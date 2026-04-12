@@ -248,71 +248,54 @@ while ( have_posts() ) :
     </div><!-- .fh-purchase -->
 </div><!-- .fh-product-layout -->
 
-<?php /* ── ABOUT THIS SPECIES — Stat Grid ── */ ?>
+<?php /* ── ABOUT THIS SPECIES — Stat Grid from meta fields ── */ ?>
 <?php
-$desc_raw = $product->get_description();
-$desc_plain = strip_tags($desc_raw);
+$desc_raw    = $product->get_description();
+$sci_name    = get_post_meta( $product_id, '_fh_scientific_name', true );
+$common      = get_post_meta( $product_id, '_fh_common_names', true );
+$max_length  = get_post_meta( $product_id, '_fh_max_length', true );
+$tank_size   = get_post_meta( $product_id, '_fh_min_tank_size', true );
+$temperament = get_post_meta( $product_id, '_fh_temperament', true );
+$reef_safe   = get_post_meta( $product_id, '_fh_reef_safe', true );
 
-$spec_fields = [
-    'Scientific Name'       => '',
-    'Common Names'          => '',
-    'Maximum Length'         => '',
-    'Minimum Aquarium Size' => '',
-    'Reef Safety'           => '',
-    'Temperament'           => '',
-];
-
-foreach ($spec_fields as $label => $val) {
-    preg_match('/' . preg_quote($label, '/') . '\s*[:\-–]\s*([^\n]+)/i', $desc_plain, $matches);
-    if (!empty($matches[1])) {
-        $spec_fields[$label] = trim($matches[1]);
-    }
+$spec_rows = [];
+if ( $sci_name )    $spec_rows[] = [ 'Scientific Name', esc_html( $sci_name ) ];
+if ( $common )      $spec_rows[] = [ 'Common Names',    esc_html( $common ) ];
+if ( $max_length )  $spec_rows[] = [ 'Max Length',      esc_html( $max_length ) ];
+if ( $tank_size )   $spec_rows[] = [ 'Min Tank Size',   esc_html( $tank_size ) ];
+if ( $temperament ) $spec_rows[] = [ 'Temperament',     esc_html( $temperament ) ];
+if ( $reef_safe ) {
+    $reef_labels = [
+        'yes'     => '<span class="fh-spec-badge fh-spec-badge--green">&#10003; Yes</span>',
+        'no'      => '<span class="fh-spec-badge fh-spec-badge--amber">&#10007; No</span>',
+        'caution' => '<span class="fh-spec-badge fh-spec-badge--amber">&#9888; With Caution</span>',
+    ];
+    $spec_rows[] = [ 'Reef Safe', $reef_labels[ $reef_safe ] ?? esc_html( $reef_safe ) ];
 }
-
-$has_specs = array_filter($spec_fields);
-
-// Build a "clean" description: remove the spec lines we already extracted
-$prose_text = $desc_plain;
-foreach ($spec_fields as $label => $val) {
-    if (!empty($val)) {
-        $prose_text = preg_replace('/' . preg_quote($label, '/') . '\s*[:\-–]\s*[^\n]+/i', '', $prose_text);
-    }
-}
-// Also strip section headers
-$prose_text = preg_replace('/\b(Foods\s+and\s+Feeding|Habitat|Habits|Fun\s+Facts?)\b\s*[:\-–]?\s*/i', '', $prose_text);
-$prose_text = trim(preg_replace('/\n{3,}/', "\n\n", $prose_text));
+if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
 ?>
 
-<?php if ($has_specs || $desc_raw) : ?>
+<?php if ( ! empty( $spec_rows ) || $desc_raw ) : ?>
 <div class="fh-species">
     <div class="fh-species__inner">
         <span class="fh-eyebrow">Description</span>
         <span class="fh-rule"></span>
         <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">About This <em style="font-style:normal; color:var(--fh-gold);">Species</em></h2>
 
-        <?php if ($has_specs) : ?>
+        <?php if ( ! empty( $spec_rows ) ) : ?>
         <table class="fh-species-grid">
-            <?php foreach ($spec_fields as $label => $val) :
-                if (empty($val)) continue;
-                $display_val = esc_html($val);
-                if (stripos($label, 'reef') !== false) {
-                    $is_safe = stripos($val, 'safe') !== false;
-                    $display_val = $is_safe
-                        ? '<span class="fh-spec-badge fh-spec-badge--green">&#10003; Yes</span>'
-                        : '<span class="fh-spec-badge fh-spec-badge--amber">With Caution</span>';
-                }
-            ?>
+            <?php foreach ( $spec_rows as $row ) : ?>
             <tr>
-                <td><?php echo esc_html($label); ?></td>
-                <td><?php echo wp_kses_post($display_val); ?></td>
+                <td><?php echo esc_html( $row[0] ); ?></td>
+                <td><?php echo wp_kses_post( $row[1] ); ?></td>
             </tr>
             <?php endforeach; ?>
         </table>
         <?php endif; ?>
 
-        <?php if ($prose_text) : ?>
+        <?php if ( $desc_raw ) : ?>
         <div class="fh-species__prose">
-            <?php echo nl2br(esc_html($prose_text)); ?>
+            <?php echo wp_kses_post( $desc_raw ); ?>
         </div>
         <?php endif; ?>
     </div>
@@ -321,8 +304,8 @@ $prose_text = trim(preg_replace('/\n{3,}/', "\n\n", $prose_text));
 
 <?php /* ── CARE GUIDE (Dossier) — reads from custom meta fields ── */ ?>
 <?php
-$foods_feeding = get_post_meta( $product_id, '_fishotel_foods_feeding', true );
-$habitat       = get_post_meta( $product_id, '_fishotel_habitat', true );
+$foods_feeding = get_post_meta( $product_id, '_fh_foods_feeding', true );
+$habitat       = get_post_meta( $product_id, '_fh_habitat', true );
 ?>
 
 <?php if ( $foods_feeding || $habitat ) : ?>

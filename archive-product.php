@@ -92,19 +92,18 @@ get_header();
         $hotel      = function_exists('fishotel_get_hotel_data') ? fishotel_get_hotel_data($pid) : [];
         $stage      = $hotel['qt_stage'] ?? '';
         $days       = $hotel['days_in_qt'] ?? '';
-        $status_class = match($stage) {
-            'souvenir-shop' => 'fh-fish-card__status--available',
-            'treatment'     => 'fh-fish-card__status--qt',
-            'checkin','observation' => 'fh-fish-card__status--qt',
-            default => '',
-        };
-        $status_label = match($stage) {
-            'souvenir-shop' => 'Available',
-            'treatment'     => 'In Treatment',
-            'observation'   => 'In QT',
-            'checkin'       => 'Checked In',
-            default => '',
-        };
+        if ( $stage === 'souvenir-shop' ) {
+            $status_class = 'fh-fish-card__status--available';
+        } elseif ( in_array( $stage, array( 'treatment', 'checkin', 'observation' ) ) ) {
+            $status_class = 'fh-fish-card__status--qt';
+        } else {
+            $status_class = '';
+        }
+        if ( $stage === 'souvenir-shop' )    { $status_label = 'Available'; }
+        elseif ( $stage === 'treatment' )    { $status_label = 'In Treatment'; }
+        elseif ( $stage === 'observation' )  { $status_label = 'In QT'; }
+        elseif ( $stage === 'checkin' )      { $status_label = 'Checked In'; }
+        else                                 { $status_label = ''; }
     ?>
         <a href="<?php the_permalink(); ?>" class="fh-fish-card">
             <div class="fh-fish-card__image">

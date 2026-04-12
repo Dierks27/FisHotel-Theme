@@ -22,11 +22,9 @@ while ( have_posts() ) :
     $treatments  = $hotel['treatments'] ?? [];
 
     // Status CSS modifier
-    $status_mod = match($stage) {
-        'souvenir-shop' => '',
-        'treatment'     => 'fh-hotel-status--treatment',
-        default         => 'fh-hotel-status--pending',
-    };
+    if ( $stage === 'souvenir-shop' )  { $status_mod = ''; }
+    elseif ( $stage === 'treatment' )  { $status_mod = 'fh-hotel-status--treatment'; }
+    else                               { $status_mod = 'fh-hotel-status--pending'; }
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -458,18 +456,14 @@ if (!empty($related_ids)) :
                 $rel_hotel  = function_exists('fishotel_get_hotel_data') ? fishotel_get_hotel_data($rel_id) : [];
                 $rel_stage  = $rel_hotel['qt_stage'] ?? '';
                 $rel_days   = $rel_hotel['days_in_qt'] ?? '';
-                $rel_status_class = match($rel_stage) {
-                    'souvenir-shop' => 'fh-fish-card__status--available',
-                    'treatment','observation','checkin' => 'fh-fish-card__status--qt',
-                    default => 'fh-fish-card__status--qt',
-                };
-                $rel_status_label = match($rel_stage) {
-                    'souvenir-shop' => 'Available',
-                    'treatment' => 'In Treatment',
-                    'observation' => 'In QT',
-                    'checkin' => 'Checked In',
-                    default => 'In QT',
-                };
+                if ( $rel_stage === 'souvenir-shop' )                                   { $rel_status_class = 'fh-fish-card__status--available'; }
+                elseif ( in_array( $rel_stage, array('treatment','observation','checkin') ) ) { $rel_status_class = 'fh-fish-card__status--qt'; }
+                else                                                                    { $rel_status_class = 'fh-fish-card__status--qt'; }
+                if ( $rel_stage === 'souvenir-shop' ) { $rel_status_label = 'Available'; }
+                elseif ( $rel_stage === 'treatment' ) { $rel_status_label = 'In Treatment'; }
+                elseif ( $rel_stage === 'observation' ) { $rel_status_label = 'In QT'; }
+                elseif ( $rel_stage === 'checkin' )   { $rel_status_label = 'Checked In'; }
+                else                                  { $rel_status_label = 'In QT'; }
             ?>
                 <a href="<?php echo esc_url($rel->get_permalink()); ?>" class="fh-fish-card">
                     <div class="fh-fish-card__image">

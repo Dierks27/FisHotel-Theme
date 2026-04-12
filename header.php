@@ -33,10 +33,10 @@
             <?php if ( has_custom_logo() ) :
                 the_custom_logo();
             else : ?>
-                <img src="https://fishotel.com/wp-content/uploads/2021/12/FisHotel-Retro-Hotel-Sign.gif"
-                     alt="The FisHotel" class="site-logo__img" width="90" height="90">
+                <img src="https://fishotel.com/wp-content/uploads/2020/06/Small-Fish-Hotel-White.png"
+                     alt="The FisHotel" class="site-logo__img" width="80" height="80">
             <?php endif; ?>
-            <span class="site-logo__tagline">Premium Marine Quarantine</span>
+            <span class="site-logo__tagline">We quarantine. You reef.</span>
         </a>
 
         <nav class="site-header__nav site-header__nav--right">

@@ -14,9 +14,8 @@ get_header(); ?>
     <div class="fh-hero__content">
         <p class="fh-eyebrow" style="letter-spacing:5px; margin-bottom:20px;">Premium Marine Fish Quarantine</p>
         <h1 class="fh-hero__title">
-            Where Fish<br>
-            <em>Check In</em><br>
-            Healthy
+            Check In<br>
+            <em>Check Out</em>
         </h1>
         <p class="fh-hero__subtitle">Every saltwater fish quarantined, observed, and treated before it ever reaches your tank. Because your reef deserves nothing less.</p>
         <div class="fh-hero__actions">

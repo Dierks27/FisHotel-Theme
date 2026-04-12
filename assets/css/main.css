@@ -250,7 +250,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .site-logo__img {
-  height: 90px;
+  height: 80px;
   width: auto;
   object-fit: contain;
   transition: height 0.3s ease;
@@ -259,9 +259,9 @@ h1, h2, h3, h4, h5 {
 /* WP custom logo override */
 .site-logo .custom-logo-link img,
 .site-logo .custom-logo {
-  height: 90px !important;
+  height: 80px !important;
   width: auto !important;
-  max-height: 90px;
+  max-height: 80px;
   transition: height 0.3s ease, max-height 0.3s ease;
 }
 

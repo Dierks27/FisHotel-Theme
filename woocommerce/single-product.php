@@ -319,45 +319,13 @@ $prose_text = trim(preg_replace('/\n{3,}/', "\n\n", $prose_text));
 </div>
 <?php endif; ?>
 
-<?php /* ── CARE GUIDE (Dossier) — Clean labeled blocks ── */ ?>
+<?php /* ── CARE GUIDE (Dossier) — reads from custom meta fields ── */ ?>
 <?php
-// Parse feeding and habitat from plain-text description
-// Try multiple label variants — descriptions vary between products
-$feeding = '';
-$habitat = '';
-
-$feeding_patterns = [
-    '/Foods?\s+and\s+Feeding(?:\s+Habits?)?\s*[:\-–—]\s*(.*?)(?=Habitat|Habits|Fun\s+Facts?|Aquarium\s|Minimum\s|\z)/is',
-    '/Feeding(?:\s+Habits?)?\s*[:\-–—]\s*(.*?)(?=Habitat|Habits|Fun\s+Facts?|Aquarium\s|\z)/is',
-    '/Diet\s*[:\-–—]\s*(.*?)(?=Habitat|Habits|Fun\s+Facts?|\z)/is',
-];
-
-foreach ($feeding_patterns as $pat) {
-    preg_match($pat, $desc_plain, $feed_match);
-    if (!empty($feed_match[1]) && strlen(trim($feed_match[1])) > 10) {
-        $feeding = trim($feed_match[1]);
-        $feeding = preg_replace('/^[:\s\-–—]+/', '', $feeding);
-        break;
-    }
-}
-
-$habitat_patterns = [
-    '/(?:Habitat|Habits)\s*(?:(?:&|and)\s*Behavior\s*)?[:\-–—]\s*(.*?)(?=Foods?\s|Feeding|Diet|Fun\s+Facts?|\z)/is',
-    '/(?:Habitat|Habits)\s*[:\-–—]\s*(.*?)(?=Foods?\s|Feeding|Diet|Fun\s+Facts?|\z)/is',
-    '/Behavior\s*[:\-–—]\s*(.*?)(?=Foods?\s|Feeding|Diet|Fun\s+Facts?|\z)/is',
-];
-
-foreach ($habitat_patterns as $pat) {
-    preg_match($pat, $desc_plain, $hab_match);
-    if (!empty($hab_match[1]) && strlen(trim($hab_match[1])) > 10) {
-        $habitat = trim($hab_match[1]);
-        $habitat = preg_replace('/^[:\s\-–—]+/', '', $habitat);
-        break;
-    }
-}
+$foods_feeding = get_post_meta( $product_id, '_fishotel_foods_feeding', true );
+$habitat       = get_post_meta( $product_id, '_fishotel_habitat', true );
 ?>
 
-<?php if ($feeding || $habitat) : ?>
+<?php if ( $foods_feeding || $habitat ) : ?>
 <div class="fh-careguide">
     <div class="fh-careguide__inner">
         <span class="fh-eyebrow">Care Guide</span>
@@ -365,17 +333,17 @@ foreach ($habitat_patterns as $pat) {
         <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">Fish <em style="font-style:normal; color:var(--fh-gold);">Dossier</em></h2>
 
         <div class="fh-careguide__blocks">
-            <?php if ($feeding) : ?>
+            <?php if ( $foods_feeding ) : ?>
             <div class="fh-careguide__block">
                 <h3 class="fh-careguide__block-title">Foods &amp; Feeding</h3>
-                <p class="fh-careguide__block-text"><?php echo esc_html($feeding); ?></p>
+                <p class="fh-careguide__block-text"><?php echo esc_html( $foods_feeding ); ?></p>
             </div>
             <?php endif; ?>
 
-            <?php if ($habitat) : ?>
+            <?php if ( $habitat ) : ?>
             <div class="fh-careguide__block">
                 <h3 class="fh-careguide__block-title">Habitat &amp; Behavior</h3>
-                <p class="fh-careguide__block-text"><?php echo esc_html($habitat); ?></p>
+                <p class="fh-careguide__block-text"><?php echo esc_html( $habitat ); ?></p>
             </div>
             <?php endif; ?>
         </div>

@@ -33,8 +33,10 @@ class FisHotel_Hotel_Data {
 	public static function render_meta_box( $post ) {
 		wp_nonce_field( 'fishotel_save_hotel_data', 'fishotel_hotel_nonce' );
 
-		$region = get_post_meta( $post->ID, self::META_PREFIX . 'region', true );
-		$notes  = get_post_meta( $post->ID, self::META_PREFIX . 'notes',  true );
+		$region         = get_post_meta( $post->ID, self::META_PREFIX . 'region', true );
+		$notes          = get_post_meta( $post->ID, self::META_PREFIX . 'notes',  true );
+		$foods_feeding  = get_post_meta( $post->ID, self::META_PREFIX . 'foods_feeding', true );
+		$habitat        = get_post_meta( $post->ID, self::META_PREFIX . 'habitat', true );
 		?>
 		<style>
 			.fh-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
@@ -43,6 +45,8 @@ class FisHotel_Hotel_Data {
 				width: 100%; padding: 7px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px;
 			}
 			.fh-meta-field textarea { min-height: 80px; resize: vertical; }
+			.fh-meta-field .description { font-size: 11px; color: #999; margin-top: 4px; }
+			.fh-meta-section { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #999; border-bottom: 1px solid #eee; padding-bottom: 6px; margin: 20px 0 12px; }
 		</style>
 
 		<div class="fh-meta-grid">
@@ -53,6 +57,21 @@ class FisHotel_Hotel_Data {
 			<div class="fh-meta-field">
 				<label><?php esc_html_e( 'Notes', 'fishotel' ); ?></label>
 				<textarea name="fishotel_notes" placeholder="Optional notes shown below the QT certificate"><?php echo esc_textarea( $notes ); ?></textarea>
+			</div>
+		</div>
+
+		<p class="fh-meta-section"><?php esc_html_e( 'Care Guide (Fish Dossier)', 'fishotel' ); ?></p>
+
+		<div class="fh-meta-grid">
+			<div class="fh-meta-field">
+				<label><?php esc_html_e( 'Foods & Feeding', 'fishotel' ); ?></label>
+				<textarea name="fishotel_foods_feeding" rows="4" placeholder="What this fish eats, feeding frequency, recommended foods."><?php echo esc_textarea( $foods_feeding ); ?></textarea>
+				<p class="description"><?php esc_html_e( 'Shows in the "Foods & Feeding" dossier block on the product page.', 'fishotel' ); ?></p>
+			</div>
+			<div class="fh-meta-field">
+				<label><?php esc_html_e( 'Habitat & Behavior', 'fishotel' ); ?></label>
+				<textarea name="fishotel_habitat" rows="4" placeholder="Tank requirements, temperament, compatible tankmates."><?php echo esc_textarea( $habitat ); ?></textarea>
+				<p class="description"><?php esc_html_e( 'Shows in the "Habitat & Behavior" dossier block on the product page.', 'fishotel' ); ?></p>
 			</div>
 		</div>
 		<?php
@@ -68,12 +87,20 @@ class FisHotel_Hotel_Data {
 		if ( isset( $_POST['fishotel_notes'] ) ) {
 			update_post_meta( $product_id, '_fishotel_notes', sanitize_textarea_field( $_POST['fishotel_notes'] ) );
 		}
+		if ( isset( $_POST['fishotel_foods_feeding'] ) ) {
+			update_post_meta( $product_id, '_fishotel_foods_feeding', sanitize_textarea_field( $_POST['fishotel_foods_feeding'] ) );
+		}
+		if ( isset( $_POST['fishotel_habitat'] ) ) {
+			update_post_meta( $product_id, '_fishotel_habitat', sanitize_textarea_field( $_POST['fishotel_habitat'] ) );
+		}
 	}
 
 	public static function get_all( $product_id ) {
 		return [
-			'region' => get_post_meta( $product_id, '_fishotel_region', true ),
-			'notes'  => get_post_meta( $product_id, '_fishotel_notes',  true ),
+			'region'        => get_post_meta( $product_id, '_fishotel_region', true ),
+			'notes'         => get_post_meta( $product_id, '_fishotel_notes',  true ),
+			'foods_feeding' => get_post_meta( $product_id, '_fishotel_foods_feeding', true ),
+			'habitat'       => get_post_meta( $product_id, '_fishotel_habitat', true ),
 		];
 	}
 }

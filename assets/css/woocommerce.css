@@ -75,3 +75,9 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   max-width: var(--fh-max-width); margin: 0 auto;
   padding: 60px var(--fh-page-pad);
 }
+
+/* Responsive — mobile */
+@media (max-width: 768px) {
+  .woocommerce-cart table.cart td { padding: 12px 8px; font-size: 12px; }
+  .woocommerce-checkout .col2-set { grid-template-columns: 1fr; gap: 24px; }
+}

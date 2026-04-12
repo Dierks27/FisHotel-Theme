@@ -85,10 +85,7 @@ class FisHotel_Hotel_Data {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) wp_die( 'Unauthorized' );
 		check_admin_referer( 'fishotel_run_migration', 'fishotel_migration_nonce' );
 
-		require_once get_template_directory() . '/tools/migrate-product-fields.php';
-
-		// The script sets $migrated and $skipped — capture via output buffer
-		// Actually, let's run inline so we can capture counts
+		// Migration runs inline below
 		$products = wc_get_products( [ 'limit' => -1, 'status' => 'publish' ] );
 		$migrated = 0;
 		$skipped  = 0;

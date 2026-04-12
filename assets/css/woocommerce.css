@@ -76,6 +76,217 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   padding: 60px var(--fh-page-pad);
 }
 
+/* ═══════════════════════════════════════
+   SINGLE PRODUCT PAGE — Component Styles
+═══════════════════════════════════════ */
+
+/* QT Certificate panel */
+.fh-qt-cert {
+  background: var(--fh-bg-dk);
+  border: none;
+  border-left: 3px solid var(--fh-green);
+  border-radius: 4px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.fh-qt-cert__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.fh-qt-cert__check {
+  color: var(--fh-green);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.fh-qt-cert__title {
+  color: var(--fh-green);
+  font-family: var(--fh-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.fh-qt-cert__protocol {
+  color: var(--fh-text-1);
+  font-size: 13px;
+  line-height: 1.8;
+  margin-bottom: 0;
+}
+
+.fh-qt-cert__region {
+  color: var(--fh-text-2);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.fh-qt-cert__notes {
+  color: var(--fh-text-3);
+  font-size: 12px;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* Trust strip */
+.fh-trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 12px;
+}
+
+.fh-trust-strip__item {
+  color: var(--fh-text-2);
+  font-family: var(--fh-font);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Variation buttons — gold hover */
+.fh-var-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--fh-text-1);
+  padding: 8px 20px;
+  font-family: var(--fh-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fh-var-btn.selected,
+.fh-var-btn:hover {
+  background: var(--fh-gold);
+  border-color: var(--fh-gold);
+  color: #1c1c1c;
+}
+
+.fh-var-btn.unavailable {
+  opacity: 0.3;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+/* About This Species — stat grid */
+.fh-species-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-bottom: 32px;
+}
+
+.fh-species-grid__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--fh-border);
+}
+
+.fh-species-grid__row:nth-child(even) {
+  background: rgba(255,255,255,0.02);
+}
+
+.fh-species-grid__label {
+  color: var(--fh-text-2);
+  font-family: var(--fh-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-right: 16px;
+}
+
+.fh-species-grid__val {
+  color: var(--fh-text-1);
+  font-size: 13px;
+  text-align: right;
+}
+
+/* Species description prose */
+.fh-species__prose {
+  color: var(--fh-text-2);
+  font-size: 14px;
+  line-height: 1.8;
+  margin-bottom: 32px;
+}
+
+.fh-species__prose p { margin-bottom: 16px; }
+.fh-species__prose p:last-child { margin-bottom: 0; }
+
+/* Fun facts accent */
+.fh-species__prose .fh-fun-facts,
+.fh-species__prose strong:first-child {
+  border-left: 2px solid var(--fh-gold);
+  padding-left: 16px;
+  display: block;
+  margin-top: 24px;
+}
+
+/* Fish Dossier — content blocks */
+.fh-careguide__blocks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.fh-careguide__block {
+  background: var(--fh-bg-dk);
+  padding: 24px;
+  border-radius: 4px;
+}
+
+.fh-careguide__block-title {
+  color: var(--fh-gold);
+  font-family: var(--fh-font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.fh-careguide__block-text {
+  color: var(--fh-text-2);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* Spec badges */
+.fh-spec-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid;
+}
+
+.fh-spec-badge--green { color: var(--fh-green); border-color: rgba(90,170,120,.3); }
+.fh-spec-badge--amber { color: var(--fh-amber); border-color: rgba(212,144,58,.3); }
+
+/* Responsive — mobile */
+@media (max-width: 768px) {
+  .fh-species-grid { grid-template-columns: 1fr; }
+  .fh-careguide__blocks { grid-template-columns: 1fr; }
+  .fh-trust-strip { flex-direction: column; gap: 8px; }
+}
+
 /* Responsive — mobile */
 @media (max-width: 768px) {
   .woocommerce-cart table.cart td { padding: 12px 8px; font-size: 12px; }

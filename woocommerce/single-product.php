@@ -293,10 +293,26 @@ if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
         </table>
         <?php endif; ?>
 
-        <?php if ( $desc_raw ) : ?>
+        <?php
+        // Strip structured data lines from prose — they now live in custom fields
+        if ( $desc_raw ) :
+            $prose = strip_tags( $desc_raw );
+            $strip_labels = [
+                'Scientific Name', 'Common Names', 'Maximum Length',
+                'Minimum Aquarium Size', 'Reef Safety', 'Temperament',
+                'Foods and Feeding', 'Foods and Feeding Habits',
+                'Habitat and Behavior', 'Habitat', 'Habits',
+            ];
+            foreach ( $strip_labels as $lbl ) {
+                $prose = preg_replace( '/' . preg_quote( $lbl, '/' ) . '\s*[:\-–—]\s*[^\n]*/i', '', $prose );
+            }
+            $prose = trim( preg_replace( '/\n{3,}/', "\n\n", $prose ) );
+        ?>
+        <?php if ( $prose ) : ?>
         <div class="fh-species__prose">
-            <?php echo wp_kses_post( $desc_raw ); ?>
+            <?php echo nl2br( esc_html( $prose ) ); ?>
         </div>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>

@@ -31,14 +31,20 @@
         });
     }
 
-    // Mobile nav
+    // Mobile nav — toggle drawer and manage ARIA
     function initMobileNav() {
-        $('.nav-toggle').on('click', function() {
-            $('body').toggleClass('nav-mobile-open');
+        $('.site-header__toggle').on('click', function() {
+            var $drawer = $('#mobile-nav');
+            var isOpen = $drawer.hasClass('is-open');
+            $drawer.toggleClass('is-open');
+            $(this).attr('aria-expanded', !isOpen);
+            $drawer.attr('aria-hidden', isOpen);
         });
         $(document).on('click', function(e) {
             if (!$(e.target).closest('.site-header').length) {
-                $('body').removeClass('nav-mobile-open');
+                $('#mobile-nav').removeClass('is-open');
+                $('.site-header__toggle').attr('aria-expanded', 'false');
+                $('#mobile-nav').attr('aria-hidden', 'true');
             }
         });
     }

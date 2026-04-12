@@ -25,8 +25,8 @@ get_header();
         <h1 class="page-hero__title">
             <?php if (is_product_category()) :
                 $words = explode(' ', single_term_title('', false), 2);
-                echo '<span class="word-1">' . esc_html($words[0]) . '</span>';
-                if (!empty($words[1])) echo '&nbsp;<span class="word-2">' . esc_html($words[1]) . '</span>';
+                echo '<span class="word-1">' . esc_html($words[0]) . '</span>'
+                   . ( !empty($words[1]) ? '&nbsp;<span class="word-2">' . esc_html($words[1]) . '</span>' : '' );
             else : ?>
                 <span class="word-1">Quarantined</span>&nbsp;<span class="word-2">Fish</span>
             <?php endif; ?>

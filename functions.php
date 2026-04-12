@@ -165,3 +165,41 @@ add_filter( 'body_class', function( $classes ) {
 	}
 	return $classes;
 } );
+
+// Enqueue homepage styles
+function fishotel_enqueue_home_assets() {
+    if ( is_front_page() ) {
+        wp_enqueue_style(
+            'fishotel-home',
+            FISHOTEL_THEME_URI . '/assets/css/home.css',
+            ['fishotel-style'],
+            FISHOTEL_THEME_VERSION
+        );
+    }
+}
+add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_home_assets' );
+
+// Homepage bubble animation
+function fishotel_hero_inline_js() {
+    if ( is_front_page() ) : ?>
+    <script>
+    (function(){
+        var c = document.getElementById('fh-bubbles');
+        if (!c) return;
+        for (var i=0;i<16;i++){
+            var b=document.createElement('div');
+            var s=Math.random()*40+8;
+            b.style.cssText='position:absolute;bottom:-20px;border-radius:50%;width:'+s+'px;height:'+s+'px;background:rgba(74,157,184,0.12);border:1px solid rgba(74,157,184,0.15);left:'+Math.random()*100+'%;animation:fh-rise '+(Math.random()*12+8)+'s linear '+(Math.random()*10)+'s infinite;';
+            c.appendChild(b);
+        }
+        if(!document.getElementById('fh-bubble-style')){
+            var style=document.createElement('style');
+            style.id='fh-bubble-style';
+            style.textContent='@keyframes fh-rise{0%{transform:translateY(0) scale(1);opacity:0}10%{opacity:1}90%{opacity:.3}100%{transform:translateY(-110vh) scale(.4);opacity:0}}';
+            document.head.appendChild(style);
+        }
+    })();
+    </script>
+    <?php endif;
+}
+add_action('wp_footer', 'fishotel_hero_inline_js');

@@ -250,7 +250,9 @@ while ( have_posts() ) :
 
 <?php /* ── ABOUT THIS SPECIES — Stat Grid ── */ ?>
 <?php
-$desc = $product->get_description();
+$desc_raw = $product->get_description();
+$desc_plain = strip_tags($desc_raw);
+
 $spec_fields = [
     'Scientific Name'       => '',
     'Common Names'          => '',
@@ -261,16 +263,27 @@ $spec_fields = [
 ];
 
 foreach ($spec_fields as $label => $val) {
-    preg_match('/' . preg_quote($label, '/') . '[:\s]+([^\n<]+)/i', $desc, $matches);
+    preg_match('/' . preg_quote($label, '/') . '\s*[:\-–]\s*([^\n]+)/i', $desc_plain, $matches);
     if (!empty($matches[1])) {
-        $spec_fields[$label] = trim(strip_tags($matches[1]));
+        $spec_fields[$label] = trim($matches[1]);
     }
 }
 
 $has_specs = array_filter($spec_fields);
+
+// Build a "clean" description: remove the spec lines we already extracted
+$prose_text = $desc_plain;
+foreach ($spec_fields as $label => $val) {
+    if (!empty($val)) {
+        $prose_text = preg_replace('/' . preg_quote($label, '/') . '\s*[:\-–]\s*[^\n]+/i', '', $prose_text);
+    }
+}
+// Also strip section headers
+$prose_text = preg_replace('/\b(Foods\s+and\s+Feeding|Habitat|Habits|Fun\s+Facts?)\b\s*[:\-–]?\s*/i', '', $prose_text);
+$prose_text = trim(preg_replace('/\n{3,}/', "\n\n", $prose_text));
 ?>
 
-<?php if ($has_specs || $desc) : ?>
+<?php if ($has_specs || $desc_raw) : ?>
 <div class="fh-species">
     <div class="fh-species__inner">
         <span class="fh-eyebrow">Description</span>
@@ -278,7 +291,7 @@ $has_specs = array_filter($spec_fields);
         <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">About This <em style="font-style:normal; color:var(--fh-gold);">Species</em></h2>
 
         <?php if ($has_specs) : ?>
-        <div class="fh-species-grid">
+        <table class="fh-species-grid">
             <?php foreach ($spec_fields as $label => $val) :
                 if (empty($val)) continue;
                 $display_val = esc_html($val);
@@ -289,17 +302,17 @@ $has_specs = array_filter($spec_fields);
                         : '<span class="fh-spec-badge fh-spec-badge--amber">With Caution</span>';
                 }
             ?>
-            <div class="fh-species-grid__row">
-                <span class="fh-species-grid__label"><?php echo esc_html($label); ?></span>
-                <span class="fh-species-grid__val"><?php echo wp_kses_post($display_val); ?></span>
-            </div>
+            <tr>
+                <td><?php echo esc_html($label); ?></td>
+                <td><?php echo wp_kses_post($display_val); ?></td>
+            </tr>
             <?php endforeach; ?>
-        </div>
+        </table>
         <?php endif; ?>
 
-        <?php if ($desc) : ?>
+        <?php if ($prose_text) : ?>
         <div class="fh-species__prose">
-            <?php echo wp_kses_post($desc); ?>
+            <?php echo nl2br(esc_html($prose_text)); ?>
         </div>
         <?php endif; ?>
     </div>
@@ -308,16 +321,18 @@ $has_specs = array_filter($spec_fields);
 
 <?php /* ── CARE GUIDE (Dossier) — Clean labeled blocks ── */ ?>
 <?php
-// Parse feeding and habitat from description
+// Parse feeding and habitat from plain-text description
 $feeding = '';
 $habitat = '';
-preg_match('/Foods\s+and\s+Feeding[:\s]*(.*?)(?=(?:Habitat|Habits|Aquarium|$))/is', $desc, $feed_match);
+preg_match('/Foods\s+and\s+Feeding\s*[:\-–]\s*(.*?)(?=Habitat|Habits|Fun\s+Facts?|\z)/is', $desc_plain, $feed_match);
 if (!empty($feed_match[1])) {
-    $feeding = trim(strip_tags($feed_match[1]));
+    $feeding = trim($feed_match[1]);
+    $feeding = preg_replace('/^[:\s]+/', '', $feeding);
 }
-preg_match('/(?:Habitat|Habits)[:\s]*(.*?)(?=(?:Foods|Fun Facts|$))/is', $desc, $hab_match);
+preg_match('/(?:Habitat|Habits)\s*(?:&\s*Behavior\s*)?[:\-–]\s*(.*?)(?=Foods\s+and\s+Feeding|Fun\s+Facts?|\z)/is', $desc_plain, $hab_match);
 if (!empty($hab_match[1])) {
-    $habitat = trim(strip_tags($hab_match[1]));
+    $habitat = trim($hab_match[1]);
+    $habitat = preg_replace('/^[:\s]+/', '', $habitat);
 }
 ?>
 

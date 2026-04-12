@@ -80,11 +80,10 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
    SINGLE PRODUCT PAGE — Component Styles
 ═══════════════════════════════════════ */
 
-/* QT Certificate panel */
+/* QT Certificate — correct selectors */
 .fh-qt-cert {
-  background: var(--fh-bg-dk);
-  border: none;
-  border-left: 3px solid var(--fh-green);
+  background: #1c1c1c;
+  border-left: 3px solid #5aaa78;
   border-radius: 4px;
   padding: 16px 20px;
   margin-bottom: 24px;
@@ -93,19 +92,19 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 .fh-qt-cert__header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 8px;
 }
 
 .fh-qt-cert__check {
-  color: var(--fh-green);
-  font-size: 14px;
+  color: #5aaa78;
   font-weight: 700;
+  margin-right: 2px;
 }
 
 .fh-qt-cert__title {
-  color: var(--fh-green);
-  font-family: var(--fh-font);
+  color: #5aaa78;
+  font-family: 'Montserrat', sans-serif;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.15em;
@@ -113,64 +112,62 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 
 .fh-qt-cert__protocol {
-  color: var(--fh-text-1);
+  color: #e8e4dc;
   font-size: 13px;
   line-height: 1.8;
-  margin-bottom: 0;
+  margin-top: 6px;
 }
 
 .fh-qt-cert__region {
-  color: var(--fh-text-2);
+  color: #a09890;
   font-size: 12px;
   margin-top: 6px;
 }
 
 .fh-qt-cert__notes {
-  color: var(--fh-text-3);
+  color: #686058;
   font-size: 12px;
   margin-top: 6px;
   font-style: italic;
 }
 
-/* Trust strip */
+/* Trust strip — correct selectors */
 .fh-trust-strip {
   display: flex;
-  flex-wrap: wrap;
   gap: 20px;
   padding: 12px 0;
   border-top: 1px solid rgba(255,255,255,0.06);
   margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 .fh-trust-strip__item {
-  color: var(--fh-text-2);
-  font-family: var(--fh-font);
+  color: #a09890;
   font-size: 11px;
+  font-family: 'Montserrat', sans-serif;
   letter-spacing: 0.05em;
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
 
-/* Variation buttons — gold hover */
+/* Variation buttons — correct selectors */
 .fh-var-btn {
   background: transparent;
   border: 1px solid rgba(255,255,255,0.15);
-  color: var(--fh-text-1);
+  color: #e8e4dc;
   padding: 8px 20px;
-  font-family: var(--fh-font);
+  font-family: 'Montserrat', sans-serif;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s;
+  border-radius: 2px;
 }
 
-.fh-var-btn.selected,
-.fh-var-btn:hover {
-  background: var(--fh-gold);
-  border-color: var(--fh-gold);
+.fh-var-btn:hover,
+.fh-var-btn.selected {
+  background: #c9963a;
+  border-color: #c9963a;
   color: #1c1c1c;
 }
 
@@ -180,90 +177,45 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   text-decoration: line-through;
 }
 
-/* About This Species — stat grid */
+/* About This Species — stat grid (table) */
 .fh-species-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
+  width: 100%;
+  border-collapse: collapse;
   margin-bottom: 32px;
 }
 
-.fh-species-grid__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--fh-border);
-}
-
-.fh-species-grid__row:nth-child(even) {
+.fh-species-grid tr:nth-child(even) {
   background: rgba(255,255,255,0.02);
 }
 
-.fh-species-grid__label {
-  color: var(--fh-text-2);
-  font-family: var(--fh-font);
+.fh-species-grid td {
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.fh-species-grid td:first-child {
+  color: #a09890;
+  font-family: 'Montserrat', sans-serif;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  width: 38%;
   white-space: nowrap;
-  padding-right: 16px;
 }
 
-.fh-species-grid__val {
-  color: var(--fh-text-1);
-  font-size: 13px;
-  text-align: right;
+.fh-species-grid td:last-child {
+  color: #e8e4dc;
 }
 
 /* Species description prose */
 .fh-species__prose {
-  color: var(--fh-text-2);
+  color: #a09890;
   font-size: 14px;
   line-height: 1.8;
-  margin-bottom: 32px;
-}
-
-.fh-species__prose p { margin-bottom: 16px; }
-.fh-species__prose p:last-child { margin-bottom: 0; }
-
-/* Fun facts accent */
-.fh-species__prose .fh-fun-facts,
-.fh-species__prose strong:first-child {
-  border-left: 2px solid var(--fh-gold);
-  padding-left: 16px;
-  display: block;
-  margin-top: 24px;
-}
-
-/* Fish Dossier — content blocks */
-.fh-careguide__blocks {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-.fh-careguide__block {
-  background: var(--fh-bg-dk);
-  padding: 24px;
-  border-radius: 4px;
-}
-
-.fh-careguide__block-title {
-  color: var(--fh-gold);
-  font-family: var(--fh-font);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
-.fh-careguide__block-text {
-  color: var(--fh-text-2);
-  font-size: 14px;
-  line-height: 1.7;
 }
 
 /* Spec badges */
@@ -277,12 +229,40 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   border: 1px solid;
 }
 
-.fh-spec-badge--green { color: var(--fh-green); border-color: rgba(90,170,120,.3); }
-.fh-spec-badge--amber { color: var(--fh-amber); border-color: rgba(212,144,58,.3); }
+.fh-spec-badge--green { color: #5aaa78; border-color: rgba(90,170,120,.3); }
+.fh-spec-badge--amber { color: #d4903a; border-color: rgba(212,144,58,.3); }
 
-/* Responsive — mobile */
+/* Care guide blocks — correct selectors */
+.fh-careguide__blocks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.fh-careguide__block {
+  background: #1c1c1c;
+  border-radius: 4px;
+  padding: 24px;
+}
+
+.fh-careguide__block-title {
+  color: #c9963a;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.fh-careguide__block-text {
+  color: #a09890;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* Responsive — product components */
 @media (max-width: 768px) {
-  .fh-species-grid { grid-template-columns: 1fr; }
   .fh-careguide__blocks { grid-template-columns: 1fr; }
   .fh-trust-strip { flex-direction: column; gap: 8px; }
 }

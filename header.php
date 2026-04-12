@@ -1,8 +1,7 @@
 <?php
 /**
  * FisHotel Theme — header.php
- * TODO: Build full nav in Phase 2
- *
+ * Centered split-nav with the retro hotel sign logo
  * @package FisHotel
  */
 ?><!DOCTYPE html>
@@ -10,7 +9,6 @@
 <head>
     <meta charset="<?php bloginfo( 'charset' ); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="profile" href="https://gmpg.org/xfn/11">
     <?php wp_head(); ?>
 </head>
 <body <?php body_class(); ?>>
@@ -19,45 +17,64 @@
 <header class="site-header" id="masthead">
     <div class="site-header__inner">
 
-        <ul class="nav-primary-left">
-            <?php wp_nav_menu([
-                'theme_location' => 'primary-left',
-                'items_wrap'     => '%3$s',
-                'container'      => false,
-                'depth'          => 1,
-                'fallback_cb'    => false,
-            ]); ?>
-        </ul>
+        <nav class="site-header__nav site-header__nav--left">
+            <?php if ( has_nav_menu( 'primary-left' ) ) :
+                wp_nav_menu([ 'theme_location' => 'primary-left', 'container' => false, 'items_wrap' => '<ul class="site-header__menu">%3$s</ul>', 'fallback_cb' => false, 'depth' => 1 ]);
+            else : ?>
+                <ul class="site-header__menu">
+                    <li <?php if ( is_front_page() ) echo 'class="current-menu-item"'; ?>><a href="<?php echo esc_url( home_url('/') ); ?>">Home</a></li>
+                    <li><a href="<?php echo esc_url( home_url('/our-process/') ); ?>">Our Process</a></li>
+                    <li <?php if ( is_shop() || is_product_category() || is_product() ) echo 'class="current-menu-item"'; ?>><a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a></li>
+                </ul>
+            <?php endif; ?>
+        </nav>
 
-        <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="site-logo">
+        <a href="<?php echo esc_url( home_url('/') ); ?>" class="site-logo">
             <?php if ( has_custom_logo() ) :
                 the_custom_logo();
             else : ?>
-                <div class="site-logo__icon">⚓</div>
-                <span class="site-logo__name">The FisHotel</span>
-                <span class="site-logo__tagline">Premium Marine Quarantine</span>
+                <img src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/logo.gif' ); ?>"
+                     onerror="this.src='https://fishotel.com/wp-content/uploads/2021/12/FisHotel-Retro-Hotel-Sign.gif'"
+                     alt="The FisHotel" class="site-logo__img" width="80" height="80">
             <?php endif; ?>
         </a>
 
-        <ul class="nav-primary-right">
-            <?php wp_nav_menu([
-                'theme_location' => 'primary-right',
-                'items_wrap'     => '%3$s',
-                'container'      => false,
-                'depth'          => 1,
-                'fallback_cb'    => false,
-            ]); ?>
-            <li>
-                <a href="<?php echo wc_get_cart_url(); ?>" class="nav-cart">
-                    Cart
-                    <span class="nav-cart__count"><?php echo WC()->cart->get_cart_contents_count(); ?></span>
-                </a>
-            </li>
-        </ul>
+        <nav class="site-header__nav site-header__nav--right">
+            <?php if ( has_nav_menu( 'primary-right' ) ) :
+                wp_nav_menu([ 'theme_location' => 'primary-right', 'container' => false, 'items_wrap' => '<ul class="site-header__menu">%3$s</ul>', 'fallback_cb' => false, 'depth' => 1 ]);
+            else : ?>
+                <ul class="site-header__menu">
+                    <li><a href="<?php echo esc_url( home_url('/faqs/') ); ?>">FAQ's</a></li>
+                    <li><a href="<?php echo esc_url( home_url('/about-us/') ); ?>">About Us</a></li>
+                    <li>
+                        <?php if ( class_exists('WooCommerce') ) : $count = WC()->cart ? WC()->cart->get_cart_contents_count() : 0; ?>
+                        <a href="<?php echo esc_url( wc_get_cart_url() ); ?>" class="site-header__cart">
+                            Cart <span class="site-header__cart-count <?php echo $count > 0 ? 'has-items' : ''; ?>"><?php echo $count; ?></span>
+                        </a>
+                        <?php endif; ?>
+                    </li>
+                </ul>
+            <?php endif; ?>
+        </nav>
 
-        <button class="nav-toggle" aria-label="Menu">
+        <button class="site-header__toggle" aria-label="Menu" aria-expanded="false">
             <span></span><span></span><span></span>
         </button>
 
+    </div>
+
+    <div class="site-header__drawer" id="mobile-nav" aria-hidden="true">
+        <ul class="site-header__drawer-menu">
+            <li><a href="<?php echo esc_url( home_url('/') ); ?>">Home</a></li>
+            <li><a href="<?php echo esc_url( home_url('/our-process/') ); ?>">Our Process</a></li>
+            <li><a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a></li>
+            <li><a href="<?php echo esc_url( home_url('/faqs/') ); ?>">FAQ's</a></li>
+            <li><a href="<?php echo esc_url( home_url('/about-us/') ); ?>">About Us</a></li>
+            <li><a href="<?php echo esc_url( home_url('/newsletter/') ); ?>">Newsletter</a></li>
+            <?php if ( class_exists('WooCommerce') ) : ?>
+            <li><a href="<?php echo esc_url( wc_get_cart_url() ); ?>">Cart (<?php echo WC()->cart ? WC()->cart->get_cart_contents_count() : 0; ?>)</a></li>
+            <li><a href="<?php echo esc_url( wc_get_account_endpoint_url('dashboard') ); ?>">My Account</a></li>
+            <?php endif; ?>
+        </ul>
     </div>
 </header>

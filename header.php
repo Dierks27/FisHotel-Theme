@@ -1,7 +1,7 @@
 <?php
 /**
  * FisHotel Theme — header.php
- * Centered split-nav with the retro hotel sign logo
+ * Safari-2 split-nav: [LEFT NAV] [CENTERED LOGO] [RIGHT NAV]
  * @package FisHotel
  */
 ?><!DOCTYPE html>
@@ -33,10 +33,10 @@
             <?php if ( has_custom_logo() ) :
                 the_custom_logo();
             else : ?>
-                <img src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/logo.gif' ); ?>"
-                     onerror="this.src='https://fishotel.com/wp-content/uploads/2021/12/FisHotel-Retro-Hotel-Sign.gif'"
-                     alt="The FisHotel" class="site-logo__img" width="80" height="80">
+                <img src="https://fishotel.com/wp-content/uploads/2021/12/FisHotel-Retro-Hotel-Sign.gif"
+                     alt="The FisHotel" class="site-logo__img" width="90" height="90">
             <?php endif; ?>
+            <span class="site-logo__tagline">Premium Marine Quarantine</span>
         </a>
 
         <nav class="site-header__nav site-header__nav--right">

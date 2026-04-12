@@ -64,11 +64,25 @@
         });
     }
 
+    // Header scroll-shrink
+    function initHeaderScroll() {
+        var $header = $('#masthead');
+        var threshold = 60;
+        $(window).on('scroll', function() {
+            if (window.scrollY > threshold) {
+                $header.addClass('site-header--compact');
+            } else {
+                $header.removeClass('site-header--compact');
+            }
+        });
+    }
+
     $(document).ready(function() {
         initVariationButtons();
         initGallery();
         initMobileNav();
         initQty();
+        initHeaderScroll();
     });
 
 })(jQuery);

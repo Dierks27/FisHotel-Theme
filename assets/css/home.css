@@ -11,7 +11,7 @@
 .fh-hero__bg {
   position: absolute; inset: 0;
   background:
-    radial-gradient(ellipse at 50% 60%, rgba(74,157,184,0.2) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 60%, rgba(74,157,184,0.35) 0%, transparent 60%),
     radial-gradient(ellipse at 20% 80%, rgba(201,150,58,0.08) 0%, transparent 50%),
     linear-gradient(180deg, #151515 0%, #1c1c1c 100%);
 }

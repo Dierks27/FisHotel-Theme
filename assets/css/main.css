@@ -185,11 +185,17 @@ h1, h2, h3, h4, h5 {
 ───────────────────────────────────────── */
 .site-header {
   background: #0f0f0f;
-  border-bottom: 1px solid rgba(212,165,116,0.35);
+  border-bottom: 1px solid rgba(212,165,116,0.5);
   position: sticky;
   top: 0;
   z-index: 1000;
   transition: all 0.3s ease;
+}
+
+/* WP admin bar collision */
+.admin-bar .site-header { top: 32px; }
+@media screen and (max-width: 782px) {
+  .admin-bar .site-header { top: 46px; }
 }
 
 .site-header__inner {
@@ -266,13 +272,13 @@ h1, h2, h3, h4, h5 {
 }
 
 .site-header--compact .site-logo__img {
-  height: 55px;
+  height: 45px;
 }
 
 .site-header--compact .site-logo .custom-logo-link img,
 .site-header--compact .site-logo .custom-logo {
-  height: 55px !important;
-  max-height: 55px;
+  height: 45px !important;
+  max-height: 45px;
 }
 
 .site-logo__tagline {

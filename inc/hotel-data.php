@@ -102,14 +102,14 @@ class FisHotel_Hotel_Data {
 		};
 
 		$fields_map = [
-			'_fh_scientific_name' => [ '/Scientific Name\s*[:\-–—]\s*([^\n]+)/i' ],
-			'_fh_common_names'    => [ '/Common Names?\s*[:\-–—]\s*([^\n]+)/i' ],
-			'_fh_max_length'      => [ '/Maximum?\s*Lengths?\s*[:\-–—]\s*([^\n]+)/i', '/Max\.?\s*Lengths?\s*[:\-–—]\s*([^\n]+)/i' ],
-			'_fh_min_tank_size'   => [ '/Minimum\s*Aquarium\s*Sizes?\s*[:\-–—]\s*([^\n]+)/i', '/Min\.?\s*Tank\s*Sizes?\s*[:\-–—]\s*([^\n]+)/i' ],
-			'_fh_temperament'     => [ '/Temperament\s*[:\-–—]\s*([^\n]+)/i' ],
-			'_fh_region'          => [ '/Region\s*[:\-–—]\s*([^\n]+)/i' ],
-			'_fh_foods_feeding'   => [ '/Foods?\s+and\s+Feeding\s*(?:Habits?)?\s*[:\-–—]\s*([\s\S]+?)(?=(?:Habitat|Habits|Reef|Temperament|Fun\s+Facts?|Description|\z))/i' ],
-			'_fh_habitat'         => [ '/Habitat\s*(?:and|&)?\s*Behavior\s*[:\-–—]\s*([\s\S]+?)(?=(?:Foods?|Feeding|Reef|Fun\s+Facts?|Description|\z))/i', '/Habits\s*[:\-–—]\s*([\s\S]+?)(?=(?:Foods?|Feeding|Reef|Fun\s+Facts?|\z))/i' ],
+			'_fh_scientific_name' => [ '/Scientific Name\s*[:-]\s*([^\n]+)/i' ],
+			'_fh_common_names'    => [ '/Common Names?\s*[:-]\s*([^\n]+)/i' ],
+			'_fh_max_length'      => [ '/Maximum?\s*Lengths?\s*[:-]\s*([^\n]+)/i', '/Max\.?\s*Lengths?\s*[:-]\s*([^\n]+)/i' ],
+			'_fh_min_tank_size'   => [ '/Minimum\s*Aquarium\s*Sizes?\s*[:-]\s*([^\n]+)/i', '/Min\.?\s*Tank\s*Sizes?\s*[:-]\s*([^\n]+)/i' ],
+			'_fh_temperament'     => [ '/Temperament\s*[:-]\s*([^\n]+)/i' ],
+			'_fh_region'          => [ '/Region\s*[:-]\s*([^\n]+)/i' ],
+			'_fh_foods_feeding'   => [ '/Foods?\s+and\s+Feeding\s*(?:Habits?)?\s*[:-]\s*([\s\S]+?)(?=(?:Habitat|Habits|Reef|Temperament|Fun\s+Facts?|Description|\z))/i' ],
+			'_fh_habitat'         => [ '/Habitat\s*(?:and|&)?\s*Behavior\s*[:-]\s*([\s\S]+?)(?=(?:Foods?|Feeding|Reef|Fun\s+Facts?|Description|\z))/i', '/Habits\s*[:-]\s*([\s\S]+?)(?=(?:Foods?|Feeding|Reef|Fun\s+Facts?|\z))/i' ],
 		];
 
 		foreach ( $products as $product ) {
@@ -128,7 +128,7 @@ class FisHotel_Hotel_Data {
 			}
 
 			if ( ! get_post_meta( $id, '_fh_reef_safe', true ) ) {
-				if ( preg_match( '/Reef[\s\-]?Safe(?:ty)?\s*[:\-–—]\s*([^\n]+)/i', $desc, $m ) ) {
+				if ( preg_match( '/Reef[\s\-]?Safe(?:ty)?\s*[:-]\s*([^\n]+)/i', $desc, $m ) ) {
 					$val = strtolower( trim( $m[1] ) );
 					$reef = 'yes';
 					if ( strpos( $val, 'caution' ) !== false ) $reef = 'caution';

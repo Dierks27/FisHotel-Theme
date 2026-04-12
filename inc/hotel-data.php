@@ -204,7 +204,7 @@ class FisHotel_Hotel_Data {
 					'date' => sanitize_text_field( $t['date'] ?? '' ),
 				];
 			}, $_POST['fishotel_treatments'] );
-			update_post_meta( $product_id, '_fishotel_treatments', array_filter( $treatments, fn( $t ) => ! empty( $t['name'] ) ) );
+			update_post_meta( $product_id, '_fishotel_treatments', array_filter( $treatments, function( $t ) { return ! empty( $t['name'] ); } ) );
 		} else {
 			update_post_meta( $product_id, '_fishotel_treatments', [] );
 		}

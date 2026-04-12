@@ -61,10 +61,10 @@ while ( have_posts() ) :
                 <?php foreach ($tags as $tag) :
                     $slug = $tag->slug;
                     $mod = '';
-                    if (str_contains($slug,'reef-safe'))   $mod = 'fh-tag--reef-safe';
-                    elseif (str_contains($slug,'peaceful')) $mod = 'fh-tag--peaceful';
-                    elseif (str_contains($slug,'carnivore')) $mod = 'fh-tag--carnivore';
-                    elseif (str_contains($slug,'aggressive')) $mod = 'fh-tag--aggressive';
+                    if ( strpos( $slug, 'reef-safe' ) !== false )   $mod = 'fh-tag--reef-safe';
+                    elseif ( strpos( $slug, 'peaceful' ) !== false ) $mod = 'fh-tag--peaceful';
+                    elseif ( strpos( $slug, 'carnivore' ) !== false ) $mod = 'fh-tag--carnivore';
+                    elseif ( strpos( $slug, 'aggressive' ) !== false ) $mod = 'fh-tag--aggressive';
                 ?>
                     <a href="<?php echo esc_url( get_term_link($tag) ); ?>" class="fh-tag <?php echo esc_attr($mod); ?>">
                         <?php echo esc_html($tag->name); ?>

@@ -21,7 +21,7 @@ add_action( 'woocommerce_after_main_content', function() {
 } );
 
 // Product loop columns
-add_filter( 'loop_shop_columns', fn() => 4 );
+add_filter( 'loop_shop_columns', function() { return 4; } );
 
 // Products per page
-add_filter( 'loop_shop_per_page', fn() => 16 );
+add_filter( 'loop_shop_per_page', function() { return 16; } );

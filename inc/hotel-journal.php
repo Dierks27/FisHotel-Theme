@@ -21,7 +21,7 @@ class FisHotel_Journal {
         $entries = get_post_meta( $product_id, self::META_KEY, true );
         if ( ! is_array( $entries ) ) return [];
         // Sort newest first
-        usort( $entries, fn( $a, $b ) => strtotime( $b['date'] ) - strtotime( $a['date'] ) );
+        usort( $entries, function( $a, $b ) { return strtotime( $b['date'] ) - strtotime( $a['date'] ); } );
         return $entries;
     }
 
@@ -37,12 +37,14 @@ class FisHotel_Journal {
 
     public static function save_entries( $product_id ) {
         if ( isset( $_POST['fishotel_journal'] ) && is_array( $_POST['fishotel_journal'] ) ) {
-            $entries = array_map( fn( $e ) => [
-                'date' => sanitize_text_field( $e['date'] ?? '' ),
-                'type' => sanitize_text_field( $e['type'] ?? 'observation' ),
-                'text' => sanitize_textarea_field( $e['text'] ?? '' ),
-            ], $_POST['fishotel_journal'] );
-            update_post_meta( $product_id, self::META_KEY, array_filter( $entries, fn( $e ) => ! empty( $e['text'] ) ) );
+            $entries = array_map( function( $e ) {
+                return array(
+                    'date' => sanitize_text_field( isset( $e['date'] ) ? $e['date'] : '' ),
+                    'type' => sanitize_text_field( isset( $e['type'] ) ? $e['type'] : 'observation' ),
+                    'text' => sanitize_textarea_field( isset( $e['text'] ) ? $e['text'] : '' ),
+                );
+            }, $_POST['fishotel_journal'] );
+            update_post_meta( $product_id, self::META_KEY, array_filter( $entries, function( $e ) { return ! empty( $e['text'] ); } ) );
         }
     }
 

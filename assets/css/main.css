@@ -202,7 +202,7 @@ h1, h2, h3, h4, h5 {
   max-width: var(--fh-max-width);
   margin: 0 auto;
   padding: 0 var(--fh-page-pad);
-  height: 110px;
+  height: 120px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -1088,52 +1088,127 @@ h1, h2, h3, h4, h5 {
 }
 
 /* ─────────────────────────────────────────
-   13. FISH DOSSIER
+   13. TRUST STRIP, QT CERTIFICATE, SPECIES GRID, CARE GUIDE, RELATED
 ───────────────────────────────────────── */
-.fh-dossier {
+
+/* Trust strip — under add to cart */
+.fh-trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--fh-border);
+}
+
+.fh-trust-strip__item {
+  font-size: 11px;
+  color: var(--fh-text-2);
+  white-space: nowrap;
+}
+
+/* QT Certificate panel */
+.fh-qt-cert {
+  background: var(--fh-bg-dk);
+  border: 1px solid var(--fh-border);
+  border-left: 3px solid var(--fh-green);
+  padding: 20px 24px;
+  margin-bottom: 28px;
+}
+
+.fh-qt-cert__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.fh-qt-cert__check {
+  color: var(--fh-green);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.fh-qt-cert__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--fh-text-1);
+}
+
+.fh-qt-cert__protocol {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--fh-text-2);
+  margin-bottom: 8px;
+}
+
+.fh-qt-cert__region {
+  font-size: 12px;
+  color: var(--fh-text-2);
+}
+
+.fh-qt-cert__notes {
+  font-size: 12px;
+  color: var(--fh-text-3);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* About This Species — stat grid */
+.fh-species {
   background: var(--fh-bg-dk);
   border-top: 1px solid var(--fh-border);
   padding: var(--fh-section-pad) var(--fh-page-pad);
 }
 
-.fh-dossier__inner {
+.fh-species__inner {
   max-width: var(--fh-max-width);
   margin: 0 auto;
+}
+
+.fh-species-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 80px;
+  gap: 0;
+  margin-bottom: 40px;
 }
 
-.fh-spec-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.fh-spec-table tr {
+.fh-species-grid__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--fh-border);
 }
 
-.fh-spec-table tr:last-child { border-bottom: none; }
-
-.fh-spec-table td {
-  padding: 10px 0;
-  font-size: 12px;
-  line-height: 1.5;
-  vertical-align: top;
+.fh-species-grid__row:nth-child(odd) {
+  background: rgba(255,255,255,0.02);
 }
 
-.fh-spec-table td:first-child {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--fh-text-3);
-  width: 140px;
-  padding-right: 16px;
-  padding-top: 12px;
+.fh-species-grid__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--fh-text-2);
 }
 
-.fh-spec-table td:last-child { color: var(--fh-text-1); }
+.fh-species-grid__val {
+  font-size: 13px;
+  color: var(--fh-text-1);
+  text-align: right;
+}
+
+.fh-species__prose {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--fh-text-2);
+  max-width: 800px;
+}
+
+.fh-species__prose p { margin-bottom: 16px; }
+.fh-species__prose p:last-child { margin-bottom: 0; }
 
 .fh-spec-badge {
   display: inline-block;
@@ -1147,25 +1222,54 @@ h1, h2, h3, h4, h5 {
 
 .fh-spec-badge--green { color: var(--fh-green); border-color: rgba(90,170,120,.3); }
 .fh-spec-badge--amber { color: var(--fh-amber); border-color: rgba(212,144,58,.3); }
-.fh-spec-badge--red   { color: var(--fh-red);   border-color: rgba(192,90,90,.3); }
 
-/* Fun facts */
-.fh-fun-fact {
-  display: flex;
-  gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--fh-border);
+/* Care Guide — clean labeled blocks */
+.fh-careguide {
+  background: var(--fh-bg);
+  border-top: 1px solid var(--fh-border);
+  padding: var(--fh-section-pad) var(--fh-page-pad);
 }
 
-.fh-fun-fact:last-child { border-bottom: none; }
+.fh-careguide__inner {
+  max-width: var(--fh-max-width);
+  margin: 0 auto;
+}
 
-.fh-fun-fact__num {
-  font-family: var(--fh-serif);
-  font-size: 28px;
+.fh-careguide__blocks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+}
+
+.fh-careguide__block-title {
+  font-size: 11px;
   font-weight: 700;
-  color: var(--fh-gold-rule);
-  line-height: 1;
-  min-width: 32px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fh-gold);
+  margin-bottom: 12px;
+}
+
+.fh-careguide__block-text {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--fh-text-2);
+}
+
+/* Related products — Also in Quarantine */
+.fh-related {
+  background: var(--fh-bg-dk);
+  border-top: 1px solid var(--fh-border);
+  padding: var(--fh-section-pad) var(--fh-page-pad);
+}
+
+.fh-related__inner {
+  max-width: var(--fh-max-width);
+  margin: 0 auto;
+}
+
+.fh-related .fh-product-grid {
+  padding: 0;
 }
 
 /* ─────────────────────────────────────────
@@ -1449,10 +1553,8 @@ h1, h2, h3, h4, h5 {
     gap: 40px;
   }
 
-  .fh-dossier__inner {
-    grid-template-columns: 1fr;
-    gap: 48px;
-  }
+  .fh-species-grid { grid-template-columns: 1fr; }
+  .fh-careguide__blocks { grid-template-columns: 1fr; gap: 32px; }
 
   .fh-journal__grid {
     grid-template-columns: 1fr;

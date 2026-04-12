@@ -12,19 +12,27 @@ while ( have_posts() ) :
     global $product;
     $product_id  = $product->get_ID();
     $hotel       = function_exists('fishotel_get_hotel_data') ? fishotel_get_hotel_data($product_id) : [];
-    $journal     = class_exists('FisHotel_Journal') ? FisHotel_Journal::get_entries($product_id) : [];
     $tags        = get_the_terms($product_id, 'product_tag') ?: [];
     $gallery_ids = $product->get_gallery_image_ids();
     $main_img_id = $product->get_image_id();
-    $stage       = $hotel['qt_stage'] ?? '';
-    $is_avail    = $hotel['is_available'] ?? false;
-    $days        = $hotel['days_in_qt'] ?? '—';
-    $treatments  = $hotel['treatments'] ?? [];
 
-    // Status CSS modifier
-    if ( $stage === 'souvenir-shop' )  { $status_mod = ''; }
-    elseif ( $stage === 'treatment' )  { $status_mod = 'fh-hotel-status--treatment'; }
-    else                               { $status_mod = 'fh-hotel-status--pending'; }
+    // Region from tags
+    $known_regions = ['Indo-Pacific', 'Caribbean', 'Red Sea', 'Eastern Pacific', 'Atlantic'];
+    $region = '';
+    if ($tags) {
+        foreach ($tags as $tag) {
+            foreach ($known_regions as $r) {
+                if (strcasecmp($tag->name, $r) === 0) {
+                    $region = $r;
+                    break 2;
+                }
+            }
+        }
+    }
+    // Fallback: check hotel data region field
+    if (!$region && !empty($hotel['region'])) {
+        $region = $hotel['region'];
+    }
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -44,14 +52,12 @@ while ( have_posts() ) :
             <?php
             $words = explode(' ', get_the_title(), 2);
             echo '<span class="word-1">' . esc_html($words[0]) . '</span>';
-            if (!empty($words[1])) echo '&nbsp;<span class="word-2">' . esc_html($words[1]) . '</span>';
+            if (!empty($words[1])) { echo '&nbsp;<span class="word-2">' . esc_html($words[1]) . '</span>'; }
             ?>
         </h1>
 
         <div class="page-hero__meta">
-            <?php
-            // Latin name from short description
-            $short = $product->get_short_description();
+            <?php $short = $product->get_short_description();
             if ($short) : ?>
                 <span class="page-hero__latin"><?php echo wp_kses_post($short); ?></span>
             <?php endif; ?>
@@ -87,29 +93,11 @@ while ( have_posts() ) :
             <?php else : ?>
                 <?php echo woocommerce_placeholder_img('fishotel-product-hero'); ?>
             <?php endif; ?>
-
-            <?php /* Status badge */ ?>
-            <?php if ($stage) : ?>
-            <div class="fh-gallery__badge-status <?php echo $stage === 'treatment' ? 'fh-gallery__badge-status--treatment' : ''; ?>">
-                <?php if ($is_avail) : ?><div class="fh-status-pulse"></div><?php endif; ?>
-                <?php echo esc_html($hotel['stage_label'] ?? 'Quarantine'); ?>
-            </div>
-            <?php endif; ?>
-
-            <?php /* Days badge */ ?>
-            <?php if ($days !== '—') : ?>
-            <div class="fh-gallery__badge-qt">
-                <span class="fh-gallery__qt-num"><?php echo esc_html($days); ?></span>
-                <span class="fh-gallery__qt-label">Days In<br>Quarantine</span>
-            </div>
-            <?php endif; ?>
         </div>
 
-        <?php /* Thumbs */ ?>
         <?php if (!empty($gallery_ids)) : ?>
         <div class="fh-gallery__thumbs">
-            <?php // First thumb = main image
-            if ($main_img_id) : ?>
+            <?php if ($main_img_id) : ?>
                 <div class="fh-gallery__thumb active" data-full="<?php echo esc_url(wp_get_attachment_url($main_img_id)); ?>">
                     <?php echo wp_get_attachment_image($main_img_id, 'fishotel-product-thumb', false, ['alt' => '']); ?>
                 </div>
@@ -126,49 +114,28 @@ while ( have_posts() ) :
     <?php /* ── PURCHASE PANEL ── */ ?>
     <div class="fh-purchase">
 
+        <?php /* QT Certificate Panel */ ?>
+        <div class="fh-qt-cert">
+            <div class="fh-qt-cert__header">
+                <span class="fh-qt-cert__check">&#10003;</span>
+                <span class="fh-qt-cert__title">Quarantine Complete</span>
+            </div>
+            <div class="fh-qt-cert__protocol">
+                14 days observation<br>+ 14 days treatment
+            </div>
+            <?php if ($region) : ?>
+            <div class="fh-qt-cert__region">
+                Region: <?php echo esc_html($region); ?>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($hotel['notes'])) : ?>
+            <div class="fh-qt-cert__notes"><?php echo esc_html($hotel['notes']); ?></div>
+            <?php endif; ?>
+        </div>
+
         <?php /* Price */ ?>
         <div class="fh-purchase__from"><?php echo $product->is_type('variable') ? esc_html__('Starting from', 'fishotel') : esc_html__('Price', 'fishotel'); ?></div>
         <div class="fh-purchase__price"><?php echo $product->get_price_html(); ?></div>
-        <p class="fh-purchase__price-note"><?php esc_html_e('Includes quarantine, full treatment history & live arrival guarantee.', 'fishotel'); ?></p>
-
-        <?php /* Hotel status panel — only if plugin data exists */ ?>
-        <?php if (!empty($hotel) && !empty($stage)) : ?>
-        <div class="fh-hotel-status <?php echo esc_attr($status_mod); ?>">
-            <div class="fh-hotel-status__header">
-                <div class="fh-hotel-status__title">
-                    <?php if ($is_avail) : ?><div class="fh-status-pulse"></div><?php endif; ?>
-                    <?php echo esc_html($hotel['health_note'] ?: $hotel['stage_label']); ?>
-                </div>
-                <span class="fh-hotel-status__stage"><?php echo esc_html($hotel['stage_label']); ?></span>
-            </div>
-            <div class="fh-hotel-status__stats">
-                <div class="fh-hotel-stat">
-                    <span class="fh-hotel-stat__val"><?php echo esc_html($days); ?></span>
-                    <span class="fh-hotel-stat__key">Days in QT</span>
-                </div>
-                <div class="fh-hotel-stat">
-                    <span class="fh-hotel-stat__val"><?php echo esc_html($hotel['health_grade'] ?: '—'); ?></span>
-                    <span class="fh-hotel-stat__key">Health Grade</span>
-                </div>
-                <div class="fh-hotel-stat">
-                    <span class="fh-hotel-stat__val"><?php echo $hotel['arrival_date'] ? esc_html(date('M j', strtotime($hotel['arrival_date']))) : '—'; ?></span>
-                    <span class="fh-hotel-stat__key">Check-in</span>
-                </div>
-                <div class="fh-hotel-stat">
-                    <span class="fh-hotel-stat__val"><?php echo esc_html($hotel['foods_eating'] ? count(explode(',', $hotel['foods_eating'])) : '—'); ?></span>
-                    <span class="fh-hotel-stat__key">Foods Eating</span>
-                </div>
-            </div>
-            <?php if (!empty($treatments)) : ?>
-            <div class="fh-hotel-status__treatments">
-                <span class="fh-treatment-label">Treatments:</span>
-                <?php foreach ($treatments as $t) : ?>
-                    <span class="fh-treatment-badge"><?php echo esc_html($t['name']); ?></span>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
 
         <?php /* Variation selectors + Add to Cart form */ ?>
         <?php do_action('woocommerce_before_add_to_cart_form'); ?>
@@ -220,7 +187,6 @@ while ( have_posts() ) :
                 <?php endforeach; ?>
             </div>
 
-            <?php /* Selected variation summary — JS updates this */ ?>
             <div class="fh-variation-summary" id="fh-variation-summary" style="display:none">
                 <div>
                     <div class="fh-variation-summary__label">Selected</div>
@@ -239,13 +205,20 @@ while ( have_posts() ) :
             <div class="fh-add-to-cart">
                 <div class="fh-qty">
                     <div class="fh-qty__num" id="fh-qty-display">1</div>
-                    <button type="button" class="fh-qty__up" aria-label="Increase">▲</button>
-                    <button type="button" class="fh-qty__down" aria-label="Decrease">▼</button>
+                    <button type="button" class="fh-qty__up" aria-label="Increase">&#9650;</button>
+                    <button type="button" class="fh-qty__down" aria-label="Decrease">&#9660;</button>
                     <input type="hidden" name="quantity" id="fh-qty-input" value="1" min="1">
                 </div>
                 <button type="submit" name="add-to-cart" value="<?php echo esc_attr($product->get_id()); ?>" class="fh-btn fh-btn--gold fh-btn--full">
-                    <?php echo esc_html($product->is_type('variable') ? __('Add to Cart', 'fishotel') : __('Add to Cart', 'fishotel')); ?>
+                    <?php esc_html_e('Add to Cart', 'fishotel'); ?>
                 </button>
+            </div>
+
+            <?php /* Trust strip */ ?>
+            <div class="fh-trust-strip">
+                <span class="fh-trust-strip__item">&#10003; 28-day QT protocol</span>
+                <span class="fh-trust-strip__item">&#10003; Live arrival guarantee</span>
+                <span class="fh-trust-strip__item">&#10003; Ships Mon&ndash;Tue</span>
             </div>
 
             <?php do_action('woocommerce_after_add_to_cart_button'); ?>
@@ -258,18 +231,6 @@ while ( have_posts() ) :
             <div class="fh-product-meta__row">
                 <span class="fh-product-meta__label">SKU</span>
                 <span><?php echo esc_html($product->get_sku()); ?></span>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($hotel['importer'])) : ?>
-            <div class="fh-product-meta__row">
-                <span class="fh-product-meta__label">Importer</span>
-                <span><?php echo esc_html($hotel['importer']); ?></span>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($hotel['foods_eating'])) : ?>
-            <div class="fh-product-meta__row">
-                <span class="fh-product-meta__label">Eating</span>
-                <span><?php echo esc_html($hotel['foods_eating']); ?></span>
             </div>
             <?php endif; ?>
             <div class="fh-product-meta__row">
@@ -287,207 +248,129 @@ while ( have_posts() ) :
     </div><!-- .fh-purchase -->
 </div><!-- .fh-product-layout -->
 
-<?php /* ── DOSSIER SECTION ── */ ?>
-<div class="fh-dossier">
-    <div class="fh-dossier__inner">
+<?php /* ── ABOUT THIS SPECIES — Stat Grid ── */ ?>
+<?php
+$desc = $product->get_description();
+$spec_fields = [
+    'Scientific Name'       => '',
+    'Common Names'          => '',
+    'Maximum Length'         => '',
+    'Minimum Aquarium Size' => '',
+    'Reef Safety'           => '',
+    'Temperament'           => '',
+];
 
-        <div>
-            <span class="fh-eyebrow">Care Guide</span>
-            <span class="fh-rule"></span>
-            <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:24px;">Fish <em style="font-style:normal; color:var(--fh-gold);">Dossier</em></h2>
-            <table class="fh-spec-table">
-                <?php
-                // Parse the product description for structured data
-                $desc = $product->get_description();
-                // Look for bullet point data
-                $spec_fields = [
-                    'Scientific Name'    => '',
-                    'Common Names'       => '',
-                    'Maximum Length'     => '',
-                    'Minimum Aquarium Size' => '',
-                    'Reef Safety'        => '',
-                    'Temperament'        => '',
-                    'Foods and Feeding'  => '',
-                ];
+foreach ($spec_fields as $label => $val) {
+    preg_match('/' . preg_quote($label, '/') . '[:\s]+([^\n<]+)/i', $desc, $matches);
+    if (!empty($matches[1])) {
+        $spec_fields[$label] = trim(strip_tags($matches[1]));
+    }
+}
 
-                foreach ($spec_fields as $label => $val) {
-                    preg_match('/' . preg_quote($label, '/') . '[:\s]+([^\n<]+)/i', $desc, $matches);
-                    if (!empty($matches[1])) {
-                        $spec_fields[$label] = trim(strip_tags($matches[1]));
-                    }
+$has_specs = array_filter($spec_fields);
+?>
+
+<?php if ($has_specs || $desc) : ?>
+<div class="fh-species">
+    <div class="fh-species__inner">
+        <span class="fh-eyebrow">Description</span>
+        <span class="fh-rule"></span>
+        <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">About This <em style="font-style:normal; color:var(--fh-gold);">Species</em></h2>
+
+        <?php if ($has_specs) : ?>
+        <div class="fh-species-grid">
+            <?php foreach ($spec_fields as $label => $val) :
+                if (empty($val)) continue;
+                $display_val = esc_html($val);
+                if (stripos($label, 'reef') !== false) {
+                    $is_safe = stripos($val, 'safe') !== false;
+                    $display_val = $is_safe
+                        ? '<span class="fh-spec-badge fh-spec-badge--green">&#10003; Yes</span>'
+                        : '<span class="fh-spec-badge fh-spec-badge--amber">With Caution</span>';
                 }
-
-                foreach ($spec_fields as $label => $val) :
-                    if (empty($val)) continue;
-                    $badge = '';
-                    if (stripos($label, 'reef') !== false) {
-                        $is_safe = stripos($val, 'reef-safe') !== false || stripos($val, 'safe') !== false;
-                        $badge = $is_safe
-                            ? '<span class="fh-spec-badge fh-spec-badge--green">✓ Reef Safe</span>'
-                            : '<span class="fh-spec-badge fh-spec-badge--amber">With Caution</span>';
-                        $val = $badge;
-                    }
-                ?>
-                <tr>
-                    <td><?php echo esc_html($label); ?></td>
-                    <td><?php echo $badge ? wp_kses_post($badge) : esc_html($val); ?></td>
-                </tr>
-                <?php endforeach; ?>
-                <?php if (!empty($hotel['importer'])) : ?>
-                <tr>
-                    <td>Importer</td>
-                    <td><?php echo esc_html($hotel['importer']); ?></td>
-                </tr>
-                <?php endif; ?>
-                <?php if (!empty($hotel['arrival_date'])) : ?>
-                <tr>
-                    <td>Check-in Date</td>
-                    <td><?php echo esc_html(date('F j, Y', strtotime($hotel['arrival_date']))); ?></td>
-                </tr>
-                <?php endif; ?>
-            </table>
-        </div>
-
-        <div>
-            <span class="fh-eyebrow">Description</span>
-            <span class="fh-rule"></span>
-            <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:24px;">About This <em style="font-style:normal; color:var(--fh-gold);">Species</em></h2>
-            <div class="desc-prose" style="font-size:13px; line-height:1.8; color:var(--fh-text-2);">
-                <?php echo wp_kses_post($product->get_description()); ?>
+            ?>
+            <div class="fh-species-grid__row">
+                <span class="fh-species-grid__label"><?php echo esc_html($label); ?></span>
+                <span class="fh-species-grid__val"><?php echo wp_kses_post($display_val); ?></span>
             </div>
+            <?php endforeach; ?>
         </div>
+        <?php endif; ?>
 
+        <?php if ($desc) : ?>
+        <div class="fh-species__prose">
+            <?php echo wp_kses_post($desc); ?>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
+<?php endif; ?>
 
-<?php /* ── QUARANTINE JOURNAL ── */ ?>
-<?php if (!empty($journal)) : ?>
-<div class="fh-journal">
-    <div class="fh-journal__inner">
-        <div class="fh-journal__header">
-            <div>
-                <span class="fh-eyebrow">FisHotel Transparency</span>
-                <h2 class="fh-serif-head" style="font-size:30px; margin-top:8px;">
-                    Quarantine <em style="font-style:normal; color:var(--fh-gold);">Journal</em>
-                </h2>
+<?php /* ── CARE GUIDE (Dossier) — Clean labeled blocks ── */ ?>
+<?php
+// Parse feeding and habitat from description
+$feeding = '';
+$habitat = '';
+preg_match('/Foods\s+and\s+Feeding[:\s]*(.*?)(?=(?:Habitat|Habits|Aquarium|$))/is', $desc, $feed_match);
+if (!empty($feed_match[1])) {
+    $feeding = trim(strip_tags($feed_match[1]));
+}
+preg_match('/(?:Habitat|Habits)[:\s]*(.*?)(?=(?:Foods|Fun Facts|$))/is', $desc, $hab_match);
+if (!empty($hab_match[1])) {
+    $habitat = trim(strip_tags($hab_match[1]));
+}
+?>
+
+<?php if ($feeding || $habitat) : ?>
+<div class="fh-careguide">
+    <div class="fh-careguide__inner">
+        <span class="fh-eyebrow">Care Guide</span>
+        <span class="fh-rule"></span>
+        <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">Fish <em style="font-style:normal; color:var(--fh-gold);">Dossier</em></h2>
+
+        <div class="fh-careguide__blocks">
+            <?php if ($feeding) : ?>
+            <div class="fh-careguide__block">
+                <h3 class="fh-careguide__block-title">Foods &amp; Feeding</h3>
+                <p class="fh-careguide__block-text"><?php echo esc_html($feeding); ?></p>
             </div>
-            <span class="fh-journal__meta"><?php echo count($journal); ?> <?php esc_html_e('Days Documented', 'fishotel'); ?></span>
-        </div>
+            <?php endif; ?>
 
-        <div class="fh-journal__grid">
-
-            <?php /* Sidebar */ ?>
-            <div>
-                <?php if (!empty($hotel['importer'])) : ?>
-                <div class="fh-importer-card">
-                    <span class="fh-eyebrow" style="margin-bottom:10px; display:block;">Sourced From</span>
-                    <div style="font-family:var(--fh-serif); font-size:17px; font-weight:700; color:var(--fh-text-1); margin-bottom:3px;"><?php echo esc_html($hotel['importer']); ?></div>
-                </div>
-                <?php endif; ?>
-
-                <?php if (!empty($hotel['arrival_date'])) : ?>
-                <div class="fh-sidebar-stat">
-                    <span class="fh-sidebar-stat__label">Check-in</span>
-                    <span class="fh-sidebar-stat__val"><?php echo esc_html(date('M j, Y', strtotime($hotel['arrival_date']))); ?></span>
-                </div>
-                <?php endif; ?>
-                <?php if (!empty($hotel['health_grade'])) : ?>
-                <div class="fh-sidebar-stat">
-                    <span class="fh-sidebar-stat__label">Health Grade</span>
-                    <span class="fh-sidebar-stat__val fh-sidebar-stat__val--good"><?php echo esc_html($hotel['health_grade']); ?></span>
-                </div>
-                <?php endif; ?>
-                <?php if (!empty($hotel['foods_eating'])) : ?>
-                <div class="fh-sidebar-stat">
-                    <span class="fh-sidebar-stat__label">Eating</span>
-                    <span class="fh-sidebar-stat__val fh-sidebar-stat__val--good"><?php echo esc_html($hotel['foods_eating']); ?></span>
-                </div>
-                <?php endif; ?>
-                <?php foreach ($treatments as $t) : ?>
-                <div class="fh-sidebar-stat">
-                    <span class="fh-sidebar-stat__label"><?php echo esc_html($t['name']); ?></span>
-                    <span class="fh-sidebar-stat__val fh-sidebar-stat__val--good">✓ Done</span>
-                </div>
-                <?php endforeach; ?>
+            <?php if ($habitat) : ?>
+            <div class="fh-careguide__block">
+                <h3 class="fh-careguide__block-title">Habitat &amp; Behavior</h3>
+                <p class="fh-careguide__block-text"><?php echo esc_html($habitat); ?></p>
             </div>
-
-            <?php /* Timeline */ ?>
-            <div class="fh-timeline">
-                <?php $type_config = class_exists('FisHotel_Journal') ? FisHotel_Journal::get_type_config() : [];
-                foreach ($journal as $entry) :
-                    $type = $entry['type'] ?? 'observation';
-                    $mod  = $type_config[$type]['modifier'] ?? '';
-                    $label = $type_config[$type]['label'] ?? ucfirst($type);
-                    $d = !empty($entry['date']) ? strtotime($entry['date']) : time();
-                ?>
-                <div class="fh-entry">
-                    <div class="fh-entry__date">
-                        <span class="fh-entry__day"><?php echo date('j', $d); ?></span>
-                        <span class="fh-entry__mon"><?php echo date('M', $d); ?></span>
-                    </div>
-                    <div class="fh-entry__dot <?php echo $mod ? 'fh-entry__dot--' . esc_attr($mod) : ''; ?>"></div>
-                    <div class="fh-entry__card <?php echo $mod ? 'fh-entry__card--' . esc_attr($mod) : ''; ?>">
-                        <span class="fh-entry__type"><?php echo esc_html($label); ?></span>
-                        <p class="fh-entry__text"><?php echo wp_kses_post($entry['text']); ?></p>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-
+            <?php endif; ?>
         </div>
     </div>
 </div>
 <?php endif; ?>
 
-<?php /* ── RELATED PRODUCTS ── */ ?>
+<?php /* ── RELATED PRODUCTS — Also in Quarantine ── */ ?>
 <?php
 $related_ids = wc_get_related_products($product_id, 4);
 if (!empty($related_ids)) :
     $related_products = array_map('wc_get_product', $related_ids);
     $related_products = array_filter($related_products);
 ?>
-<div class="related-section" style="background:var(--fh-bg-dk); border-top:1px solid var(--fh-border); padding:72px 48px;">
-    <div style="max-width:var(--fh-max-width); margin:0 auto;">
+<div class="fh-related">
+    <div class="fh-related__inner">
         <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:6px;">Also in <em style="font-style:normal; color:var(--fh-gold);">Quarantine</em></h2>
         <p style="font-size:11px; color:var(--fh-text-3); margin-bottom:36px;">Currently checking in at The FisHotel</p>
-        <div class="fh-product-grid" style="padding:0;">
+        <div class="fh-product-grid">
             <?php foreach ($related_products as $rel) :
-                $rel_id     = $rel->get_ID();
-                $rel_hotel  = function_exists('fishotel_get_hotel_data') ? fishotel_get_hotel_data($rel_id) : [];
-                $rel_stage  = $rel_hotel['qt_stage'] ?? '';
-                $rel_days   = $rel_hotel['days_in_qt'] ?? '';
-                if ( $rel_stage === 'souvenir-shop' )                                   { $rel_status_class = 'fh-fish-card__status--available'; }
-                elseif ( in_array( $rel_stage, array('treatment','observation','checkin') ) ) { $rel_status_class = 'fh-fish-card__status--qt'; }
-                else                                                                    { $rel_status_class = 'fh-fish-card__status--qt'; }
-                if ( $rel_stage === 'souvenir-shop' ) { $rel_status_label = 'Available'; }
-                elseif ( $rel_stage === 'treatment' ) { $rel_status_label = 'In Treatment'; }
-                elseif ( $rel_stage === 'observation' ) { $rel_status_label = 'In QT'; }
-                elseif ( $rel_stage === 'checkin' )   { $rel_status_label = 'Checked In'; }
-                else                                  { $rel_status_label = 'In QT'; }
+                $rel_id = $rel->get_ID();
             ?>
                 <a href="<?php echo esc_url($rel->get_permalink()); ?>" class="fh-fish-card">
                     <div class="fh-fish-card__image">
                         <?php echo $rel->get_image('fishotel-product-card'); ?>
-                        <?php if ($rel_stage) : ?>
-                        <span class="fh-fish-card__status <?php echo esc_attr($rel_status_class); ?>">
-                            <?php echo esc_html($rel_status_label); ?>
-                        </span>
-                        <?php endif; ?>
-                        <?php if ($rel_days) : ?>
-                        <div class="fh-fish-card__days">
-                            <span class="fh-fish-card__days-num"><?php echo esc_html($rel_days); ?></span>
-                            <span class="fh-fish-card__days-label">Days QT</span>
-                        </div>
-                        <?php endif; ?>
                     </div>
                     <div class="fh-fish-card__body">
                         <div class="fh-fish-card__name"><?php echo esc_html($rel->get_name()); ?></div>
                         <div class="fh-fish-card__latin"><?php echo wp_kses_post($rel->get_short_description()); ?></div>
                         <div class="fh-fish-card__footer">
                             <span class="fh-fish-card__price"><?php echo $rel->get_price_html(); ?></span>
-                            <?php if ($rel_days) : ?>
-                            <span class="fh-fish-card__qt"><?php echo esc_html($rel_days); ?> Days QT</span>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </a>

@@ -1544,3 +1544,81 @@ h1, h2, h3, h4, h5 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ─────────────────────────────────────────
+   NAV FIXES — prevent wrapping, handle
+   existing WP menus with many items
+───────────────────────────────────────── */
+.site-header__inner {
+  overflow: visible;
+}
+.site-header__nav .site-header__menu {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+.site-header__nav--left .site-header__menu li:nth-child(n+5) { display: none; }
+.site-header__nav--right .site-header__menu li:nth-child(n+5) { display: none; }
+
+/* Logo sizing */
+.site-logo__img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+.site-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* WP custom logo override */
+.site-logo .custom-logo-link img,
+.site-logo .custom-logo {
+  width: 64px !important;
+  height: auto !important;
+  max-height: 64px;
+}
+
+/* Cart count */
+.site-header__cart { display: flex; align-items: center; gap: 7px; color: var(--fh-text-2); }
+.site-header__cart-count {
+  background: var(--fh-bg-lt); color: var(--fh-text-3);
+  font-size: 9px; font-weight: 700; width: 16px; height: 16px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.site-header__cart-count.has-items { background: var(--fh-gold); color: var(--fh-bg-dkr); }
+
+/* Mobile drawer */
+.site-header__drawer {
+  display: none;
+  background: var(--fh-bg-dkr);
+  border-top: 1px solid var(--fh-border);
+  padding: 20px var(--fh-page-pad);
+}
+.site-header__drawer.is-open { display: block; }
+.site-header__drawer-menu { display: flex; flex-direction: column; gap: 0; }
+.site-header__drawer-menu a {
+  font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--fh-text-2); padding: 14px 0;
+  border-bottom: 1px solid var(--fh-border); display: block;
+  transition: color var(--fh-transition);
+}
+.site-header__drawer-menu a:hover { color: var(--fh-gold); }
+
+/* Toggle button */
+.site-header__toggle { display: none; }
+@media (max-width: 768px) {
+  .site-header__toggle {
+    display: flex; flex-direction: column; gap: 5px;
+    background: none; border: none; cursor: pointer; padding: 8px;
+  }
+  .site-header__toggle span {
+    display: block; width: 22px; height: 2px; background: var(--fh-text-2);
+    transition: all var(--fh-transition);
+  }
+  .site-header__nav--left,
+  .site-header__nav--right { display: none; }
+  .site-header__inner { grid-template-columns: 1fr auto !important; }
+}

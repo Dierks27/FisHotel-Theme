@@ -322,17 +322,38 @@ $prose_text = trim(preg_replace('/\n{3,}/', "\n\n", $prose_text));
 <?php /* ── CARE GUIDE (Dossier) — Clean labeled blocks ── */ ?>
 <?php
 // Parse feeding and habitat from plain-text description
+// Try multiple label variants — descriptions vary between products
 $feeding = '';
 $habitat = '';
-preg_match('/Foods\s+and\s+Feeding\s*[:\-–]\s*(.*?)(?=Habitat|Habits|Fun\s+Facts?|\z)/is', $desc_plain, $feed_match);
-if (!empty($feed_match[1])) {
-    $feeding = trim($feed_match[1]);
-    $feeding = preg_replace('/^[:\s]+/', '', $feeding);
+
+$feeding_patterns = [
+    '/Foods?\s+and\s+Feeding(?:\s+Habits?)?\s*[:\-–—]\s*(.*?)(?=Habitat|Habits|Fun\s+Facts?|Aquarium\s|Minimum\s|\z)/is',
+    '/Feeding(?:\s+Habits?)?\s*[:\-–—]\s*(.*?)(?=Habitat|Habits|Fun\s+Facts?|Aquarium\s|\z)/is',
+    '/Diet\s*[:\-–—]\s*(.*?)(?=Habitat|Habits|Fun\s+Facts?|\z)/is',
+];
+
+foreach ($feeding_patterns as $pat) {
+    preg_match($pat, $desc_plain, $feed_match);
+    if (!empty($feed_match[1]) && strlen(trim($feed_match[1])) > 10) {
+        $feeding = trim($feed_match[1]);
+        $feeding = preg_replace('/^[:\s\-–—]+/', '', $feeding);
+        break;
+    }
 }
-preg_match('/(?:Habitat|Habits)\s*(?:&\s*Behavior\s*)?[:\-–]\s*(.*?)(?=Foods\s+and\s+Feeding|Fun\s+Facts?|\z)/is', $desc_plain, $hab_match);
-if (!empty($hab_match[1])) {
-    $habitat = trim($hab_match[1]);
-    $habitat = preg_replace('/^[:\s]+/', '', $habitat);
+
+$habitat_patterns = [
+    '/(?:Habitat|Habits)\s*(?:(?:&|and)\s*Behavior\s*)?[:\-–—]\s*(.*?)(?=Foods?\s|Feeding|Diet|Fun\s+Facts?|\z)/is',
+    '/(?:Habitat|Habits)\s*[:\-–—]\s*(.*?)(?=Foods?\s|Feeding|Diet|Fun\s+Facts?|\z)/is',
+    '/Behavior\s*[:\-–—]\s*(.*?)(?=Foods?\s|Feeding|Diet|Fun\s+Facts?|\z)/is',
+];
+
+foreach ($habitat_patterns as $pat) {
+    preg_match($pat, $desc_plain, $hab_match);
+    if (!empty($hab_match[1]) && strlen(trim($hab_match[1])) > 10) {
+        $habitat = trim($hab_match[1]);
+        $habitat = preg_replace('/^[:\s\-–—]+/', '', $habitat);
+        break;
+    }
 }
 ?>
 

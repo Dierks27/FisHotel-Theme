@@ -571,12 +571,12 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 /* Newsletter page — 3 column layout */
 .fh-newsletter-page__columns {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 48px;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 40px;
     align-items: center;
     max-width: 1100px;
     margin: 0 auto;
-    padding: 60px 24px;
+    padding: 20px 24px 60px;
 }
 .fh-newsletter-page__gazette-col {
     display: flex;
@@ -585,8 +585,8 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 .fh-newsletter-page__gazette-img {
     width: 100%;
-    max-width: 320px;
-    opacity: 0.92;
-    filter: drop-shadow(0 8px 32px rgba(0,0,0,0.6));
+    max-width: 420px;
+    opacity: 0.95;
+    filter: drop-shadow(0 12px 40px rgba(0,0,0,0.7));
     transform: rotate(-2deg);
 }

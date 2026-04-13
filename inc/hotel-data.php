@@ -37,7 +37,7 @@ class FisHotel_Hotel_Data {
 		add_action( 'add_meta_boxes',                   [ __CLASS__, 'add_meta_box' ] );
 		add_action( 'woocommerce_process_product_meta', [ __CLASS__, 'save_meta' ] );
 		add_action( 'admin_menu',                       [ __CLASS__, 'add_tools_page' ] );
-		add_action( 'admin_post_fishotel_run_migration', [ __CLASS__, 'handle_migration' ] );
+		add_action( 'wp_ajax_fishotel_run_migration', [ __CLASS__, 'handle_migration' ] );
 	}
 
 	// ── Tools page ──────────────────────────
@@ -53,37 +53,62 @@ class FisHotel_Hotel_Data {
 	}
 
 	public static function render_tools_page() {
-		$result = get_transient( 'fishotel_migration_result' );
-		if ( $result ) delete_transient( 'fishotel_migration_result' );
 		?>
 		<div class="wrap">
 			<h1>FisHotel Tools</h1>
 
 			<div style="background:#fff; border:1px solid #ccd0d4; border-left:4px solid #c9963a; padding:20px 24px; margin:20px 0; max-width:600px;">
-				<h2 style="margin-top:0; font-size:16px;">Migrate Product Descriptions → Custom Fields</h2>
-				<p style="color:#666;">Reads every product description and auto-fills the Species Info and Care Guide custom fields. Safe to run multiple times — never overwrites fields you've already filled in.</p>
+				<h2 style="margin-top:0; font-size:16px;">Migrate Product Descriptions &rarr; Custom Fields</h2>
+				<p style="color:#666;">Reads every product description and auto-fills the Species Info and Care Guide custom fields. Safe to run multiple times &mdash; never overwrites fields you've already filled in.</p>
 
-				<?php if ( $result ) : ?>
-				<div style="background:#f0f6fc; border:1px solid #72aee6; padding:12px 16px; margin-bottom:16px; border-radius:3px;">
-					<?php echo wp_kses_post( $result ); ?>
-				</div>
-				<?php endif; ?>
-
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<?php wp_nonce_field( 'fishotel_run_migration', 'fishotel_migration_nonce' ); ?>
-					<input type="hidden" name="action" value="fishotel_run_migration">
-					<button type="submit" class="button button-primary" style="background:#c9963a; border-color:#b8862f; font-size:13px; padding:6px 20px;">
-						Run Migration Now
-					</button>
-				</form>
+				<button id="fh-run-migration" class="button button-primary" style="background:#c9963a; border-color:#b8862f; font-size:13px; padding:6px 20px;">
+					Run Migration Now
+				</button>
+				<div id="fh-migration-result" style="margin-top:12px;"></div>
 			</div>
 		</div>
+
+		<script>
+		document.getElementById('fh-run-migration').addEventListener('click', function() {
+			var btn = this;
+			var resultDiv = document.getElementById('fh-migration-result');
+			btn.disabled = true;
+			btn.textContent = 'Running... please wait';
+			resultDiv.innerHTML = '';
+
+			fetch(ajaxurl, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: 'action=fishotel_run_migration&_wpnonce=<?php echo wp_create_nonce( "fishotel_run_migration" ); ?>'
+			})
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				if (data.success) {
+					resultDiv.innerHTML = '<div class="notice notice-success" style="padding:10px 14px;"><p>' + data.data.message + '</p></div>';
+				} else {
+					resultDiv.innerHTML = '<div class="notice notice-error" style="padding:10px 14px;"><p>Error: ' + (data.data || 'Unknown error') + '</p></div>';
+				}
+				btn.disabled = false;
+				btn.textContent = 'Run Migration Now';
+			})
+			.catch(function(err) {
+				resultDiv.innerHTML = '<div class="notice notice-error" style="padding:10px 14px;"><p>Error: ' + err + '</p></div>';
+				btn.disabled = false;
+				btn.textContent = 'Run Migration Now';
+			});
+		});
+		</script>
 		<?php
 	}
 
 	public static function handle_migration() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) wp_die( 'Unauthorized' );
-		check_admin_referer( 'fishotel_run_migration', 'fishotel_migration_nonce' );
+		@ini_set( 'memory_limit', '256M' );
+		@set_time_limit( 120 );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( 'Unauthorized' );
+		}
+		check_ajax_referer( 'fishotel_run_migration' );
 
 		// Migration runs inline below
 		$products = wc_get_products( [ 'limit' => -1, 'status' => 'publish' ] );
@@ -187,9 +212,9 @@ class FisHotel_Hotel_Data {
 			if ( $updated ) $migrated++; else $skipped++;
 		}
 
-		set_transient( 'fishotel_migration_result', "<strong>Migration complete:</strong> {$migrated} products updated, {$skipped} skipped.", 30 );
-		wp_safe_redirect( admin_url( 'edit.php?post_type=product&page=fishotel-tools' ) );
-		exit;
+		wp_send_json_success( [
+			'message' => "Migration complete: {$migrated} products updated, {$skipped} skipped.",
+		] );
 	}
 
 	public static function add_meta_box() {

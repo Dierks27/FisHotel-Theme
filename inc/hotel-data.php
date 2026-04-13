@@ -101,6 +101,7 @@ class FisHotel_Hotel_Data {
 			return '';
 		};
 
+		// Single-line fields — safe regex (no backtracking risk)
 		$fields_map = [
 			'_fh_scientific_name' => [ '/Scientific Name\s*[:-]\s*([^\n]+)/i' ],
 			'_fh_common_names'    => [ '/Common Names?\s*[:-]\s*([^\n]+)/i' ],
@@ -108,9 +109,17 @@ class FisHotel_Hotel_Data {
 			'_fh_min_tank_size'   => [ '/Minimum\s*Aquarium\s*Sizes?\s*[:-]\s*([^\n]+)/i', '/Min\.?\s*Tank\s*Sizes?\s*[:-]\s*([^\n]+)/i' ],
 			'_fh_temperament'     => [ '/Temperament\s*[:-]\s*([^\n]+)/i' ],
 			'_fh_region'          => [ '/Region\s*[:-]\s*([^\n]+)/i' ],
-			'_fh_foods_feeding'   => [ '/Foods?\s+and\s+Feeding\s*(?:Habits?)?\s*[:-]\s*([\s\S]+?)(?=(?:Habitat|Habits|Reef|Temperament|Fun\s+Facts?|Description|\z))/i' ],
-			'_fh_habitat'         => [ '/Habitat\s*(?:and|&)?\s*Behavior\s*[:-]\s*([\s\S]+?)(?=(?:Foods?|Feeding|Reef|Fun\s+Facts?|Description|\z))/i', '/Habits\s*[:-]\s*([\s\S]+?)(?=(?:Foods?|Feeding|Reef|Fun\s+Facts?|\z))/i' ],
 		];
+
+		// Multi-line fields: find label line, collect following lines until next known label
+		// This avoids catastrophic backtracking from [\s\S]+? patterns
+		$multiline_map = [
+			'_fh_foods_feeding' => [ 'Foods and Feeding Habits', 'Foods and Feeding', 'Feeding' ],
+			'_fh_habitat'       => [ 'Habitat and Behavior', 'Habitat & Behavior', 'Habitat', 'Habits' ],
+		];
+		$stop_at = [ 'Scientific Name', 'Common Names', 'Maximum', 'Minimum Aquarium',
+		             'Temperament', 'Reef Safety', 'Reef Safe', 'Description', 'Fun Facts',
+		             'Region', 'Foods and Feeding', 'Habitat', 'Habits', 'Feeding' ];
 
 		foreach ( $products as $product ) {
 			$id   = $product->get_id();
@@ -118,11 +127,48 @@ class FisHotel_Hotel_Data {
 			if ( empty( $desc ) ) { $skipped++; continue; }
 
 			$updated = false;
+
+			// Single-line fields
 			foreach ( $fields_map as $key => $patterns ) {
 				if ( get_post_meta( $id, $key, true ) ) continue;
 				$value = $extract( $patterns, $desc );
 				if ( $value ) {
 					update_post_meta( $id, $key, sanitize_textarea_field( $value ) );
+					$updated = true;
+				}
+			}
+
+			// Multi-line fields: line-by-line parsing (no backtracking risk)
+			$lines = explode( "\n", $desc );
+			foreach ( $multiline_map as $key => $labels ) {
+				if ( get_post_meta( $id, $key, true ) ) continue;
+				$collecting = false;
+				$collected  = [];
+				foreach ( $lines as $line ) {
+					$line = trim( $line );
+					if ( ! $collecting ) {
+						foreach ( $labels as $label ) {
+							if ( stripos( $line, $label . ':' ) === 0 || stripos( $line, $label . ' -' ) === 0 ) {
+								$collecting = true;
+								$after = trim( preg_replace( '/^' . preg_quote( $label, '/' ) . '\s*[:\-]\s*/i', '', $line ) );
+								if ( $after ) $collected[] = $after;
+								break;
+							}
+						}
+					} else {
+						// Stop at next known label
+						$stop = false;
+						foreach ( $stop_at as $s ) {
+							if ( stripos( $line, $s . ':' ) === 0 || stripos( $line, $s . ' -' ) === 0 ) {
+								$stop = true; break;
+							}
+						}
+						if ( $stop ) break;
+						if ( $line ) $collected[] = $line;
+					}
+				}
+				if ( ! empty( $collected ) ) {
+					update_post_meta( $id, $key, sanitize_textarea_field( implode( ' ', $collected ) ) );
 					$updated = true;
 				}
 			}

@@ -464,16 +464,7 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   display: none;
 }
 
-/* Newsletter page */
-.fh-newsletter-page {
-  background: var(--fh-bg);
-  padding: var(--fh-section-pad, 72px) var(--fh-page-pad, 24px);
-}
 
-.fh-newsletter-page__inner {
-  max-width: 900px;
-  margin: 0 auto;
-}
 
 /* WP page content as intro */
 .fh-newsletter-page__wp-intro {
@@ -568,28 +559,7 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   .fh-newsletter-page__columns { grid-template-columns: 1fr; gap: 40px; }
 }
 
-/* Newsletter page — 3 column layout */
-.fh-newsletter-page__columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
-    align-items: center;
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 20px 24px 80px;
-}
-.fh-newsletter-page__gazette-col {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.fh-newsletter-page__gazette-img {
-    width: 100%;
-    max-width: 600px;
-    opacity: 0.95;
-    filter: drop-shadow(0 16px 48px rgba(0,0,0,0.8));
-    transform: rotate(-2deg);
-}
+
 
 /* Right panel — unified dark box, tighter padding */
 .fh-newsletter-page__right-panel {
@@ -610,3 +580,160 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
     text-transform: uppercase;
     margin: 0 0 16px 0;
 }
+
+/* ── NEWSLETTER PAGE ─────────────────────────── */
+.fh-nl-page {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+}
+.fh-nl-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+}
+.fh-nl-gazette {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fh-nl-gazette__img {
+    width: 100%;
+    max-width: 500px;
+    transform: rotate(-3deg);
+    filter: drop-shadow(-12px 12px 40px rgba(0,0,0,0.8));
+}
+
+/* Vintage newspaper ad box */
+.fh-nl-ad {
+    border: 2px solid rgba(201,150,58,0.55);
+    padding: 4px;
+}
+.fh-nl-ad__inner {
+    border: 1px solid rgba(201,150,58,0.2);
+    padding: 28px 32px;
+}
+.fh-nl-ad__masthead {
+    text-align: center;
+    margin-bottom: 18px;
+}
+.fh-nl-ad__rule {
+    height: 1px;
+    background: rgba(201,150,58,0.35);
+    margin: 5px 0;
+}
+.fh-nl-ad__masthead-text {
+    color: #c9963a;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.fh-nl-ad__headline {
+    color: #e8e4dc;
+    font-family: 'Roboto Slab', serif;
+    font-size: 28px;
+    text-align: center;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+}
+.fh-nl-ad__subhead {
+    color: #a09890;
+    font-size: 12px;
+    text-align: center;
+    font-style: italic;
+    font-family: 'Montserrat', sans-serif;
+    margin: 0 0 16px;
+}
+.fh-nl-ad__divider {
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    margin: 16px 0;
+}
+.fh-nl-ad__benefits {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.fh-nl-ad__benefits li {
+    color: #a09890;
+    font-size: 13px;
+    font-family: 'Montserrat', sans-serif;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+.fh-nl-ad__diamond {
+    color: #c9963a;
+    font-size: 10px;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+.fh-nl-ad__thanks {
+    color: rgba(160,152,144,0.45);
+    font-size: 11px;
+    font-style: italic;
+    font-family: 'Montserrat', sans-serif;
+    text-align: center;
+    margin: 12px 0 0;
+}
+
+/* Newsletter plugin form — inside the ad box */
+.fh-nl-ad__form .tnp-subscription {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.fh-nl-ad__form .tnp-field {
+    width: 100%;
+}
+.fh-nl-ad__form label { display: none; }
+.fh-nl-ad__form .tnp-name,
+.fh-nl-ad__form .tnp-surname,
+.fh-nl-ad__form .tnp-email {
+    width: 100%;
+    background: #151515;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #e8e4dc;
+    padding: 10px 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    box-sizing: border-box;
+}
+.fh-nl-ad__form .tnp-name:focus,
+.fh-nl-ad__form .tnp-surname:focus,
+.fh-nl-ad__form .tnp-email:focus {
+    outline: none;
+    border-color: rgba(201,150,58,0.6);
+}
+.fh-nl-ad__form .tnp-name::placeholder,
+.fh-nl-ad__form .tnp-surname::placeholder,
+.fh-nl-ad__form .tnp-email::placeholder {
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+.fh-nl-ad__form .tnp-field-button { width: 100%; }
+.fh-nl-ad__form .tnp-submit {
+    width: 100%;
+    background: #c9963a;
+    color: #1c1c1c;
+    border: none;
+    padding: 12px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.fh-nl-ad__form .tnp-submit:hover { background: #deb96a; }
+

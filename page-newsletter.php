@@ -1,56 +1,70 @@
 <?php
 /**
  * Template Name: Newsletter
- * FisHotel — Newsletter Page
- * @package FisHotel
+ * The FisHotel Newsletter signup page
  */
-get_header(); ?>
+get_header();
+if ( have_posts() ) : the_post(); endif;
+?>
 
-<div class="page-hero">
-    <div class="page-hero__inner">
-        <nav class="page-hero__breadcrumb" aria-label="Breadcrumb">
+<div class="fh-page-hero">
+    <div class="fh-page-hero__inner">
+        <nav class="fh-breadcrumb">
             <a href="<?php echo esc_url( home_url('/') ); ?>">Home</a>
             <span>/</span>
             <span style="color:var(--fh-text-2)">Newsletter</span>
         </nav>
-        <span class="fh-eyebrow" style="margin-bottom:8px; display:block;">Stay Connected</span>
-        <h1 class="page-hero__title">Newsletter</h1>
-        <p style="color:var(--fh-text-3); font-size:14px; margin-top:10px;">Be first to know when new fish clear quarantine.</p>
+        <span class="fh-eyebrow">Stay Connected</span>
+        <h1 class="fh-page-hero__title">Newsletter</h1>
+        <p class="fh-page-hero__sub">Be first to know when new fish clear quarantine.</p>
     </div>
 </div>
 
-<div class="fh-newsletter-page">
-    <div class="fh-newsletter-page__inner">
+<div class="fh-nl-page">
+    <div class="fh-nl-inner">
 
-        <?php /* Page content intentionally not rendered — template handles all copy */ ?>
-        <?php if ( have_posts() ) : the_post(); endif; ?>
+        <!-- LEFT: Gazette image, tilted -->
+        <div class="fh-nl-gazette">
+            <img src="https://woocommerce-1611979-6343482.cloudwaysapps.com/wp-content/uploads/2026/04/Newpaper.png"
+                 alt="The FisHotel Gazette"
+                 class="fh-nl-gazette__img">
+        </div>
 
-        <div class="fh-newsletter-page__columns">
+        <!-- RIGHT: Vintage newspaper ad styled box -->
+        <div class="fh-nl-ad">
+            <div class="fh-nl-ad__inner">
 
-            <!-- LEFT: Big newspaper image -->
-            <div class="fh-newsletter-page__gazette-col">
-                <img src="https://woocommerce-1611979-6343482.cloudwaysapps.com/wp-content/uploads/2026/04/Newpaper.png"
-                     alt="The FisHotel Gazette"
-                     class="fh-newsletter-page__gazette-img">
-            </div>
-
-            <!-- RIGHT: Unified dark panel — benefits + form together -->
-            <div class="fh-newsletter-page__right-panel">
-                <div class="fh-newsletter-page__copy">
-                    <h3 class="fh-newsletter-page__form-title">Sign Up for Our Newsletter</h3>
-                    <ul class="fh-newsletter-page__benefits">
-                        <li>24 hours (or more) heads up when fish go live on the website</li>
-                        <li>Exclusive deals and drawings</li>
-                        <li>Fun fish content</li>
-                    </ul>
-                    <p class="fh-newsletter-page__trust">We will NOT sell any data. We will not bug you with nonsense.</p>
+                <!-- Masthead -->
+                <div class="fh-nl-ad__masthead">
+                    <div class="fh-nl-ad__rule"></div>
+                    <span class="fh-nl-ad__masthead-text">✦ THE FISHOTEL GAZETTE ✦</span>
+                    <div class="fh-nl-ad__rule"></div>
                 </div>
-                <div class="fh-newsletter-page__form">
+
+                <!-- Headline -->
+                <h2 class="fh-nl-ad__headline">Be First to Know</h2>
+                <p class="fh-nl-ad__subhead">When new fish clear quarantine</p>
+
+                <div class="fh-nl-ad__divider"></div>
+
+                <!-- Benefits -->
+                <ul class="fh-nl-ad__benefits">
+                    <li><span class="fh-nl-ad__diamond">◆</span>24-hour advance notice when new fish go live</li>
+                    <li><span class="fh-nl-ad__diamond">◆</span>Exclusive deals, drawings &amp; fish content</li>
+                    <li><span class="fh-nl-ad__diamond">◆</span>No spam. No data selling. Ever.</li>
+                </ul>
+
+                <div class="fh-nl-ad__divider"></div>
+
+                <!-- Form -->
+                <div class="fh-nl-ad__form">
                     <?php echo do_shortcode('[newsletter]'); ?>
-                    <p class="fh-newsletter-page__thanks">Thank you for supporting small business!</p>
                 </div>
-            </div>
 
+                <!-- Footer line -->
+                <p class="fh-nl-ad__thanks">Thank you for supporting small business!</p>
+
+            </div>
         </div>
 
     </div>

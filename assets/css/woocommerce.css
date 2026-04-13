@@ -343,7 +343,7 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   .woocommerce-checkout .col2-set { grid-template-columns: 1fr; gap: 24px; }
 }
 
-.fh-shop-categories { min-height: calc(100vh - 550px); }
+.fh-shop-categories { min-height: calc(100vh - 650px); }
 
 /* ═══════════════════════════════════════
    NEWSLETTER — Footer Block + Page

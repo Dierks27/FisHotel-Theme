@@ -19,10 +19,19 @@ if ( is_shop() && ! is_product_category() && $shop_display !== 'products' ) {
         'order'      => 'ASC',
     ]);
 
-    // Apply hide_empty setting in PHP — setting default is '1' (hide empty)
+    // Apply hide_empty setting in PHP
     $should_hide_empty = ( $hide_empty === '' ) ? true : (bool) $hide_empty;
     if ( $should_hide_empty ) {
         $cats = array_filter( $cats, function( $cat ) { return $cat->count > 0; } );
+    }
+
+    // Filter out hidden categories from settings
+    $hidden_cats = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_shop_hidden_cats') : [];
+    if ( ! is_array( $hidden_cats ) ) $hidden_cats = [];
+    if ( ! empty( $hidden_cats ) ) {
+        $cats = array_filter( $cats, function( $cat ) use ( $hidden_cats ) {
+            return ! in_array( $cat->slug, $hidden_cats, true );
+        });
     }
 
     get_header(); ?>

@@ -20,6 +20,7 @@ class FisHotel_Admin_Settings {
 			// Shop
 			'fh_shop_display'        => 'categories',
 			'fh_shop_hide_empty'     => '1',
+			'fh_shop_hidden_cats'    => [],
 			// QT Certificate
 			'fh_qt_line_1'           => '14 days observation',
 			'fh_qt_line_2'           => '+ 14 days treatment',
@@ -63,8 +64,9 @@ class FisHotel_Admin_Settings {
 			'shop' => [
 				'title'  => 'Shop Page',
 				'fields' => [
-					'fh_shop_display'    => [ 'label' => 'Shop page display',    'type' => 'select', 'options' => [ 'categories' => 'Categories', 'products' => 'Products', 'both' => 'Both' ] ],
-					'fh_shop_hide_empty' => [ 'label' => 'Hide empty categories', 'type' => 'checkbox' ],
+					'fh_shop_display'     => [ 'label' => 'Shop page display',    'type' => 'select', 'options' => [ 'categories' => 'Categories', 'products' => 'Products', 'both' => 'Both' ] ],
+					'fh_shop_hide_empty'  => [ 'label' => 'Hide empty categories', 'type' => 'checkbox' ],
+					'fh_shop_hidden_cats' => [ 'label' => 'Hidden categories',     'type' => 'multicheck', 'description' => 'Checked categories will never appear on the shop page.' ],
 				],
 			],
 			// QT Certificate section
@@ -110,11 +112,22 @@ class FisHotel_Admin_Settings {
 			);
 
 			foreach ( $section['fields'] as $key => $field ) {
-				register_setting( self::OPTION_GROUP, $key, [
-					'type'              => 'string',
-					'sanitize_callback' => $field['type'] === 'textarea' ? 'sanitize_textarea_field' : 'sanitize_text_field',
-					'default'           => self::defaults()[ $key ] ?? '',
-				] );
+				if ( $field['type'] === 'multicheck' ) {
+					register_setting( self::OPTION_GROUP, $key, [
+						'type'              => 'array',
+						'sanitize_callback' => function( $val ) {
+							if ( ! is_array( $val ) ) return [];
+							return array_map( 'sanitize_text_field', $val );
+						},
+						'default'           => [],
+					] );
+				} else {
+					register_setting( self::OPTION_GROUP, $key, [
+						'type'              => 'string',
+						'sanitize_callback' => $field['type'] === 'textarea' ? 'sanitize_textarea_field' : 'sanitize_text_field',
+						'default'           => self::defaults()[ $key ] ?? '',
+					] );
+				}
 
 				add_settings_field(
 					$key,
@@ -164,6 +177,21 @@ class FisHotel_Admin_Settings {
 				esc_attr( $key ),
 				checked( $value, '1', false )
 			);
+		} elseif ( $type === 'multicheck' ) {
+			$saved = get_option( $key, [] );
+			if ( ! is_array( $saved ) ) $saved = [];
+			$all_cats = get_terms( [ 'taxonomy' => 'product_cat', 'hide_empty' => false, 'orderby' => 'name' ] );
+			if ( $all_cats && ! is_wp_error( $all_cats ) ) {
+				foreach ( $all_cats as $cat ) {
+					printf(
+						'<label style="display:block; margin-bottom:4px;"><input type="checkbox" name="%s[]" value="%s" %s> %s</label>',
+						esc_attr( $key ),
+						esc_attr( $cat->slug ),
+						checked( in_array( $cat->slug, $saved, true ), true, false ),
+						esc_html( $cat->name )
+					);
+				}
+			}
 		}
 
 		if ( ! empty( $args['description'] ) ) {

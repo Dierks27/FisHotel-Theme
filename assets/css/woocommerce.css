@@ -107,7 +107,7 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 
 .fh-cat-card__image {
   height: 200px;
-  background-size: contain;
+  background-size: 80%;
   background-position: center;
   background-repeat: no-repeat;
   background-color: var(--fh-bg-dkr);

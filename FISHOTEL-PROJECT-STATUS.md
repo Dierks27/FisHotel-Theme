@@ -11,99 +11,85 @@
 | **Staging URL** | https://woocommerce-1611979-6343482.cloudwaysapps.com |
 | **WP Admin** | jeff@fishotel.com / DwKAx9E34e |
 | **htpasswd** | fstrvwvmjq / ZkVkBVV2Ts |
-| **DB** | name/user: ahtbszgmef, password: BBAunUW3Qw |
-| **phpMyAdmin** | https://woocommerce-1611979-6343482.cloudwaysapps.com:8082/ |
-| **PHP Version** | 8.2.30 |
 | **Deploy** | GitHub push → Cloudways → Deployment via GIT → Pull |
+| **Settings page URL** | /wp-admin/edit.php?post_type=product&page=fishotel-settings |
 
 ---
 
 ## DONE ✅
 
-### Product Page (single-product.php) — COMPLETE
-- QT Certificate panel — green left border, "✓ QUARANTINE COMPLETE / 14 days observation + 14 days treatment"
-- Trust strip — "✓ 28-day QT protocol · ✓ Live arrival guarantee · ✓ Ships Mon–Tue"
-- Variation buttons (SIZE) — styled, gold on hover/selected
-- Species stat grid — two-column table, 6 rows from custom fields
-- Fish Dossier — two clean labeled blocks (FOODS & FEEDING + HABITAT & BEHAVIOR)
-- Also in Quarantine — related fish cards rendering
-- Colored tag chips — Carnivore amber, Peaceful green, Reef Safe teal
+### Product Page — COMPLETE
+- QT Certificate, trust strip, variation buttons, species table, dossier blocks
+- All data from custom fields — zero regex
+- "ABOUT THIS FISH" prose section, Fun Facts stripped
+- Breadcrumb: Home / Category (clickable) / Product
 
-### Custom Fields System — COMPLETE
-All product data in dedicated meta fields. Zero regex parsing.
-
-WP Admin → edit product → FisHotel — Product Data:
-```
-── SPECIES INFO ──────────────────────
-Scientific Name   [_fh_scientific_name]
-Common Names      [_fh_common_names]
-Max Length        [_fh_max_length]
-Min Tank Size     [_fh_min_tank_size]
-Temperament       [_fh_temperament]
-Reef Safe         (•) Yes / No / With Caution  [_fh_reef_safe]
-Region            [_fh_region]
-
-── CARE GUIDE ────────────────────────
-Foods & Feeding   [_fh_foods_feeding]
-Habitat & Behav.  [_fh_habitat]
-
-── INTERNAL NOTES (not shown on site) ─
-Notes             [_fh_notes]
-```
+### Custom Fields — COMPLETE
+WP Admin → Products → edit product → FisHotel — Product Data
+Scientific Name, Common Names, Max Length, Min Tank Size, Temperament, Reef Safe, Region, Foods & Feeding, Habitat & Behavior, Notes
 
 ### FisHotel Tools — COMPLETE
 WP Admin → Products → FisHotel Tools
-- "Run Migration Now" button — AJAX, no page reload
-- Parsed all 226 products from existing descriptions → auto-filled custom fields
-- Safe to re-run — never overwrites fields already filled in
+- "Run Migration Now" AJAX button — ran on 226 products
 
-### CSS Design System — COMPLETE
-All in assets/css/woocommerce.css using design tokens:
-```
---fh-bg: #252525 / --fh-bg-dk: #1c1c1c / --fh-bg-dkr: #151515
---fh-gold: #c9963a / --fh-text-1: #e8e4dc / --fh-text-2: #a09890
---fh-green: #5aaa78 (QT cert) / --fh-amber: #d4903a / --fh-blue: #4a9db8
-Fonts: Montserrat (UI) + Roboto Slab (display)
-```
+### FisHotel Settings — COMPLETE
+WP Admin → Products → FisHotel Settings
+- Shop display (Categories/Products/Both)
+- Hide empty categories toggle
+- Hidden categories — 3-column multicheck (Invoices hidden)
+- QT Certificate lines 1 & 2
+- Trust strip items 1, 2, 3
+- Logo tagline
+- Care guide defaults
+
+### Shop Page — COMPLETE
+- /shop/ → category tiles (Gift Cards, Merchandise, Quarantined Fish)
+- Category images at 80% size, breathing room
+- Admin-controlled: hide empty, hide specific categories
+- Footer sits correctly with min-height
+
+### Newsletter Page — COMPLETE
+- URL: /newsletter/
+- Template: page-newsletter.php (select in Page Attributes)
+- Left: FisHotel Gazette AI image (tilted, drop shadow)
+- Right: Vintage newspaper ad box — double gold border, masthead,
+  "BE FIRST TO KNOW" headline, diamond bullet benefits, dark form
+- Newsletter plugin form: First Name + Last Name + Email + Subscribe
+- Hero matches site standard (page-hero CSS)
+- Nav: NEWSLETTER link in right nav
+
+### Nav — UPDATED
+- Left: HOME · OUR PROCESS · SHOP
+- Right: NEWSLETTER · CONTACTS · FAQ'S · ABOUT US
 
 ---
 
 ## STILL TO DO 🔧
 
 ### High Priority
-1. **Nav menus** — Left side shows Services/Features/Shop/Contacts (wrong)
-   Should be: Home · Our Process · Shop
-   Fix: WP Admin → Appearance → Menus — assign correct menu to Primary Left location
-   OR hardcode in header.php
-
-2. **Homepage below-fold sections** — Stats bar, stages, transparency, quote, CTA
-   all exist in code but need visual review. Screenshot tool can't capture them.
-   Jeff needs to scroll through in his browser and report what needs fixing.
-
-3. **Shop/archive page** — needs visual review
+1. **Homepage below-fold** — Stats bar, process stages, transparency, quote, CTA
+   needs visual review. Screenshot tool can't capture scrolled content.
 
 ### Medium Priority
-4. **Mobile responsive** — full polish pass needed
-5. **Logo** — current white icon, Jeff said no retro logo — confirm current is correct
-6. **Homepage header** — needs more breathing room (was specced at 120px)
+2. **Mobile responsive** — full polish pass needed across all pages
+3. **Category page** (/product-category/quarantined-fish/) — visual review
 
 ### Low Priority
-7. **Live site deployment** — same Git setup for fishotel.com when ready
-8. **Git Updater** — still crashes on activation, skip for now
+4. **Live site deployment** — fishotel.com when staging is ready
 
 ---
 
 ## Design Tokens
 ```
---fh-bg:      #252525   --fh-gold:    #c9963a
---fh-bg-dk:   #1c1c1c   --fh-gold-lt: #deb96a
---fh-bg-dkr:  #151515   --fh-text-1:  #e8e4dc
---fh-green:   #5aaa78   --fh-text-2:  #a09890
-Fonts: Montserrat (UI) + Roboto Slab (display/prices)
+--fh-bg: #252525   --fh-bg-dk: #1c1c1c   --fh-bg-dkr: #151515
+--fh-gold: #c9963a  --fh-text-1: #e8e4dc  --fh-text-2: #a09890
+--fh-green: #5aaa78
+Fonts: Montserrat (UI) + Roboto Slab (display)
 ```
 
-## Workflow
-- Claude.ai (this chat) — browser testing, screenshots, project managing, spec writing
-- Claude Code — all PHP, CSS, JS file edits
-- Push to GitHub main → Pull in Cloudways = deploy
-- Always hard-refresh browser (Ctrl+Shift+R) when checking changes
+## Key Rules
+- Claude.ai — browser testing, specs, project management
+- Claude Code — all PHP/CSS/JS file edits
+- Always ?v=something to bust cache when checking changes
+- Settings page: /wp-admin/edit.php?post_type=product&page=fishotel-settings
+  (NOT admin.php?page=fishotel-settings — that crashes)

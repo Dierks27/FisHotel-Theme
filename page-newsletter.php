@@ -26,26 +26,31 @@ get_header(); ?>
         <?php if ( have_posts() ) : the_post(); endif; ?>
 
         <div class="fh-newsletter-page__columns">
+
+            <!-- LEFT: Big newspaper image -->
             <div class="fh-newsletter-page__gazette-col">
                 <img src="https://woocommerce-1611979-6343482.cloudwaysapps.com/wp-content/uploads/2026/04/Newpaper.png"
                      alt="The FisHotel Gazette"
                      class="fh-newsletter-page__gazette-img">
             </div>
-            <div class="fh-newsletter-page__copy">
-                <ul class="fh-newsletter-page__benefits">
-                    <li>24 hours (or more) heads up when fish go live on the website</li>
-                    <li>Exclusive deals and drawings</li>
-                    <li>Fun fish content</li>
-                </ul>
 
-                <p class="fh-newsletter-page__trust">We will NOT sell any data. We will not bug you with nonsense.</p>
+            <!-- RIGHT: Unified dark panel — benefits + form together -->
+            <div class="fh-newsletter-page__right-panel">
+                <div class="fh-newsletter-page__copy">
+                    <h3 class="fh-newsletter-page__form-title">Sign Up for Our Newsletter</h3>
+                    <ul class="fh-newsletter-page__benefits">
+                        <li>24 hours (or more) heads up when fish go live on the website</li>
+                        <li>Exclusive deals and drawings</li>
+                        <li>Fun fish content</li>
+                    </ul>
+                    <p class="fh-newsletter-page__trust">We will NOT sell any data. We will not bug you with nonsense.</p>
+                </div>
+                <div class="fh-newsletter-page__form">
+                    <?php echo do_shortcode('[newsletter]'); ?>
+                    <p class="fh-newsletter-page__thanks">Thank you for supporting small business!</p>
+                </div>
             </div>
 
-            <div class="fh-newsletter-page__form">
-                <h3 class="fh-newsletter-page__form-title">Sign Up for Our Newsletter</h3>
-                <?php echo do_shortcode('[newsletter]'); ?>
-                <p class="fh-newsletter-page__thanks">Thank you for supporting small business!</p>
-            </div>
         </div>
 
     </div>

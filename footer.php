@@ -18,7 +18,7 @@
                 <p>Be the first to know when new fish clear quarantine.</p>
             </div>
             <div class="fh-footer-newsletter__form">
-                <?php echo do_shortcode('[newsletter_form]'); ?>
+                <?php echo do_shortcode('[newsletter]'); ?>
             </div>
         </div>
     </div>

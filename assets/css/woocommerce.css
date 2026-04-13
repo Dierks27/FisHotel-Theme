@@ -349,12 +349,12 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
    NEWSLETTER — Footer Block + Page
 ═══════════════════════════════════════ */
 
-/* Footer newsletter block */
+/* Footer newsletter block — compact bar */
 .fh-footer-newsletter {
-  background: var(--fh-bg-dk);
+  background: var(--fh-bg-dkr);
   border-top: 1px solid rgba(255,255,255,0.06);
   border-bottom: 1px solid rgba(255,255,255,0.06);
-  padding: 60px var(--fh-page-pad, 24px);
+  padding: 32px var(--fh-page-pad, 24px);
 }
 
 .fh-footer-newsletter__inner {
@@ -362,28 +362,30 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 60px;
+  gap: 32px;
 }
 
 .fh-footer-newsletter__copy { flex: 1; }
 
 .fh-footer-newsletter__title {
-  font-family: 'Roboto Slab', serif;
+  font-family: 'Montserrat', sans-serif;
   color: #e8e4dc;
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 700;
-  margin: 8px 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 4px 0;
 }
 
 .fh-footer-newsletter__copy p {
   color: #a09890;
-  font-size: 14px;
+  font-size: 12px;
   margin: 0;
 }
 
 .fh-footer-newsletter__form { flex: 1; }
 
-/* Newsletter plugin form — shared between footer and page */
+/* Newsletter plugin form — shared styles */
 .fh-footer-newsletter .tnp-subscription,
 .fh-newsletter-page__form .tnp-subscription {
   display: flex;
@@ -395,6 +397,13 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 .fh-newsletter-page__form .tnp-field {
   flex: 1;
   min-width: 140px;
+}
+
+/* Footer form: single row, no wrapping */
+.fh-footer-newsletter .tnp-subscription {
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .fh-footer-newsletter .tnp-name,
@@ -464,17 +473,26 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 .fh-newsletter-page__inner {
   max-width: 900px;
   margin: 0 auto;
+}
+
+/* WP page content as intro */
+.fh-newsletter-page__wp-intro {
+  color: #a09890;
+  font-size: 15px;
+  line-height: 1.8;
+  margin-bottom: 40px;
+  max-width: 700px;
+}
+
+.fh-newsletter-page__wp-intro p { margin-bottom: 12px; }
+.fh-newsletter-page__wp-intro p:last-child { margin-bottom: 0; }
+
+/* Two-column layout below intro */
+.fh-newsletter-page__columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 60px;
   align-items: start;
-}
-
-.fh-newsletter-page__intro {
-  color: #a09890;
-  font-size: 15px;
-  line-height: 1.7;
-  margin-bottom: 24px;
 }
 
 .fh-newsletter-page__benefits {
@@ -503,6 +521,12 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   color: #686058;
   font-size: 12px;
   font-style: italic;
+}
+
+.fh-newsletter-page__form {
+  background: #1c1c1c;
+  border-radius: 4px;
+  padding: 28px;
 }
 
 .fh-newsletter-page__form-title {
@@ -539,6 +563,7 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .fh-footer-newsletter__inner { flex-direction: column; gap: 24px; text-align: center; }
-  .fh-newsletter-page__inner { grid-template-columns: 1fr; gap: 40px; }
+  .fh-footer-newsletter__inner { flex-direction: column; gap: 16px; text-align: center; }
+  .fh-footer-newsletter .tnp-subscription { flex-wrap: wrap; }
+  .fh-newsletter-page__columns { grid-template-columns: 1fr; gap: 40px; }
 }

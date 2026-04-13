@@ -180,3 +180,62 @@ WP Admin → Appearance → Menus → add the Newsletter page
 - `page-newsletter.php` — new dedicated page template
 - `assets/css/woocommerce.css` — Newsletter plugin form styles
 
+
+---
+
+## Newsletter Page Copy (from live site)
+
+The page content should preserve this messaging — it's good copy:
+
+**Headline:** Newsletter
+
+**Body copy:**
+"So we will keep our newsletter around, but we will now turn this mainly 
+into a celebration and a thank you by providing more of just the fun stuff."
+
+**Bullet benefits:**
+- 24 hours (or more) heads up when fish go live on the website
+- Exclusive deals and drawings
+- Fun fish content
+
+**CTA line before form:** "Sign up for our Newsletter Here:"
+
+**Footer line after form:** "Thank You for supporting small business!"
+
+**Trust line:** "We will NOT sell any data. We will not bug you with nonsense."
+
+---
+
+## Newsletter Page Design (new theme)
+
+`page-newsletter.php` layout — top to bottom:
+
+```
+┌─────────────────────────────────────────────┐
+│  [HERO]                                      │
+│  STAY CONNECTED          ← gold eyebrow     │
+│  Newsletter              ← big heading      │
+│  Be first to know when fish clear QT        │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│  [TWO COLUMN — max-width 900px centered]    │
+│                                             │
+│  LEFT: Copy block                           │
+│  • 24hr heads up on new fish                │
+│  • Exclusive deals & drawings               │
+│  • No spam. No data selling. Ever.          │
+│                                             │
+│  RIGHT: The form                            │
+│  [ First Name  ] [ Last Name  ]             │
+│  [ Email Address              ]             │
+│  [ SIGN UP NOW ← gold button  ]             │
+│                                             │
+│  "Thank you for supporting small business!" │
+└─────────────────────────────────────────────┘
+```
+
+Use same CSS classes as the footer newsletter form where possible
+so styles are shared — `.tnp-name`, `.tnp-email`, `.tnp-submit` etc.
+Add a wrapper class `.fh-newsletter-page` to scope any page-specific styles.
+

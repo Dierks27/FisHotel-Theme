@@ -127,6 +127,7 @@ $includes = [
 	'/inc/hotel-journal.php',    // Quarantine journal entries
 	'/inc/variation-display.php', // Visual variation buttons
 	'/inc/widgets.php',
+	'/inc/admin-settings.php',   // FisHotel admin settings page
 ];
 
 foreach ( $includes as $file ) {

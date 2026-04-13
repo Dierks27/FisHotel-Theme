@@ -36,7 +36,7 @@
                 <img src="https://fishotel.com/wp-content/uploads/2020/06/Small-Fish-Hotel-White.png"
                      alt="The FisHotel" class="site-logo__img" width="80" height="80">
             <?php endif; ?>
-            <span class="site-logo__tagline">We quarantine. You reef.</span>
+            <span class="site-logo__tagline"><?php echo esc_html( class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_tagline') : 'We quarantine. You reef.' ); ?></span>
         </a>
 
         <nav class="site-header__nav site-header__nav--right">

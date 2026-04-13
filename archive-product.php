@@ -5,11 +5,14 @@
  */
 defined('ABSPATH') || exit;
 
-// If on the main shop page (not inside a category), show category tiles
-if ( is_shop() && ! is_product_category() ) {
+// If on the main shop page (not inside a category), check display setting
+$shop_display = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_shop_display') : 'categories';
+$hide_empty   = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_shop_hide_empty') : '1';
+
+if ( is_shop() && ! is_product_category() && $shop_display !== 'products' ) {
     $cats = get_terms([
         'taxonomy'   => 'product_cat',
-        'hide_empty' => true,
+        'hide_empty' => (bool) $hide_empty,
         'parent'     => 0,
         'orderby'    => 'name',
         'order'      => 'ASC',

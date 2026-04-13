@@ -125,7 +125,11 @@ while ( have_posts() ) :
                 <span class="fh-qt-cert__title">Quarantine Complete</span>
             </div>
             <div class="fh-qt-cert__protocol">
-                14 days observation<br>+ 14 days treatment
+                <?php
+                $qt1 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_qt_line_1') : '14 days observation';
+                $qt2 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_qt_line_2') : '+ 14 days treatment';
+                echo esc_html( $qt1 ); ?><br><?php echo esc_html( $qt2 );
+                ?>
             </div>
             <?php if ($region) : ?>
             <div class="fh-qt-cert__region">
@@ -218,11 +222,15 @@ while ( have_posts() ) :
                 </button>
             </div>
 
-            <?php /* Trust strip */ ?>
+            <?php /* Trust strip */
+            $t1 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_1') : '28-day QT protocol';
+            $t2 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_2') : 'Live arrival guarantee';
+            $t3 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_3') : 'Ships Mon–Tue';
+            ?>
             <div class="fh-trust-strip">
-                <span class="fh-trust-strip__item">&#10003; 28-day QT protocol</span>
-                <span class="fh-trust-strip__item">&#10003; Live arrival guarantee</span>
-                <span class="fh-trust-strip__item">&#10003; Ships Mon&ndash;Tue</span>
+                <?php if ( $t1 ) : ?><span class="fh-trust-strip__item">&#10003; <?php echo esc_html( $t1 ); ?></span><?php endif; ?>
+                <?php if ( $t2 ) : ?><span class="fh-trust-strip__item">&#10003; <?php echo esc_html( $t2 ); ?></span><?php endif; ?>
+                <?php if ( $t3 ) : ?><span class="fh-trust-strip__item">&#10003; <?php echo esc_html( $t3 ); ?></span><?php endif; ?>
             </div>
 
             <?php do_action('woocommerce_after_add_to_cart_button'); ?>
@@ -330,7 +338,13 @@ if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
 <?php /* ── CARE GUIDE (Dossier) — reads from custom meta fields ── */ ?>
 <?php
 $foods_feeding = get_post_meta( $product_id, '_fh_foods_feeding', true );
-$habitat       = get_post_meta( $product_id, '_fh_habitat', true );
+if ( ! $foods_feeding && class_exists('FisHotel_Admin_Settings') ) {
+    $foods_feeding = FisHotel_Admin_Settings::get('fh_default_foods');
+}
+$habitat = get_post_meta( $product_id, '_fh_habitat', true );
+if ( ! $habitat && class_exists('FisHotel_Admin_Settings') ) {
+    $habitat = FisHotel_Admin_Settings::get('fh_default_habitat');
+}
 ?>
 
 <?php if ( $foods_feeding || $habitat ) : ?>

@@ -585,21 +585,21 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 .fh-newsletter-page__gazette-img {
     width: 100%;
-    max-width: 480px;
+    max-width: 600px;
     opacity: 0.95;
     filter: drop-shadow(0 16px 48px rgba(0,0,0,0.8));
     transform: rotate(-2deg);
 }
 
-/* Right panel — unified dark box */
+/* Right panel — unified dark box, tighter padding */
 .fh-newsletter-page__right-panel {
     background: #1c1c1c;
     border: 1px solid rgba(255,255,255,0.06);
     border-radius: 4px;
-    padding: 40px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 16px;
 }
 .fh-newsletter-page__right-panel .fh-newsletter-page__form-title {
     color: var(--fh-gold);

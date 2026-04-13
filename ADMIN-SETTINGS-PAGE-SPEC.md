@@ -102,3 +102,101 @@ Quick interim fix for `archive-product.php`:
 
 The settings page is the permanent fix.
 
+
+---
+
+## ADDITION: Hidden Categories Setting
+
+Add a new field to the Shop Page section of FisHotel Settings:
+
+```
+── SHOP PAGE ─────────────────────────────────────────
+Shop page display:       [Categories ▼]
+Hide empty categories:   [✓] Yes
+Hidden categories:       [ ] 3D Printed Parts
+                         [ ] Delivery Dates
+                         [ ] Donations
+                         [ ] Fish Food
+                         [✓] Gift Cards
+                         [✓] Invoices
+                         [ ] Inverts
+                         [ ] Medications
+                         [✓] Merchandise
+                         [✓] Quarantined Fish
+                         [ ] Sales
+                         [ ] Tank Equipment
+                         [ ] Wallet
+```
+
+### Implementation
+
+**In `admin-settings.php` — register new field:**
+```php
+// In the 'shop' section fields array:
+'fh_shop_hidden_cats' => [
+    'label'       => 'Hidden categories',
+    'type'        => 'multicheck',
+    'description' => 'These categories will never appear on the shop page.',
+    'options'     => [], // populated dynamically from get_terms()
+],
+```
+
+**render_field() — add multicheck type:**
+```php
+} elseif ( $type === 'multicheck' ) {
+    $saved    = get_option( $key, [] );
+    if ( ! is_array( $saved ) ) $saved = [];
+    $all_cats = get_terms(['taxonomy' => 'product_cat', 'hide_empty' => false]);
+    foreach ( $all_cats as $cat ) {
+        printf(
+            '<label style="display:block; margin-bottom:4px;">
+                <input type="checkbox" name="%s[]" value="%s" %s> %s
+            </label>',
+            esc_attr( $key ),
+            esc_attr( $cat->slug ),
+            checked( in_array( $cat->slug, $saved ), true, false ),
+            esc_html( $cat->name )
+        );
+    }
+}
+```
+
+**register_settings() — save as array:**
+```php
+register_setting( self::OPTION_GROUP, 'fh_shop_hidden_cats', [
+    'type'              => 'array',
+    'sanitize_callback' => function( $val ) {
+        if ( ! is_array( $val ) ) return [];
+        return array_map( 'sanitize_text_field', $val );
+    },
+    'default' => [],
+] );
+```
+
+**In `archive-product.php` — filter hidden cats:**
+```php
+$hidden_cats = FisHotel_Admin_Settings::get('fh_shop_hidden_cats');
+if ( ! is_array( $hidden_cats ) ) $hidden_cats = [];
+
+if ( ! empty( $hidden_cats ) ) {
+    $cats = array_filter( $cats, function( $cat ) use ( $hidden_cats ) {
+        return ! in_array( $cat->slug, $hidden_cats );
+    });
+}
+```
+
+**Also add to `FisHotel_Admin_Settings::get()` — handle array default:**
+```php
+public static function get( $key ) {
+    $defaults = self::defaults();
+    $default  = $defaults[ $key ] ?? '';
+    $value    = get_option( $key, $default );
+    return $value;
+}
+```
+
+### Result
+Jeff goes to FisHotel Settings → Shop Page → Hidden Categories
+Checks "Invoices" → Invoices disappears from the shop page immediately.
+Works regardless of whether the category has products or not.
+Safe to check/uncheck at any time.

@@ -182,15 +182,17 @@ class FisHotel_Admin_Settings {
 			if ( ! is_array( $saved ) ) $saved = [];
 			$all_cats = get_terms( [ 'taxonomy' => 'product_cat', 'hide_empty' => false, 'orderby' => 'name' ] );
 			if ( $all_cats && ! is_wp_error( $all_cats ) ) {
+				echo '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px 20px;max-width:620px;">';
 				foreach ( $all_cats as $cat ) {
 					printf(
-						'<label style="display:block; margin-bottom:4px;"><input type="checkbox" name="%s[]" value="%s" %s> %s</label>',
+						'<label style="display:flex;align-items:center;gap:6px;white-space:nowrap;"><input type="checkbox" name="%s[]" value="%s" %s> %s</label>',
 						esc_attr( $key ),
 						esc_attr( $cat->slug ),
 						checked( in_array( $cat->slug, $saved, true ), true, false ),
 						esc_html( $cat->name )
 					);
 				}
+				echo '</div>';
 			}
 		}
 

@@ -7,16 +7,16 @@ get_header();
 if ( have_posts() ) : the_post(); endif;
 ?>
 
-<div class="fh-page-hero">
-    <div class="fh-page-hero__inner">
-        <nav class="fh-breadcrumb">
+<div class="page-hero">
+    <div class="page-hero__inner">
+        <nav class="breadcrumb">
             <a href="<?php echo esc_url( home_url('/') ); ?>">Home</a>
             <span>/</span>
             <span style="color:var(--fh-text-2)">Newsletter</span>
         </nav>
         <span class="fh-eyebrow">Stay Connected</span>
-        <h1 class="fh-page-hero__title">Newsletter</h1>
-        <p class="fh-page-hero__sub">Be first to know when new fish clear quarantine.</p>
+        <h1 class="page-hero__title">Newsletter</h1>
+        <p class="page-hero__sub">Be first to know when new fish clear quarantine.</p>
     </div>
 </div>
 

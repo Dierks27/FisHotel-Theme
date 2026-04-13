@@ -10,13 +10,20 @@ $shop_display = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Setting
 $hide_empty   = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_shop_hide_empty') : '1';
 
 if ( is_shop() && ! is_product_category() && $shop_display !== 'products' ) {
+    // Always fetch all top-level cats then filter — more reliable than hide_empty arg
     $cats = get_terms([
         'taxonomy'   => 'product_cat',
-        'hide_empty' => (bool) $hide_empty,
+        'hide_empty' => false,
         'parent'     => 0,
         'orderby'    => 'name',
         'order'      => 'ASC',
     ]);
+
+    // Apply hide_empty setting in PHP — setting default is '1' (hide empty)
+    $should_hide_empty = ( $hide_empty === '' ) ? true : (bool) $hide_empty;
+    if ( $should_hide_empty ) {
+        $cats = array_filter( $cats, function( $cat ) { return $cat->count > 0; } );
+    }
 
     get_header(); ?>
     <div class="page-hero">

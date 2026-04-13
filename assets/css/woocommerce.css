@@ -344,3 +344,201 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 
 .fh-shop-categories { min-height: calc(100vh - 550px); }
+
+/* ═══════════════════════════════════════
+   NEWSLETTER — Footer Block + Page
+═══════════════════════════════════════ */
+
+/* Footer newsletter block */
+.fh-footer-newsletter {
+  background: var(--fh-bg-dk);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 60px var(--fh-page-pad, 24px);
+}
+
+.fh-footer-newsletter__inner {
+  max-width: var(--fh-max-width, 1200px);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 60px;
+}
+
+.fh-footer-newsletter__copy { flex: 1; }
+
+.fh-footer-newsletter__title {
+  font-family: 'Roboto Slab', serif;
+  color: #e8e4dc;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 8px 0;
+}
+
+.fh-footer-newsletter__copy p {
+  color: #a09890;
+  font-size: 14px;
+  margin: 0;
+}
+
+.fh-footer-newsletter__form { flex: 1; }
+
+/* Newsletter plugin form — shared between footer and page */
+.fh-footer-newsletter .tnp-subscription,
+.fh-newsletter-page__form .tnp-subscription {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fh-footer-newsletter .tnp-field,
+.fh-newsletter-page__form .tnp-field {
+  flex: 1;
+  min-width: 140px;
+}
+
+.fh-footer-newsletter .tnp-name,
+.fh-footer-newsletter .tnp-surname,
+.fh-footer-newsletter .tnp-email,
+.fh-newsletter-page__form .tnp-name,
+.fh-newsletter-page__form .tnp-surname,
+.fh-newsletter-page__form .tnp-email {
+  width: 100%;
+  background: #151515;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e8e4dc;
+  padding: 10px 14px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  border-radius: 2px;
+}
+
+.fh-footer-newsletter .tnp-name:focus,
+.fh-footer-newsletter .tnp-surname:focus,
+.fh-footer-newsletter .tnp-email:focus,
+.fh-newsletter-page__form .tnp-name:focus,
+.fh-newsletter-page__form .tnp-surname:focus,
+.fh-newsletter-page__form .tnp-email:focus {
+  outline: none;
+  border-color: #c9963a;
+}
+
+.fh-footer-newsletter .tnp-field-button,
+.fh-newsletter-page__form .tnp-field-button {
+  display: flex;
+  align-items: flex-end;
+}
+
+.fh-footer-newsletter .tnp-submit,
+.fh-newsletter-page__form .tnp-submit {
+  background: #c9963a;
+  color: #1c1c1c;
+  border: none;
+  padding: 10px 24px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.fh-footer-newsletter .tnp-submit:hover,
+.fh-newsletter-page__form .tnp-submit:hover {
+  background: #deb96a;
+}
+
+.fh-footer-newsletter label,
+.fh-newsletter-page__form label {
+  display: none;
+}
+
+/* Newsletter page */
+.fh-newsletter-page {
+  background: var(--fh-bg);
+  padding: var(--fh-section-pad, 72px) var(--fh-page-pad, 24px);
+}
+
+.fh-newsletter-page__inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: start;
+}
+
+.fh-newsletter-page__intro {
+  color: #a09890;
+  font-size: 15px;
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.fh-newsletter-page__benefits {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+}
+
+.fh-newsletter-page__benefits li {
+  color: #e8e4dc;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 8px 0 8px 20px;
+  position: relative;
+}
+
+.fh-newsletter-page__benefits li::before {
+  content: '\2713';
+  color: #c9963a;
+  font-weight: 700;
+  position: absolute;
+  left: 0;
+}
+
+.fh-newsletter-page__trust {
+  color: #686058;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.fh-newsletter-page__form-title {
+  color: #c9963a;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin: 0 0 16px;
+}
+
+.fh-newsletter-page__form .tnp-subscription {
+  flex-direction: column;
+}
+
+.fh-newsletter-page__form .tnp-field {
+  min-width: 100%;
+}
+
+.fh-newsletter-page__form .tnp-submit {
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 12px;
+}
+
+.fh-newsletter-page__thanks {
+  color: #686058;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 16px;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .fh-footer-newsletter__inner { flex-direction: column; gap: 24px; text-align: center; }
+  .fh-newsletter-page__inner { grid-template-columns: 1fr; gap: 40px; }
+}

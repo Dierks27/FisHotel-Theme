@@ -9,14 +9,12 @@ if ( have_posts() ) : the_post(); endif;
 
 <div class="page-hero">
     <div class="page-hero__inner">
-        <nav class="breadcrumb">
+        <nav class="page-hero__breadcrumb">
             <a href="<?php echo esc_url( home_url('/') ); ?>">Home</a>
             <span>/</span>
-            <span style="color:var(--fh-text-2)">Newsletter</span>
+            <span>Newsletter</span>
         </nav>
-        <span class="fh-eyebrow">Stay Connected</span>
         <h1 class="page-hero__title">Newsletter</h1>
-        <p class="page-hero__sub">Be first to know when new fish clear quarantine.</p>
     </div>
 </div>
 

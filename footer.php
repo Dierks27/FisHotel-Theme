@@ -9,20 +9,6 @@
 
 <footer class="site-footer" id="colophon">
 
-    <?php /* ── NEWSLETTER BLOCK ── */ ?>
-    <div class="fh-footer-newsletter">
-        <div class="fh-footer-newsletter__inner">
-            <div class="fh-footer-newsletter__copy">
-                <span class="fh-eyebrow">Stay in the loop</span>
-                <h2 class="fh-footer-newsletter__title">Fish Availability Updates</h2>
-                <p>Be the first to know when new fish clear quarantine.</p>
-            </div>
-            <div class="fh-footer-newsletter__form">
-                <?php echo do_shortcode('[newsletter]'); ?>
-            </div>
-        </div>
-    </div>
-
     <?php /* ── FOOTER COLUMNS ── */ ?>
     <div class="site-footer__main">
         <div>

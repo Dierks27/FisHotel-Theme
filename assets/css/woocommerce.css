@@ -567,3 +567,15 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   .fh-footer-newsletter .tnp-subscription { flex-wrap: wrap; }
   .fh-newsletter-page__columns { grid-template-columns: 1fr; gap: 40px; }
 }
+
+/* Newsletter page gazette image */
+.fh-newsletter-page__gazette {
+    text-align: center;
+    margin-bottom: 48px;
+}
+.fh-newsletter-page__gazette-img {
+    width: 340px;
+    max-width: 100%;
+    opacity: 0.92;
+    filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+}

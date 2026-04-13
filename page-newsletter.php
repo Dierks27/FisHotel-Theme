@@ -25,6 +25,12 @@ get_header(); ?>
         <?php /* Page content intentionally not rendered — template handles all copy */ ?>
         <?php if ( have_posts() ) : the_post(); endif; ?>
 
+        <div class="fh-newsletter-page__gazette">
+            <img src="https://woocommerce-1611979-6343482.cloudwaysapps.com/wp-content/uploads/2026/04/Newpaper.png"
+                 alt="The FisHotel Gazette"
+                 class="fh-newsletter-page__gazette-img">
+        </div>
+
         <div class="fh-newsletter-page__columns">
             <div class="fh-newsletter-page__copy">
                 <ul class="fh-newsletter-page__benefits">

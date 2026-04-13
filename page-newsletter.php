@@ -22,14 +22,8 @@ get_header(); ?>
 <div class="fh-newsletter-page">
     <div class="fh-newsletter-page__inner">
 
-        <?php /* Pull WP page content as intro paragraph */ ?>
-        <?php if ( have_posts() ) : the_post();
-            $page_content = get_the_content();
-            if ( $page_content ) : ?>
-            <div class="fh-newsletter-page__wp-intro">
-                <?php echo apply_filters( 'the_content', $page_content ); ?>
-            </div>
-        <?php endif; endif; ?>
+        <?php /* Page content intentionally not rendered — template handles all copy */ ?>
+        <?php if ( have_posts() ) : the_post(); endif; ?>
 
         <div class="fh-newsletter-page__columns">
             <div class="fh-newsletter-page__copy">

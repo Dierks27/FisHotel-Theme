@@ -213,9 +213,22 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 
 /* Species description prose */
 .fh-species__prose {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
   color: #a09890;
   font-size: 14px;
   line-height: 1.8;
+}
+
+.fh-species__prose-label {
+  color: #c9963a;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin: 0 0 10px 0;
 }
 
 /* Spec badges */

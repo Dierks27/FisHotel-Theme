@@ -306,11 +306,16 @@ if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
             foreach ( $strip_labels as $lbl ) {
                 $prose = preg_replace( '/' . preg_quote( $lbl, '/' ) . '\s*[:\-–—]\s*[^\n]*/i', '', $prose );
             }
+            // Strip "Description:" prefix
+            $prose = preg_replace( '/^Description:\s*/i', '', trim( $prose ) );
+            // Strip Fun Facts and everything after
+            $prose = preg_replace( '/Fun Facts?:?[\s\S]*/i', '', $prose );
             $prose = trim( preg_replace( '/\n{3,}/', "\n\n", $prose ) );
         ?>
         <?php if ( $prose ) : ?>
         <div class="fh-species__prose">
-            <?php echo nl2br( esc_html( $prose ) ); ?>
+            <h3 class="fh-species__prose-label">About This Fish</h3>
+            <p><?php echo wp_kses_post( nl2br( esc_html( $prose ) ) ); ?></p>
         </div>
         <?php endif; ?>
         <?php endif; ?>

@@ -24,7 +24,7 @@
                 <ul class="site-header__menu">
                     <li <?php if ( is_front_page() ) echo 'class="current-menu-item"'; ?>><a href="<?php echo esc_url( home_url('/') ); ?>">Home</a></li>
                     <li><a href="<?php echo esc_url( home_url('/our-process/') ); ?>">Our Process</a></li>
-                    <li <?php if ( is_shop() || is_product_category() || is_product() ) echo 'class="current-menu-item"'; ?>><a href="<?php echo esc_url( get_term_link( 'quarantined-fish', 'product_cat' ) ); ?>">Shop</a></li>
+                    <li <?php if ( is_shop() || is_product_category() || is_product() ) echo 'class="current-menu-item"'; ?>><a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a></li>
                 </ul>
             <?php endif; ?>
         </nav>
@@ -67,7 +67,7 @@
         <ul class="site-header__drawer-menu">
             <li><a href="<?php echo esc_url( home_url('/') ); ?>">Home</a></li>
             <li><a href="<?php echo esc_url( home_url('/our-process/') ); ?>">Our Process</a></li>
-            <li><a href="<?php echo esc_url( get_term_link( 'quarantined-fish', 'product_cat' ) ); ?>">Shop</a></li>
+            <li><a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a></li>
             <li><a href="<?php echo esc_url( home_url('/faqs/') ); ?>">FAQ's</a></li>
             <li><a href="<?php echo esc_url( home_url('/about-us/') ); ?>">About Us</a></li>
             <li><a href="<?php echo esc_url( home_url('/newsletter/') ); ?>">Newsletter</a></li>

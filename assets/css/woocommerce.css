@@ -77,6 +77,62 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 
 /* ═══════════════════════════════════════
+   SHOP — Category Tiles
+═══════════════════════════════════════ */
+
+.fh-shop-categories {
+  max-width: var(--fh-max-width, 1200px);
+  margin: 0 auto;
+  padding: 60px var(--fh-page-pad, 24px);
+}
+
+.fh-shop-categories__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.fh-cat-card {
+  display: block;
+  background: var(--fh-bg-dk);
+  border-radius: 4px;
+  overflow: hidden;
+  text-decoration: none;
+  transition: transform 0.2s;
+}
+
+.fh-cat-card:hover {
+  transform: translateY(-3px);
+}
+
+.fh-cat-card__image {
+  height: 220px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--fh-bg-dkr);
+}
+
+.fh-cat-card__body {
+  padding: 20px;
+}
+
+.fh-cat-card__name {
+  color: var(--fh-text-1);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 6px 0;
+}
+
+.fh-cat-card__count {
+  color: var(--fh-text-2);
+  font-size: 12px;
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* ═══════════════════════════════════════
    SINGLE PRODUCT PAGE — Component Styles
 ═══════════════════════════════════════ */
 

@@ -4,6 +4,55 @@
  * @package FisHotel
  */
 defined('ABSPATH') || exit;
+
+// If on the main shop page (not inside a category), show category tiles
+if ( is_shop() && ! is_product_category() ) {
+    $cats = get_terms([
+        'taxonomy'   => 'product_cat',
+        'hide_empty' => true,
+        'parent'     => 0,
+        'orderby'    => 'name',
+        'order'      => 'ASC',
+    ]);
+
+    get_header(); ?>
+    <div class="page-hero">
+        <div class="page-hero__inner">
+            <nav class="page-hero__breadcrumb">
+                <a href="<?php echo esc_url(home_url('/')); ?>">Home</a>
+                <span>/</span>
+                <span style="color:var(--fh-text-2)">Shop</span>
+            </nav>
+            <h1 class="page-hero__title">
+                <span class="word-1">The</span>&nbsp;<span class="word-2">Shop</span>
+            </h1>
+        </div>
+    </div>
+    <?php if ( $cats && ! is_wp_error( $cats ) ) : ?>
+    <div class="fh-shop-categories">
+        <div class="fh-shop-categories__grid">
+            <?php foreach ( $cats as $cat ) :
+                $thumb_id  = get_term_meta( $cat->term_id, 'thumbnail_id', true );
+                $thumb_url = $thumb_id
+                    ? wp_get_attachment_image_url( $thumb_id, 'medium_large' )
+                    : wc_placeholder_img_src();
+                $cat_url   = get_term_link( $cat );
+            ?>
+            <a href="<?php echo esc_url( $cat_url ); ?>" class="fh-cat-card">
+                <div class="fh-cat-card__image" style="background-image:url('<?php echo esc_url($thumb_url); ?>')"></div>
+                <div class="fh-cat-card__body">
+                    <h2 class="fh-cat-card__name"><?php echo esc_html( $cat->name ); ?></h2>
+                    <span class="fh-cat-card__count"><?php echo esc_html( $cat->count ); ?> <?php echo esc_html( _n( 'product', 'products', $cat->count, 'fishotel' ) ); ?></span>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+    <?php get_footer();
+    return;
+}
+
 get_header();
 ?>
 

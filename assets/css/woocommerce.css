@@ -341,3 +341,5 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   .woocommerce-cart table.cart td { padding: 12px 8px; font-size: 12px; }
   .woocommerce-checkout .col2-set { grid-template-columns: 1fr; gap: 24px; }
 }
+
+.fh-shop-categories { min-height: calc(100vh - 400px); }

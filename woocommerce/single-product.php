@@ -41,10 +41,14 @@ while ( have_posts() ) :
         <nav class="page-hero__breadcrumb" aria-label="Breadcrumb">
             <a href="<?php echo esc_url( home_url('/') ); ?>">Home</a>
             <span>/</span>
-            <a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a>
+            <?php $product_cats = get_the_terms( $product_id, 'product_cat' );
+            $product_cat = $product_cats ? $product_cats[0] : null;
+            if ( $product_cat ) : ?>
+                <a href="<?php echo esc_url( get_term_link( $product_cat ) ); ?>"><?php echo esc_html( $product_cat->name ); ?></a>
+            <?php else : ?>
+                <a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a>
+            <?php endif; ?>
             <span>/</span>
-            <?php $cats = wc_get_product_category_list($product_id, ' / ');
-            if ($cats) echo '<span>' . wp_strip_all_tags($cats) . '</span><span>/</span>'; ?>
             <span style="color:var(--fh-text-2)"><?php the_title(); ?></span>
         </nav>
 

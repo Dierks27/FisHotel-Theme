@@ -30,6 +30,36 @@ class FisHotel_Theme_Updater {
 		add_filter( 'pre_set_site_transient_update_themes', [ __CLASS__, 'check_for_update' ] );
 		add_filter( 'themes_api',                           [ __CLASS__, 'theme_info' ], 20, 3 );
 		add_filter( 'upgrader_source_selection',            [ __CLASS__, 'fix_directory_name' ], 10, 4 );
+		add_action( 'wp_ajax_fishotel_check_update',        [ __CLASS__, 'ajax_check_update' ] );
+	}
+
+	/** AJAX: flush cache and check now */
+	public static function ajax_check_update() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( 'Unauthorized' );
+		}
+		check_ajax_referer( 'fishotel_check_update' );
+
+		// Clear cached version so it fetches fresh
+		delete_transient( self::TRANSIENT );
+
+		$theme       = wp_get_theme( self::SLUG );
+		$current_ver = $theme->get( 'Version' );
+		$remote_ver  = self::get_remote_version();
+
+		if ( version_compare( $remote_ver, $current_ver, '>' ) ) {
+			// Force WP to re-check theme updates
+			delete_site_transient( 'update_themes' );
+			wp_send_json_success( [
+				'message' => "Update available! Current: {$current_ver} → Remote: {$remote_ver}. Go to Appearance → Themes to update.",
+				'update'  => true,
+			] );
+		} else {
+			wp_send_json_success( [
+				'message' => "You're up to date. Installed: {$current_ver}, Remote: {$remote_ver}.",
+				'update'  => false,
+			] );
+		}
 	}
 
 	/** GitHub API/raw request with optional auth token */

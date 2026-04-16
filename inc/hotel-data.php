@@ -58,6 +58,16 @@ class FisHotel_Hotel_Data {
 			<h1>FisHotel Tools</h1>
 
 			<div style="background:#fff; border:1px solid #ccd0d4; border-left:4px solid #c9963a; padding:20px 24px; margin:20px 0; max-width:600px;">
+				<h2 style="margin-top:0; font-size:16px;">Check for Theme Updates</h2>
+				<p style="color:#666;">Clears the update cache and checks GitHub for a new version right now.</p>
+
+				<button id="fh-check-update" class="button button-primary" style="background:#c9963a; border-color:#b8862f; font-size:13px; padding:6px 20px;">
+					Check for Updates
+				</button>
+				<div id="fh-update-result" style="margin-top:12px;"></div>
+			</div>
+
+			<div style="background:#fff; border:1px solid #ccd0d4; border-left:4px solid #c9963a; padding:20px 24px; margin:20px 0; max-width:600px;">
 				<h2 style="margin-top:0; font-size:16px;">Migrate Product Descriptions &rarr; Custom Fields</h2>
 				<p style="color:#666;">Reads every product description and auto-fills the Species Info and Care Guide custom fields. Safe to run multiple times &mdash; never overwrites fields you've already filled in.</p>
 
@@ -69,6 +79,36 @@ class FisHotel_Hotel_Data {
 		</div>
 
 		<script>
+		document.getElementById('fh-check-update').addEventListener('click', function() {
+			var btn = this;
+			var resultDiv = document.getElementById('fh-update-result');
+			btn.disabled = true;
+			btn.textContent = 'Checking...';
+			resultDiv.innerHTML = '';
+
+			fetch(ajaxurl, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: 'action=fishotel_check_update&_wpnonce=<?php echo wp_create_nonce( "fishotel_check_update" ); ?>'
+			})
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				if (data.success) {
+					var cls = data.data.update ? 'notice-warning' : 'notice-success';
+					resultDiv.innerHTML = '<div class="notice ' + cls + '" style="padding:10px 14px;"><p>' + data.data.message + '</p></div>';
+				} else {
+					resultDiv.innerHTML = '<div class="notice notice-error" style="padding:10px 14px;"><p>Error: ' + (data.data || 'Unknown error') + '</p></div>';
+				}
+				btn.disabled = false;
+				btn.textContent = 'Check for Updates';
+			})
+			.catch(function(err) {
+				resultDiv.innerHTML = '<div class="notice notice-error" style="padding:10px 14px;"><p>Error: ' + err + '</p></div>';
+				btn.disabled = false;
+				btn.textContent = 'Check for Updates';
+			});
+		});
+
 		document.getElementById('fh-run-migration').addEventListener('click', function() {
 			var btn = this;
 			var resultDiv = document.getElementById('fh-migration-result');

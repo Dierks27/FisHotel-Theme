@@ -128,6 +128,7 @@ $includes = [
 	'/inc/variation-display.php', // Visual variation buttons
 	'/inc/widgets.php',
 	'/inc/admin-settings.php',   // FisHotel admin settings page
+	'/inc/theme-updater.php',    // Self-updater via raw GitHub branch
 ];
 
 foreach ( $includes as $file ) {

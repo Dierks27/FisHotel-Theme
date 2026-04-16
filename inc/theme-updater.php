@@ -5,11 +5,6 @@
  * Checks the raw main branch on GitHub for version changes.
  * No plugin required. Works with private repos via access token.
  *
- * How it works:
- * 1. Every 12 hours, fetches style.css from the raw main branch
- * 2. Parses the Version: header and compares to installed version
- * 3. If newer, tells WordPress to download the zip from GitHub
- *
  * For private repos: set FISHOTEL_GITHUB_TOKEN in wp-config.php
  *   define( 'FISHOTEL_GITHUB_TOKEN', 'ghp_xxxxxxxxxxxx' );
  *
@@ -20,11 +15,15 @@ defined( 'ABSPATH' ) || exit;
 
 class FisHotel_Theme_Updater {
 
-	const REPO       = 'Dierks27/FisHotel-Theme';
-	const BRANCH     = 'main';
-	const SLUG       = 'FisHotel-Theme';
-	const TRANSIENT  = 'fishotel_update_check';
+	const REPO           = 'Dierks27/FisHotel-Theme';
+	const BRANCH         = 'main';
+	const TRANSIENT      = 'fishotel_update_check';
 	const CHECK_INTERVAL = 43200; // 12 hours
+
+	/** Get the active theme's directory name (works regardless of folder naming) */
+	private static function get_slug() {
+		return get_option( 'stylesheet' );
+	}
 
 	public static function init() {
 		add_filter( 'pre_set_site_transient_update_themes', [ __CLASS__, 'check_for_update' ] );
@@ -40,18 +39,15 @@ class FisHotel_Theme_Updater {
 		}
 		check_ajax_referer( 'fishotel_check_update' );
 
-		// Clear cached version so it fetches fresh
 		delete_transient( self::TRANSIENT );
 
-		$theme       = wp_get_theme( self::SLUG );
-		$current_ver = $theme->get( 'Version' );
+		$current_ver = self::get_current_version();
 		$remote_ver  = self::get_remote_version();
 
 		if ( version_compare( $remote_ver, $current_ver, '>' ) ) {
-			// Force WP to re-check theme updates
 			delete_site_transient( 'update_themes' );
 			wp_send_json_success( [
-				'message' => "Update available! Current: {$current_ver} → Remote: {$remote_ver}. Go to Appearance → Themes to update.",
+				'message' => "Update available! Current: {$current_ver} — Remote: {$remote_ver}. Go to Appearance → Themes to update.",
 				'update'  => true,
 			] );
 		} else {
@@ -62,16 +58,25 @@ class FisHotel_Theme_Updater {
 		}
 	}
 
-	/** GitHub API/raw request with optional auth token */
+	/** Get installed theme version safely */
+	private static function get_current_version() {
+		$theme = wp_get_theme( self::get_slug() );
+		if ( ! $theme->exists() ) {
+			return '0.0.0';
+		}
+		return $theme->get( 'Version' ) ?: '0.0.0';
+	}
+
+	/** GitHub request with optional auth token */
 	private static function remote_get( $url ) {
 		$args = [
 			'timeout' => 15,
-			'headers' => [ 'Accept' => 'application/vnd.github.v3.raw' ],
+			'headers' => [],
 		];
 
 		$token = defined( 'FISHOTEL_GITHUB_TOKEN' ) ? FISHOTEL_GITHUB_TOKEN : '';
 		if ( $token ) {
-			$args['headers']['Authorization'] = 'token ' . $token;
+			$args['headers']['Authorization'] = 'Bearer ' . $token;
 		}
 
 		return wp_remote_get( $url, $args );
@@ -92,8 +97,7 @@ class FisHotel_Theme_Updater {
 
 		$response = self::remote_get( $url );
 
-		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
-			// Cache failure for 1 hour to avoid hammering
+		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
 			set_transient( self::TRANSIENT, '0.0.0', 3600 );
 			return '0.0.0';
 		}
@@ -112,17 +116,21 @@ class FisHotel_Theme_Updater {
 
 	/** Hook: check if remote version is newer */
 	public static function check_for_update( $transient ) {
+		// Guard: $transient can be false or non-object on first run
+		if ( ! is_object( $transient ) ) {
+			return $transient;
+		}
 		if ( empty( $transient->checked ) ) {
 			return $transient;
 		}
 
-		$theme          = wp_get_theme( self::SLUG );
-		$current_ver    = $theme->get( 'Version' );
-		$remote_ver     = self::get_remote_version();
+		$slug        = self::get_slug();
+		$current_ver = self::get_current_version();
+		$remote_ver  = self::get_remote_version();
 
-		if ( version_compare( $remote_ver, $current_ver, '>' ) ) {
-			$transient->response[ self::SLUG ] = [
-				'theme'       => self::SLUG,
+		if ( $current_ver !== '0.0.0' && version_compare( $remote_ver, $current_ver, '>' ) ) {
+			$transient->response[ $slug ] = [
+				'theme'       => $slug,
 				'new_version' => $remote_ver,
 				'url'         => 'https://github.com/' . self::REPO,
 				'package'     => self::get_download_url(),
@@ -140,11 +148,6 @@ class FisHotel_Theme_Updater {
 			self::BRANCH
 		);
 
-		$token = defined( 'FISHOTEL_GITHUB_TOKEN' ) ? FISHOTEL_GITHUB_TOKEN : '';
-		if ( $token ) {
-			$url = add_query_arg( 'access_token', $token, $url );
-		}
-
 		return $url;
 	}
 
@@ -154,16 +157,17 @@ class FisHotel_Theme_Updater {
 			return $result;
 		}
 
-		if ( ! isset( $args->slug ) || $args->slug !== self::SLUG ) {
+		$slug = self::get_slug();
+		if ( ! isset( $args->slug ) || $args->slug !== $slug ) {
 			return $result;
 		}
 
-		$theme      = wp_get_theme( self::SLUG );
+		$theme      = wp_get_theme( $slug );
 		$remote_ver = self::get_remote_version();
 
 		return (object) [
 			'name'          => $theme->get( 'Name' ),
-			'slug'          => self::SLUG,
+			'slug'          => $slug,
 			'version'       => $remote_ver,
 			'author'        => $theme->get( 'Author' ),
 			'homepage'      => 'https://github.com/' . self::REPO,
@@ -179,24 +183,42 @@ class FisHotel_Theme_Updater {
 
 	/**
 	 * Hook: fix directory name after extraction.
-	 * GitHub zips extract to "Dierks27-FisHotel-Theme-abc123/" — rename to "FisHotel-Theme/"
+	 * GitHub zips extract to "Dierks27-FisHotel-Theme-abc123/" — rename to match current slug.
 	 */
 	public static function fix_directory_name( $source, $remote_source, $upgrader, $hook_extra ) {
-		if ( ! isset( $hook_extra['theme'] ) || $hook_extra['theme'] !== self::SLUG ) {
+		$slug = self::get_slug();
+		if ( ! isset( $hook_extra['theme'] ) || $hook_extra['theme'] !== $slug ) {
 			return $source;
 		}
 
-		$correct_dest = trailingslashit( $remote_source ) . self::SLUG . '/';
+		$correct_dest = trailingslashit( $remote_source ) . $slug . '/';
 
 		if ( $source !== $correct_dest ) {
 			global $wp_filesystem;
-			if ( $wp_filesystem->move( $source, $correct_dest ) ) {
+			if ( $wp_filesystem && $wp_filesystem->move( $source, $correct_dest ) ) {
 				return $correct_dest;
 			}
 		}
 
 		return $source;
 	}
+
+	/** Add auth header for GitHub API download requests */
+	public static function inject_auth_header( $parsed_args, $url ) {
+		if ( strpos( $url, 'api.github.com/repos/' . self::REPO ) === false ) {
+			return $parsed_args;
+		}
+
+		$token = defined( 'FISHOTEL_GITHUB_TOKEN' ) ? FISHOTEL_GITHUB_TOKEN : '';
+		if ( $token ) {
+			$parsed_args['headers']['Authorization'] = 'Bearer ' . $token;
+		}
+
+		return $parsed_args;
+	}
 }
+
+// Hook the auth header injection for download requests
+add_filter( 'http_request_args', [ 'FisHotel_Theme_Updater', 'inject_auth_header' ], 10, 2 );
 
 FisHotel_Theme_Updater::init();

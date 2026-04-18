@@ -1,11 +1,43 @@
 {
-  "$schema_version": "1.2",
-  "generated_at": "2026-04-18T07:26:45.324098Z",
+  "$schema_version": "1.3",
+  "generated_at": "2026-04-18T19:25:54Z",
   "primary_generic_source": "Humblefish Medication Dosing Guide (canonical text supplied by user, matching https://humble.fish/community/threads/medication-dosing-guide.1124/)",
-  "notes": "All calculated_brand_mg_per_gal_to_deliver_pure_dose values are based on active_ingredient_pct and the generic LOW dose. Measure weights are left null when not published on the label; this is tracked in the verification log. | v1.1 (2026-04-18): Added MetroPlex in-house scoop weight (150 mg). Added fishotel_default overrides for Copper Power (1.73 ml/gal empirical) and Cupramine (HF ramp). Triple Sulfa substitution surfaced via ui_user_surface_note. Hyposalinity duration 5\u219230 days. Added sulfa_tmp, minocycline, fenbendazole_internal as meds 23-25. | v1.2 (2026-04-18): Jeff-supplied updates from Fritz/API/Seachem/Copper Power/PolyGuard data dump. Filled measure_weight_mg for NeoPlex (125), KanaPlex (125), SulfaPlex (145), Fritz Maracyn (600), Maracyn Two (600). Confirmed API packets all 2000 mg total weight. Added Copper Power 0.5% Cu(II) and SG 1.12. Added Seachem PolyGuard (med 26) with full 5-active composition disclosure.",
+  "notes": "All calculated_brand_mg_per_gal_to_deliver_pure_dose values are based on active_ingredient_pct and the generic LOW dose. Measure weights are left null when not published on the label; this is tracked in the verification log. | v1.1 (2026-04-18): Added MetroPlex in-house scoop weight (150 mg). Added fishotel_default overrides for Copper Power (1.73 ml/gal empirical) and Cupramine (HF ramp). Triple Sulfa substitution surfaced via ui_user_surface_note. Hyposalinity duration 5→30 days. Added sulfa_tmp, minocycline, fenbendazole_internal as meds 23-25. | v1.2 (2026-04-18): Jeff-supplied updates from Fritz/API/Seachem/Copper Power/PolyGuard data dump. Filled measure_weight_mg for NeoPlex (125), KanaPlex (125), SulfaPlex (145), Fritz Maracyn (600), Maracyn Two (600). Confirmed API packets all 2000 mg total weight. Added Copper Power 0.5% Cu(II) and SG 1.12. Added Seachem PolyGuard (med 26) with full 5-active composition disclosure. | v1.3 (2026-04-18): Added bath_protocol framework. Schema additions: treatment_type on every med ('prolonged' | 'bath' | 'both'); bath_protocol nested object on the 8 bath-capable meds (ciprofloxacin, enrofloxacin, fenbendazole (external), formalin_37, hydrogen_peroxide_3, methylene_blue, acriflavine, nitrofuracin_green); temperature_contraindication_celsius=27 on formalin_37 with amber-warning text; root-level default_bath_safety object carrying Noga's universal abort criteria, aeration requirement, default scaleless-fish sensitivity, and bioassay recommendation. Enrofloxacin and Nitrofuracin Green implement Standard/Aggressive tiers per Jeff's discrepancy adjudications. All new data points cite Noga (2nd ed., 2010) by chapter, entry, book page, and PDF page; all Noga material is paraphrased, never quoted. See discrepancy-report.md for the four adjudicated Humblefish-vs-Noga conflicts and the ciprofloxacin/acriflavine Noga gaps.",
+  "default_bath_safety": {
+    "abort_criteria": {
+      "description": "Observable signs that require immediate termination of a bath and transfer of the fish to clean, untreated, aerated water — even if the scheduled bath time is incomplete. Applies to every bath_protocol in this schema unless that protocol explicitly overrides a specific field.",
+      "signs": [
+        "Excitability (frantic or unusual activity)",
+        "Attempts to jump out of the bath container",
+        "Depression (unusual listlessness, sinking to the bottom)",
+        "Loss of equilibrium (inability to stay upright)",
+        "Listing to one side (tilting rather than swimming level)"
+      ],
+      "immediate_action": "Net the fish out of the bath immediately and return to clean, untreated, well-aerated water. Do not wait to see whether the fish recovers in the treatment container.",
+      "followup": "After aborting or completing any bath, observe the fish closely over the next several days before deciding whether a second session is indicated.",
+      "source_note": "Noga also notes that bath toxicity is most common when antiseptic-class drugs are used (formalin, hydrogen peroxide, methylene blue, acriflavine, nitrofurans).",
+      "verification_source_citation": "Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010. Chapter 16 'General Concepts in Therapy', 'Bath Method in a Small Volume of Water' framework, Sample Calculation step 3. Book p.362 (PDF p.381)."
+    },
+    "aeration_requirement": {
+      "description": "Vigorous aeration of the treatment water is mandatory for any bath lasting longer than one minute.",
+      "threshold_minutes": 1,
+      "rationale": "Concentrated treatment water in a small bath container rapidly depletes dissolved oxygen, and several common bath drugs (formalin, methylene blue) either consume oxygen directly or impair gill function. Without active aeration, hypoxic stress compounds drug toxicity.",
+      "verification_source_citation": "Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010. Chapter 16 'General Concepts in Therapy', 'Bath Method in a Small Volume of Water', step 3. Book p.362 (PDF p.381)."
+    },
+    "default_species_sensitivity": {
+      "description": "Species-sensitivity baseline inherited by every bath_protocol unless the specific medication's bath_protocol sets `suppress_default_scaleless_sensitivity: true` with a justifying source note.",
+      "scaleless_species_warning": "Scaleless and partially-scaled species (catfish, loaches, eels, many moray varieties, and some wrasses) are consistently more sensitive to water-borne treatments than fully-scaled species. For any untested species, bioassay a single individual before treating a group.",
+      "verification_source_citation": "Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010. Chapter 16 'General Concepts in Therapy', introductory material on water-borne treatments. Book p.358 (PDF p.377). Reinforced in the Nitrofurazone entry at book p.381 (PDF p.400) and in several other drug-specific entries."
+    },
+    "bioassay_recommendation": {
+      "description": "Before treating any group of fish with a medication whose species-specific response is unknown, test the protocol on a small number of individuals first. Even well-established doses can behave unexpectedly in a new system because temperature, hardness, and pH strongly modulate drug toxicity.",
+      "verification_source_citation": "Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010. Chapter 16 'General Concepts in Therapy'. Book p.361–362 (PDF p.380–381)."
+    }
+  },
   "medications": [
     {
       "med_id": "ciprofloxacin",
+      "treatment_type": "bath",
       "name_generic": "Ciprofloxacin",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": 250,
@@ -20,10 +52,38 @@
         "https://humble.fish/community/threads/medication-dosing-guide.1124/",
         "https://humble.fish/community/threads/ciprofloxacin.11405/"
       ],
-      "brand_equivalents": []
+      "brand_equivalents": [],
+      "bath_protocol": {
+        "tiers": [
+          {
+            "tier_id": "standard",
+            "tier_label": "Standard",
+            "concentration_value": 250,
+            "concentration_unit": "mg/gal",
+            "duration_minutes": 90,
+            "duration_range_minutes": {
+              "min": 60,
+              "max": 120
+            },
+            "repeat_schedule": "daily for 7 consecutive days",
+            "sessions_total": 7,
+            "recovery_instructions": "After each bath, return the fish to clean untreated seawater. Observe for several days after the final session before deciding on any further course.",
+            "aeration_required": true,
+            "abort_criteria_ref": "inherits_default_bath_safety",
+            "indication": "Bacterial infections of marine fish, particularly resistant gram-negative cultures. Methylene blue may be added to the bath water to boost efficacy.",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "source": "humblefish_only",
+            "verification_source_citation": "Dose and schedule: Humblefish Medication Dosing Guide and the Humblefish Ciprofloxacin thread. Noga (2nd ed.) does not cover ciprofloxacin in its fluoroquinolone section — enrofloxacin metabolizes to ciprofloxacin in some species but cipro is not independently profiled. No corroborating Noga data is available for this medication; Humblefish stands alone."
+          }
+        ],
+        "calendar_export_enabled": true,
+        "calendar_event_label": "Ciprofloxacin bath",
+        "calendar_event_note": "7 consecutive daily bath sessions, ~60–120 min each"
+      }
     },
     {
       "med_id": "enrofloxacin",
+      "treatment_type": "both",
       "name_generic": "Enrofloxacin",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": 9.5,
@@ -44,10 +104,63 @@
         "https://pubmed.ncbi.nlm.nih.gov/2080513/",
         "https://pmc.ncbi.nlm.nih.gov/articles/PMC3717066/"
       ],
-      "brand_equivalents": []
+      "brand_equivalents": [],
+      "bath_protocol": {
+        "tiers": [
+          {
+            "tier_id": "standard",
+            "tier_label": "Standard",
+            "concentration_value_low": 9.5,
+            "concentration_value_high": 19,
+            "concentration_unit": "mg/gal",
+            "duration_minutes": 300,
+            "repeat_schedule": "single session",
+            "sessions_total": 1,
+            "recovery_instructions": "After the 5-hour bath, return the fish to clean untreated seawater and observe over several days before deciding on any follow-up course.",
+            "aeration_required": true,
+            "abort_criteria_ref": "inherits_default_bath_safety",
+            "indication": "Bacterial infections responsive to fluoroquinolones. Prefer the low end of the concentration range for sensitive species (anthias, dragonets, wrasses).",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "species_sensitivity_supplement": "Anthias, dragonets, and wrasses flagged as sensitive per the top-level sensitivity_species array on this med.",
+            "source": "humblefish_single_session",
+            "verification_source_citation": "Humblefish Medication Dosing Guide: 9.5–19 mg/gal, single ~5-hour bath session. Concentration range matches the pure-dose range already recorded in the prolonged-dose fields of this med at v1.2.",
+            "tier_note": "Standard tier: a single one-off ~5-hour bath. Lower logistical burden than the Aggressive tier."
+          },
+          {
+            "tier_id": "aggressive",
+            "tier_label": "Aggressive",
+            "concentration_value_low": 9.5,
+            "concentration_value_high": 19,
+            "concentration_unit": "mg/gal",
+            "concentration_metric_equivalent": "2.5–5 mg/L",
+            "duration_minutes": 7200,
+            "duration_days": 5,
+            "repeat_schedule": "Continuous therapeutic immersion for 5 days with a 50–75% water change between daily dose intervals.",
+            "water_change_between_doses_pct_range": {
+              "min": 50,
+              "max": 75
+            },
+            "sessions_total": 1,
+            "recovery_instructions": "At the end of the 5-day course, move the fish to a fully untreated observation system. Watch closely for any late-onset adverse signs.",
+            "aeration_required": true,
+            "abort_criteria_ref": "inherits_default_bath_safety",
+            "indication": "More severe or refractory bacterial infections where a single short bath is unlikely to achieve therapeutic clearance.",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "species_sensitivity_supplement": "A 5-day therapeutic immersion is a much heavier exposure than a single bath. Anthias, dragonets, and wrasses may not tolerate it. Bioassay a single individual first for any untested species.",
+            "source": "noga_multi_day_immersion",
+            "verification_source_citation": "Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010, Chapter 17 'Pharmacopoeia', Enrofloxacin (Baytril) entry, water-borne formulations, 'Bath' formulation 1a: 2.5–5 mg/L (9.5–19 mg/gal), 5 days, with 50–75% water change between treatments. Cites Lewbart et al. 1997. Book p.378 (PDF p.397). Noga labels this a 'Bath' in his taxonomy, but functionally it is a multi-day therapeutic immersion rather than a short dip — see discrepancy-report.md item #1 for the adjudication.",
+            "tier_note": "Aggressive tier: 5-day therapeutic immersion. Use when the Standard-tier single session is clinically insufficient. Do not stack with other antibiotics without veterinary input."
+          }
+        ],
+        "default_tier": "standard",
+        "calendar_export_enabled": true,
+        "calendar_event_label": "Enrofloxacin bath",
+        "calendar_event_note": "Standard: one 5-hour session. Aggressive: 5 consecutive days with water-change checkpoints."
+      }
     },
     {
       "med_id": "erythromycin",
+      "treatment_type": "prolonged",
       "name_generic": "Erythromycin",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": 12.5,
@@ -98,7 +211,7 @@
           "calculated_brand_mg_per_gal_to_deliver_pure_dose": 37.54,
           "calculated_measures_per_gal": 0.0625,
           "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e05fc13b-1317-48f7-82c6-c318b660cf52",
-          "brand_notes": "Humblefish describes Fritz Maracyn as <35% erythromycin; DailyMed lists 200 mg active per packet. Packet powder weight (571 mg) is back-calculated from that active mass at 35% potency and should be treated as approximate - flagged in verification_log. Label schedule (1 packet/10 gal \u00d7 5 days) delivers ~20 mg/gal per dose, which is inside the Humblefish 12.5-25 mg/gal range.",
+          "brand_notes": "Humblefish describes Fritz Maracyn as <35% erythromycin; DailyMed lists 200 mg active per packet. Packet powder weight (571 mg) is back-calculated from that active mass at 35% potency and should be treated as approximate - flagged in verification_log. Label schedule (1 packet/10 gal × 5 days) delivers ~20 mg/gal per dose, which is inside the Humblefish 12.5-25 mg/gal range.",
           "measure_weight_source": "fda.report/DailyMed Maracyn monograph: 0.6 g per packet (200 mg erythromycin)"
         },
         {
@@ -121,6 +234,7 @@
     },
     {
       "med_id": "kanamycin_sulfate",
+      "treatment_type": "prolonged",
       "name_generic": "Kanamycin Sulfate",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": 25,
@@ -154,7 +268,7 @@
           "calculated_brand_mg_per_gal_to_deliver_pure_dose": 78.125,
           "calculated_measures_per_gal": 0.625,
           "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=fdce22b3-4b51-4bac-8a89-db5f8b6ae252",
-          "brand_notes": "DailyMed confirms 32% kanamycin. Measure weight 125 mg \u2192 40 mg kanamycin per measure. DOSING DISCREPANCY: Seachem label (1 measure / 5 gal = 8 mg/gal kanamycin) is roughly 3\u00d7 below Humblefish therapeutic range (25-37.5 mg/gal). To hit HF therapeutic, dose 6.25 measures per 10 gal, not the label 2 measures per 10 gal.",
+          "brand_notes": "DailyMed confirms 32% kanamycin. Measure weight 125 mg → 40 mg kanamycin per measure. DOSING DISCREPANCY: Seachem label (1 measure / 5 gal = 8 mg/gal kanamycin) is roughly 3× below Humblefish therapeutic range (25-37.5 mg/gal). To hit HF therapeutic, dose 6.25 measures per 10 gal, not the label 2 measures per 10 gal.",
           "measure_weight_source": "Seachem FAQ explicitly: 125 mg per measure (0.25 mL scoop)"
         },
         {
@@ -170,13 +284,14 @@
           "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
           "calculated_measures_per_gal": 0.1,
           "brand_spec_sheet_url": "https://www.americanaquariumproducts.com/AquariumMedication2.html",
-          "brand_notes": "Kanamycin + nitrofurazone combination capsule. Active percentages not publicly published. Widely regarded as strongest broad-spectrum aquarium antibiotic for columnaris, aeromonas, pseudomonas. Total actives ~150 mg per capsule per forum sources (unofficial \u2014 AAP received FDA warning letters for unapproved labeling, hence no DailyMed entry). Dosing: 1 capsule / 10 gal.",
-          "measure_weight_source": "Forum reference: ~150 mg total actives per capsule (UNOFFICIAL \u2014 AAP does not publish)"
+          "brand_notes": "Kanamycin + nitrofurazone combination capsule. Active percentages not publicly published. Widely regarded as strongest broad-spectrum aquarium antibiotic for columnaris, aeromonas, pseudomonas. Total actives ~150 mg per capsule per forum sources (unofficial — AAP received FDA warning letters for unapproved labeling, hence no DailyMed entry). Dosing: 1 capsule / 10 gal.",
+          "measure_weight_source": "Forum reference: ~150 mg total actives per capsule (UNOFFICIAL — AAP does not publish)"
         }
       ]
     },
     {
       "med_id": "neomycin_sulfate",
+      "treatment_type": "prolonged",
       "name_generic": "Neomycin Sulfate",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": 25,
@@ -211,12 +326,13 @@
           "calculated_measures_per_gal": 0.4651,
           "brand_spec_sheet_url": "https://seachem.zendesk.com/hc/en-us/articles/115001213893-Info-Seachem-NeoPlex-Dosing-Instructions",
           "brand_notes": "DailyMed confirms 43% neomycin sulfate. Seachem's label protocol (weekly for 3 weeks) is very different from the Humblefish daily QT protocol - capture both schedules. Measure mg weight not published.",
-          "measure_weight_source": "Seachem FAQ: 10 g vial \u2248 80 measures \u2192 125 mg/measure (identical 0.25 mL scoop across products)"
+          "measure_weight_source": "Seachem FAQ: 10 g vial ≈ 80 measures → 125 mg/measure (identical 0.25 mL scoop across products)"
         }
       ]
     },
     {
       "med_id": "nitrofuracin_green",
+      "treatment_type": "both",
       "name_generic": "Nitrofuracin Green",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": 50,
@@ -254,10 +370,56 @@
           "brand_spec_sheet_url": "https://www.americanaquariumproducts.com/AquariumMedication3.html",
           "brand_notes": "Active percentages not published by AAP. Hobbyist reverse-engineering suggests ~25 mg/gal nitrofurazone + ~25 mg/gal sulfathiazole + ~0.5 ml/gal methylene blue at the label dose (not manufacturer-confirmed - flagged). 4 g/tsp is a standard salt-like powder density, treated as approximate."
         }
-      ]
+      ],
+      "bath_protocol": {
+        "tiers": [
+          {
+            "tier_id": "standard",
+            "tier_label": "Standard (Jeff / Humblefish)",
+            "concentration_value": 100,
+            "concentration_unit": "mg/gal",
+            "duration_minutes": 30,
+            "repeat_schedule": "Single session; repeat only after clinical reassessment.",
+            "sessions_total": 1,
+            "recovery_instructions": "Return the fish to clean untreated seawater after 30 minutes. Water will be stained yellow-green from the methylene blue component and tinted brown from the nitrofurazone component; neither is cause for concern.",
+            "aeration_required": true,
+            "abort_criteria_ref": "inherits_default_bath_safety",
+            "indication": "Routine bath dip for suspected bacterial and superficial parasitic infections on marine fish as part of a QT intake workflow.",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "species_sensitivity_supplement": "Scaleless species are specifically flagged by Noga as more sensitive to water-borne nitrofurans.",
+            "source": "humblefish_credit_dierks",
+            "verification_source_citation": "Humblefish Medication Dosing Guide, Humblefish NFG-specific threads, and empirical validation by @Dierks at FisHotel. Scaleless-fish sensitivity, photosensitivity, and nitrofuran bacterial-resistance profile paraphrased from Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010, Chapter 17 'Pharmacopoeia', Nifurpirinol and Nitrofurazone entries, book p.381 (PDF p.400).",
+            "tier_note": "Jeff's empirical standard, used as routine intake QT at FisHotel."
+          },
+          {
+            "tier_id": "aggressive",
+            "tier_label": "Aggressive (Noga)",
+            "concentration_value": 380,
+            "concentration_unit": "mg/gal",
+            "concentration_metric_equivalent": "100 mg/L",
+            "duration_minutes": 30,
+            "repeat_schedule": "Single session. Re-evaluate clinically before any repeat.",
+            "sessions_total": 1,
+            "recovery_instructions": "Move the fish to clean, fully-aerated untreated seawater immediately at the end of the 30 minutes and observe constantly for at least another 30 minutes for any delayed toxicity signs.",
+            "aeration_required": true,
+            "abort_criteria_ref": "inherits_default_bath_safety_with_heightened_vigilance",
+            "heightened_warning": "This concentration is approximately 3.8× the Standard tier (~4× informally). Reserve for severe or life-threatening bacterial presentations where the Standard tier has failed or is clearly insufficient. Lower abort threshold — any early distress signs mean end the bath immediately.",
+            "indication": "Severe bacterial infections on marine fish where a shorter high-concentration exposure is clinically indicated.",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "species_sensitivity_supplement": "At this concentration, scaleless and sensitive species (anthias, dragonets, wrasses) should be routed to the Standard tier instead, or approached with extra caution.",
+            "source": "noga_high_dose_bath",
+            "verification_source_citation": "Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010, Chapter 17 'Pharmacopoeia', Nitrofurazone (Furacyn) entry, water-borne formulations, 'Bath' formulation 1a: 100 mg/L (380 mg/gal), 30 minutes. Book p.381 (PDF p.400). Nitrofuracin Green is a branded combination product (nitrofurazone + sulfathiazole sodium + methylene blue on a NaCl carrier) and is not in Noga — nitrofurazone is its principal antibacterial active and is used here as the closest available proxy. See discrepancy-report.md item #4.",
+            "tier_note": "Approximately 3.8× the Standard tier. Reserved for severe presentations; uses the same pattern as the Copper sensitivity toggle in the calculator UI."
+          }
+        ],
+        "default_tier": "standard",
+        "calendar_export_enabled": false,
+        "calendar_event_note": "Single-session bath at either tier; no .ics export"
+      }
     },
     {
       "med_id": "nitrofurazone",
+      "treatment_type": "prolonged",
       "name_generic": "Nitrofurazone",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": 10,
@@ -313,6 +475,7 @@
     },
     {
       "med_id": "sulfa_drugs",
+      "treatment_type": "prolonged",
       "name_generic": "Sulfa Drugs (Sulfamerazine / Sulfamethazine / Sulfathiazole)",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": 25,
@@ -348,7 +511,7 @@
           "calculated_measures_per_gal": 0.1,
           "brand_spec_sheet_url": "https://www.apifishcare.com/pdfs/products-us/triple-sulfa/api-triple-sulfa-safety-data-sheet.pdf",
           "brand_notes": "Substitutes sulfacetamide for sulfamerazine vs. the HF generic recipe. Total label dose delivers ~100 mg/gal combined sulfa sodium salts. Packet total weight ~1 g (inferred, not manufacturer-confirmed).",
-          "ui_user_surface_note": "Contains sulfacetamide sodium in place of sulfamerazine \u2014 different pharmacokinetics than the generic HF sulfa recipe.",
+          "ui_user_surface_note": "Contains sulfacetamide sodium in place of sulfamerazine — different pharmacokinetics than the generic HF sulfa recipe.",
           "active_ingredient_pct_combined_sulfas": 50.0,
           "measure_weight_source": "API SDS: 664 sulfathiazole Na + 168 sulfamethazine Na + 168 sulfacetamide Na = 1000 mg actives in 2 g packet"
         },
@@ -365,13 +528,14 @@
           "calculated_brand_mg_per_gal_to_deliver_pure_dose": 36.23,
           "calculated_measures_per_gal": 0.2499,
           "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=638cfdf4-99cc-4c33-9144-ebadf96a9512",
-          "brand_notes": "DailyMed confirms 69% sulfathiazole. Measure weight 145 mg (total powder) \u2192 100 mg sulfathiazole active per measure. Label \"2-3 measures per 10 gal\" matches HF 25 mg/gal at 2.5 measures/10 gal.",
+          "brand_notes": "DailyMed confirms 69% sulfathiazole. Measure weight 145 mg (total powder) → 100 mg sulfathiazole active per measure. Label \"2-3 measures per 10 gal\" matches HF 25 mg/gal at 2.5 measures/10 gal.",
           "measure_weight_source": "Seachem support: ~145 mg per measure (69% sulfathiazole = ~100 mg active per measure)"
         }
       ]
     },
     {
       "med_id": "copper_power",
+      "treatment_type": "prolonged",
       "name_generic": "Copper Power (ionic/chelated copper)",
       "category": "copper",
       "dose_pure_low_mg_per_gal": 2.5,
@@ -407,7 +571,7 @@
           "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
           "calculated_measures_per_gal": 1.48,
           "brand_spec_sheet_url": "https://gocopperpower.com/technical-data-sheet",
-          "brand_notes": "DATA CONFLICT: Label/calculator value is 1.48 ml/gal for 2.5 ppm. Empirical Hanna HI702 testing by multiple hobbyists lands at ~1.73 ml/gal to actually reach 2.5 ppm. Treat 1.73 ml/gal as the conservative empirical value and ALWAYS verify with the Hanna checker. Never trust the label dose blindly. Technical data sheet confirms 0.5% Cu(II) w/w, SG 1.12. Math check: 1.73 ml \u00d7 1.12 g/ml \u00d7 0.005 = 9.69 mg Cu in 1 gal (3.785 L) = 2.56 ppm \u2014 matches FisHotel empirical.",
+          "brand_notes": "DATA CONFLICT: Label/calculator value is 1.48 ml/gal for 2.5 ppm. Empirical Hanna HI702 testing by multiple hobbyists lands at ~1.73 ml/gal to actually reach 2.5 ppm. Treat 1.73 ml/gal as the conservative empirical value and ALWAYS verify with the Hanna checker. Never trust the label dose blindly. Technical data sheet confirms 0.5% Cu(II) w/w, SG 1.12. Math check: 1.73 ml × 1.12 g/ml × 0.005 = 9.69 mg Cu in 1 gal (3.785 L) = 2.56 ppm — matches FisHotel empirical.",
           "fishotel_default": {
             "dose": "1.73 ml per gallon to reach 2.5 ppm",
             "source": "fishotel_hanna_hi702_empirical",
@@ -420,6 +584,7 @@
     },
     {
       "med_id": "copper_sulfate_pentahydrate",
+      "treatment_type": "prolonged",
       "name_generic": "Copper Sulfate Pentahydrate",
       "category": "copper",
       "dose_pure_low_mg_per_gal": 0.15,
@@ -455,12 +620,13 @@
           "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
           "calculated_measures_per_gal": null,
           "brand_spec_sheet_url": "https://edis.ifas.ufl.edu/publication/FA165",
-          "brand_notes": "Peer-reviewed UF/IFAS aquaculture guide; formula: gallons \u00d7 0.0038 \u00d7 desired mg/L \u00d7 3.92 = grams of pentahydrate needed. Worked value: ~2.22 mg of pentahydrate powder per gallon delivers ~0.15 ppm Cu2+. The standard calculated_brand_mg_per_gal formula (dose_low \u00f7 active_pct) does not apply cleanly here because the pure dose is expressed as ppm of Cu2+ (mg/L) not mg/gal of compound - left null to avoid unit confusion downstream."
+          "brand_notes": "Peer-reviewed UF/IFAS aquaculture guide; formula: gallons × 0.0038 × desired mg/L × 3.92 = grams of pentahydrate needed. Worked value: ~2.22 mg of pentahydrate powder per gallon delivers ~0.15 ppm Cu2+. The standard calculated_brand_mg_per_gal formula (dose_low ÷ active_pct) does not apply cleanly here because the pure dose is expressed as ppm of Cu2+ (mg/L) not mg/gal of compound - left null to avoid unit confusion downstream."
         }
       ]
     },
     {
       "med_id": "cupramine",
+      "treatment_type": "prolonged",
       "name_generic": "Cupramine (Seachem)",
       "category": "copper",
       "dose_pure_low_mg_per_gal": 0.5,
@@ -506,6 +672,7 @@
     },
     {
       "med_id": "cuprion",
+      "treatment_type": "prolonged",
       "name_generic": "Cuprion (Ruby Reef / Brightwell)",
       "category": "copper",
       "dose_pure_low_mg_per_gal": 0.2,
@@ -547,6 +714,7 @@
     },
     {
       "med_id": "coppersafe",
+      "treatment_type": "prolonged",
       "name_generic": "Coppersafe / Kordon Copper Aid (chelated copper, 2.0 ppm target)",
       "category": "copper",
       "dose_pure_low_mg_per_gal": 2.0,
@@ -604,6 +772,7 @@
     },
     {
       "med_id": "fenbendazole",
+      "treatment_type": "bath",
       "name_generic": "Fenbendazole (external)",
       "category": "dewormer_external",
       "dose_pure_low_mg_per_gal": 95,
@@ -635,10 +804,36 @@
           "brand_spec_sheet_url": "https://www.merck-animal-health-usa.com/product/panacur-c",
           "brand_notes": "Off-label aquarium use. 1 g granule packets labeled for dogs. Always weigh on a mg scale rather than trusting scoops."
         }
-      ]
+      ],
+      "bath_protocol": {
+        "tiers": [
+          {
+            "tier_id": "standard",
+            "tier_label": "Standard",
+            "concentration_value": 95,
+            "concentration_unit": "mg/gal",
+            "concentration_metric_equivalent": "25 mg/L",
+            "duration_minutes": 720,
+            "repeat_schedule": "Repeat the 12-hour bath once, approximately 7 days after the first session, to catch worms that hatched from eggs the first bath did not kill.",
+            "sessions_total": 2,
+            "recovery_instructions": "At the end of the 12-hour bath, return the fish to clean untreated seawater. Observe over the next several days. Schedule the second session one week later per the standard fluke life-cycle calendar.",
+            "aeration_required": true,
+            "abort_criteria_ref": "inherits_default_bath_safety",
+            "indication": "External monogenean flukes and flatworms on marine fish.",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "solubility_note": "Fenbendazole is not readily water-soluble. Pre-dissolve in DMSO at 10 mg fenbendazole per 1 ml DMSO, or use weighed Panacur C granules via the brand substitution already in this record.",
+            "source": "humblefish_and_noga_agree",
+            "verification_source_citation": "Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010, Chapter 17 'Pharmacopoeia', Fenbendazole (Panacur) entry, Use No. 2 'Treatment of monogeneans', water-borne formulation 1a: 25 mg/L (≈95 mg/gal) for 12 hours. Book p.398 (PDF p.417). Concentration and duration match the Humblefish Medication Dosing Guide exactly; the 7-day repeat cadence is Humblefish-derived but is consistent with Noga's weekly-for-three-weeks prolonged-immersion nematode schedule."
+          }
+        ],
+        "calendar_export_enabled": true,
+        "calendar_event_label": "Fenbendazole external bath",
+        "calendar_event_note": "Two 12-hour bath sessions: Day 1 and Day 8"
+      }
     },
     {
       "med_id": "praziquantel",
+      "treatment_type": "prolonged",
       "name_generic": "Praziquantel",
       "category": "dewormer_external",
       "dose_pure_low_mg_per_gal": 9.5,
@@ -692,6 +887,7 @@
     },
     {
       "med_id": "hyposalinity",
+      "treatment_type": "prolonged",
       "name_generic": "Hyposalinity",
       "category": "protocol",
       "dose_pure_low_mg_per_gal": null,
@@ -714,6 +910,7 @@
     },
     {
       "med_id": "acriflavine",
+      "treatment_type": "both",
       "name_generic": "Acriflavine",
       "category": "misc",
       "dose_pure_low_mg_per_gal": null,
@@ -744,12 +941,37 @@
           "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
           "calculated_measures_per_gal": 1,
           "brand_spec_sheet_url": "https://www.bulkreefsupply.com/rally-pro-fish-treatment-in-dispensing-bottle-ruby-reef.html",
-          "brand_notes": "Three-active liquid: Acriflavine HCl + Aminoacridine HCl + Formalin (trace activator). Exact percentages proprietary. Per Ruby Reef: sequential reagent blending with formalin reduces required acriflavine/aminoacridine by 10\u00d7 vs dosing separately. Rally Pro: 1 oz (30 mL) per 10 gal saltwater, daily \u00d7 3+ days (skimmer/carbon off). Reef-safe, invertebrate-safe, biofilter-safe, copper-free. Turns water yellow-green temporarily."
+          "brand_notes": "Three-active liquid: Acriflavine HCl + Aminoacridine HCl + Formalin (trace activator). Exact percentages proprietary. Per Ruby Reef: sequential reagent blending with formalin reduces required acriflavine/aminoacridine by 10× vs dosing separately. Rally Pro: 1 oz (30 mL) per 10 gal saltwater, daily × 3+ days (skimmer/carbon off). Reef-safe, invertebrate-safe, biofilter-safe, copper-free. Turns water yellow-green temporarily."
         }
-      ]
+      ],
+      "bath_protocol": {
+        "tiers": [
+          {
+            "tier_id": "standard",
+            "tier_label": "Standard",
+            "concentration_value": 1,
+            "concentration_unit": "tsp of Ruby Reef Rally per gal",
+            "duration_minutes": 90,
+            "repeat_schedule": "Single session for the short bath. Optionally followed by Rally Pro prolonged immersion (1 oz per 10 gal daily for 3+ days) per the existing brand notes on this med.",
+            "sessions_total": 1,
+            "recovery_instructions": "Return the fish to clean untreated seawater at the end of the 90 minutes. The treatment water stains yellow-green; this is cosmetic and does not indicate active medication.",
+            "aeration_required": true,
+            "abort_criteria_ref": "inherits_default_bath_safety",
+            "indication": "Bacterial and parasitic infections on marine fish, including Cryptocaryon irritans, velvet, and Uronema.",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "species_sensitivity_supplement": "Acriflavine is a photosensitizer. Keep the bath container shielded from bright light, and if any follow-up prolonged immersion is used, keep the display dim.",
+            "source": "humblefish_only_noga_gap",
+            "source_note": "Noga (Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010, Chapter 17 'Pharmacopoeia', Acriflavin entry, book p.376, PDF p.395) describes the agent but does NOT provide a specific bath concentration. Noga is skeptical of acriflavine's clinical value due to widespread bacterial resistance and the availability of more effective alternatives. Noga also flags that high acriflavine doses may inhibit normal swim-bladder inflation in developing fry (Sanabria et al. 2009). See discrepancy-report.md.",
+            "verification_source_citation": "Dose per Humblefish Medication Dosing Guide and the Humblefish Acriflavine / Ruby Reef Rally thread: 1 tsp Rally per gallon, 90 minutes. Noga consulted for safety context only; does not provide a numeric bath concentration."
+          }
+        ],
+        "calendar_export_enabled": false,
+        "calendar_event_note": "90-minute bath is typically one-off; Rally Pro daily immersion, if used, can be manually scheduled."
+      }
     },
     {
       "med_id": "chloroquine_phosphate",
+      "treatment_type": "prolonged",
       "name_generic": "Chloroquine Phosphate",
       "category": "misc",
       "dose_pure_low_mg_per_gal": 40,
@@ -775,6 +997,7 @@
     },
     {
       "med_id": "formalin_37",
+      "treatment_type": "both",
       "name_generic": "Formalin 37%",
       "category": "misc",
       "dose_pure_low_mg_per_gal": null,
@@ -792,10 +1015,55 @@
         "https://humble.fish/community/threads/medication-dosing-guide.1124/",
         "https://www.reef2reef.com/threads/formalin.290925/"
       ],
-      "brand_equivalents": []
+      "brand_equivalents": [],
+      "temperature_contraindication_celsius": 27,
+      "temperature_contraindication_note": "Formalin is contraindicated above 27°C (80.6°F) — oxygen demand rises and toxicity increases. Cool your bath water or choose an alternative treatment.",
+      "temperature_contraindication_source_citation": "Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010, Chapter 17 'Pharmacopoeia', Formalin entry, Use No. 1, contraindication text. Book p.399–400 (PDF p.418–419).",
+      "bath_protocol": {
+        "tiers": [
+          {
+            "tier_id": "standard",
+            "tier_label": "Standard",
+            "concentration_value": 0.6,
+            "concentration_value_range": {
+              "min": 0.47,
+              "max": 0.95
+            },
+            "concentration_unit": "ml/gal",
+            "concentration_equivalent_drops_per_gal": 12,
+            "duration_minutes": 45,
+            "duration_range_minutes": {
+              "min": 30,
+              "max": 60
+            },
+            "repeat_schedule": "May be repeated 2–3 times, once daily, if clinically needed. Noga restricts the maximum concentration to once every 3 days when water is warm.",
+            "sessions_total": 1,
+            "recovery_instructions": "Return the fish to clean, well-aerated water immediately at the end of the bath. Observe closely for 24–72 hours. Idiosyncratic late-onset mortality has been reported up to 72 hours post-treatment; typical toxicity signs are piping at the surface, excess mucus production, and pale coloration.",
+            "aeration_required": true,
+            "aeration_note": "Vigorous aeration is mandatory. Every 5 mg/L of formalin removes roughly 1 mg/L of dissolved oxygen from the bath water.",
+            "abort_criteria_ref": "inherits_default_bath_safety",
+            "indication": "External protozoan and metazoan ectoparasites including marine ich and monogenean flukes.",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "species_sensitivity_supplement": "Elasmobranchs (sharks, rays) are especially sensitive — bioassay required before treating any untested species. Do not use on fish that were recently stressed (shipped, transported, netted repeatedly) or that have open skin ulcers.",
+            "temperature_warning": "Above 21°C (70°F) for warmwater species, or above 10°C (50°F) for coldwater species, do not exceed 0.63 ml/gal. Above 27°C (80°F), formalin is contraindicated entirely — see temperature_contraindication_celsius on the parent med.",
+            "contraindications": [
+              "Water temperature above 27°C (80°F)",
+              "Fish recently stressed (shipped, transported, or netted repeatedly)",
+              "Fish with open skin ulcers",
+              "Elasmobranchs without prior bioassay",
+              "Soft, acidic water (toxicity is elevated in low alkalinity)"
+            ],
+            "source": "humblefish_primary_noga_supplemental",
+            "verification_source_citation": "Core dose (0.6 ml/gal, 30–60 min) per Humblefish Medication Dosing Guide. Dose range, temperature caps, contraindications, and late-onset toxicity signs paraphrased from Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010, Chapter 17 'Pharmacopoeia', Formalin entry, Use No. 1 'Treatment of protozoan and metazoan ectoparasites', water-borne formulation 1a: 125–250 ppm (0.47–0.95 ml/gal) for up to 60 minutes. Book p.399–400 (PDF p.418–419)."
+          }
+        ],
+        "calendar_export_enabled": false,
+        "calendar_event_note": "Typically a one-off short bath; no .ics export. If repeating 2–3 daily sessions, Jeff can manually add calendar events."
+      }
     },
     {
       "med_id": "hydrogen_peroxide_3",
+      "treatment_type": "bath",
       "name_generic": "Hydrogen Peroxide 3%",
       "category": "misc",
       "dose_pure_low_mg_per_gal": null,
@@ -813,10 +1081,37 @@
         "https://humble.fish/community/threads/peroxide-h2o2-dosing-for-parasites-in-reef-tank.725/",
         "https://edis.ifas.ufl.edu/publication/FA157"
       ],
-      "brand_equivalents": []
+      "brand_equivalents": [],
+      "bath_protocol": {
+        "tiers": [
+          {
+            "tier_id": "standard",
+            "tier_label": "Standard",
+            "concentration_value": 20,
+            "concentration_unit": "ml of 3% H2O2 per gal",
+            "duration_minutes": 30,
+            "repeat_schedule": "single session",
+            "sessions_total": 1,
+            "water_type": "saltwater_only",
+            "recovery_instructions": "At the end of the 30 minutes, move the fish into clean untreated seawater. Rinse the fish in clean seawater before returning to any display system — never put a peroxide-dipped fish directly back into a reef. Use only fresh, unopened 3% hydrogen peroxide; the concentration degrades after opening.",
+            "aeration_required": true,
+            "aeration_note": "Hydrogen peroxide releases oxygen as it decays, so strict oxygenation aeration is not required, but follow the default bath-safety rule of providing aeration for any bath over one minute for circulation and monitoring.",
+            "abort_criteria_ref": "inherits_default_bath_safety",
+            "abort_criteria_supplement": "Noga specifically warns that many fish do not tolerate peroxide, and that overdose-related gill damage may take up to 24 hours to manifest as mortality. Monitor continuously during the bath and for at least a full day afterward.",
+            "indication": "External ectoparasite dip for marine fish prior to introduction into a clean system.",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "species_sensitivity_supplement": "Peroxide toxicity rises with water temperature and with smaller fish size. Bioassay a single individual first for any untested species.",
+            "source": "humblefish_primary_noga_supplemental_safety",
+            "verification_source_citation": "Dose per Humblefish Medication Dosing Guide and the Humblefish peroxide thread. Supplemental toxicity, aeration, and monitoring-window data paraphrased from Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010, Chapter 17 'Pharmacopoeia', Hydrogen Peroxide entry, book p.401 (PDF p.420). Noga's own bath protocols for H2O2 use different concentrations and durations than Humblefish; per Jeff's adjudication of the discrepancy, the Humblefish concentration and duration are authoritative for this schema — see discrepancy-report.md item #2."
+          }
+        ],
+        "calendar_export_enabled": false,
+        "calendar_event_note": "Single-session dip; no .ics export per Jeff's calendar policy"
+      }
     },
     {
       "med_id": "methylene_blue",
+      "treatment_type": "both",
       "name_generic": "Methylene Blue",
       "category": "misc",
       "dose_pure_low_mg_per_gal": null,
@@ -848,10 +1143,37 @@
           "brand_spec_sheet_url": "https://www.kordon.com/kordon/products/chemical-preventatives-and-treatments-2/methylene-blue",
           "brand_notes": "Concentration on label is 2.303% methylene blue. 4 oz bottle treats ~240 gal. Staining is permanent on silicone - avoid display-tank use."
         }
-      ]
+      ],
+      "bath_protocol": {
+        "tiers": [
+          {
+            "tier_id": "standard",
+            "tier_label": "Standard",
+            "concentration_value": 5,
+            "concentration_unit": "ml of 2.303% MB (Kordon) per 5 gal",
+            "concentration_equivalent": "1 tsp of Kordon Methylene Blue per 5 gal",
+            "duration_minutes": 30,
+            "repeat_schedule": "single session",
+            "sessions_total": 1,
+            "water_type": "saltwater",
+            "recovery_instructions": "Return the fish to clean untreated seawater after 30 minutes. Methylene blue permanently stains silicone and soft plastics — never use a bath container you plan to repurpose. MB is also toxic to nitrifying bacteria, so carry-over into a biologically filtered display system can crash the filter.",
+            "aeration_required": true,
+            "abort_criteria_ref": "inherits_default_bath_safety",
+            "indication": "Short bath for bacterial and water-mold infections in marine fish, buffering against ammonia/nitrite stress, and adjunct oxygenation support during stressful procedures.",
+            "species_sensitivity_ref": "inherits_default_scaleless_sensitivity",
+            "species_sensitivity_supplement": "Noga documents MB only in freshwater contexts; saltwater bath safety data is limited. Approach scaleless and delicate species conservatively.",
+            "source": "humblefish_authoritative_noga_gap",
+            "source_note": "Noga (Noga, E.J. Fish Disease: Diagnosis and Treatment, 2nd edition, Wiley-Blackwell, 2010, Chapter 17 'Pharmacopoeia', Methylene Blue entry, book p.406, PDF p.425) documents MB only as a freshwater prolonged-immersion treatment for aquarium fish eggs (2 mg/L, alternate days, up to 3 total) and for freshwater ectoparasites (1–3 mg/L prolonged immersion). Noga gives no saltwater bath protocol for MB and specifically warns against prolonged-immersion use in any system with biological filtration. The saltwater bath concentration in this record is Humblefish-only per Jeff's adjudication — see discrepancy-report.md item #3.",
+            "verification_source_citation": "Dose per Humblefish Medication Dosing Guide and the Humblefish Methylene Blue thread: 1 tsp (5 ml) of 2.303% MB per 5 gal, 30 minutes. Noga consulted for safety context only; does not provide a saltwater bath concentration."
+          }
+        ],
+        "calendar_export_enabled": false,
+        "calendar_event_note": "Single-session saltwater bath; no .ics export"
+      }
     },
     {
       "med_id": "metronidazole",
+      "treatment_type": "prolonged",
       "name_generic": "Metronidazole",
       "category": "dewormer_internal",
       "dose_pure_low_mg_per_gal": 12.5,
@@ -908,6 +1230,7 @@
     },
     {
       "med_id": "sulfa_tmp",
+      "treatment_type": "prolonged",
       "name_generic": "Sulfa TMP (Trimethoprim + Sulfathiazole sodium)",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": null,
@@ -923,7 +1246,7 @@
         "wrasses",
         "scaleless fish"
       ],
-      "special_notes_generic": "Combination antibiotic containing Trimethoprim + Sulfathiazole sodium. Humblefish recommends 1/4 tsp per 10 gal daily \u00d7 10 days with 25% water change before each dose. TMP-Sulfa is synergistic against a broader spectrum than either drug alone. Remove invertebrates during treatment.",
+      "special_notes_generic": "Combination antibiotic containing Trimethoprim + Sulfathiazole sodium. Humblefish recommends 1/4 tsp per 10 gal daily × 10 days with 25% water change before each dose. TMP-Sulfa is synergistic against a broader spectrum than either drug alone. Remove invertebrates during treatment.",
       "verification_source_urls": [
         "https://humble.fish/community/threads/antibiotics.15/"
       ],
@@ -931,6 +1254,7 @@
     },
     {
       "med_id": "minocycline",
+      "treatment_type": "prolonged",
       "name_generic": "Minocycline",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": 1.0,
@@ -969,6 +1293,7 @@
     },
     {
       "med_id": "fenbendazole_internal",
+      "treatment_type": "prolonged",
       "name_generic": "Fenbendazole (internal / food-soak)",
       "category": "dewormer_internal",
       "dose_pure_low_mg_per_gal": 7.6,
@@ -978,7 +1303,7 @@
       "duration_days": 21,
       "water_change_pct_before_dose": 0,
       "sensitivity_species": [],
-      "special_notes_generic": "Internal dewormer for round worms (Camallanus, Capillaria) and tapeworms. Dose 7.6 mg/gal once weekly \u00d7 3 weeks, OR food-soak with Seachem Focus as binder. Distinct from fenbendazole external bath (95 mg/gal \u00d7 12 h). Safe for biofilter; not reef-safe (harmful to corals, worms, hydrozoans).",
+      "special_notes_generic": "Internal dewormer for round worms (Camallanus, Capillaria) and tapeworms. Dose 7.6 mg/gal once weekly × 3 weeks, OR food-soak with Seachem Focus as binder. Distinct from fenbendazole external bath (95 mg/gal × 12 h). Safe for biofilter; not reef-safe (harmful to corals, worms, hydrozoans).",
       "verification_source_urls": [
         "https://humble.fish/community/threads/fenbendazole.18/"
       ],
@@ -1002,6 +1327,7 @@
     },
     {
       "med_id": "seachem_polyguard",
+      "treatment_type": "prolonged",
       "name_generic": "Seachem PolyGuard (5-active combination)",
       "category": "antibiotic",
       "dose_pure_low_mg_per_gal": null,
@@ -1033,7 +1359,7 @@
             "excipients": 61.3
           },
           "measure_weight_mg": 143,
-          "measure_weight_source": "Seachem: 10 g vial \u2248 70 measures \u2192 ~143 mg per measure",
+          "measure_weight_source": "Seachem: 10 g vial ≈ 70 measures → ~143 mg per measure",
           "measure_unit_label": "measure",
           "manufacturer_label_dose": "1 measure per 10 US gallons every 72 hours for up to 14 days",
           "brand_label_frequency_hours": 72,
@@ -1042,7 +1368,7 @@
           "calculated_measures_per_gal": 0.1,
           "brand_spec_sheet_url": "https://www.seachem.com/polyguard.php",
           "brand_notes": "Full composition publicly declared: 36.4% sulfathiazole + 1.9% malachite green + 0.1% nitrofurantoin + 0.1% nitrofurazone + 0.2% quinacrine dihydrochloride. Unique among Seachem products in having its blend percentages fully disclosed.",
-          "ui_user_surface_note": "Contains malachite green \u2014 not safe for invertebrates or sensitive plants."
+          "ui_user_surface_note": "Contains malachite green — not safe for invertebrates or sensitive plants."
         }
       ]
     }

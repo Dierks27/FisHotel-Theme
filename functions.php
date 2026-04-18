@@ -12,6 +12,8 @@ define( 'FISHOTEL_THEME_VERSION', '1.0.2' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
+// Medication Dosing Calculator
+require_once FISHOTEL_THEME_DIR . '/inc/calculator/init.php';
 // ─────────────────────────────────────────
 // THEME SETUP
 // ─────────────────────────────────────────

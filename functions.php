@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.0.1' );
+define( 'FISHOTEL_THEME_VERSION', '1.0.2' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -180,6 +180,19 @@ function fishotel_enqueue_home_assets() {
     }
 }
 add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_home_assets' );
+
+// Enqueue FAQ page styles only on pages using the FAQ template
+function fishotel_enqueue_faq_assets() {
+    if ( is_page_template( 'page-faq.php' ) ) {
+        wp_enqueue_style(
+            'fishotel-faq',
+            FISHOTEL_THEME_URI . '/assets/css/faq.css',
+            [ 'fishotel-style' ],
+            FISHOTEL_THEME_VERSION
+        );
+    }
+}
+add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_faq_assets' );
 
 // Homepage bubble animation
 function fishotel_hero_inline_js() {

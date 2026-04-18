@@ -1,0 +1,310 @@
+/**
+ * FisHotel — FAQ page
+ *
+ * Loaded only for pages using the "FAQ Page" template (page-faq.php).
+ * Reuses the theme's existing tokens (Montserrat + Roboto Slab, dark palette)
+ * and layers on the gold hairline accents called out in the spec
+ * (rgba(212,165,116,0.5)) to continue visually from the site header.
+ *
+ * Sections:
+ *   1. Shared tokens (local)
+ *   2. Hero
+ *   3. Quarantine timeline (desktop horizontal / mobile vertical)
+ *   4. FAQ cards
+ */
+
+/* 1. Local tokens ─────────────────────────────────────────────── */
+.fh-faq-page {
+	--fh-faq-gold:       #d4a574;
+	--fh-faq-gold-rule:  rgba(212, 165, 116, 0.5);
+	--fh-faq-gold-soft:  rgba(212, 165, 116, 0.28);
+	--fh-faq-dot-ring:   rgba(212, 165, 116, 0.22);
+	--fh-faq-max:        1100px;
+	background: var(--fh-bg-dk);
+	color: var(--fh-text-1);
+}
+
+/* 2. Hero ─────────────────────────────────────────────────────── */
+.fh-faq-hero {
+	background: var(--fh-bg-dk);
+	padding: 80px var(--fh-page-pad) 56px;
+	border-bottom: 1px solid var(--fh-border);
+}
+.fh-faq-hero__inner {
+	max-width: var(--fh-faq-max);
+	margin: 0 auto;
+	text-align: center;
+}
+.fh-faq-eyebrow {
+	display: inline-block;
+	font-family: var(--fh-font); /* Montserrat */
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 4px;
+	color: var(--fh-faq-gold);
+	margin-bottom: 18px;
+}
+.fh-faq-hero__title {
+	font-family: var(--fh-serif); /* Roboto Slab */
+	font-weight: 300;
+	font-size: clamp(32px, 5vw, 52px);
+	letter-spacing: 0.5px;
+	line-height: 1.15;
+	text-transform: none;
+	color: var(--fh-text-1);
+	margin: 0 auto;
+	max-width: 20ch;
+}
+.fh-faq-hero__rule {
+	display: block;
+	width: 72px;
+	height: 1px;
+	background: var(--fh-faq-gold-rule);
+	margin: 28px auto 0;
+}
+.fh-faq-hero__intro {
+	max-width: 56ch;
+	margin: 24px auto 0;
+	font-size: 14px;
+	line-height: 1.8;
+	color: var(--fh-text-2);
+}
+
+/* 3. Quarantine timeline ──────────────────────────────────────── */
+.fh-qt-section {
+	background: var(--fh-bg);
+	padding: 72px var(--fh-page-pad);
+}
+.fh-qt-section__inner {
+	max-width: var(--fh-faq-max);
+	margin: 0 auto;
+}
+.fh-qt-title {
+	font-family: var(--fh-serif);
+	font-weight: 400;
+	text-transform: none;
+	letter-spacing: 0;
+	font-size: clamp(24px, 3vw, 32px);
+	color: var(--fh-text-1);
+	text-align: center;
+	margin: 0 0 8px;
+}
+.fh-qt-subtitle {
+	text-align: center;
+	font-family: var(--fh-font);
+	font-size: 13px;
+	color: var(--fh-text-2);
+	margin: 0 auto 48px;
+	max-width: 50ch;
+}
+
+.fh-qt-timeline {
+	position: relative;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 24px;
+}
+/* Gold hairline connector across the 5 stages (desktop) */
+.fh-qt-timeline::before {
+	content: "";
+	position: absolute;
+	top: 8px; /* aligns with dot centers */
+	left: 10%;
+	right: 10%;
+	height: 1px;
+	background: var(--fh-faq-gold-rule);
+}
+
+.fh-qt-stage {
+	position: relative;
+	padding: 28px 10px 0;
+	text-align: center;
+}
+.fh-qt-dot {
+	position: absolute;
+	top: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 17px;
+	height: 17px;
+	border-radius: 50%;
+	background: var(--fh-bg);
+	border: 1px solid var(--fh-faq-gold);
+	box-shadow: 0 0 0 4px var(--fh-faq-dot-ring);
+}
+
+.fh-qt-duration {
+	display: block;
+	font-family: var(--fh-font);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 2.5px;
+	text-transform: uppercase;
+	color: var(--fh-text-3);
+	margin-bottom: 10px;
+}
+.fh-qt-label {
+	font-family: var(--fh-serif);
+	font-weight: 400;
+	text-transform: none;
+	letter-spacing: 0;
+	font-size: 18px;
+	line-height: 1.25;
+	color: var(--fh-faq-gold);
+	margin: 0 0 6px;
+}
+.fh-qt-sublabel {
+	font-family: var(--fh-font);
+	font-size: 12px;
+	font-style: italic;
+	color: var(--fh-text-3);
+	margin: 0 0 14px;
+}
+.fh-qt-desc {
+	font-family: var(--fh-font);
+	font-size: 13px;
+	line-height: 1.75;
+	color: var(--fh-text-1);
+	margin: 0;
+	text-align: left;
+}
+
+/* Mobile: stack vertically, line runs down the left gutter */
+@media (max-width: 767px) {
+	.fh-qt-timeline {
+		grid-template-columns: 1fr;
+		gap: 36px;
+		padding-left: 32px;
+	}
+	.fh-qt-timeline::before {
+		top: 8px;
+		bottom: 8px;
+		left: 8px;
+		right: auto;
+		width: 1px;
+		height: auto;
+	}
+	.fh-qt-stage {
+		text-align: left;
+		padding: 0 0 0 0;
+	}
+	.fh-qt-dot {
+		top: 6px;
+		left: -24px;
+		transform: none;
+	}
+	.fh-qt-desc {
+		text-align: left;
+	}
+}
+
+/* 4. FAQ cards ────────────────────────────────────────────────── */
+.fh-faq-section {
+	background: var(--fh-bg-dk);
+	padding: 64px var(--fh-page-pad) 96px;
+}
+.fh-faq-section__inner {
+	max-width: 720px;
+	margin: 0 auto;
+}
+
+.fh-faq-card {
+	border-top: 1px solid var(--fh-faq-gold-rule);
+	padding: 32px 0 28px;
+}
+.fh-faq-card:last-child {
+	border-bottom: 1px solid var(--fh-faq-gold-rule);
+}
+.fh-faq-card__cat {
+	display: inline-block;
+	font-family: var(--fh-font);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 2.5px;
+	text-transform: uppercase;
+	color: var(--fh-text-3);
+	margin-bottom: 10px;
+}
+.fh-faq-card__q {
+	font-family: var(--fh-serif);
+	font-weight: 400;
+	text-transform: none;
+	letter-spacing: 0;
+	font-size: 22px;
+	line-height: 1.3;
+	color: var(--fh-faq-gold);
+	margin: 0 0 14px;
+}
+.fh-faq-card__a {
+	font-family: var(--fh-font);
+	font-size: 14px;
+	line-height: 1.85;
+	color: var(--fh-text-1);
+}
+.fh-faq-card__a p {
+	margin: 0 0 14px;
+}
+.fh-faq-card__a p:last-child {
+	margin-bottom: 0;
+}
+.fh-faq-card__a strong {
+	color: var(--fh-text-1);
+	font-weight: 700;
+}
+.fh-faq-card__a a {
+	color: var(--fh-faq-gold);
+	text-decoration: underline;
+	text-decoration-color: var(--fh-faq-gold-soft);
+}
+.fh-faq-card__a a:hover {
+	text-decoration-color: var(--fh-faq-gold);
+}
+.fh-faq-card__a ul,
+.fh-faq-card__a ol {
+	margin: 10px 0 16px;
+	padding-left: 22px;
+	list-style: none;
+}
+.fh-faq-card__a ul > li,
+.fh-faq-card__a ol > li {
+	position: relative;
+	padding-left: 14px;
+	margin-bottom: 10px;
+	line-height: 1.75;
+}
+.fh-faq-card__a ul > li::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0.65em;
+	width: 6px;
+	height: 6px;
+	background: var(--fh-faq-gold);
+	border-radius: 50%;
+}
+.fh-faq-card__a ol {
+	counter-reset: fh-faq-ol;
+}
+.fh-faq-card__a ol > li {
+	counter-increment: fh-faq-ol;
+}
+.fh-faq-card__a ol > li::before {
+	content: counter(fh-faq-ol) ".";
+	position: absolute;
+	left: -6px;
+	top: 0;
+	color: var(--fh-faq-gold);
+	font-weight: 600;
+	font-size: 13px;
+}
+
+@media (max-width: 767px) {
+	.fh-faq-hero     { padding: 56px var(--fh-page-pad) 40px; }
+	.fh-qt-section   { padding: 56px var(--fh-page-pad); }
+	.fh-faq-section  { padding: 48px var(--fh-page-pad) 72px; }
+	.fh-faq-card__q  { font-size: 19px; }
+}

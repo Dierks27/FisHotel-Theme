@@ -14,26 +14,132 @@ class FisHotel_Admin_Settings {
 
 	const OPTION_GROUP = 'fishotel_settings';
 
+	/** FAQ item categories whitelist */
+	public static function faq_categories() {
+		return [
+			'General'    => 'General',
+			'Shipping'   => 'Shipping',
+			'Guarantees' => 'Guarantees',
+		];
+	}
+
+	/** Default 5 quarantine stages (word-for-word per spec). */
+	public static function default_quarantine_stages() {
+		return [
+			[
+				'label'       => 'Check-In',
+				'sublabel'    => 'Upon Receiving the Fish',
+				'duration'    => 'Day 1',
+				'description' => "When fish arrive from the wholesaler, we look each one over for anything that needs immediate attention. We then float the bags to match the tank temperature and confirm the salinity matches before anyone checks in.",
+			],
+			[
+				'label'       => 'The Spa',
+				'sublabel'    => 'Into Medication',
+				'duration'    => 'Days 1–14',
+				'description' => "Fish that look healthy and ready to be treated begin a 14-day treatment in either Copper Power (held at 2.35–2.50) or Chloroquine (held at 60 mg/gal). Fish on Copper Power also receive 10 days of formalin treatments, along with 2 Praziquantel and/or Fenbendazole treatments spaced 6 days apart.",
+			],
+			[
+				'label'       => 'Room Upgrade',
+				'sublabel'    => 'Moving Day',
+				'duration'    => 'Days 15–28',
+				'description' => "After the 14-day treatment wraps, every fish moves into a clean observation tank designed to feel like their natural environment — rocks and sand in every tank so they can settle in. They stay here for 14 days of observation while we watch their health and feed them well so they can put weight back on.",
+			],
+			[
+				'label'       => 'Room Service',
+				'sublabel'    => 'Medicated Food',
+				'duration'    => 'As needed, Days 15–28',
+				'description' => "For any fish that isn't putting on weight during observation, we provide medicated food with Praziquantel or Fenbendazole — once a day for 3 treatments. We keep watching and won't let them head to check-out until we're confident they're healthy and gaining weight.",
+			],
+			[
+				'label'       => 'Check-Out',
+				'sublabel'    => 'Ready to Go',
+				'duration'    => 'Day 29+',
+				'description' => "After 4 weeks with us — 2 in the spa, 2 under observation — each fish is ready to head home. We'll miss these little guys, but we know we can't keep them all. That's where you come in: adopt one and give them a long, healthy life in your slice of the ocean.",
+			],
+		];
+	}
+
+	/** Default 4 FAQ items (word-for-word per spec). */
+	public static function default_faq_items() {
+		return [
+			[
+				'question' => 'How much is shipping?',
+				'category' => 'Shipping',
+				'answer'   => "<p><strong>Product Shipping</strong><br>Ground shipping starts at \$2.99. Receive free shipping on orders over \$79.99.</p>\n<p><strong>Livestock Shipping</strong><br>Overnight shipping is \$49.99. Receive \$19 shipping on orders over \$500.</p>",
+			],
+			[
+				'question' => 'Can I pick my shipment date?',
+				'category' => 'Shipping',
+				'answer'   => "<p>We ship all critters every Tuesday &amp; Wednesdays. At checkout simply select the date that you would like your fish to be delivered. We expect you to be home to collect the delivery, but if you are unable to please make sure you get the fish dropped at the nearest UPS location to your home.</p>",
+			],
+			[
+				'question' => 'What if my fish arrives DOA?',
+				'category' => 'Guarantees',
+				'answer'   => "<p>At the FisHotel we take great pride in the health of our live animals. We believe in giving people the healthiest animals to ensure a positive experience in the aquarium hobby. For that reason, we fully guarantee that the animals we ship will arrive healthy and alive. In the unfortunate event that you have a D.O.A claim, please see below:</p>\n<ul>\n<li>Take a picture of your un-opened bag of livestock</li>\n<li>Once opened, please remove them and take a photo of the deceased livestock on a white background next to our packing slip</li>\n<li>Do NOT dispose of deceased livestock until you get the approval from FisHotel (In case we need more photos or information, we suggest freezing the animal in a Ziploc bag)</li>\n<li>Send an email with pictures to Jeff@FisHotel.com</li>\n<li>D.O.A. claims must be sent within 24 hours of receiving the package</li>\n<li>We do not issue credit for shipping costs</li>\n<li>Any claims due to packages being left outside for extended periods of time in extreme weather are void, although we know mistakes do happen. For this reason, we reserve the right to handle this on a case to case basis.</li>\n<li>Any D.O.A less than \$15 in value will be shipped with a future orders</li>\n</ul>",
+			],
+			[
+				'question' => "What's your health guarantee?",
+				'category' => 'Guarantees',
+				'answer'   => "<p>We also guarantee the health of our animals for 14 days from the day they are received. If you have any issues with sick livestock, please contact us within 14 days of receiving your order. Please allow one to two business days for a FisHotel to review your claim and notify you of approval or denial. Livestock credit is valid for one year from the date it is issued. (To use your credit, enter the credit code in the Coupons field on the checkout page. The dollar amount will be deducted from your livestock purchase total.)</p>",
+			],
+		];
+	}
+
 	/** All settings with defaults */
 	public static function defaults() {
 		return [
 			// Shop
-			'fh_shop_display'        => 'categories',
-			'fh_shop_hide_empty'     => '1',
-			'fh_shop_hidden_cats'    => [],
+			'fh_shop_display'             => 'categories',
+			'fh_shop_hide_empty'          => '1',
+			'fh_shop_hidden_cats'         => [],
 			// QT Certificate
-			'fh_qt_line_1'           => '14 days observation',
-			'fh_qt_line_2'           => '+ 14 days treatment',
+			'fh_qt_line_1'                => '14 days observation',
+			'fh_qt_line_2'                => '+ 14 days treatment',
 			// Trust Strip
-			'fh_trust_1'             => '28-day QT protocol',
-			'fh_trust_2'             => 'Live arrival guarantee',
-			'fh_trust_3'             => 'Ships Mon–Tue',
+			'fh_trust_1'                  => '28-day QT protocol',
+			'fh_trust_2'                  => 'Live arrival guarantee',
+			'fh_trust_3'                  => 'Ships Mon–Tue',
 			// Branding
-			'fh_tagline'             => 'We quarantine. You reef.',
+			'fh_tagline'                  => 'We quarantine. You reef.',
 			// Care Guide Defaults
-			'fh_default_foods'       => '',
-			'fh_default_habitat'     => '',
+			'fh_default_foods'            => '',
+			'fh_default_habitat'          => '',
+			// FAQ Page — hero fields
+			'faq_concierge_label'         => 'The Concierge Desk',
+			'faq_page_title'              => 'Frequently Asked Questions',
+			'faq_page_intro'              => '',
+			'quarantine_section_title'    => 'A Stay at The FisHotel',
+			'quarantine_section_subtitle' => 'How does a stay at The FisHotel work?',
+			// FAQ Page — structured content
+			'fh_quarantine_stages'        => [], // seeded below via get_quarantine_stages()
+			'fh_faq_items'                => [], // seeded below via get_faq_items()
 		];
+	}
+
+	/** Get quarantine stages, filling missing slots from defaults so we always have exactly 5. */
+	public static function get_quarantine_stages() {
+		$saved    = get_option( 'fh_quarantine_stages', [] );
+		$defaults = self::default_quarantine_stages();
+		$out      = [];
+		for ( $i = 0; $i < 5; $i++ ) {
+			$row = isset( $saved[ $i ] ) && is_array( $saved[ $i ] ) ? $saved[ $i ] : [];
+			$out[ $i ] = [
+				'label'       => isset( $row['label'] )       && $row['label']       !== '' ? $row['label']       : $defaults[ $i ]['label'],
+				'sublabel'    => isset( $row['sublabel'] )    && $row['sublabel']    !== '' ? $row['sublabel']    : $defaults[ $i ]['sublabel'],
+				'duration'    => isset( $row['duration'] )    && $row['duration']    !== '' ? $row['duration']    : $defaults[ $i ]['duration'],
+				'description' => isset( $row['description'] ) && $row['description'] !== '' ? $row['description'] : $defaults[ $i ]['description'],
+			];
+		}
+		return $out;
+	}
+
+	/** Get FAQ items, falling back to defaults if nothing saved yet. */
+	public static function get_faq_items() {
+		$saved = get_option( 'fh_faq_items', null );
+		if ( ! is_array( $saved ) || empty( $saved ) ) {
+			return self::default_faq_items();
+		}
+		return $saved;
 	}
 
 	/** Get a setting with its default fallback */
@@ -45,6 +151,48 @@ class FisHotel_Admin_Settings {
 	public static function init() {
 		add_action( 'admin_menu', [ __CLASS__, 'add_page' ] );
 		add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
+		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_admin_assets' ] );
+	}
+
+	public static function enqueue_admin_assets( $hook ) {
+		if ( $hook !== 'product_page_fishotel-settings' ) {
+			return;
+		}
+		// Ensure TinyMCE / Quicktags are available so wp_editor() instances init reliably
+		// and so we can add editors dynamically for new repeater rows.
+		wp_enqueue_editor();
+		wp_enqueue_script( 'jquery-ui-sortable' );
+		wp_enqueue_script(
+			'fishotel-admin-faq',
+			FISHOTEL_THEME_URI . '/assets/js/admin-faq.js',
+			[ 'jquery', 'jquery-ui-sortable', 'editor', 'quicktags' ],
+			FISHOTEL_THEME_VERSION,
+			true
+		);
+		wp_add_inline_style( 'wp-admin', self::admin_inline_css() );
+	}
+
+	public static function admin_inline_css() {
+		return '
+		.fh-faq-stages { display: flex; flex-direction: column; gap: 16px; max-width: 860px; }
+		.fh-faq-stage { background: #fff; border: 1px solid #ddd; border-left: 3px solid #c9963a; padding: 14px 16px; border-radius: 3px; }
+		.fh-faq-stage h4 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+		.fh-faq-stage .fh-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin-bottom: 10px; }
+		.fh-faq-stage label { display: block; font-weight: 600; font-size: 12px; color: #444; margin-bottom: 4px; }
+		.fh-faq-stage input[type=text] { width: 100%; }
+		.fh-faq-stage textarea { width: 100%; min-height: 90px; }
+		.fh-faq-repeater { max-width: 920px; }
+		.fh-faq-list { list-style: none; margin: 0; padding: 0; }
+		.fh-faq-row { background: #fff; border: 1px solid #ddd; border-left: 3px solid #c9963a; border-radius: 3px; padding: 12px 14px 14px; margin: 0 0 14px; }
+		.fh-faq-row.ui-sortable-helper { box-shadow: 0 6px 18px rgba(0,0,0,.15); }
+		.fh-faq-row-head { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+		.fh-faq-row-head .fh-faq-handle { cursor: move; color: #888; font-size: 18px; line-height: 1; user-select: none; padding: 4px 6px; }
+		.fh-faq-row-head .fh-faq-q { flex: 1 1 260px; min-width: 200px; }
+		.fh-faq-row-head select { min-width: 130px; }
+		.fh-faq-row-head button { cursor: pointer; }
+		.fh-faq-row .fh-faq-answer-label { display: block; font-weight: 600; font-size: 12px; color: #444; margin: 6px 0 4px; }
+		.fh-faq-actions { margin-top: 10px; }
+		';
 	}
 
 	public static function add_page() {
@@ -101,6 +249,19 @@ class FisHotel_Admin_Settings {
 					'fh_default_habitat' => [ 'label' => 'Default Habitat & Behavior text', 'type' => 'textarea', 'description' => 'Shown when a product has no Habitat & Behavior custom field.' ],
 				],
 			],
+			// FAQ Page section
+			'faq' => [
+				'title'  => 'FAQ Page',
+				'fields' => [
+					'faq_concierge_label'         => [ 'label' => 'Concierge eyebrow',         'type' => 'text',     'placeholder' => 'The Concierge Desk' ],
+					'faq_page_title'              => [ 'label' => 'Page title',                'type' => 'text',     'placeholder' => 'Frequently Asked Questions' ],
+					'faq_page_intro'              => [ 'label' => 'Page intro (optional)',     'type' => 'textarea', 'placeholder' => 'Optional short paragraph under the title.' ],
+					'quarantine_section_title'    => [ 'label' => 'Quarantine section title',  'type' => 'text',     'placeholder' => 'A Stay at The FisHotel' ],
+					'quarantine_section_subtitle' => [ 'label' => 'Quarantine section subtitle','type' => 'text',    'placeholder' => 'How does a stay at The FisHotel work?' ],
+					'fh_quarantine_stages'        => [ 'label' => 'Quarantine stages (5)',     'type' => 'stages_fixed', 'description' => 'Five fixed stages of the quarantine timeline. Blank fields revert to the default copy.' ],
+					'fh_faq_items'                => [ 'label' => 'FAQ items',                 'type' => 'repeater_wysiwyg', 'description' => 'Drag rows to reorder. Answers support bullet lists, bold, and links.' ],
+				],
+			],
 		];
 
 		foreach ( $fields as $section_id => $section ) {
@@ -121,6 +282,18 @@ class FisHotel_Admin_Settings {
 						},
 						'default'           => [],
 					] );
+				} elseif ( $field['type'] === 'stages_fixed' ) {
+					register_setting( self::OPTION_GROUP, $key, [
+						'type'              => 'array',
+						'sanitize_callback' => [ __CLASS__, 'sanitize_stages' ],
+						'default'           => self::default_quarantine_stages(),
+					] );
+				} elseif ( $field['type'] === 'repeater_wysiwyg' ) {
+					register_setting( self::OPTION_GROUP, $key, [
+						'type'              => 'array',
+						'sanitize_callback' => [ __CLASS__, 'sanitize_faq_items' ],
+						'default'           => self::default_faq_items(),
+					] );
 				} else {
 					register_setting( self::OPTION_GROUP, $key, [
 						'type'              => 'string',
@@ -139,6 +312,40 @@ class FisHotel_Admin_Settings {
 				);
 			}
 		}
+	}
+
+	public static function sanitize_stages( $val ) {
+		$defaults = self::default_quarantine_stages();
+		$out = [];
+		for ( $i = 0; $i < 5; $i++ ) {
+			$row = ( is_array( $val ) && isset( $val[ $i ] ) && is_array( $val[ $i ] ) ) ? $val[ $i ] : [];
+			$out[ $i ] = [
+				'label'       => isset( $row['label'] )       ? sanitize_text_field( $row['label'] )           : $defaults[ $i ]['label'],
+				'sublabel'    => isset( $row['sublabel'] )    ? sanitize_text_field( $row['sublabel'] )        : $defaults[ $i ]['sublabel'],
+				'duration'    => isset( $row['duration'] )    ? sanitize_text_field( $row['duration'] )        : $defaults[ $i ]['duration'],
+				'description' => isset( $row['description'] ) ? sanitize_textarea_field( $row['description'] ) : $defaults[ $i ]['description'],
+			];
+		}
+		return $out;
+	}
+
+	public static function sanitize_faq_items( $val ) {
+		if ( ! is_array( $val ) ) return [];
+		$categories = array_keys( self::faq_categories() );
+		$out = [];
+		foreach ( $val as $row ) {
+			if ( ! is_array( $row ) ) continue;
+			$question = isset( $row['question'] ) ? sanitize_text_field( $row['question'] ) : '';
+			$answer   = isset( $row['answer'] )   ? wp_kses_post( $row['answer'] )          : '';
+			$category = isset( $row['category'] ) && in_array( $row['category'], $categories, true ) ? $row['category'] : 'General';
+			if ( $question === '' && trim( wp_strip_all_tags( $answer ) ) === '' ) continue; // drop fully empty rows
+			$out[] = [
+				'question' => $question,
+				'answer'   => $answer,
+				'category' => $category,
+			];
+		}
+		return $out;
 	}
 
 	public static function render_field( $args ) {
@@ -194,11 +401,106 @@ class FisHotel_Admin_Settings {
 				}
 				echo '</div>';
 			}
+		} elseif ( $type === 'stages_fixed' ) {
+			$stages = self::get_quarantine_stages();
+			echo '<div class="fh-faq-stages">';
+			foreach ( $stages as $i => $stage ) {
+				$n = $i + 1;
+				echo '<div class="fh-faq-stage">';
+				echo '<h4>Stage ' . esc_html( $n ) . '</h4>';
+				echo '<div class="fh-row">';
+				printf(
+					'<div><label>Label</label><input type="text" name="%1$s[%2$d][label]" value="%3$s"></div>',
+					esc_attr( $key ), (int) $i, esc_attr( $stage['label'] )
+				);
+				printf(
+					'<div><label>Sublabel</label><input type="text" name="%1$s[%2$d][sublabel]" value="%3$s"></div>',
+					esc_attr( $key ), (int) $i, esc_attr( $stage['sublabel'] )
+				);
+				echo '</div>';
+				printf(
+					'<label>Duration</label><input type="text" name="%1$s[%2$d][duration]" value="%3$s" style="max-width:280px;">',
+					esc_attr( $key ), (int) $i, esc_attr( $stage['duration'] )
+				);
+				printf(
+					'<label style="margin-top:10px;">Description</label><textarea name="%1$s[%2$d][description]">%3$s</textarea>',
+					esc_attr( $key ), (int) $i, esc_textarea( $stage['description'] )
+				);
+				echo '</div>';
+			}
+			echo '</div>';
+		} elseif ( $type === 'repeater_wysiwyg' ) {
+			$items = self::get_faq_items();
+			$cats  = self::faq_categories();
+			echo '<div class="fh-faq-repeater">';
+			echo '<ol class="fh-faq-list" id="fh-faq-list">';
+			foreach ( $items as $i => $item ) {
+				self::render_faq_row( $key, $i, $item, $cats );
+			}
+			echo '</ol>';
+			echo '<div class="fh-faq-actions"><button type="button" class="button button-secondary" id="fh-faq-add">+ Add FAQ</button></div>';
+
+			// Hidden template row (used by JS to clone new items). __INDEX__ placeholder is replaced at clone time.
+			echo '<script type="text/template" id="fh-faq-row-template">';
+			self::render_faq_row( $key, '__INDEX__', [ 'question' => '', 'answer' => '', 'category' => 'General' ], $cats, true );
+			echo '</script>';
+			echo '</div>';
 		}
 
 		if ( ! empty( $args['description'] ) ) {
 			echo '<p class="description">' . esc_html( $args['description'] ) . '</p>';
 		}
+	}
+
+	/** Render a single FAQ repeater row. $is_template=true uses __INDEX__ placeholder for JS cloning. */
+	protected static function render_faq_row( $key, $index, $item, $cats, $is_template = false ) {
+		$idx_attr = $is_template ? '__INDEX__' : (int) $index;
+		$editor_id = 'fh_faq_answer_' . ( $is_template ? '__INDEX__' : (int) $index );
+		?>
+		<li class="fh-faq-row" data-index="<?php echo esc_attr( $idx_attr ); ?>">
+			<div class="fh-faq-row-head">
+				<span class="fh-faq-handle" title="Drag to reorder">&#8597;</span>
+				<input type="text" class="fh-faq-q" name="<?php echo esc_attr( $key ); ?>[<?php echo esc_attr( $idx_attr ); ?>][question]" value="<?php echo esc_attr( $item['question'] ); ?>" placeholder="Question">
+				<select name="<?php echo esc_attr( $key ); ?>[<?php echo esc_attr( $idx_attr ); ?>][category]">
+					<?php foreach ( $cats as $v => $l ) : ?>
+						<option value="<?php echo esc_attr( $v ); ?>" <?php selected( $item['category'], $v ); ?>><?php echo esc_html( $l ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<button type="button" class="button fh-faq-up" title="Move up">&uarr;</button>
+				<button type="button" class="button fh-faq-down" title="Move down">&darr;</button>
+				<button type="button" class="button button-link-delete fh-faq-delete" title="Delete">Delete</button>
+			</div>
+			<label class="fh-faq-answer-label" for="<?php echo esc_attr( $editor_id ); ?>">Answer</label>
+			<?php
+			if ( $is_template ) {
+				// Plain textarea in template; JS swaps in wp.editor on clone.
+				printf(
+					'<textarea id="%1$s" class="fh-faq-answer" name="%2$s[%3$s][answer]" rows="6" style="width:100%%;">%4$s</textarea>',
+					esc_attr( $editor_id ),
+					esc_attr( $key ),
+					esc_attr( $idx_attr ),
+					esc_textarea( $item['answer'] )
+				);
+			} else {
+				wp_editor(
+					$item['answer'],
+					$editor_id,
+					[
+						'textarea_name' => $key . '[' . (int) $index . '][answer]',
+						'textarea_rows' => 6,
+						'media_buttons' => false,
+						'teeny'         => true,
+						'quicktags'     => true,
+						'tinymce'       => [
+							'toolbar1' => 'bold,italic,underline,bullist,numlist,link,unlink,undo,redo',
+							'toolbar2' => '',
+						],
+					]
+				);
+			}
+			?>
+		</li>
+		<?php
 	}
 
 	public static function render_page() {

@@ -1,0 +1,162 @@
+/**
+ * FisHotel Medication Dosing Calculator — styles
+ *
+ * Design tokens match existing theme (bg #0f0f0f, gold #d4a574, cream #EDE0C0,
+ * Playfair Display + Josefin Sans). Locked-in aesthetic from seven Prazi
+ * iterations and one Copper final.
+ */
+
+:root {
+  --fh-qh-bg:            #0f0f0f;
+  --fh-qh-gold:          #d4a574;
+  --fh-qh-cream:         #EDE0C0;
+  --fh-qh-muted:         #9a8e80;
+  --fh-qh-dim:           #807469;
+  --fh-qh-dimmer:        #6b6058;
+  --fh-qh-hair:          rgba(212, 165, 116, 0.5);
+  --fh-qh-tint-weak:     rgba(212, 165, 116, 0.05);
+  --fh-qh-tint-med:      rgba(212, 165, 116, 0.15);
+  --fh-qh-tint-strong:   rgba(212, 165, 116, 0.25);
+  --fh-qh-safe:          #4ea58a;
+  --fh-qh-warn:          #e6b062;
+  --fh-qh-danger:        #d46a5a;
+  --fh-qh-water:         #6b8db8;
+  --fh-qh-warn-bg:       rgba(230, 176, 98, 0.1);
+  --fh-qh-warn-border:   rgba(230, 176, 98, 0.4);
+  --fh-qh-font-display:  'Playfair Display', Georgia, serif;
+  --fh-qh-font-body:     'Josefin Sans', -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ---- Page frame ---------------------------------------------------------- */
+.fh-qh-page { background: var(--fh-qh-bg); color: var(--fh-qh-cream); }
+.fh-qh-wrap { max-width: 820px; margin: 0 auto; padding: 48px 24px 80px; font-family: var(--fh-qh-font-body); font-weight: 300; }
+
+/* ---- Hero ---------------------------------------------------------------- */
+.fh-qh-hero { text-align: center; margin-bottom: 36px; }
+.fh-qh-eyebrow { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--fh-qh-gold); margin-bottom: 10px; font-weight: 400; }
+.fh-qh-title { font-family: var(--fh-qh-font-display); font-size: 40px; color: var(--fh-qh-cream); font-weight: 400; margin: 0 0 16px; line-height: 1.1; }
+.fh-qh-hairline { width: 60px; height: 1px; background: var(--fh-qh-hair); margin: 0 auto 16px; }
+.fh-qh-intro { color: var(--fh-qh-muted); font-size: 14px; max-width: 400px; margin: 0 auto; line-height: 1.5; }
+
+/* ---- Tank slider row ---------------------------------------------------- */
+.fh-qh-tankrow { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--fh-qh-tint-weak); border: 0.5px solid var(--fh-qh-tint-strong); border-radius: 3px; margin-bottom: 14px; }
+.fh-qh-tanklabel { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); min-width: 96px; }
+.fh-qh-tankslider { flex: 1; accent-color: var(--fh-qh-gold); height: 4px; }
+.fh-qh-tankval { font-family: var(--fh-qh-font-display); font-size: 22px; color: var(--fh-qh-cream); min-width: 82px; text-align: right; }
+.fh-qh-tankval small { font-family: var(--fh-qh-font-body); font-size: 12px; color: var(--fh-qh-dim); margin-left: 2px; }
+
+/* ---- Category tabs ------------------------------------------------------ */
+.fh-qh-tabs { display: flex; border-bottom: 0.5px solid var(--fh-qh-tint-strong); margin-bottom: 14px; }
+.fh-qh-tab { flex: 1; padding: 13px 6px; text-align: center; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fh-qh-dimmer); cursor: pointer; border: none; background: transparent; border-bottom: 1.5px solid transparent; margin-bottom: -0.5px; font-family: var(--fh-qh-font-body); font-weight: 300; }
+.fh-qh-tab:hover { color: var(--fh-qh-muted); }
+.fh-qh-tab.is-on { color: var(--fh-qh-gold); border-bottom-color: var(--fh-qh-gold); }
+
+/* ---- Med picker grid ---------------------------------------------------- */
+.fh-qh-medgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 6px; margin-bottom: 24px; }
+.fh-qh-med { padding: 11px 6px; border: 0.5px solid var(--fh-qh-tint-med); border-radius: 3px; text-align: center; font-size: 11px; color: var(--fh-qh-dim); cursor: pointer; line-height: 1.3; background: transparent; font-family: var(--fh-qh-font-body); font-weight: 300; transition: all 0.15s; }
+.fh-qh-med:hover { border-color: var(--fh-qh-tint-strong); color: var(--fh-qh-muted); }
+.fh-qh-med.is-on { border-color: var(--fh-qh-gold); background: var(--fh-qh-tint-med); color: var(--fh-qh-cream); }
+
+/* ---- Selected panel ----------------------------------------------------- */
+.fh-qh-panel { border: 0.5px solid var(--fh-qh-tint-strong); border-radius: 3px; padding: 28px; margin-bottom: 20px; min-height: 200px; }
+.fh-qh-card { display: flex; flex-direction: column; gap: 20px; }
+.fh-qh-phead { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 10px; }
+.fh-qh-pname { font-family: var(--fh-qh-font-display); font-size: 24px; color: var(--fh-qh-cream); font-weight: 400; }
+.fh-qh-ptag { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); }
+
+/* ---- Sensitivity / protocol toggle ------------------------------------- */
+.fh-qh-sens { padding-bottom: 4px; border-bottom: 0.5px solid var(--fh-qh-tint-med); }
+.fh-qh-senslabel { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); margin-bottom: 10px; }
+.fh-qh-senstabs { display: flex; flex-wrap: wrap; border-bottom: 0.5px solid var(--fh-qh-tint-strong); }
+.fh-qh-senstab { padding: 10px 16px 10px 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fh-qh-dimmer); cursor: pointer; border: none; background: transparent; border-bottom: 1.5px solid transparent; margin-bottom: -0.5px; margin-right: 22px; font-family: var(--fh-qh-font-body); font-weight: 300; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.fh-qh-senstab small { font-size: 10px; letter-spacing: 0.08em; text-transform: none; color: var(--fh-qh-dim); }
+.fh-qh-senstab:hover { color: var(--fh-qh-muted); }
+.fh-qh-senstab.is-on { color: var(--fh-qh-gold); border-bottom-color: var(--fh-qh-gold); }
+
+/* ---- Ppm inputs (copper) ----------------------------------------------- */
+.fh-qh-ppmrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fh-qh-ppmbox { padding: 14px 18px; background: var(--fh-qh-tint-weak); border: 0.5px solid var(--fh-qh-tint-med); border-radius: 3px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fh-qh-ppmlabel { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); }
+.fh-qh-ppminput { background: transparent; border: none; border-bottom: 0.5px solid var(--fh-qh-tint-strong); color: var(--fh-qh-cream); font-family: var(--fh-qh-font-display); font-size: 18px; width: 70px; text-align: right; padding: 2px 4px; outline: none; }
+.fh-qh-ppminput:focus { border-bottom-color: var(--fh-qh-gold); }
+
+/* ---- Prazi fluke checkboxes --------------------------------------------- */
+.fh-qh-prazi-ctrls { display: flex; flex-wrap: wrap; gap: 16px; }
+.fh-qh-check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--fh-qh-muted); }
+.fh-qh-check input { accent-color: var(--fh-qh-gold); }
+.fh-qh-check-label { }
+
+/* ---- Prazi sliders ------------------------------------------------------ */
+.fh-qh-prazi-sliders { display: flex; flex-direction: column; gap: 8px; }
+.fh-qh-slrow { display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: var(--fh-qh-tint-weak); border: 0.5px solid var(--fh-qh-tint-med); border-radius: 3px; }
+.fh-qh-sllabel { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fh-qh-gold); min-width: 100px; }
+.fh-qh-slider { flex: 1; accent-color: var(--fh-qh-gold); height: 4px; }
+.fh-qh-slval { font-family: var(--fh-qh-font-display); font-size: 16px; color: var(--fh-qh-cream); min-width: 64px; text-align: right; }
+
+/* ---- Dose block (pipette/scoops + readout) ----------------------------- */
+.fh-qh-doseblock { display: flex; align-items: center; justify-content: center; gap: 32px; padding: 22px 0; border-top: 0.5px solid var(--fh-qh-tint-med); border-bottom: 0.5px solid var(--fh-qh-tint-med); }
+.fh-qh-doseblock-copper { }
+.fh-qh-pipette-wrap { flex-shrink: 0; }
+.fh-qh-pipette { display: block; }
+.fh-qh-scoops { display: flex; flex-wrap: wrap; gap: 6px; max-width: 200px; flex-shrink: 0; }
+.fh-qh-scoop { width: 10px; height: 10px; border-radius: 50%; background: var(--fh-qh-gold); }
+.fh-qh-scoop-more { font-size: 11px; color: var(--fh-qh-dim); padding-left: 6px; align-self: center; }
+.fh-qh-doseinfo { text-align: left; }
+.fh-qh-dosenum { font-family: var(--fh-qh-font-display); font-size: 52px; color: var(--fh-qh-gold); line-height: 1; letter-spacing: -0.01em; font-weight: 400; }
+.fh-qh-doseunit { font-family: var(--fh-qh-font-display); font-size: 22px; color: var(--fh-qh-gold); margin-left: 6px; }
+.fh-qh-dosesub { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-dim); margin-top: 8px; }
+.fh-qh-doseswing { font-family: var(--fh-qh-font-display); font-style: italic; font-size: 13px; color: var(--fh-qh-muted); margin-top: 6px; }
+
+/* ---- Brand equivalents -------------------------------------------------- */
+.fh-qh-brands { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fh-qh-brandbox { padding: 14px 16px; background: var(--fh-qh-tint-weak); border: 0.5px solid var(--fh-qh-tint-med); border-radius: 3px; }
+.fh-qh-brandname { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); margin-bottom: 6px; }
+.fh-qh-brandval { font-family: var(--fh-qh-font-display); font-style: italic; font-size: 16px; color: var(--fh-qh-cream); line-height: 1.3; }
+.fh-qh-brandsub { font-size: 11px; color: var(--fh-qh-dim); margin-top: 4px; line-height: 1.4; }
+.fh-qh-brandnote { font-size: 11px; color: var(--fh-qh-muted); margin-top: 6px; font-style: italic; line-height: 1.4; }
+
+/* ---- Schedule cells ----------------------------------------------------- */
+.fh-qh-sched { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.fh-qh-schedcell { text-align: center; padding: 12px 8px; }
+.fh-qh-schedlabel { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-dim); margin-bottom: 6px; }
+.fh-qh-schedval { font-family: var(--fh-qh-font-display); font-size: 15px; color: var(--fh-qh-cream); line-height: 1.3; }
+.fh-qh-schedsub { font-size: 11px; color: var(--fh-qh-dimmer); margin-top: 2px; font-family: var(--fh-qh-font-body); }
+
+/* ---- Timeline box ------------------------------------------------------- */
+.fh-qh-timeline { padding-top: 4px; }
+.fh-qh-timeline-title { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); margin-bottom: 10px; text-align: center; }
+.fh-qh-legend { display: flex; justify-content: center; gap: 18px; margin-bottom: 12px; font-size: 11px; color: var(--fh-qh-dimmer); }
+.fh-qh-leg-item { display: flex; align-items: center; gap: 6px; }
+.fh-qh-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.fh-qh-dot-water { background: var(--fh-qh-water); }
+.fh-qh-dot-dose { background: var(--fh-qh-gold); }
+.fh-qh-sq { width: 10px; height: 10px; display: inline-block; }
+.fh-qh-sq-ramp { background: var(--fh-qh-gold); }
+.fh-qh-sq-hold { background: var(--fh-qh-tint-strong); border: 0.5px solid var(--fh-qh-gold); }
+
+/* ---- Warnings + notes --------------------------------------------------- */
+.fh-qh-warning { padding: 12px 14px; background: var(--fh-qh-warn-bg); border: 0.5px solid var(--fh-qh-warn-border); border-left: 2px solid var(--fh-qh-warn); border-radius: 3px; color: var(--fh-qh-warn); font-size: 12px; line-height: 1.5; display: flex; gap: 10px; }
+.fh-qh-warning-icon { flex-shrink: 0; font-size: 14px; }
+.fh-qh-note { font-size: 12px; color: var(--fh-qh-dim); font-style: italic; text-align: center; line-height: 1.6; }
+.fh-qh-error { padding: 24px; text-align: center; color: var(--fh-qh-danger); font-size: 13px; }
+
+/* ---- Actions row -------------------------------------------------------- */
+.fh-qh-actions { display: flex; gap: 10px; }
+.fh-qh-actbtn { flex: 1; background: transparent; color: var(--fh-qh-gold); border: 0.5px solid rgba(212,165,116,0.4); padding: 12px 14px; font-family: var(--fh-qh-font-body); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; border-radius: 3px; transition: all 0.15s; font-weight: 300; }
+.fh-qh-actbtn:hover { background: var(--fh-qh-tint-med); border-color: var(--fh-qh-gold); }
+
+/* ---- Disclaimer --------------------------------------------------------- */
+.fh-qh-disclaimer { font-size: 11px; color: var(--fh-qh-dim); font-style: italic; text-align: center; line-height: 1.7; margin-top: 28px; max-width: 560px; margin-left: auto; margin-right: auto; }
+
+/* ---- Mobile breakpoint -------------------------------------------------- */
+@media (max-width: 640px) {
+  .fh-qh-wrap { padding: 32px 16px 60px; }
+  .fh-qh-title { font-size: 30px; }
+  .fh-qh-doseblock { flex-direction: column; gap: 18px; text-align: center; }
+  .fh-qh-doseinfo { text-align: center; }
+  .fh-qh-dosenum { font-size: 44px; }
+  .fh-qh-ppmrow, .fh-qh-brands, .fh-qh-sched { grid-template-columns: 1fr; }
+  .fh-qh-senstabs { flex-direction: column; }
+  .fh-qh-senstab { margin-right: 0; padding: 10px 0; }
+  .fh-qh-actions { flex-direction: column; }
+}

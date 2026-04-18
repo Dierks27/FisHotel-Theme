@@ -1,0 +1,1050 @@
+{
+  "$schema_version": "1.2",
+  "generated_at": "2026-04-18T07:26:45.324098Z",
+  "primary_generic_source": "Humblefish Medication Dosing Guide (canonical text supplied by user, matching https://humble.fish/community/threads/medication-dosing-guide.1124/)",
+  "notes": "All calculated_brand_mg_per_gal_to_deliver_pure_dose values are based on active_ingredient_pct and the generic LOW dose. Measure weights are left null when not published on the label; this is tracked in the verification log. | v1.1 (2026-04-18): Added MetroPlex in-house scoop weight (150 mg). Added fishotel_default overrides for Copper Power (1.73 ml/gal empirical) and Cupramine (HF ramp). Triple Sulfa substitution surfaced via ui_user_surface_note. Hyposalinity duration 5\u219230 days. Added sulfa_tmp, minocycline, fenbendazole_internal as meds 23-25. | v1.2 (2026-04-18): Jeff-supplied updates from Fritz/API/Seachem/Copper Power/PolyGuard data dump. Filled measure_weight_mg for NeoPlex (125), KanaPlex (125), SulfaPlex (145), Fritz Maracyn (600), Maracyn Two (600). Confirmed API packets all 2000 mg total weight. Added Copper Power 0.5% Cu(II) and SG 1.12. Added Seachem PolyGuard (med 26) with full 5-active composition disclosure.",
+  "medications": [
+    {
+      "med_id": "ciprofloxacin",
+      "name_generic": "Ciprofloxacin",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": 250,
+      "dose_pure_high_mg_per_gal": 250,
+      "dose_unit_override": null,
+      "frequency_hours": 24,
+      "duration_days": 7,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [],
+      "special_notes_generic": "Applied as a 1-2 hour bath at 250 mg per gallon, repeated daily. Methylene Blue can be added to the bath water to boost efficacy. Not typically used as an in-tank QT dose.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/ciprofloxacin.11405/"
+      ],
+      "brand_equivalents": []
+    },
+    {
+      "med_id": "enrofloxacin",
+      "name_generic": "Enrofloxacin",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": 9.5,
+      "dose_pure_high_mg_per_gal": 19,
+      "dose_unit_override": null,
+      "frequency_hours": 24,
+      "duration_days": 7,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Can be given in-tank as a QT dose, or as a 5-hour bath. Prefer the low end of the range for sensitive species. In vivo it partially de-ethylates to ciprofloxacin, so it has overlapping coverage.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://pubmed.ncbi.nlm.nih.gov/2080513/",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC3717066/"
+      ],
+      "brand_equivalents": []
+    },
+    {
+      "med_id": "erythromycin",
+      "name_generic": "Erythromycin",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": 12.5,
+      "dose_pure_high_mg_per_gal": 25,
+      "dose_unit_override": null,
+      "frequency_hours": 24,
+      "duration_days": 10,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Humblefish frames the 12.5-25 mg/gal dose around eye infections; treat 10-14 days total. Pharma-grade powder (e.g. from Everything Aquatic) is preferred over aquarium brands because fillers are lower. Remove chemical filtration and turn off UV while dosing.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/antibiotics.15/",
+        "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e05fc13b-1317-48f7-82c6-c318b660cf52",
+        "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=22726a17-d459-4550-ad34-81beeea28bfc"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Pharma-Grade Erythromycin (Everything Aquatic)",
+          "manufacturer": "Everything Aquatic",
+          "active_ingredient_pct": 100,
+          "inactive_or_filler_pct": 0,
+          "measure_weight_mg": null,
+          "measure_unit_label": null,
+          "brand_label_dose": "Weigh with a digital scale to deliver 12.5-25 mg/gal of pure erythromycin",
+          "brand_label_frequency_hours": 24,
+          "brand_label_duration_days": 10,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 12.5,
+          "calculated_measures_per_gal": null,
+          "brand_spec_sheet_url": "https://everythingaquatic.com/",
+          "brand_notes": "Humblefish-recommended source for pharma-grade erythromycin because of the high purity."
+        },
+        {
+          "brand_name": "Fritz Maracyn (formerly Mardel Maracyn)",
+          "manufacturer": "Fritz Aquatics",
+          "active_ingredient_pct": 33.3,
+          "inactive_or_filler_pct": 65,
+          "measure_weight_mg": 600,
+          "measure_unit_label": "packet",
+          "brand_label_dose": "1 packet (200 mg erythromycin) per 10 US gallons",
+          "brand_label_frequency_hours": 24,
+          "brand_label_duration_days": 5,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 37.54,
+          "calculated_measures_per_gal": 0.0625,
+          "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e05fc13b-1317-48f7-82c6-c318b660cf52",
+          "brand_notes": "Humblefish describes Fritz Maracyn as <35% erythromycin; DailyMed lists 200 mg active per packet. Packet powder weight (571 mg) is back-calculated from that active mass at 35% potency and should be treated as approximate - flagged in verification_log. Label schedule (1 packet/10 gal \u00d7 5 days) delivers ~20 mg/gal per dose, which is inside the Humblefish 12.5-25 mg/gal range.",
+          "measure_weight_source": "fda.report/DailyMed Maracyn monograph: 0.6 g per packet (200 mg erythromycin)"
+        },
+        {
+          "brand_name": "API E.M. Erythromycin",
+          "manufacturer": "Mars Fishcare / API",
+          "active_ingredient_pct": 10.0,
+          "inactive_or_filler_pct": 90,
+          "measure_weight_mg": 2000,
+          "measure_unit_label": "packet",
+          "brand_label_dose": "1 packet (200 mg erythromycin) per 10 US gallons",
+          "brand_label_frequency_hours": 24,
+          "brand_label_duration_days": 2,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 125.0,
+          "calculated_measures_per_gal": 0.0625,
+          "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=22726a17-d459-4550-ad34-81beeea28bfc",
+          "brand_notes": "Humblefish describes API E.M. as <10% erythromycin. DailyMed confirms 200 mg active per 2 g packet. Label is a 2-dose course with 25% water change between, not a 10-day QT course.",
+          "measure_weight_source": "DailyMed label: 200 mg erythromycin in 2 g packet (confirmed via uploaded PDF 2026-04-18)"
+        }
+      ]
+    },
+    {
+      "med_id": "kanamycin_sulfate",
+      "name_generic": "Kanamycin Sulfate",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": 25,
+      "dose_pure_high_mg_per_gal": 37.5,
+      "dose_unit_override": null,
+      "frequency_hours": 48,
+      "duration_days": 10,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Dose every 48 h (drop to every 24 h for severe infections) for 10-14 days. Most effective when paired with nitrofurazone (e.g. AAP Spectrogram delivers both in one capsule). Remove carbon, switch off UV during treatment.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=fdce22b3-4b51-4bac-8a89-db5f8b6ae252"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Seachem KanaPlex",
+          "manufacturer": "Seachem",
+          "active_ingredient_pct": 32,
+          "inactive_or_filler_pct": 68,
+          "measure_weight_mg": 125,
+          "measure_unit_label": "measure",
+          "brand_label_dose": "1 measure per 20 L (5 US gallons)",
+          "brand_label_frequency_hours": 48,
+          "brand_label_duration_days": 6,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 78.125,
+          "calculated_measures_per_gal": 0.625,
+          "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=fdce22b3-4b51-4bac-8a89-db5f8b6ae252",
+          "brand_notes": "DailyMed confirms 32% kanamycin. Measure weight 125 mg \u2192 40 mg kanamycin per measure. DOSING DISCREPANCY: Seachem label (1 measure / 5 gal = 8 mg/gal kanamycin) is roughly 3\u00d7 below Humblefish therapeutic range (25-37.5 mg/gal). To hit HF therapeutic, dose 6.25 measures per 10 gal, not the label 2 measures per 10 gal.",
+          "measure_weight_source": "Seachem FAQ explicitly: 125 mg per measure (0.25 mL scoop)"
+        },
+        {
+          "brand_name": "AAP Spectrogram",
+          "manufacturer": "American Aquarium Products (AAP)",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": 150,
+          "measure_unit_label": "packet",
+          "brand_label_dose": "1 capsule per 10 US gallons",
+          "brand_label_frequency_hours": 48,
+          "brand_label_duration_days": 10,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 0.1,
+          "brand_spec_sheet_url": "https://www.americanaquariumproducts.com/AquariumMedication2.html",
+          "brand_notes": "Kanamycin + nitrofurazone combination capsule. Active percentages not publicly published. Widely regarded as strongest broad-spectrum aquarium antibiotic for columnaris, aeromonas, pseudomonas. Total actives ~150 mg per capsule per forum sources (unofficial \u2014 AAP received FDA warning letters for unapproved labeling, hence no DailyMed entry). Dosing: 1 capsule / 10 gal.",
+          "measure_weight_source": "Forum reference: ~150 mg total actives per capsule (UNOFFICIAL \u2014 AAP does not publish)"
+        }
+      ]
+    },
+    {
+      "med_id": "neomycin_sulfate",
+      "name_generic": "Neomycin Sulfate",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": 25,
+      "dose_pure_high_mg_per_gal": 25,
+      "dose_unit_override": null,
+      "frequency_hours": 24,
+      "duration_days": 10,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Treat 10 days for common bacterial infection. For suspected fish tuberculosis (Mycobacterium), extend to 30 days. 25% WC before each dose, remove carbon, UV off.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://dailymed.nlm.nih.gov/dailymed/getFile.cfm?setid=02e8a701-7a7f-4a4e-80ba-7ba7e8c1ffe2&type=pdf"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Seachem NeoPlex",
+          "manufacturer": "Seachem",
+          "active_ingredient_pct": 43,
+          "inactive_or_filler_pct": 57,
+          "measure_weight_mg": 125,
+          "measure_unit_label": "measure",
+          "brand_label_dose": "1 measure per 8 L (2 US gallons)",
+          "brand_label_frequency_hours": 168,
+          "brand_label_duration_days": 21,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 58.14,
+          "calculated_measures_per_gal": 0.4651,
+          "brand_spec_sheet_url": "https://seachem.zendesk.com/hc/en-us/articles/115001213893-Info-Seachem-NeoPlex-Dosing-Instructions",
+          "brand_notes": "DailyMed confirms 43% neomycin sulfate. Seachem's label protocol (weekly for 3 weeks) is very different from the Humblefish daily QT protocol - capture both schedules. Measure mg weight not published.",
+          "measure_weight_source": "Seachem FAQ: 10 g vial \u2248 80 measures \u2192 125 mg/measure (identical 0.25 mL scoop across products)"
+        }
+      ]
+    },
+    {
+      "med_id": "nitrofuracin_green",
+      "name_generic": "Nitrofuracin Green",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": 50,
+      "dose_pure_high_mg_per_gal": 50,
+      "dose_unit_override": null,
+      "frequency_hours": 24,
+      "duration_days": 10,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Combination product - nitrofurazone + sulfathiazole sodium + methylene blue on a NaCl carrier. Humblefish in-tank dose: 1/4 tsp per 20 gal = 1 g per 20 gal = 50 mg/gal. Bath-only dose: 100 mg/gal for 30 min.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/nitrofuracin-green-nfg.10017/",
+        "https://humble.fish/community/threads/nfg-nitrofuracin-green-powder.22447/",
+        "https://www.americanaquariumproducts.com/AquariumMedication3.html"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Nitrofuracin Green Powder (AAP / Aquatronics)",
+          "manufacturer": "American Aquarium Products (originally Aquatronics)",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": 4000,
+          "measure_unit_label": "teaspoon",
+          "brand_label_dose": "1/4 teaspoon per 20 US gallons (~1 g per 20 gallons)",
+          "brand_label_frequency_hours": 24,
+          "brand_label_duration_days": 10,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 50,
+          "calculated_measures_per_gal": 0.0125,
+          "brand_spec_sheet_url": "https://www.americanaquariumproducts.com/AquariumMedication3.html",
+          "brand_notes": "Active percentages not published by AAP. Hobbyist reverse-engineering suggests ~25 mg/gal nitrofurazone + ~25 mg/gal sulfathiazole + ~0.5 ml/gal methylene blue at the label dose (not manufacturer-confirmed - flagged). 4 g/tsp is a standard salt-like powder density, treated as approximate."
+        }
+      ]
+    },
+    {
+      "med_id": "nitrofurazone",
+      "name_generic": "Nitrofurazone",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": 10,
+      "dose_pure_high_mg_per_gal": 25,
+      "dose_unit_override": null,
+      "frequency_hours": 48,
+      "duration_days": 10,
+      "water_change_pct_before_dose": 50,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Every 48 h standard, drop to every 24 h for severe infections. 25-50% water change before each dose (50% recommended by Humblefish for heavier dose schedules). 10-14 days total. Synergistic with kanamycin. Light-sensitive - ideally dose with tank lights off. Stains silicone yellow.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=f1339c47-224d-4607-a4d6-22ea95a1a6bd"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "API Furan-2",
+          "manufacturer": "Mars Fishcare / API",
+          "active_ingredient_pct": 4.25,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": 2000,
+          "measure_unit_label": "packet",
+          "brand_label_dose": "1 packet (85 mg nitrofurazone) per 10 US gallons",
+          "brand_label_frequency_hours": 24,
+          "brand_label_duration_days": 4,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 235.29,
+          "calculated_measures_per_gal": 0.1,
+          "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=f1339c47-224d-4607-a4d6-22ea95a1a6bd",
+          "brand_notes": "DailyMed confirms 85 mg nitrofurazone per packet (delivers 8.5 mg/gal at label dose - just below the Humblefish range). Total packet weight and excipient percentages not published. Furan-2 label is a 4-day course.",
+          "measure_weight_source": "DailyMed label: 85 mg nitrofurazone in 2 g packet (same 2g format as API E.M./General Cure)"
+        },
+        {
+          "brand_name": "AAP Spectrogram",
+          "manufacturer": "American Aquarium Products",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": null,
+          "measure_unit_label": "packet",
+          "brand_label_dose": "1 capsule per 10 US gallons",
+          "brand_label_frequency_hours": 48,
+          "brand_label_duration_days": 10,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 0.1,
+          "brand_spec_sheet_url": "https://www.americanaquariumproducts.com/AquariumMedication2.html",
+          "brand_notes": "Same product as for kanamycin - delivers both actives synchronously."
+        }
+      ]
+    },
+    {
+      "med_id": "sulfa_drugs",
+      "name_generic": "Sulfa Drugs (Sulfamerazine / Sulfamethazine / Sulfathiazole)",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": 25,
+      "dose_pure_high_mg_per_gal": 25,
+      "dose_unit_override": null,
+      "frequency_hours": 48,
+      "duration_days": 10,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Humblefish generic dose refers to a combined sulfa mix (sulfamerazine + sulfamethazine + sulfathiazole) at 25 mg/gal total. Drop to every 24 h for severe infections. Minimum 10 days. Note: the most common aquarium brand (API Triple Sulfa) actually substitutes sulfacetamide for sulfamerazine.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=638cfdf4-99cc-4c33-9144-ebadf96a9512",
+        "https://www.apifishcare.com/pdfs/products-us/triple-sulfa/api-triple-sulfa-safety-data-sheet.pdf"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "API Triple Sulfa",
+          "manufacturer": "Mars Fishcare / API",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": 2000,
+          "measure_unit_label": "packet",
+          "brand_label_dose": "1 packet per 10 US gallons (delivers 664 mg sulfathiazole Na + 168 mg sulfamethazine Na + 168 mg sulfacetamide Na per 10 gal)",
+          "brand_label_frequency_hours": 24,
+          "brand_label_duration_days": 4,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 0.1,
+          "brand_spec_sheet_url": "https://www.apifishcare.com/pdfs/products-us/triple-sulfa/api-triple-sulfa-safety-data-sheet.pdf",
+          "brand_notes": "Substitutes sulfacetamide for sulfamerazine vs. the HF generic recipe. Total label dose delivers ~100 mg/gal combined sulfa sodium salts. Packet total weight ~1 g (inferred, not manufacturer-confirmed).",
+          "ui_user_surface_note": "Contains sulfacetamide sodium in place of sulfamerazine \u2014 different pharmacokinetics than the generic HF sulfa recipe.",
+          "active_ingredient_pct_combined_sulfas": 50.0,
+          "measure_weight_source": "API SDS: 664 sulfathiazole Na + 168 sulfamethazine Na + 168 sulfacetamide Na = 1000 mg actives in 2 g packet"
+        },
+        {
+          "brand_name": "Seachem SulfaPlex",
+          "manufacturer": "Seachem",
+          "active_ingredient_pct": 69,
+          "inactive_or_filler_pct": 31,
+          "measure_weight_mg": 145,
+          "measure_unit_label": "measure",
+          "brand_label_dose": "2-3 measures per 40 L (10 US gallons)",
+          "brand_label_frequency_hours": 72,
+          "brand_label_duration_days": 21,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 36.23,
+          "calculated_measures_per_gal": 0.2499,
+          "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=638cfdf4-99cc-4c33-9144-ebadf96a9512",
+          "brand_notes": "DailyMed confirms 69% sulfathiazole. Measure weight 145 mg (total powder) \u2192 100 mg sulfathiazole active per measure. Label \"2-3 measures per 10 gal\" matches HF 25 mg/gal at 2.5 measures/10 gal.",
+          "measure_weight_source": "Seachem support: ~145 mg per measure (69% sulfathiazole = ~100 mg active per measure)"
+        }
+      ]
+    },
+    {
+      "med_id": "copper_power",
+      "name_generic": "Copper Power (ionic/chelated copper)",
+      "category": "copper",
+      "dose_pure_low_mg_per_gal": 2.5,
+      "dose_pure_high_mg_per_gal": 2.5,
+      "dose_unit_override": "ppm",
+      "frequency_hours": null,
+      "duration_days": 14,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish",
+        "invertebrates"
+      ],
+      "special_notes_generic": "Target 2.2-2.5 ppm total copper. Ramp over 4-5 days; never hit therapeutic in a single dose. Remove all inverts, carbon, Purigen, and chemical filtration. Turn off UV. Test with Hanna HI702 High Range Copper Checker - Seachem/Salifert kits are not appropriate for this product.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/copper/",
+        "https://www.reef2reef.com/threads/ratios-for-dosing-copper-power.385871/",
+        "https://www.reef2reef.com/threads/hanna-hr-copper-checker-vs-copper-power-dosage-instructions.1072606/"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Copper Power Blue (Saltwater)",
+          "manufacturer": "Endich / Mardel",
+          "active_ingredient_pct": 0.5,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": null,
+          "measure_unit_label": "ml",
+          "brand_label_frequency_hours": null,
+          "brand_label_duration_days": 14,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 1.48,
+          "brand_spec_sheet_url": "https://gocopperpower.com/technical-data-sheet",
+          "brand_notes": "DATA CONFLICT: Label/calculator value is 1.48 ml/gal for 2.5 ppm. Empirical Hanna HI702 testing by multiple hobbyists lands at ~1.73 ml/gal to actually reach 2.5 ppm. Treat 1.73 ml/gal as the conservative empirical value and ALWAYS verify with the Hanna checker. Never trust the label dose blindly. Technical data sheet confirms 0.5% Cu(II) w/w, SG 1.12. Math check: 1.73 ml \u00d7 1.12 g/ml \u00d7 0.005 = 9.69 mg Cu in 1 gal (3.785 L) = 2.56 ppm \u2014 matches FisHotel empirical.",
+          "fishotel_default": {
+            "dose": "1.73 ml per gallon to reach 2.5 ppm",
+            "source": "fishotel_hanna_hi702_empirical",
+            "override_reason": "Manufacturer label value (1.48 ml/gal) under-doses by ~15-20% when verified against a Hanna HI702 checker. FisHotel-tested dosing."
+          },
+          "manufacturer_label_dose": "1.48 ml per gallon to reach 2.5 ppm (manufacturer label / common calculator value)",
+          "specific_gravity": 1.12
+        }
+      ]
+    },
+    {
+      "med_id": "copper_sulfate_pentahydrate",
+      "name_generic": "Copper Sulfate Pentahydrate",
+      "category": "copper",
+      "dose_pure_low_mg_per_gal": 0.15,
+      "dose_pure_high_mg_per_gal": 0.2,
+      "dose_unit_override": "ppm",
+      "frequency_hours": null,
+      "duration_days": 14,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish",
+        "invertebrates"
+      ],
+      "special_notes_generic": "Free Cu2+ target 0.15-0.20 ppm. Copper sulfate pentahydrate is 25.5% free copper by weight. Ramp over 4-5 days. Extremely narrow therapeutic window - test with a Seachem or Salifert copper kit before every adjustment. Remove inverts and chemical filtration. UV off.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://edis.ifas.ufl.edu/publication/FA165",
+        "https://edis.ifas.ufl.edu/publication/FA008"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Copper Sulfate Pentahydrate (generic)",
+          "manufacturer": "Various",
+          "active_ingredient_pct": 25.5,
+          "inactive_or_filler_pct": 74.5,
+          "measure_weight_mg": null,
+          "measure_unit_label": null,
+          "brand_label_dose": "~0.22 g of pentahydrate salt per 100 gal to reach 0.15 ppm Cu2+ (UF/IFAS FA165 formula)",
+          "brand_label_frequency_hours": null,
+          "brand_label_duration_days": 14,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": null,
+          "brand_spec_sheet_url": "https://edis.ifas.ufl.edu/publication/FA165",
+          "brand_notes": "Peer-reviewed UF/IFAS aquaculture guide; formula: gallons \u00d7 0.0038 \u00d7 desired mg/L \u00d7 3.92 = grams of pentahydrate needed. Worked value: ~2.22 mg of pentahydrate powder per gallon delivers ~0.15 ppm Cu2+. The standard calculated_brand_mg_per_gal formula (dose_low \u00f7 active_pct) does not apply cleanly here because the pure dose is expressed as ppm of Cu2+ (mg/L) not mg/gal of compound - left null to avoid unit confusion downstream."
+        }
+      ]
+    },
+    {
+      "med_id": "cupramine",
+      "name_generic": "Cupramine (Seachem)",
+      "category": "copper",
+      "dose_pure_low_mg_per_gal": 0.5,
+      "dose_pure_high_mg_per_gal": 0.5,
+      "dose_unit_override": "ppm",
+      "frequency_hours": null,
+      "duration_days": 14,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish",
+        "invertebrates"
+      ],
+      "special_notes_generic": "Target 0.50 ppm total copper. Humblefish-preferred ramp dose is smaller than Seachem's label (Humblefish: 4 drops (0.2 ml) per gallon OR 1 ml per 5 gallons; Seachem label: 1 ml per 10.5 gal first dose, 48 h later second dose to 0.5 ppm). Inverts removed, carbon and Purigen out, UV off. Test with Seachem MultiTest or Salifert. Do not exceed 0.6 ppm.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://seachem.zendesk.com/hc/en-us/articles/115000979754-Info-Seachem-Cupramine-Dosing-Treatment-Instructions"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Cupramine",
+          "manufacturer": "Seachem",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": null,
+          "measure_unit_label": "ml",
+          "brand_label_frequency_hours": 48,
+          "brand_label_duration_days": 14,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 0.2,
+          "brand_spec_sheet_url": "https://seachem.zendesk.com/hc/en-us/articles/115000979754-Info-Seachem-Cupramine-Dosing-Treatment-Instructions",
+          "brand_notes": "HF ramped protocol: 4 drops (0.2 ml) per gal OR 1 ml per 5 gal. Seachem label protocol (two-step 48 h) is faster than HF recommends. Cupramine is a copper-amine complex, not chelated - it stays ionic in the water column. Remove with carbon or CupriSorb after treatment.",
+          "fishotel_default": {
+            "dose": "0.2 ml (4 drops) per gallon, ramped over multiple days to therapeutic 0.5 ppm",
+            "source": "humblefish_ramp",
+            "override_reason": "HF's slower ramp is safer for sensitivity-flagged species (anthias, dragonets, wrasses, scaleless fish)."
+          },
+          "manufacturer_label_dose": "1 ml per 40 L (~10.5 gal) day 1; wait 48 h; repeat to reach 0.5 ppm"
+        }
+      ]
+    },
+    {
+      "med_id": "cuprion",
+      "name_generic": "Cuprion (Ruby Reef / Brightwell)",
+      "category": "copper",
+      "dose_pure_low_mg_per_gal": 0.2,
+      "dose_pure_high_mg_per_gal": 0.2,
+      "dose_unit_override": "ppm",
+      "frequency_hours": null,
+      "duration_days": 14,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish",
+        "invertebrates"
+      ],
+      "special_notes_generic": "Target 0.20 ppm ionic copper. Very tight therapeutic window - above ~0.25 ppm turns toxic quickly. Daily testing required (Seachem or Salifert). Not reef-safe. For experienced aquarists only.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/copper/",
+        "https://www.bulkreefsupply.com/cuprion-stabilized-ionic-copper-solution-brightwell-aquatics.html"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Cuprion",
+          "manufacturer": "Brightwell Aquatics (formerly Ruby Reef)",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": 50,
+          "measure_unit_label": "drop",
+          "brand_label_dose": "1 drop per gallon raises free copper by ~0.20 ppm",
+          "brand_label_frequency_hours": null,
+          "brand_label_duration_days": 14,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 1,
+          "brand_spec_sheet_url": "https://www.bulkreefsupply.com/cuprion-stabilized-ionic-copper-solution-brightwell-aquatics.html",
+          "brand_notes": "Ruby Reef brand originally; now sold under Brightwell Aquatics. Drop volume assumed ~0.05 ml (standard)."
+        }
+      ]
+    },
+    {
+      "med_id": "coppersafe",
+      "name_generic": "Coppersafe / Kordon Copper Aid (chelated copper, 2.0 ppm target)",
+      "category": "copper",
+      "dose_pure_low_mg_per_gal": 2.0,
+      "dose_pure_high_mg_per_gal": 2.0,
+      "dose_unit_override": "ppm",
+      "frequency_hours": null,
+      "duration_days": 30,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish",
+        "invertebrates"
+      ],
+      "special_notes_generic": "Chelated coppers hold dosed level for roughly a month without redosing. Test with Hanna HI702 High Range Copper Checker - Seachem/Salifert don't read chelated copper correctly. Ramp gently even though the chemistry is more forgiving than ionic copper. Remove inverts, carbon, Purigen, and UV.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/copper/",
+        "https://fritzaquatics.com/products/mardel-coppersafe",
+        "https://www.kordon.com/kordon/products/chemical-preventatives-and-treatments-2/copper-aid"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Mardel Coppersafe",
+          "manufacturer": "Fritz Aquatics (Mardel brand)",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": null,
+          "measure_unit_label": "ml",
+          "brand_label_dose": "5 ml (1 tsp) per 4 US gal (or 8 oz / 190 US gal) to reach ~2.0 ppm total copper",
+          "brand_label_frequency_hours": null,
+          "brand_label_duration_days": 30,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 1.25,
+          "brand_spec_sheet_url": "https://fritzaquatics.com/products/mardel-coppersafe",
+          "brand_notes": "Chelated. Stays active ~1 month. Always verify with Hanna HI702 - hobbyists report label dose usually under-shoots 2.0 ppm."
+        },
+        {
+          "brand_name": "Kordon Copper-AID",
+          "manufacturer": "Kordon",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": null,
+          "measure_unit_label": "ml",
+          "brand_label_dose": "1 tsp (5 ml) per 4 US gallons",
+          "brand_label_frequency_hours": null,
+          "brand_label_duration_days": 30,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 1.25,
+          "brand_spec_sheet_url": "https://www.kordon.com/kordon/products/chemical-preventatives-and-treatments-2/copper-aid",
+          "brand_notes": "Chelated copper sulfate. Multiple hobbyist reports that the label dose delivers notably below 2.0 ppm; plan to overshoot against the Hanna checker."
+        }
+      ]
+    },
+    {
+      "med_id": "fenbendazole",
+      "name_generic": "Fenbendazole (external)",
+      "category": "dewormer_external",
+      "dose_pure_low_mg_per_gal": 95,
+      "dose_pure_high_mg_per_gal": 95,
+      "dose_unit_override": null,
+      "frequency_hours": 168,
+      "duration_days": 1,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [],
+      "special_notes_generic": "12-hour bath at 25 mg/L (~95 mg/gal) for flukes and external flatworms. Not easily water-soluble - dissolve first in DMSO at 10 mg fenbendazole per 1 ml DMSO. The bath must be repeated roughly 1 week later to catch newly-hatched worms; timing via the BeNeZe/Cawthron 2022 calendar. Fenbendazole is toxic to many invertebrates; not reef safe.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/fenbendazole.18/",
+        "https://humble.fish/community/threads/use-dmso-to-dissolve-medications.4809/"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Panacur C (canine dewormer - fenbendazole 22.2%)",
+          "manufacturer": "Merck Animal Health",
+          "active_ingredient_pct": 22.2,
+          "inactive_or_filler_pct": 77.8,
+          "measure_weight_mg": 1000,
+          "measure_unit_label": "packet",
+          "brand_label_dose": "Hobbyist use: weigh 430 mg Panacur C (yields ~95 mg fenbendazole) per gallon for a 12-hour external bath",
+          "brand_label_frequency_hours": 168,
+          "brand_label_duration_days": 1,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 427.93,
+          "calculated_measures_per_gal": null,
+          "brand_spec_sheet_url": "https://www.merck-animal-health-usa.com/product/panacur-c",
+          "brand_notes": "Off-label aquarium use. 1 g granule packets labeled for dogs. Always weigh on a mg scale rather than trusting scoops."
+        }
+      ]
+    },
+    {
+      "med_id": "praziquantel",
+      "name_generic": "Praziquantel",
+      "category": "dewormer_external",
+      "dose_pure_low_mg_per_gal": 9.5,
+      "dose_pure_high_mg_per_gal": 9.5,
+      "dose_unit_override": null,
+      "frequency_hours": 168,
+      "duration_days": 7,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "invertebrates"
+      ],
+      "special_notes_generic": "Humblefish QT dose: 9.5 mg/gal (2.5 mg/L). Not water-soluble - pre-dissolve in a few drops of vodka (or DMSO at 1 ml per 20 mg) before adding. Must dose AT LEAST twice, roughly 1 week apart, to catch newly-hatched flukes - use the BeNeZe/Cawthron 2022 calendar. Broadly toxic to inverts and snails. Keep temp stable during the protocol.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/praziquantel.25/",
+        "https://humble.fish/community/threads/use-dmso-to-dissolve-medications.4809/"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Hikari PraziPro (liquid)",
+          "manufacturer": "Hikari",
+          "active_ingredient_pct": 5,
+          "inactive_or_filler_pct": 95,
+          "measure_weight_mg": null,
+          "measure_unit_label": "ml",
+          "brand_label_dose": "1 tsp (~5 ml) per 20 US gallons to reach ~2.5 mg/L praziquantel",
+          "brand_label_frequency_hours": 168,
+          "brand_label_duration_days": 7,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 0.25,
+          "brand_spec_sheet_url": "https://hikariusa.com/img/pds/PDS_PraziPro.pdf",
+          "brand_notes": "Label concentration is <5% praziquantel by weight. Already pre-solubilized - no DMSO/vodka needed. Repeat no more than every 3 days; a single treatment lasts 5-7 days."
+        },
+        {
+          "brand_name": "API General Cure (metronidazole + praziquantel)",
+          "manufacturer": "Mars Fishcare / API",
+          "active_ingredient_pct": 3.75,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": 2000,
+          "measure_unit_label": "packet",
+          "brand_label_dose": "1 packet per 10 US gallons delivers 250 mg metronidazole + 75 mg praziquantel per 10 gal",
+          "brand_label_frequency_hours": 48,
+          "brand_label_duration_days": 4,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 253.33,
+          "calculated_measures_per_gal": 0.1,
+          "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=22e84714-366b-4a90-89e2-eae934716af4",
+          "brand_notes": "DailyMed confirms the 250/75 mg split. Single packet-dose only delivers 7.5 mg/gal praziquantel (just below HF's 9.5 mg/gal target), so most QT operators round up. Not reef-safe - snail/shrimp/crab toxic. Second dose 48 h later per label; HF prefers week-spaced redosing for full life-cycle coverage.",
+          "measure_weight_source": "DailyMed label: 75 mg prazi + 250 mg metro in 2 g packet"
+        }
+      ]
+    },
+    {
+      "med_id": "hyposalinity",
+      "name_generic": "Hyposalinity",
+      "category": "protocol",
+      "dose_pure_low_mg_per_gal": null,
+      "dose_pure_high_mg_per_gal": null,
+      "dose_unit_override": "sg",
+      "frequency_hours": null,
+      "duration_days": 30,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "invertebrates",
+        "sharks",
+        "rays"
+      ],
+      "special_notes_generic": "NOT A MEDICATION - a salinity protocol. Hold at 15 ppt / 1.011 SG for 5 days to eliminate juvenile and adult flukes plus their eggs. Drop salinity over 48 h, hold for 5 days, then ramp back up over several days. Not reef-safe; kills inverts. Incompatible with sharks, rays, and other osmotically-sensitive species. Full protocol including ramp-down and ramp-up typically runs 4-6 weeks; 30 days is the minimum at target salinity. Some operators hold 72+ days for persistent Neobenedenia infestations.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/hyposalinity.22/"
+      ],
+      "brand_equivalents": []
+    },
+    {
+      "med_id": "acriflavine",
+      "name_generic": "Acriflavine",
+      "category": "misc",
+      "dose_pure_low_mg_per_gal": null,
+      "dose_pure_high_mg_per_gal": null,
+      "dose_unit_override": null,
+      "frequency_hours": null,
+      "duration_days": 1,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "invertebrates"
+      ],
+      "special_notes_generic": "Humblefish recommends using Ruby Reef Rally rather than raw acriflavine powder. Bath protocol: 1 tsp Rally per gallon for 90 minutes. Stains silicone and rockwork yellow-green. Photolabile. Not reef-safe.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/acriflavine-ruby-reef-rally-pro-nt-labs-marine-anti-bacterial-or-koi-care-acriflavin.14/"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Ruby Reef Rally / Rally Pro",
+          "manufacturer": "Ruby Reef",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": null,
+          "measure_unit_label": "teaspoon",
+          "brand_label_dose": "1 tsp per gallon as a 90-minute bath (Humblefish protocol)",
+          "brand_label_frequency_hours": null,
+          "brand_label_duration_days": 1,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 1,
+          "brand_spec_sheet_url": "https://www.bulkreefsupply.com/rally-pro-fish-treatment-in-dispensing-bottle-ruby-reef.html",
+          "brand_notes": "Three-active liquid: Acriflavine HCl + Aminoacridine HCl + Formalin (trace activator). Exact percentages proprietary. Per Ruby Reef: sequential reagent blending with formalin reduces required acriflavine/aminoacridine by 10\u00d7 vs dosing separately. Rally Pro: 1 oz (30 mL) per 10 gal saltwater, daily \u00d7 3+ days (skimmer/carbon off). Reef-safe, invertebrate-safe, biofilter-safe, copper-free. Turns water yellow-green temporarily."
+        }
+      ]
+    },
+    {
+      "med_id": "chloroquine_phosphate",
+      "name_generic": "Chloroquine Phosphate",
+      "category": "misc",
+      "dose_pure_low_mg_per_gal": 40,
+      "dose_pure_high_mg_per_gal": 60,
+      "dose_unit_override": null,
+      "frequency_hours": 720,
+      "duration_days": 30,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish",
+        "invertebrates"
+      ],
+      "special_notes_generic": "40-60 mg/gal, 'one-and-done' dosing in a bare-bottom QT with no biological filtration (biofilters degrade CP). Treat 30 days, or 14 days followed by transfer to a sterile observation tank at least 10 ft away. Use for ich, velvet, uronema, brook. Do not use carbon or UV. No reliable hobbyist test kit.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/chloroquine-phosphate.16/",
+        "https://reefs.com/magazine/aquarium-fish-chloroquine-a-new-drug-for-treating-fish-diseases/"
+      ],
+      "brand_equivalents": []
+    },
+    {
+      "med_id": "formalin_37",
+      "name_generic": "Formalin 37%",
+      "category": "misc",
+      "dose_pure_low_mg_per_gal": null,
+      "dose_pure_high_mg_per_gal": null,
+      "dose_unit_override": null,
+      "frequency_hours": 24,
+      "duration_days": 1,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "invertebrates",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "37% formaldehyde solution. In-tank (bare QT): 1 ml per 10 gal, or 2 drops per gallon daily. Bath: 30-60 min at 0.6 ml/gal (~12 drops/gal). Depletes oxygen - aerate heavily during any bath. Carcinogen - wear gloves, ventilate. Not reef-safe.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://www.reef2reef.com/threads/formalin.290925/"
+      ],
+      "brand_equivalents": []
+    },
+    {
+      "med_id": "hydrogen_peroxide_3",
+      "name_generic": "Hydrogen Peroxide 3%",
+      "category": "misc",
+      "dose_pure_low_mg_per_gal": null,
+      "dose_pure_high_mg_per_gal": null,
+      "dose_unit_override": null,
+      "frequency_hours": null,
+      "duration_days": 1,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [
+        "invertebrates"
+      ],
+      "special_notes_generic": "Standard dip: 20 ml of 3% H2O2 per gallon of saltwater for 30 minutes. Sensitive species should be monitored continuously during the dip and pulled early if distressed. Fresh bottles only - H2O2 degrades once opened. Do NOT put back into a reef after a peroxide dip without a rinse.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/peroxide-h2o2-dosing-for-parasites-in-reef-tank.725/",
+        "https://edis.ifas.ufl.edu/publication/FA157"
+      ],
+      "brand_equivalents": []
+    },
+    {
+      "med_id": "methylene_blue",
+      "name_generic": "Methylene Blue",
+      "category": "misc",
+      "dose_pure_low_mg_per_gal": null,
+      "dose_pure_high_mg_per_gal": null,
+      "dose_unit_override": null,
+      "frequency_hours": 48,
+      "duration_days": 10,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [],
+      "special_notes_generic": "Humblefish prefers aquarium brand liquid (Kordon or Fritz). 30-min bath (preferred): 1 tsp (5 ml) of 2.303% MB per 5 gallons. QT protocol: 1 tsp per 10 gallons every other day for 10 days with water changes before each dose (~3 ppm maintained). Stains silicone and soft plastics; remove carbon and switch off UV.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/methylene-blue.23/",
+        "https://www.kordon.com/kordon/products/chemical-preventatives-and-treatments-2/methylene-blue"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Kordon Methylene Blue",
+          "manufacturer": "Kordon",
+          "active_ingredient_pct": 2.303,
+          "inactive_or_filler_pct": 97.697,
+          "measure_weight_mg": null,
+          "measure_unit_label": "teaspoon",
+          "brand_label_dose": "1 tsp (5 ml) per 10 US gal = 3 ppm MB (standard); 1 tsp per 5 gal for a 30-min bath",
+          "brand_label_frequency_hours": 48,
+          "brand_label_duration_days": 10,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 0.1,
+          "brand_spec_sheet_url": "https://www.kordon.com/kordon/products/chemical-preventatives-and-treatments-2/methylene-blue",
+          "brand_notes": "Concentration on label is 2.303% methylene blue. 4 oz bottle treats ~240 gal. Staining is permanent on silicone - avoid display-tank use."
+        }
+      ]
+    },
+    {
+      "med_id": "metronidazole",
+      "name_generic": "Metronidazole",
+      "category": "dewormer_internal",
+      "dose_pure_low_mg_per_gal": 12.5,
+      "dose_pure_high_mg_per_gal": 25,
+      "dose_unit_override": null,
+      "frequency_hours": 48,
+      "duration_days": 10,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Water-column dosing: 12.5-25 mg/gal every 48 h (24 h for severe) with 25% WC before each dose; treat 10 days. Equally (more?) effective when fed: bind to food with Seachem Focus + Epsom salt + vitamins. Photolabile - light-shield the medicated water.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/medication-dosing-guide.1124/",
+        "https://humble.fish/community/threads/metronidazole.24/",
+        "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=22e84714-366b-4a90-89e2-eae934716af4"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Seachem MetroPlex",
+          "manufacturer": "Seachem",
+          "active_ingredient_pct": 70,
+          "inactive_or_filler_pct": 30,
+          "measure_weight_mg": 150,
+          "measure_unit_label": "measure",
+          "brand_label_dose": "1-2 measures per 40 L (10 US gallons); each measure delivers ~100-125 mg metronidazole per Seachem's own description",
+          "brand_label_frequency_hours": 48,
+          "brand_label_duration_days": 21,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 17.86,
+          "calculated_measures_per_gal": 0.119,
+          "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=6f8a853f-1a52-4528-8f85-201257f05916&type=display",
+          "brand_notes": "DailyMed confirms 70% metronidazole. One level measure weighs 150 mg (FisHotel in-house), delivering 105 mg metronidazole per measure. 1.19 measures per 10 gal hits Humblefish's 12.5 mg/gal floor; 2.4 measures per 10 gal reaches the 25 mg/gal ceiling. Matches Seachem's 1-2 measures per 10 gal label range.",
+          "measure_weight_source": "FisHotel in-house measurement, level scoop (2026-04-18)"
+        },
+        {
+          "brand_name": "API General Cure",
+          "manufacturer": "Mars Fishcare / API",
+          "active_ingredient_pct": null,
+          "inactive_or_filler_pct": null,
+          "measure_weight_mg": null,
+          "measure_unit_label": "packet",
+          "brand_label_dose": "1 packet per 10 US gal (delivers 250 mg metronidazole + 75 mg praziquantel per 10 gal)",
+          "brand_label_frequency_hours": 48,
+          "brand_label_duration_days": 4,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 0.1,
+          "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=22e84714-366b-4a90-89e2-eae934716af4",
+          "brand_notes": "Label dose delivers 25 mg/gal metronidazole - matches HF high end. Double-active means you're also dosing 7.5 mg/gal praziquantel whether you want it or not."
+        }
+      ]
+    },
+    {
+      "med_id": "sulfa_tmp",
+      "name_generic": "Sulfa TMP (Trimethoprim + Sulfathiazole sodium)",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": null,
+      "dose_pure_high_mg_per_gal": null,
+      "dose_unit_override": "tsp/gal",
+      "dose_label_value": "1/4 tsp per 10 gal",
+      "frequency_hours": 24,
+      "duration_days": 10,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Combination antibiotic containing Trimethoprim + Sulfathiazole sodium. Humblefish recommends 1/4 tsp per 10 gal daily \u00d7 10 days with 25% water change before each dose. TMP-Sulfa is synergistic against a broader spectrum than either drug alone. Remove invertebrates during treatment.",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/antibiotics.15/"
+      ],
+      "brand_equivalents": []
+    },
+    {
+      "med_id": "minocycline",
+      "name_generic": "Minocycline",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": 1.0,
+      "dose_pure_high_mg_per_gal": 1.0,
+      "dose_unit_override": null,
+      "frequency_hours": 24,
+      "duration_days": 5,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [
+        "anthias",
+        "dragonets",
+        "wrasses",
+        "scaleless fish"
+      ],
+      "special_notes_generic": "Broad-spectrum tetracycline-class antibiotic. Active in Fritz Maracyn Two. Label schedule: escalating packets over 5 days (1/1/2/2/2 packets per 10 gal). Effective against gram-positive and some gram-negative bacteria; often paired with Maracyn (erythromycin) for broader coverage. Remove invertebrates; will discolor water.",
+      "verification_source_urls": [
+        "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=83cb77b3-d479-418d-9d7f-f6f060e9f225"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Fritz Maracyn Two",
+          "manufacturer": "Fritz Aquatics",
+          "active_ingredient_pct": 1.67,
+          "measure_weight_mg": 600,
+          "measure_unit_label": "packet",
+          "manufacturer_label_dose": "1 packet (10 mg minocycline) per 10 US gallons; 5-day escalating schedule: 1/1/2/2/2 packets",
+          "brand_label_frequency_hours": 24,
+          "brand_label_duration_days": 5,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": null,
+          "brand_spec_sheet_url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=83cb77b3-d479-418d-9d7f-f6f060e9f225",
+          "brand_notes": "DailyMed confirms 10 mg minocycline per packet. Full packet weight not published by Fritz; recommend contacting Fritz Aquatics customer support for total packet weight.",
+          "measure_weight_source": "fda.report/DailyMed Maracyn Two: 0.6 g per packet (10 mg minocycline)"
+        }
+      ]
+    },
+    {
+      "med_id": "fenbendazole_internal",
+      "name_generic": "Fenbendazole (internal / food-soak)",
+      "category": "dewormer_internal",
+      "dose_pure_low_mg_per_gal": 7.6,
+      "dose_pure_high_mg_per_gal": 7.6,
+      "dose_unit_override": null,
+      "frequency_hours": 168,
+      "duration_days": 21,
+      "water_change_pct_before_dose": 0,
+      "sensitivity_species": [],
+      "special_notes_generic": "Internal dewormer for round worms (Camallanus, Capillaria) and tapeworms. Dose 7.6 mg/gal once weekly \u00d7 3 weeks, OR food-soak with Seachem Focus as binder. Distinct from fenbendazole external bath (95 mg/gal \u00d7 12 h). Safe for biofilter; not reef-safe (harmful to corals, worms, hydrozoans).",
+      "verification_source_urls": [
+        "https://humble.fish/community/threads/fenbendazole.18/"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Panacur C (canine dewormer - fenbendazole 22.2%)",
+          "manufacturer": "Merck Animal Health",
+          "active_ingredient_pct": 22.2,
+          "measure_weight_mg": 1000,
+          "measure_unit_label": "packet",
+          "manufacturer_label_dose": "1 g granule packets (off-label aquarium use); weigh 34 mg Panacur C per gallon for internal/once-weekly protocol",
+          "brand_label_frequency_hours": 168,
+          "brand_label_duration_days": 21,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": 34.23,
+          "calculated_measures_per_gal": null,
+          "brand_spec_sheet_url": "https://www.merck-animal-health-usa.com/products/panacur-c",
+          "brand_notes": "Off-label aquarium use. Always weigh on a mg scale. Food-soak with Focus for internal parasites.",
+          "measure_weight_source": "Panacur C label states 1 g (1000 mg) per packet"
+        }
+      ]
+    },
+    {
+      "med_id": "seachem_polyguard",
+      "name_generic": "Seachem PolyGuard (5-active combination)",
+      "category": "antibiotic",
+      "dose_pure_low_mg_per_gal": null,
+      "dose_pure_high_mg_per_gal": null,
+      "dose_unit_override": "measure/gal",
+      "frequency_hours": 72,
+      "duration_days": 14,
+      "water_change_pct_before_dose": 25,
+      "sensitivity_species": [
+        "invertebrates",
+        "sensitive plants"
+      ],
+      "special_notes_generic": "Broad-spectrum freshwater combination treatment for bacterial, fungal, and parasitic diseases when the specific pathogen is unknown. Five actives in one powder. Malachite green is harsh on sensitive invertebrates and some plants. Not intended for reef tanks. Remove carbon and UV during treatment.",
+      "verification_source_urls": [
+        "https://www.seachem.com/polyguard.php",
+        "https://dailymed.nlm.nih.gov/"
+      ],
+      "brand_equivalents": [
+        {
+          "brand_name": "Seachem PolyGuard",
+          "manufacturer": "Seachem",
+          "active_ingredient_pct": null,
+          "composition_pct": {
+            "sulfathiazole": 36.4,
+            "malachite_green": 1.9,
+            "nitrofurantoin": 0.1,
+            "nitrofural_nitrofurazone": 0.1,
+            "quinacrine_dihydrochloride": 0.2,
+            "excipients": 61.3
+          },
+          "measure_weight_mg": 143,
+          "measure_weight_source": "Seachem: 10 g vial \u2248 70 measures \u2192 ~143 mg per measure",
+          "measure_unit_label": "measure",
+          "manufacturer_label_dose": "1 measure per 10 US gallons every 72 hours for up to 14 days",
+          "brand_label_frequency_hours": 72,
+          "brand_label_duration_days": 14,
+          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
+          "calculated_measures_per_gal": 0.1,
+          "brand_spec_sheet_url": "https://www.seachem.com/polyguard.php",
+          "brand_notes": "Full composition publicly declared: 36.4% sulfathiazole + 1.9% malachite green + 0.1% nitrofurantoin + 0.1% nitrofurazone + 0.2% quinacrine dihydrochloride. Unique among Seachem products in having its blend percentages fully disclosed.",
+          "ui_user_surface_note": "Contains malachite green \u2014 not safe for invertebrates or sensitive plants."
+        }
+      ]
+    }
+  ]
+}

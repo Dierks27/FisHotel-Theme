@@ -1,5 +1,5 @@
 {
-  "$schema_version": "1.3",
+  "$schema_version": "1.4",
   "generated_at": "2026-04-18T19:25:54Z",
   "primary_generic_source": "Humblefish Medication Dosing Guide (canonical text supplied by user, matching https://humble.fish/community/threads/medication-dosing-guide.1124/)",
   "notes": "All calculated_brand_mg_per_gal_to_deliver_pure_dose values are based on active_ingredient_pct and the generic LOW dose. Measure weights are left null when not published on the label; this is tracked in the verification log. | v1.1 (2026-04-18): Added MetroPlex in-house scoop weight (150 mg). Added fishotel_default overrides for Copper Power (1.73 ml/gal empirical) and Cupramine (HF ramp). Triple Sulfa substitution surfaced via ui_user_surface_note. Hyposalinity duration 5→30 days. Added sulfa_tmp, minocycline, fenbendazole_internal as meds 23-25. | v1.2 (2026-04-18): Jeff-supplied updates from Fritz/API/Seachem/Copper Power/PolyGuard data dump. Filled measure_weight_mg for NeoPlex (125), KanaPlex (125), SulfaPlex (145), Fritz Maracyn (600), Maracyn Two (600). Confirmed API packets all 2000 mg total weight. Added Copper Power 0.5% Cu(II) and SG 1.12. Added Seachem PolyGuard (med 26) with full 5-active composition disclosure. | v1.3 (2026-04-18): Added bath_protocol framework. Schema additions: treatment_type on every med ('prolonged' | 'bath' | 'both'); bath_protocol nested object on the 8 bath-capable meds (ciprofloxacin, enrofloxacin, fenbendazole (external), formalin_37, hydrogen_peroxide_3, methylene_blue, acriflavine, nitrofuracin_green); temperature_contraindication_celsius=27 on formalin_37 with amber-warning text; root-level default_bath_safety object carrying Noga's universal abort criteria, aeration requirement, default scaleless-fish sensitivity, and bioassay recommendation. Enrofloxacin and Nitrofuracin Green implement Standard/Aggressive tiers per Jeff's discrepancy adjudications. All new data points cite Noga (2nd ed., 2010) by chapter, entry, book page, and PDF page; all Noga material is paraphrased, never quoted. See discrepancy-report.md for the four adjudicated Humblefish-vs-Noga conflicts and the ciprofloxacin/acriflavine Noga gaps.",
@@ -917,8 +917,9 @@
       "dose_pure_high_mg_per_gal": null,
       "dose_unit_override": null,
       "frequency_hours": null,
-      "duration_days": 1,
+      "duration_days": null,
       "water_change_pct_before_dose": 0,
+      "source_note": "No in-tank prolonged-immersion protocol is recommended for Ruby Reef Rally at this concentration — Rally is a bath-only medication (1 tsp per gallon, 90-minute bath). For prolonged immersion, Ruby Reef Rally Pro is the separate product intended for display tanks (1 oz per 10 gal daily for 3+ days per the brand notes). Switch to Bath mode above to dose.",
       "sensitivity_species": [
         "invertebrates"
       ],
@@ -1000,12 +1001,13 @@
       "treatment_type": "both",
       "name_generic": "Formalin 37%",
       "category": "misc",
-      "dose_pure_low_mg_per_gal": null,
-      "dose_pure_high_mg_per_gal": null,
-      "dose_unit_override": null,
+      "dose_pure_low_mg_per_gal": 0.1,
+      "dose_pure_high_mg_per_gal": 0.1,
+      "dose_unit_override": "ml/gal",
       "frequency_hours": 24,
-      "duration_days": 1,
-      "water_change_pct_before_dose": 0,
+      "duration_days": 11,
+      "water_change_pct_before_dose": 50,
+      "source_note": "In-tank (bare QT) protocol: 1 ml of 37% formalin per 10 gal (= 0.1 ml/gal) once daily for up to 11 days, preceded by a 50% water change before each dose. Aerate heavily — formalin depletes dissolved oxygen. Not reef-safe. Source: Humblefish Medication Dosing Guide, Formalin entry (canonical text).",
       "sensitivity_species": [
         "invertebrates",
         "scaleless fish"
@@ -1114,12 +1116,13 @@
       "treatment_type": "both",
       "name_generic": "Methylene Blue",
       "category": "misc",
-      "dose_pure_low_mg_per_gal": null,
-      "dose_pure_high_mg_per_gal": null,
-      "dose_unit_override": null,
+      "dose_pure_low_mg_per_gal": 0.5,
+      "dose_pure_high_mg_per_gal": 0.5,
+      "dose_unit_override": "ml/gal",
       "frequency_hours": 48,
       "duration_days": 10,
       "water_change_pct_before_dose": 25,
+      "source_note": "In-tank (bare QT) protocol with Kordon Methylene Blue (2.303% liquid): 1 tsp (5 ml) per 10 US gal — i.e. 0.5 ml/gal of 2.303% MB, which maintains approximately 3 ppm methylene blue. Dose every 48 hours for 10 days with a 25% water change before each dose. Remove carbon and switch off UV. MB stains silicone permanently — never use a bath container you plan to repurpose. Source: Humblefish Medication Dosing Guide, Methylene Blue entry.",
       "sensitivity_species": [],
       "special_notes_generic": "Humblefish prefers aquarium brand liquid (Kordon or Fritz). 30-min bath (preferred): 1 tsp (5 ml) of 2.303% MB per 5 gallons. QT protocol: 1 tsp per 10 gallons every other day for 10 days with water changes before each dose (~3 ppm maintained). Stains silicone and soft plastics; remove carbon and switch off UV.",
       "verification_source_urls": [

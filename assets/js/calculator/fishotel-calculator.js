@@ -490,28 +490,48 @@
     var doseLow = med.dose_pure_low_mg_per_gal;
     var unit = med.dose_unit_override || 'mg/gal';
 
-    var info = el('div', 'fh-qh-doseblock');
-    var right = el('div', 'fh-qh-doseinfo');
     if (doseLow != null) {
-      var totalMg = state.tankGal * (+doseLow);
-      var f = formatDoseMg(totalMg);
+      var info = el('div', 'fh-qh-doseblock');
+      var right = el('div', 'fh-qh-doseinfo');
+      var totalVal, totalUnit;
+      if (unit === 'ml/gal') {
+        totalVal = (state.tankGal * (+doseLow)).toFixed(1);
+        totalUnit = 'ml';
+      } else {
+        var f = formatDoseMg(state.tankGal * (+doseLow));
+        totalVal = f.value;
+        totalUnit = f.unit;
+      }
       right.innerHTML =
-        '<div><span class="fh-qh-dosenum">' + f.value + '</span><span class="fh-qh-doseunit">' + f.unit + '</span></div>' +
+        '<div><span class="fh-qh-dosenum">' + totalVal + '</span><span class="fh-qh-doseunit">' + totalUnit + '</span></div>' +
         '<div class="fh-qh-dosesub">Generic · Per dose</div>' +
         '<div class="fh-qh-doseswing">' + doseLow + ' ' + unit + '</div>';
+      info.appendChild(right);
+      root.appendChild(info);
     } else if (med.dose_label_value) {
-      right.innerHTML =
+      var info2 = el('div', 'fh-qh-doseblock');
+      var right2 = el('div', 'fh-qh-doseinfo');
+      right2.innerHTML =
         '<div><span class="fh-qh-dosenum">' + med.dose_label_value + '</span></div>' +
         '<div class="fh-qh-dosesub">Per label</div>';
-    } else {
-      right.innerHTML = '<div class="fh-qh-dosesub">Protocol — see notes below</div>';
+      info2.appendChild(right2);
+      root.appendChild(info2);
+    } else if (med.source_note) {
+      // No pure-dose data — render the source_note as a structured info block
+      // rather than a broken "Protocol — see notes below" stub.
+      var note = el('div', 'fh-qh-info-block');
+      note.innerHTML = '<span class="fh-qh-info-icon">\u2139</span>' +
+        '<div class="fh-qh-info-body"><div class="fh-qh-info-title">No in-tank protocol</div>' +
+        '<div class="fh-qh-info-text">' + med.source_note + '</div></div>';
+      root.appendChild(note);
     }
-    info.appendChild(right);
-    root.appendChild(info);
 
     root.appendChild(renderBrandGrid(brands, doseLow));
 
-    if (med.frequency_hours || med.duration_days) {
+    // Suppress the schedule cells entirely when there is no pure dose —
+    // otherwise junk data like formalin's old duration_days:1 would leak
+    // a stray "Duration: 1 days" row onto the card.
+    if (doseLow != null && (med.frequency_hours || med.duration_days)) {
       root.appendChild(renderScheduleCells([
         { label: 'Frequency', value: med.frequency_hours ? (med.frequency_hours === 24 ? 'Daily' : 'Every ' + med.frequency_hours + ' h') : '—', sub: '' },
         { label: 'Duration',  value: med.duration_days ? med.duration_days + ' days' : '—', sub: '' },

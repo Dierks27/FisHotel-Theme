@@ -202,6 +202,14 @@
 .fh-qh-amber-body { flex: 1; }
 .fh-qh-amber-title { font-family: var(--fh-qh-font-display); font-size: 18px; color: var(--fh-qh-warn); margin-bottom: 6px; font-style: italic; font-weight: 400; }
 .fh-qh-amber-text { font-size: 13px; color: var(--fh-qh-cream); line-height: 1.6; }
+
+/* ---- Neutral info block (null-dose source_note fallback) ---------------- */
+.fh-qh-info-block { display: flex; gap: 14px; align-items: flex-start; padding: 20px 22px; background: rgba(120, 160, 190, 0.08); border: 0.5px solid rgba(120, 160, 190, 0.35); border-left: 3px solid rgba(120, 160, 190, 0.75); border-radius: 3px; margin: 6px 0; }
+.fh-qh-info-icon { font-size: 22px; color: rgba(180, 205, 225, 0.95); line-height: 1; flex-shrink: 0; padding-top: 2px; }
+.fh-qh-info-body { flex: 1; }
+.fh-qh-info-title { font-family: var(--fh-qh-font-display); font-size: 18px; color: rgba(180, 205, 225, 0.95); margin-bottom: 6px; font-style: italic; font-weight: 400; }
+.fh-qh-info-text { font-size: 13px; color: var(--fh-qh-cream); line-height: 1.6; }
+
 .fh-qh-bathtemp { margin-top: 4px; }
 .fh-qh-bathtemp .fh-qh-slval small { color: var(--fh-qh-dim); font-family: var(--fh-qh-font-body); font-size: 11px; margin-left: 4px; }
 

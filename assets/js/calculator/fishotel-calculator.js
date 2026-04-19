@@ -1238,6 +1238,15 @@
       node = renderGeneric(med);
     }
 
+    // "Both"-type meds need the delivery-mode toggle on the prolonged side too
+    // (the bath renderer already prepends it internally).
+    if (med.treatment_type === 'both' && !showBath) {
+      var wrap = el('div', 'fh-qh-card fh-qh-modeframe');
+      wrap.appendChild(renderBathModeToggle());
+      wrap.appendChild(node);
+      node = wrap;
+    }
+
     $panel.innerHTML = '';
     $panel.appendChild(node);
   }

@@ -995,7 +995,7 @@
         t.intervalId = null;
         t.running = false;
         t.completed = true;
-        try { playTimerChime(); } catch (e) { /* audio optional */ }
+        playBellChime();
         rerenderPanel();
       }
     }, 1000);
@@ -1016,15 +1016,43 @@
     state.timer = null;
   }
 
-  function playTimerChime() {
-    if (typeof window === 'undefined' || !window.AudioContext && !window.webkitAudioContext) return;
-    var Ctx = window.AudioContext || window.webkitAudioContext;
-    var ctx = new Ctx();
-    var osc = ctx.createOscillator(), gain = ctx.createGain();
-    osc.frequency.value = 660; osc.type = 'sine';
-    gain.gain.value = 0.05;
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + 0.5);
+  function playBellChime() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      var now = ctx.currentTime;
+
+      // Bell harmonics: 1:1.5:2 ratio gives a church-bell-like partial structure.
+      // Strike envelope: sharp attack, exponential decay over ~2.5 seconds.
+      var playPartial = function (freq, gain, startOffset, decayTime) {
+        var osc = ctx.createOscillator();
+        var g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + startOffset);
+        g.gain.setValueAtTime(0.0001, now + startOffset);
+        g.gain.exponentialRampToValueAtTime(gain, now + startOffset + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + decayTime);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(now + startOffset);
+        osc.stop(now + startOffset + decayTime + 0.05);
+      };
+
+      // First strike — three harmonics in unison
+      playPartial(660,  0.25, 0,    2.5);  // fundamental
+      playPartial(990,  0.12, 0,    1.8);  // perfect fifth above
+      playPartial(1320, 0.08, 0,    1.2);  // octave above
+
+      // Second strike 650ms later — same harmonics, slightly quieter
+      playPartial(660,  0.18, 0.65, 2.2);
+      playPartial(990,  0.09, 0.65, 1.6);
+      playPartial(1320, 0.06, 0.65, 1.1);
+
+      setTimeout(function () { try { ctx.close(); } catch (e) {} }, 3500);
+    } catch (e) {
+      // Browsers without AudioContext silently no-op — same failure mode as before
+    }
   }
 
   function renderPraziSliders() {

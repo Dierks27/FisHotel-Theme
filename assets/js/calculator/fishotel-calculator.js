@@ -98,7 +98,7 @@
     tankGal: 30,
     lastProlongedGal: 30,
     lastBathGal: 3,
-    category: 'antibiotic',
+    category: 'copper',
     medId: null,
     sensitivity: 'standard',
     // Copper inputs
@@ -1545,7 +1545,7 @@
 
     // Initial selection from query string or default
     var params = new URLSearchParams(window.location.search);
-    var initialMedId = params.get('med') || 'neomycin_sulfate';
+    var initialMedId = params.get('med') || 'copper_power';
     selectMed(initialMedId);
   });
 

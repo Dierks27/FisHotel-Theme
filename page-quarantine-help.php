@@ -17,7 +17,7 @@ $medication_data = FisHotel_Medication_Data::get_all();
 $medications     = isset( $medication_data['medications'] ) ? $medication_data['medications'] : array();
 
 // Deep-link support: ?med=<med_id> and ?tank=<gal>
-$initial_med_id = isset( $_GET['med'] ) ? sanitize_text_field( wp_unslash( $_GET['med'] ) ) : 'neomycin_sulfate';
+$initial_med_id = isset( $_GET['med'] ) ? sanitize_text_field( wp_unslash( $_GET['med'] ) ) : 'copper_power';
 $initial_tank   = isset( $_GET['tank'] ) ? absint( $_GET['tank'] ) : 30;
 if ( $initial_tank < 5 )   { $initial_tank = 5; }
 if ( $initial_tank > 500 ) { $initial_tank = 500; }

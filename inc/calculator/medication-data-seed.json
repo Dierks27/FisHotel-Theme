@@ -1,5 +1,5 @@
 {
-  "$schema_version": "1.4",
+  "$schema_version": "1.5",
   "generated_at": "2026-04-18T19:25:54Z",
   "primary_generic_source": "Humblefish Medication Dosing Guide (canonical text supplied by user, matching https://humble.fish/community/threads/medication-dosing-guide.1124/)",
   "notes": "All calculated_brand_mg_per_gal_to_deliver_pure_dose values are based on active_ingredient_pct and the generic LOW dose. Measure weights are left null when not published on the label; this is tracked in the verification log. | v1.1 (2026-04-18): Added MetroPlex in-house scoop weight (150 mg). Added fishotel_default overrides for Copper Power (1.73 ml/gal empirical) and Cupramine (HF ramp). Triple Sulfa substitution surfaced via ui_user_surface_note. Hyposalinity duration 5→30 days. Added sulfa_tmp, minocycline, fenbendazole_internal as meds 23-25. | v1.2 (2026-04-18): Jeff-supplied updates from Fritz/API/Seachem/Copper Power/PolyGuard data dump. Filled measure_weight_mg for NeoPlex (125), KanaPlex (125), SulfaPlex (145), Fritz Maracyn (600), Maracyn Two (600). Confirmed API packets all 2000 mg total weight. Added Copper Power 0.5% Cu(II) and SG 1.12. Added Seachem PolyGuard (med 26) with full 5-active composition disclosure. | v1.3 (2026-04-18): Added bath_protocol framework. Schema additions: treatment_type on every med ('prolonged' | 'bath' | 'both'); bath_protocol nested object on the 8 bath-capable meds (ciprofloxacin, enrofloxacin, fenbendazole (external), formalin_37, hydrogen_peroxide_3, methylene_blue, acriflavine, nitrofuracin_green); temperature_contraindication_celsius=27 on formalin_37 with amber-warning text; root-level default_bath_safety object carrying Noga's universal abort criteria, aeration requirement, default scaleless-fish sensitivity, and bioassay recommendation. Enrofloxacin and Nitrofuracin Green implement Standard/Aggressive tiers per Jeff's discrepancy adjudications. All new data points cite Noga (2nd ed., 2010) by chapter, entry, book page, and PDF page; all Noga material is paraphrased, never quoted. See discrepancy-report.md for the four adjudicated Humblefish-vs-Noga conflicts and the ciprofloxacin/acriflavine Noga gaps.",
@@ -1325,53 +1325,6 @@
           "brand_spec_sheet_url": "https://www.merck-animal-health-usa.com/products/panacur-c",
           "brand_notes": "Off-label aquarium use. Always weigh on a mg scale. Food-soak with Focus for internal parasites.",
           "measure_weight_source": "Panacur C label states 1 g (1000 mg) per packet"
-        }
-      ]
-    },
-    {
-      "med_id": "seachem_polyguard",
-      "treatment_type": "prolonged",
-      "name_generic": "Seachem PolyGuard (5-active combination)",
-      "category": "antibiotic",
-      "dose_pure_low_mg_per_gal": null,
-      "dose_pure_high_mg_per_gal": null,
-      "dose_unit_override": "measure/gal",
-      "frequency_hours": 72,
-      "duration_days": 14,
-      "water_change_pct_before_dose": 25,
-      "sensitivity_species": [
-        "invertebrates",
-        "sensitive plants"
-      ],
-      "special_notes_generic": "Broad-spectrum freshwater combination treatment for bacterial, fungal, and parasitic diseases when the specific pathogen is unknown. Five actives in one powder. Malachite green is harsh on sensitive invertebrates and some plants. Not intended for reef tanks. Remove carbon and UV during treatment.",
-      "verification_source_urls": [
-        "https://www.seachem.com/polyguard.php",
-        "https://dailymed.nlm.nih.gov/"
-      ],
-      "brand_equivalents": [
-        {
-          "brand_name": "Seachem PolyGuard",
-          "manufacturer": "Seachem",
-          "active_ingredient_pct": null,
-          "composition_pct": {
-            "sulfathiazole": 36.4,
-            "malachite_green": 1.9,
-            "nitrofurantoin": 0.1,
-            "nitrofural_nitrofurazone": 0.1,
-            "quinacrine_dihydrochloride": 0.2,
-            "excipients": 61.3
-          },
-          "measure_weight_mg": 143,
-          "measure_weight_source": "Seachem: 10 g vial ≈ 70 measures → ~143 mg per measure",
-          "measure_unit_label": "measure",
-          "manufacturer_label_dose": "1 measure per 10 US gallons every 72 hours for up to 14 days",
-          "brand_label_frequency_hours": 72,
-          "brand_label_duration_days": 14,
-          "calculated_brand_mg_per_gal_to_deliver_pure_dose": null,
-          "calculated_measures_per_gal": 0.1,
-          "brand_spec_sheet_url": "https://www.seachem.com/polyguard.php",
-          "brand_notes": "Full composition publicly declared: 36.4% sulfathiazole + 1.9% malachite green + 0.1% nitrofurantoin + 0.1% nitrofurazone + 0.2% quinacrine dihydrochloride. Unique among Seachem products in having its blend percentages fully disclosed.",
-          "ui_user_surface_note": "Contains malachite green — not safe for invertebrates or sensitive plants."
         }
       ]
     }

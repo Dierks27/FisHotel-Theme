@@ -246,6 +246,12 @@
     var formLabel     = med.form_label || 'Ionic';
     var formula       = med.dispensing_formula || { type: 'liquid_ml_per_gal', ml_per_gal_per_ppm: 0.692 };
 
+    // Hard-cap current/target ppm to this med's therapeutic ceiling before
+    // computing anything — prevents a stale 2.5 ppm (e.g. Copper Power) from
+    // leaking into a 0.20 ppm (Copper Sulfate) dose calculation.
+    if (state.targetPpm  > therapeutic) state.targetPpm  = therapeutic;
+    if (state.currentPpm > therapeutic) state.currentPpm = therapeutic;
+
     var deltaPpm = state.targetPpm - state.currentPpm;
     if (deltaPpm < 0) deltaPpm = 0;
 
@@ -271,12 +277,11 @@
     var root = el('div', 'fh-qh-card');
     root.appendChild(renderHeader(med, formLabel + ' \u00B7 ' + therapeutic.toFixed(2) + ' ppm therapeutic'));
 
-    // Ppm inputs — clamp to the therapeutic target so the user can't accidentally
-    // request 2.5 ppm of a 0.2 ppm medication.
-    var ppmMax = Math.max(therapeutic, 2.5);
+    // Ppm inputs — per-med therapeutic max. User can go below therapeutic,
+    // not above. (Clamping happens at top of renderRampHold.)
     var ppmRow = el('div', 'fh-qh-ppmrow');
-    ppmRow.appendChild(ppmBox('Current ppm', 'fh-qh-cur', state.currentPpm.toFixed(2), ppmMax));
-    ppmRow.appendChild(ppmBox('Target ppm',  'fh-qh-tgt', state.targetPpm.toFixed(2),  ppmMax));
+    ppmRow.appendChild(ppmBox('Current ppm', 'fh-qh-cur', state.currentPpm.toFixed(2), therapeutic));
+    ppmRow.appendChild(ppmBox('Target ppm',  'fh-qh-tgt', state.targetPpm.toFixed(2),  therapeutic));
     root.appendChild(ppmRow);
 
     root.appendChild(renderSensitivityToggle([

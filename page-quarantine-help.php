@@ -45,7 +45,8 @@ $categories = array(
         <div class="fh-qh-tankrow">
             <label for="fh-qh-tank" class="fh-qh-tanklabel">Tank Volume</label>
             <input id="fh-qh-tank" class="fh-qh-tankslider" type="range" min="3" max="500" step="1" value="<?php echo esc_attr( $initial_tank ); ?>">
-            <span class="fh-qh-tankval"><span id="fh-qh-gal"><?php echo esc_html( $initial_tank ); ?></span><small>gal</small></span>
+            <input id="fh-qh-tank-text" class="fh-qh-tanktext" type="number" min="3" max="500" step="1" value="<?php echo esc_attr( $initial_tank ); ?>" aria-label="Tank volume in gallons">
+            <span class="fh-qh-tankunit">gal</span>
         </div>
 
         <!-- Category tabs -->

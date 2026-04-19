@@ -53,8 +53,11 @@ body.page-template-page-quarantine-help { background: var(--fh-qh-bg); }
 .fh-qh-tankrow { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--fh-qh-tint-weak); border: 0.5px solid var(--fh-qh-tint-strong); border-radius: 3px; margin-bottom: 14px; }
 .fh-qh-tanklabel { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); min-width: 96px; }
 .fh-qh-tankslider { flex: 1; accent-color: var(--fh-qh-gold); height: 4px; }
-.fh-qh-tankval { font-family: var(--fh-qh-font-display); font-size: 22px; color: var(--fh-qh-cream); min-width: 82px; text-align: right; }
-.fh-qh-tankval small { font-family: var(--fh-qh-font-body); font-size: 12px; color: var(--fh-qh-dim); margin-left: 2px; }
+.fh-qh-tanktext { font-family: var(--fh-qh-font-display); font-size: 22px; color: var(--fh-qh-cream); background: transparent; border: none; border-bottom: 0.5px solid transparent; width: 60px; text-align: right; padding: 2px 4px; margin: 0; appearance: textfield; -moz-appearance: textfield; -webkit-appearance: none; outline: none; transition: border-color 0.15s; }
+.fh-qh-tanktext:focus { border-bottom-color: var(--fh-qh-gold); }
+.fh-qh-tanktext::-webkit-inner-spin-button,
+.fh-qh-tanktext::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.fh-qh-tankunit { font-family: var(--fh-qh-font-body); font-size: 12px; color: var(--fh-qh-dim); margin-left: 2px; min-width: 22px; }
 
 /* ---- Category tabs ------------------------------------------------------ */
 .fh-qh-tabs { display: flex; border-bottom: 0.5px solid var(--fh-qh-tint-strong); margin-bottom: 14px; }

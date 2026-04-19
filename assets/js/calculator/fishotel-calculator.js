@@ -123,7 +123,7 @@
   // DOM ELEMENTS
   // ============================================================================
 
-  var $panel, $tankSlider, $tankGalOut, $tabs, $grid, $medButtons, $printBtn, $icsBtn;
+  var $panel, $tankSlider, $tankText, $tabs, $grid, $medButtons, $printBtn, $icsBtn;
 
   function el(tag, className, text) {
     var e = document.createElement(tag);
@@ -1375,7 +1375,17 @@
     }
 
     $tankSlider.value = String(state.tankGal);
-    if ($tankGalOut) $tankGalOut.textContent = state.tankGal;
+    syncTankText(state.tankGal, min, max);
+  }
+
+  // Keeps the typable text input in lockstep with the slider — both IDs
+  // share the same tankGal state, same min/max bounds.
+  function syncTankText(value, min, max) {
+    if (!$tankText) return;
+    $tankText.min = String(min);
+    $tankText.max = String(max);
+    // Only write if different to avoid disrupting user mid-keystroke
+    if ($tankText.value !== String(value)) $tankText.value = String(value);
   }
 
   /**
@@ -1587,7 +1597,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     $panel       = document.getElementById('fh-qh-panel');
     $tankSlider  = document.getElementById('fh-qh-tank');
-    $tankGalOut  = document.getElementById('fh-qh-gal');
+    $tankText    = document.getElementById('fh-qh-tank-text');
     $tabs        = document.querySelectorAll('.fh-qh-tab');
     $grid        = document.getElementById('fh-qh-medgrid');
     $medButtons  = document.querySelectorAll('.fh-qh-med');
@@ -1603,9 +1613,41 @@
 
     $tankSlider.addEventListener('input', function () {
       state.tankGal = +$tankSlider.value;
-      $tankGalOut.textContent = state.tankGal;
+      if ($tankText) $tankText.value = String(state.tankGal);
       rerenderPanel();
     });
+
+    // Typable tank input — the precision override. Live input triggers a
+    // recompute whenever the value is a valid number inside the slider's
+    // current [min, max] range; blur snaps out-of-range / empty values.
+    if ($tankText) {
+      $tankText.addEventListener('input', function () {
+        var raw = $tankText.value.trim();
+        if (raw === '') return; // let blur handle empty snap-back
+        var v = parseInt(raw, 10);
+        if (isNaN(v)) return;
+        var min = +($tankSlider.min || 3);
+        var max = +($tankSlider.max || 500);
+        if (v < min || v > max) return; // wait for blur to clamp
+        state.tankGal = v;
+        $tankSlider.value = String(v);
+        rerenderPanel();
+      });
+
+      $tankText.addEventListener('blur', function () {
+        var raw = $tankText.value.trim();
+        var min = +($tankSlider.min || 3);
+        var max = +($tankSlider.max || 500);
+        var v = parseInt(raw, 10);
+        if (isNaN(v) || raw === '') v = state.tankGal;
+        if (v < min) v = min;
+        if (v > max) v = max;
+        state.tankGal = v;
+        $tankSlider.value = String(v);
+        $tankText.value   = String(v);
+        rerenderPanel();
+      });
+    }
 
     [].forEach.call($tabs, function (t) {
       t.addEventListener('click', function () {

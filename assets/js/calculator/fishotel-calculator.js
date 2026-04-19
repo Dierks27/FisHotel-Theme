@@ -690,8 +690,10 @@
     // Dose markers
     life.doses.forEach(function (d, idx) {
       var cx = pad + ((d - 0.5) / days) * (W - pad * 2);
-      svg += '<circle cx="' + cx + '" cy="65" r="6" fill="#d4a574"/>';
-      svg += '<text x="' + cx + '" y="80" text-anchor="middle" font-family="Playfair Display,serif" font-size="10" fill="#EDE0C0">Dose ' + (idx + 1) + '</text>';
+      svg += '<line x1="' + cx + '" y1="18" x2="' + cx + '" y2="65" stroke="#EDE0C0" stroke-width="1.5" opacity="0.75"/>';
+      svg += '<circle cx="' + cx + '" cy="65" r="8" fill="#d4a574" stroke="#0f0f0f" stroke-width="1.5"/>';
+      svg += '<text x="' + cx + '" y="68.5" text-anchor="middle" font-family="Playfair Display,serif" font-size="11" font-weight="bold" fill="#0f0f0f">' + (idx + 1) + '</text>';
+      svg += '<text x="' + cx + '" y="84" text-anchor="middle" font-family="Playfair Display,serif" font-size="10" font-style="italic" fill="#EDE0C0">Dose ' + (idx + 1) + '</text>';
     });
     // Day axis — every day labeled
     for (var d = 1; d <= days; d++) {

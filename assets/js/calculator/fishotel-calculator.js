@@ -324,7 +324,7 @@
       '<span class="fh-qh-amber-icon">\u26A0</span>' +
       '<div class="fh-qh-amber-body">' +
         '<div class="fh-qh-amber-title">Before You Finish Treatment \u2014 Tank Transfer Required</div>' +
-        '<div class="fh-qh-amber-text">Copper is lethal to free-swimming parasites but does not kill ich tomonts or velvet cysts attached to heaters, substrate, d\u00E9cor, or tank walls. When you end copper treatment, transfer the fish to a fresh QT with new or fully bleached equipment \u2014 heater, powerhead, net, bucket, everything. Any surviving cyst can hatch after the fish leaves copper and reinfect. Leave the original tank fallow and fish-free for at least 76 days to starve out any remaining cysts. When in doubt, bleach it.</div>' +
+        '<div class="fh-qh-amber-text">Copper is lethal to free-swimming parasites but does not kill ich tomonts or velvet cysts attached to heaters, substrate, d\u00E9cor, or tank walls. When you end copper treatment, transfer the fish to a fresh QT with new or fully bleached equipment \u2014 heater, powerhead, and everything else. Any surviving cyst can hatch after the fish leaves copper and reinfect.</div>' +
       '</div>';
     return block;
   }

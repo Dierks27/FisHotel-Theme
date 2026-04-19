@@ -1346,7 +1346,7 @@
   function applyAdaptiveTankRange(isBath) {
     if (!$tankSlider) return;
     var max = isBath ? 10 : 500;
-    var min = 1;
+    var min = 3;
     $tankSlider.min = String(min);
     $tankSlider.max = String(max);
 

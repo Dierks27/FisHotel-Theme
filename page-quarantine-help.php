@@ -19,7 +19,7 @@ $medications     = isset( $medication_data['medications'] ) ? $medication_data['
 // Deep-link support: ?med=<med_id> and ?tank=<gal>
 $initial_med_id = isset( $_GET['med'] ) ? sanitize_text_field( wp_unslash( $_GET['med'] ) ) : 'copper_power';
 $initial_tank   = isset( $_GET['tank'] ) ? absint( $_GET['tank'] ) : 30;
-if ( $initial_tank < 5 )   { $initial_tank = 5; }
+if ( $initial_tank < 3 )   { $initial_tank = 3; }
 if ( $initial_tank > 500 ) { $initial_tank = 500; }
 
 // Category display order + human labels
@@ -44,7 +44,7 @@ $categories = array(
         <!-- Tank Volume (primary input, affects every med) -->
         <div class="fh-qh-tankrow">
             <label for="fh-qh-tank" class="fh-qh-tanklabel">Tank Volume</label>
-            <input id="fh-qh-tank" class="fh-qh-tankslider" type="range" min="5" max="500" step="1" value="<?php echo esc_attr( $initial_tank ); ?>">
+            <input id="fh-qh-tank" class="fh-qh-tankslider" type="range" min="3" max="500" step="1" value="<?php echo esc_attr( $initial_tank ); ?>">
             <span class="fh-qh-tankval"><span id="fh-qh-gal"><?php echo esc_html( $initial_tank ); ?></span><small>gal</small></span>
         </div>
 

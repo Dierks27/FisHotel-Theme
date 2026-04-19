@@ -1,5 +1,5 @@
 {
-  "$schema_version": "1.6",
+  "$schema_version": "1.7",
   "generated_at": "2026-04-18T19:25:54Z",
   "primary_generic_source": "Humblefish Medication Dosing Guide (canonical text supplied by user, matching https://humble.fish/community/threads/medication-dosing-guide.1124/)",
   "notes": "All calculated_brand_mg_per_gal_to_deliver_pure_dose values are based on active_ingredient_pct and the generic LOW dose. Measure weights are left null when not published on the label; this is tracked in the verification log. | v1.1 (2026-04-18): Added MetroPlex in-house scoop weight (150 mg). Added fishotel_default overrides for Copper Power (1.73 ml/gal empirical) and Cupramine (HF ramp). Triple Sulfa substitution surfaced via ui_user_surface_note. Hyposalinity duration 5→30 days. Added sulfa_tmp, minocycline, fenbendazole_internal as meds 23-25. | v1.2 (2026-04-18): Jeff-supplied updates from Fritz/API/Seachem/Copper Power/PolyGuard data dump. Filled measure_weight_mg for NeoPlex (125), KanaPlex (125), SulfaPlex (145), Fritz Maracyn (600), Maracyn Two (600). Confirmed API packets all 2000 mg total weight. Added Copper Power 0.5% Cu(II) and SG 1.12. Added Seachem PolyGuard (med 26) with full 5-active composition disclosure. | v1.3 (2026-04-18): Added bath_protocol framework. Schema additions: treatment_type on every med ('prolonged' | 'bath' | 'both'); bath_protocol nested object on the 8 bath-capable meds (ciprofloxacin, enrofloxacin, fenbendazole (external), formalin_37, hydrogen_peroxide_3, methylene_blue, acriflavine, nitrofuracin_green); temperature_contraindication_celsius=27 on formalin_37 with amber-warning text; root-level default_bath_safety object carrying Noga's universal abort criteria, aeration requirement, default scaleless-fish sensitivity, and bioassay recommendation. Enrofloxacin and Nitrofuracin Green implement Standard/Aggressive tiers per Jeff's discrepancy adjudications. All new data points cite Noga (2nd ed., 2010) by chapter, entry, book page, and PDF page; all Noga material is paraphrased, never quoted. See discrepancy-report.md for the four adjudicated Humblefish-vs-Noga conflicts and the ciprofloxacin/acriflavine Noga gaps.",
@@ -544,6 +544,13 @@
       "frequency_hours": null,
       "duration_days": 14,
       "water_change_pct_before_dose": 0,
+      "therapeutic_ppm_target": 2.5,
+      "form_label": "Ionic",
+      "dispensing_formula": {
+        "type": "liquid_ml_per_gal",
+        "ml_per_gal_per_ppm": 0.692,
+        "source_note": "FisHotel Hanna-verified 1.73 ml/gal at 2.5 ppm. Manufacturer label 1.48 ml/gal under-doses ~15-20%."
+      },
       "sensitivity_species": [
         "anthias",
         "dragonets",
@@ -593,6 +600,13 @@
       "frequency_hours": null,
       "duration_days": 14,
       "water_change_pct_before_dose": 0,
+      "therapeutic_ppm_target": 0.2,
+      "form_label": "Powder",
+      "dispensing_formula": {
+        "type": "powder_mg_per_gal",
+        "mg_per_gal_per_ppm": 14.83,
+        "source_note": "Copper sulfate pentahydrate is 25.5% free copper by weight. Extremely narrow therapeutic window — test with Seachem or Salifert copper kit before every adjustment. Dissolve thoroughly before adding."
+      },
       "sensitivity_species": [
         "anthias",
         "dragonets",
@@ -635,6 +649,13 @@
       "frequency_hours": null,
       "duration_days": 14,
       "water_change_pct_before_dose": 0,
+      "therapeutic_ppm_target": 0.5,
+      "form_label": "Ionic",
+      "dispensing_formula": {
+        "type": "liquid_ml_per_gal",
+        "ml_per_gal_per_ppm": 0.4,
+        "source_note": "Seachem Cupramine: 1 ml per 5 gallons brings tank to 0.5 ppm. Alternative: 4 drops per gallon."
+      },
       "sensitivity_species": [
         "anthias",
         "dragonets",
@@ -681,6 +702,13 @@
       "frequency_hours": null,
       "duration_days": 14,
       "water_change_pct_before_dose": 0,
+      "therapeutic_ppm_target": 0.2,
+      "form_label": "Ionic",
+      "dispensing_formula": {
+        "type": "liquid_ml_per_gal",
+        "ml_per_gal_per_ppm": 0.25,
+        "source_note": "Ruby Reef/Brightwell Cuprion: 1 drop per gallon (~0.05 ml) brings tank to 0.2 ppm."
+      },
       "sensitivity_species": [
         "anthias",
         "dragonets",
@@ -723,6 +751,13 @@
       "frequency_hours": null,
       "duration_days": 14,
       "water_change_pct_before_dose": 0,
+      "therapeutic_ppm_target": 2.0,
+      "form_label": "Chelated",
+      "dispensing_formula": {
+        "type": "liquid_ml_per_gal",
+        "ml_per_gal_per_ppm": 0.616,
+        "source_note": "Fritz/Mardel Coppersafe: 1 tsp per 4 gal brings tank to 2.0 ppm chelated copper. Verify with Hanna HI702."
+      },
       "sensitivity_species": [
         "anthias",
         "dragonets",

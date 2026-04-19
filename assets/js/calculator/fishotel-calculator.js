@@ -437,8 +437,12 @@
     // Duration readout
     root.appendChild(renderBathDurationBlock(tier));
 
-    // Countdown timer (manual start, no persistence)
-    root.appendChild(renderTimerWidget(med, tier));
+    // Countdown timer — suppressed when the bath is blocked by a
+    // temperature contraindication. Recovery / abort / aeration notes still
+    // render as reference content below; only the start-bath affordance is hidden.
+    if (!formalinBlocked) {
+      root.appendChild(renderTimerWidget(med, tier));
+    }
 
     // Recovery instructions
     if (tier.recovery_instructions) {

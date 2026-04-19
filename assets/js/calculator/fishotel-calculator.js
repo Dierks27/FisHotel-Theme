@@ -1150,8 +1150,64 @@
     $panel.appendChild(node);
   }
 
-  // Placeholder — real adaptive behavior lands in the adaptive-slider commit.
-  function applyAdaptiveTankRange(isBath) { /* no-op */ }
+  /**
+   * Bath mode clamps the tank volume slider to 1–10 gal; prolonged mode
+   * opens it back up to 1–500 gal. Current value is preserved across modes
+   * (bath value remembered in lastBathGal; prolonged in lastProlongedGal).
+   */
+  function applyAdaptiveTankRange(isBath) {
+    if (!$tankSlider) return;
+    var max = isBath ? 10 : 500;
+    var min = 1;
+    $tankSlider.min = String(min);
+    $tankSlider.max = String(max);
+
+    if (isBath) {
+      if (+$tankSlider.value > max) {
+        state.lastProlongedGal = state.tankGal > 10 ? state.tankGal : state.lastProlongedGal;
+        state.tankGal = state.lastBathGal <= max ? state.lastBathGal : max;
+      }
+    } else {
+      if (state.lastProlongedGal && state.tankGal <= 10) {
+        state.lastBathGal = state.tankGal;
+        state.tankGal = state.lastProlongedGal;
+      }
+    }
+
+    $tankSlider.value = String(state.tankGal);
+    if ($tankGalOut) $tankGalOut.textContent = state.tankGal;
+  }
+
+  /**
+   * Annotate each med tile with a treatment-type badge.
+   * Called once at boot — tiles are PHP-rendered.
+   */
+  function initTileBadges() {
+    var meds = (window.FISHOTEL_MEDS && window.FISHOTEL_MEDS.medications) || [];
+    var byId = {};
+    meds.forEach(function (m) { byId[m.med_id] = m; });
+
+    [].forEach.call($medButtons, function (btn) {
+      var med = byId[btn.getAttribute('data-med-id')];
+      if (!med) return;
+      var badge = badgeTextFor(med);
+      if (!badge) return;
+      var span = document.createElement('span');
+      span.className = 'fh-qh-med-badge';
+      span.textContent = badge;
+      btn.appendChild(span);
+    });
+  }
+
+  function badgeTextFor(med) {
+    var tt = med.treatment_type || 'prolonged';
+    var days = med.duration_days;
+    if (tt === 'bath') return 'BATH';
+    if (tt === 'both') {
+      return days ? 'BATH or ' + days + 'd' : 'BATH';
+    }
+    return days ? days + 'd' : null;
+  }
 
   function selectMed(medId) {
     // Reset per-med bath state on every med switch (default per task: prolonged for 'both')
@@ -1277,6 +1333,8 @@
         selectMed(b.getAttribute('data-med-id'));
       });
     });
+
+    initTileBadges();
 
     $printBtn.addEventListener('click', handlePrint);
     $icsBtn.addEventListener('click', handleIcs);

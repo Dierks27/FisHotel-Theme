@@ -19,11 +19,13 @@
   var COPPER_RAMP_DAYS = { aggressive: 3, standard: 5, sensitive: 7 };
 
   function pickPipetteScale(ml) {
-    var scales = [25, 50, 75, 150, 300, 500, 1000, 2000];
+    // Smallest band ≥ computed total, so low-dose meds (Cuprion 1.5 ml @ 30 gal)
+    // render a meaningful fill instead of a tiny sliver at the bottom.
+    var scales = [2, 5, 10, 25, 50, 75, 150, 300, 500, 1000];
     for (var i = 0; i < scales.length; i++) {
       if (ml <= scales[i]) return scales[i];
     }
-    return 5000;
+    return 1000;
   }
 
   function formatDoseMg(mg) {

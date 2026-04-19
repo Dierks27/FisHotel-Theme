@@ -29,7 +29,14 @@
 
 /* ---- Page frame ---------------------------------------------------------- */
 .fh-qh-page { background: var(--fh-qh-bg); color: var(--fh-qh-cream); }
-.fh-qh-wrap { max-width: 820px; margin: 0 auto; padding: 56px 40px 72px; font-family: var(--fh-qh-font-body); font-weight: 300; border: 1px solid rgba(212, 165, 116, 0.2); border-radius: 2px; }
+.fh-qh-wrap { max-width: 820px; margin: 64px auto 80px; padding: 56px 40px 72px; font-family: var(--fh-qh-font-body); font-weight: 300; border: 1px solid rgba(212, 165, 116, 0.28); border-radius: 2px; }
+
+@media (max-width: 900px) {
+  .fh-qh-wrap {
+    margin: 32px 16px 48px;
+    padding: 40px 20px 56px;
+  }
+}
 
 /* ---- Hero ---------------------------------------------------------------- */
 .fh-qh-hero { text-align: center; margin-bottom: 36px; }

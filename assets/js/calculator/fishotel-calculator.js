@@ -285,15 +285,22 @@
       { key: 'sensitive',  label: 'Sensitive',  sub: '7-day ramp' }
     ], 'Fish Sensitivity'));
 
-    // Pipette + readout. Pipette is purely decorative — fill scale doesn't matter
-    // for powder meds since the number below it carries the real data.
-    var doseBlock = el('div', 'fh-qh-doseblock fh-qh-doseblock-copper');
-    doseBlock.appendChild(renderPipette(dose.unit === 'ml' ? dose.total : 0));
+    // Readout — liquid meds get the pipette visual; powder meds get a weigh note
+    // instead ("you weigh powder, not pipette it").
+    var isPowder = formula.type === 'powder_mg_per_gal';
+    var doseBlock = el('div', 'fh-qh-doseblock fh-qh-doseblock-copper' + (isPowder ? ' fh-qh-doseblock-powder' : ''));
+    if (!isPowder) {
+      doseBlock.appendChild(renderPipette(dose.total));
+    }
     var info = el('div', 'fh-qh-doseinfo');
+    var swingLine = '<div class="fh-qh-doseswing">' + state.currentPpm.toFixed(2) + ' \u2192 ' + state.targetPpm.toFixed(2) + ' ppm</div>';
+    var weighLine = isPowder
+      ? '<div class="fh-qh-powder-note">Weigh on a 0.01 g precision scale. Dissolve fully in a cup of tank water before adding.</div>'
+      : '';
     info.innerHTML =
       '<div><span class="fh-qh-dosenum">' + dose.displayValue + '</span><span class="fh-qh-doseunit">' + dose.displayUnit + '</span></div>' +
       '<div class="fh-qh-dosesub">Total to reach target</div>' +
-      '<div class="fh-qh-doseswing">' + state.currentPpm.toFixed(2) + ' \u2192 ' + state.targetPpm.toFixed(2) + ' ppm</div>';
+      swingLine + weighLine;
     doseBlock.appendChild(info);
     root.appendChild(doseBlock);
 

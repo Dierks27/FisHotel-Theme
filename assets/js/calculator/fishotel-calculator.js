@@ -96,6 +96,8 @@
 
   var state = {
     tankGal: 30,
+    lastProlongedGal: 30,
+    lastBathGal: 3,
     category: 'antibiotic',
     medId: null,
     sensitivity: 'standard',
@@ -108,6 +110,11 @@
     gillOn: true,
     bodyOn: true,
     protocol: 'standard',
+    // Bath inputs
+    bathMode: 'prolonged',  // 'bath' | 'prolonged' for treatment_type === 'both'
+    bathTier: null,          // tier_id, null = use default
+    // Timer (never persisted; resets on nav/med-switch)
+    timer: null,             // { totalSec, remainingSec, running, paused, completed, intervalId }
     // Computed schedule (for print + ics)
     lastComputed: null
   };
@@ -381,6 +388,97 @@
   }
 
   /**
+   * Bath treatment renderer — v1.3 bath_protocol data.
+   * Covers cipro, enro (std), fenbendazole ext, formalin, H2O2, MB, acriflavine, NFG.
+   */
+  function renderBathCard(med) {
+    var bp = med.bath_protocol || {};
+    var tiers = bp.tiers || [];
+    var tier = getActiveBathTier(med);
+    var root = el('div', 'fh-qh-card fh-qh-bathcard');
+
+    root.appendChild(renderHeader(med, 'Bath · ' + (tier && tier.tier_label ? tier.tier_label : 'Standard')));
+
+    // Mode toggle — only when treatment_type === 'both'
+    if (med.treatment_type === 'both') {
+      root.appendChild(renderBathModeToggle());
+    }
+
+    // Tier toggle — only when multiple tiers
+    if (tiers.length > 1) {
+      var opts = tiers.map(function (t) {
+        return { key: t.tier_id, label: t.tier_label, sub: t.tier_note ? shortenTierNote(t.tier_note) : '' };
+      });
+      root.appendChild(renderSensitivityToggle(opts, 'Bath Tier', 'bathTier'));
+    }
+
+    if (!tier) {
+      root.appendChild(renderWarning('No bath protocol available for this medication.'));
+      return root;
+    }
+
+    // Formalin temperature contraindication (rendered in commit 5 — placeholder guard)
+    var formalinBlocked = checkFormalinContraindication(med);
+    if (formalinBlocked) {
+      root.appendChild(formalinBlocked);
+    }
+
+    // Concentration readout
+    if (!formalinBlocked) {
+      root.appendChild(renderBathConcentration(med, tier));
+    }
+
+    // Brand equivalents
+    root.appendChild(renderBrandGrid(med.brand_equivalents || [], null));
+
+    // Duration readout
+    root.appendChild(renderBathDurationBlock(tier));
+
+    // Countdown timer — attached in commit 2
+    if (typeof renderTimerWidget === 'function') {
+      root.appendChild(renderTimerWidget(med, tier));
+    }
+
+    // Recovery instructions
+    if (tier.recovery_instructions) {
+      root.appendChild(renderBathSection('Recovery', tier.recovery_instructions));
+    }
+
+    // Abort criteria (inherits default unless explicitly overridden)
+    root.appendChild(renderAbortCriteria(med, tier));
+
+    // Aeration reminder
+    root.appendChild(renderAerationNote(med, tier));
+
+    // Scaleless sensitivity
+    root.appendChild(renderScalelessSensitivity(med, tier));
+
+    // Session details
+    root.appendChild(renderBathSessionDetails(tier));
+
+    // Record for .ics export — only eligible for multi-session series
+    var calEnabled = !!bp.calendar_export_enabled;
+    state.lastComputed = {
+      medName: med.name_generic,
+      mode: 'bath',
+      bathCalendarEnabled: calEnabled,
+      bathTier: tier,
+      bathProtocol: bp,
+      doseLabel: (bp.calendar_event_label || (med.name_generic + ' bath')),
+      doseDays: [],
+      waterChangeDays: [],
+      totalDays: 1
+    };
+
+    // Special notes
+    if (med.special_notes_generic) {
+      root.appendChild(renderNote(med.special_notes_generic));
+    }
+
+    return root;
+  }
+
+  /**
    * Stub renderer for scheduleTypes we haven't built yet — shows basic dose info.
    */
   function renderGeneric(med) {
@@ -557,6 +655,196 @@
     return row;
   }
 
+  // ---- Bath helpers -------------------------------------------------------
+
+  function getActiveBathTier(med) {
+    var tiers = (med.bath_protocol && med.bath_protocol.tiers) || [];
+    if (!tiers.length) return null;
+    if (state.bathTier) {
+      for (var i = 0; i < tiers.length; i++) {
+        if (tiers[i].tier_id === state.bathTier) return tiers[i];
+      }
+    }
+    var defId = med.bath_protocol.default_tier;
+    if (defId) {
+      for (var j = 0; j < tiers.length; j++) {
+        if (tiers[j].tier_id === defId) return tiers[j];
+      }
+    }
+    return tiers[0];
+  }
+
+  function shortenTierNote(note) {
+    var colonIdx = note.indexOf(':');
+    if (colonIdx > -1 && colonIdx < 40) return note.slice(colonIdx + 1).trim().split('.')[0].slice(0, 48);
+    return note.split('.')[0].slice(0, 48);
+  }
+
+  function renderBathModeToggle() {
+    return renderSensitivityToggle(
+      [
+        { key: 'prolonged', label: 'In-Tank', sub: 'prolonged immersion' },
+        { key: 'bath',      label: 'Bath',    sub: 'short-soak protocol' }
+      ],
+      'Delivery',
+      'bathMode'
+    );
+  }
+
+  function renderBathConcentration(med, tier) {
+    var dose = el('div', 'fh-qh-doseblock');
+    var info = el('div', 'fh-qh-doseinfo');
+    var f = formatBathConcentration(tier);
+    var totalLine = bathTotalForTank(tier, state.tankGal);
+
+    info.innerHTML =
+      '<div><span class="fh-qh-dosenum">' + f.value + '</span><span class="fh-qh-doseunit">' + f.unit + '</span></div>' +
+      '<div class="fh-qh-dosesub">Bath concentration</div>' +
+      (totalLine ? '<div class="fh-qh-doseswing">' + totalLine + '</div>' : '') +
+      (f.sub ? '<div class="fh-qh-doseswing">' + f.sub + '</div>' : '');
+    dose.appendChild(info);
+    return dose;
+  }
+
+  function formatBathConcentration(tier) {
+    var unit = tier.concentration_unit || '';
+    if (tier.concentration_value_low != null && tier.concentration_value_high != null) {
+      return { value: tier.concentration_value_low + '\u2013' + tier.concentration_value_high, unit: unit, sub: tier.concentration_metric_equivalent || '' };
+    }
+    if (tier.concentration_value != null) {
+      var sub = '';
+      if (tier.concentration_value_range) {
+        sub = 'range ' + tier.concentration_value_range.min + '\u2013' + tier.concentration_value_range.max + ' ' + unit;
+      } else if (tier.concentration_metric_equivalent) {
+        sub = tier.concentration_metric_equivalent;
+      } else if (tier.concentration_equivalent_drops_per_gal) {
+        sub = '\u2248 ' + tier.concentration_equivalent_drops_per_gal + ' drops/gal';
+      } else if (tier.concentration_equivalent) {
+        sub = tier.concentration_equivalent;
+      }
+      return { value: String(tier.concentration_value), unit: unit, sub: sub };
+    }
+    return { value: '\u2014', unit: '', sub: '' };
+  }
+
+  /**
+   * Best-effort total-for-tank line. Returns null when the unit doesn't cleanly
+   * scale per-gallon (e.g. "per 5 gal" compound units).
+   */
+  function bathTotalForTank(tier, tankGal) {
+    var unit = (tier.concentration_unit || '').toLowerCase();
+    if (!/\/\s*gal|per\s+gal/i.test(tier.concentration_unit || '')) return null;
+
+    var base = null;
+    if (tier.concentration_value_low != null && tier.concentration_value_high != null) {
+      var lo = tier.concentration_value_low * tankGal;
+      var hi = tier.concentration_value_high * tankGal;
+      return 'Total for ' + tankGal + ' gal: ' + formatNum(lo) + '\u2013' + formatNum(hi) + ' ' + unitHead(tier.concentration_unit);
+    }
+    if (tier.concentration_value != null) {
+      base = tier.concentration_value * tankGal;
+      return 'Total for ' + tankGal + ' gal: ' + formatNum(base) + ' ' + unitHead(tier.concentration_unit);
+    }
+    return null;
+  }
+
+  function unitHead(unit) {
+    if (!unit) return '';
+    return unit.replace(/\s*\/\s*gal.*/i, '').replace(/\s*per\s+gal.*/i, '').trim();
+  }
+
+  function formatNum(n) {
+    if (n >= 1000) return (n / 1000).toFixed(2) + 'k';
+    if (n >= 100)  return Math.round(n).toString();
+    if (n >= 10)   return n.toFixed(1).replace(/\.0$/, '');
+    return n.toFixed(2).replace(/\.?0+$/, '');
+  }
+
+  function renderBathDurationBlock(tier) {
+    var wrap = el('div', 'fh-qh-bathduration');
+    wrap.appendChild(el('div', 'fh-qh-bathduration-label', 'Bath Time'));
+    var val = formatDuration(tier);
+    wrap.appendChild(el('div', 'fh-qh-bathduration-val', val));
+    return wrap;
+  }
+
+  function formatDuration(tier) {
+    if (tier.duration_minutes == null && tier.duration_days == null) return '\u2014';
+    var m = tier.duration_minutes;
+    if (tier.duration_days && (!m || m >= 1440)) return tier.duration_days + ' days';
+    if (m < 60) return m + ' minutes';
+    var h = Math.floor(m / 60), rem = m % 60;
+    var base = h + ' h' + (rem ? ' ' + rem + ' min' : '');
+    if (tier.duration_range_minutes) {
+      base = tier.duration_range_minutes.min + '\u2013' + tier.duration_range_minutes.max + ' minutes';
+    }
+    return base;
+  }
+
+  function renderBathSection(label, text) {
+    var sec = el('div', 'fh-qh-bathsection');
+    sec.appendChild(el('div', 'fh-qh-bathsection-label', label));
+    sec.appendChild(el('div', 'fh-qh-bathsection-body', text));
+    return sec;
+  }
+
+  function renderAbortCriteria(med, tier) {
+    var defaults = (window.FISHOTEL_MEDS && window.FISHOTEL_MEDS.default_bath_safety) || {};
+    var abort = defaults.abort_criteria || {};
+    var signs = abort.signs || [];
+    var wrap = el('div', 'fh-qh-bathabort');
+    wrap.appendChild(el('div', 'fh-qh-bathsection-label', 'Abort the Bath If'));
+    var ul = el('ul', 'fh-qh-bathabort-list');
+    signs.forEach(function (s) { ul.appendChild(el('li', '', s)); });
+    wrap.appendChild(ul);
+    if (tier.abort_criteria_ref === 'inherits_default_bath_safety_with_heightened_vigilance' && tier.heightened_warning) {
+      wrap.appendChild(renderWarning(tier.heightened_warning));
+    }
+    if (abort.immediate_action) {
+      wrap.appendChild(el('div', 'fh-qh-bathabort-action', abort.immediate_action));
+    }
+    return wrap;
+  }
+
+  function renderAerationNote(med, tier) {
+    var defaults = (window.FISHOTEL_MEDS && window.FISHOTEL_MEDS.default_bath_safety) || {};
+    var a = defaults.aeration_requirement || {};
+    var text = tier.aeration_note || a.description || 'Vigorous aeration is mandatory during any bath longer than one minute.';
+    return renderBathSection('Aeration', text);
+  }
+
+  function renderScalelessSensitivity(med, tier) {
+    var defaults = (window.FISHOTEL_MEDS && window.FISHOTEL_MEDS.default_bath_safety) || {};
+    var d = defaults.default_species_sensitivity || {};
+    if (tier.suppress_default_scaleless_sensitivity) return el('div');
+    var text = d.scaleless_species_warning || '';
+    var sup = tier.species_sensitivity_supplement ? ' ' + tier.species_sensitivity_supplement : '';
+    return renderBathSection('Species Sensitivity', text + sup);
+  }
+
+  function renderBathSessionDetails(tier) {
+    var cells = [];
+    if (tier.sessions_total) {
+      cells.push({ label: 'Sessions', value: String(tier.sessions_total), sub: '' });
+    }
+    if (tier.repeat_schedule) {
+      cells.push({ label: 'Schedule', value: tier.repeat_schedule, sub: '' });
+    }
+    if (!cells.length) return el('div');
+    var wrap = el('div', 'fh-qh-bathsessions');
+    wrap.appendChild(el('div', 'fh-qh-bathsection-label', 'Session Plan'));
+    cells.forEach(function (c) {
+      var row = el('div', 'fh-qh-bathsessions-row');
+      row.appendChild(el('span', 'fh-qh-bathsessions-key', c.label));
+      row.appendChild(el('span', 'fh-qh-bathsessions-val', c.value));
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+
+  // Placeholder; replaced by the real implementation in the formalin-warning commit.
+  function checkFormalinContraindication(med) { return null; }
+
   function renderPraziSliders() {
     var wrap = el('div', 'fh-qh-prazi-sliders');
 
@@ -718,11 +1006,19 @@
     var med = getMed(state.medId);
     if (!med) return;
 
-    // Determine scheduleType from category + med_id
+    // Bath-mode routing: v1.3 treatment_type drives the renderer
+    var tt = med.treatment_type || 'prolonged';
+    var showBath = tt === 'bath' || (tt === 'both' && state.bathMode === 'bath');
+
+    // Adapt tank slider range to the active mode
+    applyAdaptiveTankRange(showBath);
+
     var cat = med.category;
     var node;
 
-    if (med.med_id === 'praziquantel') {
+    if (showBath) {
+      node = renderBathCard(med);
+    } else if (med.med_id === 'praziquantel') {
       node = renderPrazi(med);
     } else if (cat === 'copper') {
       node = renderRampHold(med);
@@ -736,9 +1032,18 @@
     $panel.appendChild(node);
   }
 
+  // Placeholder — real adaptive behavior lands in the adaptive-slider commit.
+  function applyAdaptiveTankRange(isBath) { /* no-op */ }
+
   function selectMed(medId) {
+    // Reset per-med bath state on every med switch (default per task: prolonged for 'both')
+    clearTimer();
     state.medId = medId;
+    state.bathTier = null;
     var med = getMed(medId);
+    if (med) {
+      state.bathMode = (med.treatment_type === 'bath') ? 'bath' : 'prolonged';
+    }
     if (med && med.category) {
       var cat = med.category === 'dewormer_internal' || med.category === 'protocol' ? 'misc' : med.category;
       setActiveTab(cat);
@@ -748,6 +1053,9 @@
     });
     rerenderPanel();
   }
+
+  // Placeholder — real implementation lands in the timer commit.
+  function clearTimer() { state.timer = null; }
 
   function setActiveTab(cat) {
     state.category = cat;

@@ -148,6 +148,27 @@
 /* ---- Disclaimer --------------------------------------------------------- */
 .fh-qh-disclaimer { font-size: 11px; color: var(--fh-qh-dim); font-style: italic; text-align: center; line-height: 1.7; margin-top: 28px; max-width: 560px; margin-left: auto; margin-right: auto; }
 
+/* ---- Bath card ---------------------------------------------------------- */
+.fh-qh-bathcard { }
+.fh-qh-bathduration { text-align: center; padding: 14px 0; border-top: 0.5px solid var(--fh-qh-tint-med); border-bottom: 0.5px solid var(--fh-qh-tint-med); }
+.fh-qh-bathduration-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); margin-bottom: 6px; }
+.fh-qh-bathduration-val { font-family: var(--fh-qh-font-display); font-size: 22px; color: var(--fh-qh-cream); font-style: italic; }
+
+.fh-qh-bathsection { padding: 12px 0; border-top: 0.5px solid var(--fh-qh-tint-med); }
+.fh-qh-bathsection-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); margin-bottom: 8px; }
+.fh-qh-bathsection-body { font-size: 12px; color: var(--fh-qh-muted); line-height: 1.6; }
+
+.fh-qh-bathabort { padding: 14px 0; border-top: 0.5px solid var(--fh-qh-tint-med); }
+.fh-qh-bathabort-list { list-style: none; padding: 0; margin: 0 0 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; }
+.fh-qh-bathabort-list li { font-size: 12px; color: var(--fh-qh-muted); padding-left: 14px; position: relative; line-height: 1.5; }
+.fh-qh-bathabort-list li::before { content: '\2014'; position: absolute; left: 0; color: var(--fh-qh-gold); }
+.fh-qh-bathabort-action { font-size: 12px; color: var(--fh-qh-cream); font-style: italic; margin-top: 6px; line-height: 1.5; }
+
+.fh-qh-bathsessions { padding: 12px 0; border-top: 0.5px solid var(--fh-qh-tint-med); }
+.fh-qh-bathsessions-row { display: flex; gap: 12px; padding: 4px 0; font-size: 12px; color: var(--fh-qh-muted); line-height: 1.5; }
+.fh-qh-bathsessions-key { min-width: 96px; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fh-qh-dim); }
+.fh-qh-bathsessions-val { flex: 1; color: var(--fh-qh-cream); }
+
 /* ---- Mobile breakpoint -------------------------------------------------- */
 @media (max-width: 640px) {
   .fh-qh-wrap { padding: 32px 16px 60px; }

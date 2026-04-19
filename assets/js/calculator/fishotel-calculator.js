@@ -241,39 +241,42 @@
    * Ramp-hold copper: Copper Power, Cupramine, Cuprion, Coppersafe, Cu sulfate pent.
    */
   function renderRampHold(med) {
-    var brands = med.brand_equivalents || [];
-    var isCopperPower = med.med_id === 'copper_power';
+    var brands        = med.brand_equivalents || [];
+    var therapeutic   = +med.therapeutic_ppm_target || 2.5;
+    var formLabel     = med.form_label || 'Ionic';
+    var formula       = med.dispensing_formula || { type: 'liquid_ml_per_gal', ml_per_gal_per_ppm: 0.692 };
 
-    // Empirical 1.73 ml/gal for Copper Power; fall back to label value for others
-    var mlPerGalAtTarget = isCopperPower ? 1.73 : (med.ml_per_gal_at_target || 1.73);
-    var targetDefault    = +med.target_default_ppm || 2.5;
+    var deltaPpm = state.targetPpm - state.currentPpm;
+    if (deltaPpm < 0) deltaPpm = 0;
 
-    var ml = (state.targetPpm - state.currentPpm) * state.tankGal * mlPerGalAtTarget / targetDefault;
-    if (ml < 0) ml = 0;
+    // Per-med dispensing math. Liquid doses land in ml; powder doses in mg.
+    var dose = computeCopperDose(formula, state.tankGal, deltaPpm);
 
-    var rampDays = COPPER_RAMP_DAYS[state.sensitivity];
-    var holdDays = +med.duration_days || 14;
+    var rampDays  = COPPER_RAMP_DAYS[state.sensitivity];
+    var holdDays  = +med.duration_days || 14;
     var totalDays = rampDays + holdDays;
-    var mlPerRampDay = ml / rampDays;
+    var perRamp   = dose.total / rampDays;
 
     var doses = [];
     for (var d = 1; d <= totalDays; d++) doses.push(d);
 
     state.lastComputed = {
       medName: med.name_generic,
-      doseLabel: ml.toFixed(1) + ' ml total; ' + mlPerRampDay.toFixed(1) + ' ml/day during ramp',
+      doseLabel: dose.display + ' total; ' + formatCopperAmount(perRamp, dose.unit) + '/day during ramp',
       doseDays: doses,
-      waterChangeDays: [totalDays], // water change at end
+      waterChangeDays: [totalDays],
       totalDays: totalDays
     };
 
     var root = el('div', 'fh-qh-card');
-    root.appendChild(renderHeader(med, 'Ionic · ' + state.targetPpm.toFixed(2) + ' ppm therapeutic'));
+    root.appendChild(renderHeader(med, formLabel + ' \u00B7 ' + therapeutic.toFixed(2) + ' ppm therapeutic'));
 
-    // Ppm inputs
+    // Ppm inputs — clamp to the therapeutic target so the user can't accidentally
+    // request 2.5 ppm of a 0.2 ppm medication.
+    var ppmMax = Math.max(therapeutic, 2.5);
     var ppmRow = el('div', 'fh-qh-ppmrow');
-    ppmRow.appendChild(ppmBox('Current ppm', 'fh-qh-cur', state.currentPpm.toFixed(2)));
-    ppmRow.appendChild(ppmBox('Target ppm',  'fh-qh-tgt', state.targetPpm.toFixed(2)));
+    ppmRow.appendChild(ppmBox('Current ppm', 'fh-qh-cur', state.currentPpm.toFixed(2), ppmMax));
+    ppmRow.appendChild(ppmBox('Target ppm',  'fh-qh-tgt', state.targetPpm.toFixed(2),  ppmMax));
     root.appendChild(ppmRow);
 
     root.appendChild(renderSensitivityToggle([
@@ -282,40 +285,80 @@
       { key: 'sensitive',  label: 'Sensitive',  sub: '7-day ramp' }
     ], 'Fish Sensitivity'));
 
-    // Pipette + readout
-    var dose = el('div', 'fh-qh-doseblock fh-qh-doseblock-copper');
-    dose.appendChild(renderPipette(ml));
+    // Pipette + readout. Pipette is purely decorative — fill scale doesn't matter
+    // for powder meds since the number below it carries the real data.
+    var doseBlock = el('div', 'fh-qh-doseblock fh-qh-doseblock-copper');
+    doseBlock.appendChild(renderPipette(dose.unit === 'ml' ? dose.total : 0));
     var info = el('div', 'fh-qh-doseinfo');
     info.innerHTML =
-      '<div><span class="fh-qh-dosenum">' + ml.toFixed(1) + '</span><span class="fh-qh-doseunit">ml</span></div>' +
+      '<div><span class="fh-qh-dosenum">' + dose.displayValue + '</span><span class="fh-qh-doseunit">' + dose.displayUnit + '</span></div>' +
       '<div class="fh-qh-dosesub">Total to reach target</div>' +
       '<div class="fh-qh-doseswing">' + state.currentPpm.toFixed(2) + ' \u2192 ' + state.targetPpm.toFixed(2) + ' ppm</div>';
-    dose.appendChild(info);
-    root.appendChild(dose);
+    doseBlock.appendChild(info);
+    root.appendChild(doseBlock);
 
     root.appendChild(renderBrandGrid(brands, null));
 
     root.appendChild(renderScheduleCells([
-      { label: 'Ramp',         value: rampDays + ' days',  sub: mlPerRampDay.toFixed(1) + ' ml/day' },
-      { label: 'Therapeutic',  value: holdDays + ' days', sub: 'hold at ' + state.targetPpm.toFixed(2) + ' ppm' },
+      { label: 'Ramp',         value: rampDays + ' days',  sub: formatCopperAmount(perRamp, dose.unit) + '/day' },
+      { label: 'Therapeutic',  value: holdDays + ' days',  sub: 'hold at ' + therapeutic.toFixed(2) + ' ppm' },
       { label: 'Total course', value: totalDays + ' days', sub: 'before observation' }
     ]));
 
-    root.appendChild(renderRampHoldTimeline(state.targetPpm, rampDays, holdDays));
+    root.appendChild(renderRampHoldTimeline(state.targetPpm, rampDays, holdDays, therapeutic));
 
-    if (isCopperPower) {
-      root.appendChild(renderNote(
-        'Uses FisHotel\u2019s Hanna-verified 1.73 ml/gal to 2.5 ppm (manufacturer label 1.48 ml/gal under-doses by ~15–20%). Verify with Hanna HI702 before every top-off.'
-      ));
-    } else if (med.special_notes_generic) {
-      root.appendChild(renderNote(med.special_notes_generic));
-    }
+    // Per-med source note (moved from hardcoded Copper Power text to formula.source_note).
+    var noteText = (formula.source_note) || med.special_notes_generic;
+    if (noteText) root.appendChild(renderNote(noteText));
 
     // Completion-protocol warning — copper kills only free-swimming parasites,
     // so surviving tomonts/cysts on hardscape will hatch after treatment ends.
     root.appendChild(renderCopperTransferWarning());
 
     return root;
+  }
+
+  /**
+   * Dispatches on dispensing_formula.type:
+   *   liquid_ml_per_gal → tankGal * ml_per_gal_per_ppm * deltaPpm, unit "ml"
+   *   powder_mg_per_gal → tankGal * mg_per_gal_per_ppm * deltaPpm, unit "mg"
+   *                       (auto-converts to g when total ≥ 1000 mg)
+   * Returns { total, unit, display, displayValue, displayUnit }.
+   */
+  function computeCopperDose(formula, tankGal, deltaPpm) {
+    if (formula.type === 'powder_mg_per_gal') {
+      var mg = tankGal * (+formula.mg_per_gal_per_ppm || 0) * deltaPpm;
+      if (mg >= 1000) {
+        return {
+          total: mg, unit: 'mg',
+          display:      (mg / 1000).toFixed(2) + ' g',
+          displayValue: (mg / 1000).toFixed(2),
+          displayUnit:  'g'
+        };
+      }
+      // Powder doses have narrow therapeutic windows — preserve 2-decimal
+      // precision so the number matches the ppm calculation exactly.
+      return {
+        total: mg, unit: 'mg',
+        display:      mg.toFixed(2) + ' mg',
+        displayValue: mg.toFixed(2),
+        displayUnit:  'mg'
+      };
+    }
+    // default: liquid_ml_per_gal
+    var ml = tankGal * (+formula.ml_per_gal_per_ppm || 0) * deltaPpm;
+    return {
+      total: ml, unit: 'ml',
+      display:      ml.toFixed(1) + ' ml',
+      displayValue: ml.toFixed(1),
+      displayUnit:  'ml'
+    };
+  }
+
+  function formatCopperAmount(amount, unit) {
+    if (unit === 'mg' && amount >= 1000) return (amount / 1000).toFixed(2) + ' g';
+    if (unit === 'mg') return amount.toFixed(2) + ' ' + unit;
+    return amount.toFixed(1) + ' ' + unit;
   }
 
   function renderCopperTransferWarning() {
@@ -657,7 +700,8 @@
     return el('div', 'fh-qh-note', text);
   }
 
-  function ppmBox(label, inputId, defaultVal) {
+  function ppmBox(label, inputId, defaultVal, maxPpm) {
+    var max = (maxPpm != null) ? +maxPpm : 2.5;
     var box = el('div', 'fh-qh-ppmbox');
     box.appendChild(el('span', 'fh-qh-ppmlabel', label));
     var input = el('input', 'fh-qh-ppminput');
@@ -665,10 +709,10 @@
     input.type = 'number';
     input.step = '0.01';
     input.min = '0';
-    input.max = '2.5';
+    input.max = String(max);
     input.value = defaultVal;
     input.addEventListener('input', function () {
-      var v = Math.max(0, Math.min(2.5, +input.value || 0));
+      var v = Math.max(0, Math.min(max, +input.value || 0));
       if (inputId === 'fh-qh-cur') state.currentPpm = v;
       else if (inputId === 'fh-qh-tgt') state.targetPpm = v;
       rerenderPanel();
@@ -1177,21 +1221,25 @@
     return wrap;
   }
 
-  function renderRampHoldTimeline(target, rampDays, holdDays) {
+  function renderRampHoldTimeline(target, rampDays, holdDays, therapeutic) {
     var days = rampDays + holdDays;
+    // Y-axis is scaled to the med's therapeutic target (with 25% headroom) so
+    // a 0.2 ppm Cuprion chart isn't squished at the bottom of a 2.5 ppm scale.
+    var yMax = (therapeutic != null ? +therapeutic : target) * 1.25;
+    if (!yMax || yMax <= 0) yMax = 2.5;
     var W = 580, H = 120, pad = 6, colW = (W - pad * 2) / days;
     var svg = '<svg width="100%" height="120" viewBox="0 0 580 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
     for (var d = 0; d < days; d++) {
       var x = pad + d * colW, dayNum = d + 1, isRamp = dayNum <= rampDays;
       var level = isRamp ? (dayNum / rampDays) * target : target;
-      var barH = (level / 2.5) * (H - 32), barY = H - 10 - barH;
+      var barH = (level / yMax) * (H - 32), barY = H - 10 - barH;
       var fill = isRamp ? '#d4a574' : 'rgba(212,165,116,0.28)';
       var stroke = isRamp ? 'none' : '#d4a574';
       var sw = isRamp ? 0 : 0.5;
       svg += '<rect x="' + (x + 1) + '" y="' + barY + '" width="' + (colW - 2) + '" height="' + barH + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"/>';
       svg += '<text x="' + (x + colW / 2) + '" y="' + (H - 1) + '" text-anchor="middle" font-family="Josefin Sans,sans-serif" font-size="8" fill="#6b6058">D' + dayNum + '</text>';
     }
-    var yTgt = H - 10 - ((target / 2.5) * (H - 32));
+    var yTgt = H - 10 - ((target / yMax) * (H - 32));
     svg += '<line x1="' + pad + '" y1="' + yTgt + '" x2="' + (W - pad) + '" y2="' + yTgt + '" stroke="#d4a574" stroke-width="0.5" stroke-dasharray="2 3" opacity="0.5"/>';
     svg += '<text x="' + (W - pad - 4) + '" y="' + (yTgt - 2) + '" text-anchor="end" font-family="Josefin Sans,sans-serif" font-size="8" fill="#d4a574">' + target.toFixed(2) + ' ppm target</text>';
     svg += '</svg>';
@@ -1357,6 +1405,12 @@
     var med = getMed(medId);
     if (med) {
       state.bathMode = (med.treatment_type === 'bath') ? 'bath' : 'prolonged';
+      // Copper: target_ppm and current_ppm are per-med — never carry a 2.5 ppm
+      // Copper Power target over to Cupramine's 0.5 ppm target, for example.
+      if (med.category === 'copper') {
+        state.targetPpm  = +med.therapeutic_ppm_target || 2.5;
+        state.currentPpm = 0;
+      }
     }
     if (med && med.category) {
       var cat = med.category === 'dewormer_internal' || med.category === 'protocol' ? 'misc' : med.category;

@@ -180,6 +180,10 @@
 /* ---- Bath countdown timer ---------------------------------------------- */
 .fh-qh-timer { text-align: center; padding: 18px 0; border-top: 0.5px solid var(--fh-qh-tint-med); border-bottom: 0.5px solid var(--fh-qh-tint-med); }
 .fh-qh-timer-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); margin-bottom: 10px; }
+.fh-qh-timer-adjust { display: flex; align-items: center; gap: 14px; padding: 8px 16px; margin: 0 auto 12px; max-width: 420px; background: var(--fh-qh-tint-weak); border: 0.5px solid var(--fh-qh-tint-med); border-radius: 3px; }
+.fh-qh-timer-adjust .fh-qh-timer-slider { flex: 1; }
+.fh-qh-timer-adjust-val { font-family: var(--fh-qh-font-display); font-style: italic; font-size: 13px; color: var(--fh-qh-cream); min-width: 150px; text-align: right; }
+.fh-qh-timer-adjust.is-locked { opacity: 0.45; pointer-events: none; }
 .fh-qh-timer-display { font-family: var(--fh-qh-font-display); font-size: 48px; color: var(--fh-qh-gold); line-height: 1; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; font-weight: 400; margin-bottom: 12px; }
 .fh-qh-timer-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .fh-qh-timer-btn { background: transparent; color: var(--fh-qh-gold); border: 0.5px solid rgba(212,165,116,0.4); padding: 10px 18px; font-family: var(--fh-qh-font-body); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; border-radius: 3px; transition: all 0.15s; font-weight: 300; min-width: 120px; }

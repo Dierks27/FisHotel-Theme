@@ -882,6 +882,35 @@
     return null;
   }
 
+  function renderTimerAdjustSlider(tier, t) {
+    var r = tier.duration_range_minutes;
+    var locked = t.running || t.paused;
+    var wrap = el('div', 'fh-qh-timer-adjust' + (locked ? ' is-locked' : ''));
+
+    var input = el('input', 'fh-qh-slider fh-qh-timer-slider');
+    input.type = 'range';
+    input.min = String(r.min);
+    input.max = String(r.max);
+    input.step = '5';
+    input.value = String(Math.round(t.totalSec / 60));
+    if (locked) input.disabled = true;
+
+    var label = el('span', 'fh-qh-timer-adjust-val', 'Bath duration: ' + input.value + ' min');
+
+    input.addEventListener('input', function () {
+      var mins = +input.value;
+      t.totalSec = mins * 60;
+      if (!t.running && !t.paused) t.remainingSec = t.totalSec;
+      label.textContent = 'Bath duration: ' + mins + ' min';
+      var d = document.querySelector('.fh-qh-timer-display');
+      if (d && !t.running && !t.paused) d.textContent = formatMMSS(t.remainingSec);
+    });
+
+    wrap.appendChild(input);
+    wrap.appendChild(label);
+    return wrap;
+  }
+
   function renderTimerWidget(med, tier) {
     var totalSec = timerSecondsFor(tier);
     var wrap = el('div', 'fh-qh-timer');
@@ -897,6 +926,11 @@
     var tierKey = med.med_id + ':' + tier.tier_id;
     if (!t || t.key !== tierKey) {
       t = state.timer = { key: tierKey, totalSec: totalSec, remainingSec: totalSec, running: false, paused: false, completed: false, intervalId: null };
+    }
+
+    // Adjustable-duration slider — only when the tier declares a bounded range
+    if (tier.duration_range_minutes && !t.completed) {
+      wrap.appendChild(renderTimerAdjustSlider(tier, t));
     }
 
     var display = el('div', 'fh-qh-timer-display');

@@ -185,6 +185,15 @@
 .fh-qh-timer-complete { font-family: var(--fh-qh-font-display); font-style: italic; font-size: 14px; color: var(--fh-qh-safe); margin-bottom: 12px; }
 .fh-qh-timer-unsupported { font-size: 12px; color: var(--fh-qh-muted); font-style: italic; margin-top: 4px; }
 
+/* ---- Amber contraindication block --------------------------------------- */
+.fh-qh-amber-block { display: flex; gap: 14px; align-items: flex-start; padding: 20px 22px; background: rgba(230, 176, 98, 0.12); border: 0.5px solid var(--fh-qh-warn-border); border-left: 3px solid var(--fh-qh-warn); border-radius: 3px; margin: 6px 0; }
+.fh-qh-amber-icon { font-size: 22px; color: var(--fh-qh-warn); line-height: 1; flex-shrink: 0; padding-top: 2px; }
+.fh-qh-amber-body { flex: 1; }
+.fh-qh-amber-title { font-family: var(--fh-qh-font-display); font-size: 18px; color: var(--fh-qh-warn); margin-bottom: 6px; font-style: italic; font-weight: 400; }
+.fh-qh-amber-text { font-size: 13px; color: var(--fh-qh-cream); line-height: 1.6; }
+.fh-qh-bathtemp { margin-top: 4px; }
+.fh-qh-bathtemp .fh-qh-slval small { color: var(--fh-qh-dim); font-family: var(--fh-qh-font-body); font-size: 11px; margin-left: 4px; }
+
 /* ---- Mobile breakpoint -------------------------------------------------- */
 @media (max-width: 640px) {
   .fh-qh-wrap { padding: 32px 16px 60px; }

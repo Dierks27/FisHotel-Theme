@@ -417,14 +417,17 @@
       return root;
     }
 
-    // Formalin temperature contraindication (rendered in commit 5 — placeholder guard)
+    // Formalin (or any med with temperature_contraindication) gets a temp slider
+    // and an amber block that BLOCKS the dose readout above the contraindication.
+    var hasTempContraindication = med.temperature_contraindication_celsius != null;
+    if (hasTempContraindication) {
+      root.appendChild(renderBathTempSlider(med));
+    }
+
     var formalinBlocked = checkFormalinContraindication(med);
     if (formalinBlocked) {
       root.appendChild(formalinBlocked);
-    }
-
-    // Concentration readout
-    if (!formalinBlocked) {
+    } else {
       root.appendChild(renderBathConcentration(med, tier));
     }
 
@@ -840,8 +843,35 @@
     return wrap;
   }
 
-  // Placeholder; replaced by the real implementation in the formalin-warning commit.
-  function checkFormalinContraindication(med) { return null; }
+  function checkFormalinContraindication(med) {
+    if (med.temperature_contraindication_celsius == null) return null;
+    var tempC = (state.tempF - 32) * 5 / 9;
+    if (tempC < med.temperature_contraindication_celsius) return null;
+
+    var note = med.temperature_contraindication_note ||
+      (med.name_generic + ' is contraindicated above ' + med.temperature_contraindication_celsius + '\u00B0C.');
+    var block = el('div', 'fh-qh-amber-block');
+    block.innerHTML = '<span class="fh-qh-amber-icon">\u26A0</span>' +
+      '<div class="fh-qh-amber-body"><div class="fh-qh-amber-title">Treatment blocked at this temperature</div>' +
+      '<div class="fh-qh-amber-text">' + note + '</div></div>';
+    return block;
+  }
+
+  function renderBathTempSlider(med) {
+    var wrap = el('div', 'fh-qh-prazi-sliders fh-qh-bathtemp');
+    var row = el('div', 'fh-qh-slrow');
+    row.appendChild(el('span', 'fh-qh-sllabel', 'Bath Water Temp'));
+    var input = el('input', 'fh-qh-slider');
+    input.type = 'range'; input.min = '60'; input.max = '86'; input.step = '1'; input.value = state.tempF;
+    var out = el('span', 'fh-qh-slval');
+    var tempC = ((state.tempF - 32) * 5 / 9).toFixed(1);
+    out.innerHTML = state.tempF + '\u00B0F <small>(' + tempC + '\u00B0C)</small>';
+    input.addEventListener('input', function () { state.tempF = +input.value; rerenderPanel(); });
+    row.appendChild(input);
+    row.appendChild(out);
+    wrap.appendChild(row);
+    return wrap;
+  }
 
   // ---- Countdown timer ---------------------------------------------------
 

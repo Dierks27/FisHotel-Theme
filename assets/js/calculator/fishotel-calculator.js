@@ -434,10 +434,8 @@
     // Duration readout
     root.appendChild(renderBathDurationBlock(tier));
 
-    // Countdown timer — attached in commit 2
-    if (typeof renderTimerWidget === 'function') {
-      root.appendChild(renderTimerWidget(med, tier));
-    }
+    // Countdown timer (manual start, no persistence)
+    root.appendChild(renderTimerWidget(med, tier));
 
     // Recovery instructions
     if (tier.recovery_instructions) {
@@ -845,6 +843,126 @@
   // Placeholder; replaced by the real implementation in the formalin-warning commit.
   function checkFormalinContraindication(med) { return null; }
 
+  // ---- Countdown timer ---------------------------------------------------
+
+  function timerSecondsFor(tier) {
+    if (tier.duration_minutes && tier.duration_minutes < 1440) {
+      return Math.round(tier.duration_minutes * 60);
+    }
+    return null;
+  }
+
+  function renderTimerWidget(med, tier) {
+    var totalSec = timerSecondsFor(tier);
+    var wrap = el('div', 'fh-qh-timer');
+    wrap.appendChild(el('div', 'fh-qh-timer-label', 'Countdown Timer'));
+
+    if (totalSec == null) {
+      wrap.appendChild(el('div', 'fh-qh-timer-unsupported', 'This treatment is measured in days — use your calendar export below.'));
+      return wrap;
+    }
+
+    // Initialise timer state if missing or tier changed
+    var t = state.timer;
+    var tierKey = med.med_id + ':' + tier.tier_id;
+    if (!t || t.key !== tierKey) {
+      t = state.timer = { key: tierKey, totalSec: totalSec, remainingSec: totalSec, running: false, paused: false, completed: false, intervalId: null };
+    }
+
+    var display = el('div', 'fh-qh-timer-display');
+    display.textContent = formatMMSS(t.remainingSec);
+    wrap.appendChild(display);
+
+    var controls = el('div', 'fh-qh-timer-controls');
+
+    if (t.completed) {
+      var done = el('div', 'fh-qh-timer-complete', 'Bath complete — return fish to clean, aerated water now.');
+      wrap.appendChild(done);
+      var resetBtn = timerButton('Start New Bath', 'fh-qh-timer-btn fh-qh-timer-btn-primary', function () {
+        clearTimer();
+        rerenderPanel();
+      });
+      controls.appendChild(resetBtn);
+      wrap.appendChild(controls);
+      return wrap;
+    }
+
+    if (!t.running && !t.paused && t.remainingSec === t.totalSec) {
+      controls.appendChild(timerButton('Begin Bath', 'fh-qh-timer-btn fh-qh-timer-btn-primary', function () { startTimer(); rerenderPanel(); }));
+    } else if (t.running && !t.paused) {
+      controls.appendChild(timerButton('Pause', 'fh-qh-timer-btn', function () { pauseTimer(); rerenderPanel(); }));
+      controls.appendChild(timerButton('Abort', 'fh-qh-timer-btn fh-qh-timer-btn-abort', function () { abortTimer(); rerenderPanel(); }));
+    } else if (t.paused) {
+      controls.appendChild(timerButton('Resume', 'fh-qh-timer-btn fh-qh-timer-btn-primary', function () { startTimer(); rerenderPanel(); }));
+      controls.appendChild(timerButton('Abort', 'fh-qh-timer-btn fh-qh-timer-btn-abort', function () { abortTimer(); rerenderPanel(); }));
+    }
+
+    wrap.appendChild(controls);
+    wrap.appendChild(el('div', 'fh-qh-timer-note', 'Timer never auto-starts; begin after the fish is in the treatment container.'));
+    return wrap;
+  }
+
+  function timerButton(label, cls, onClick) {
+    var b = el('button', cls, label);
+    b.type = 'button';
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function formatMMSS(sec) {
+    if (sec < 0) sec = 0;
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function startTimer() {
+    var t = state.timer;
+    if (!t) return;
+    if (t.intervalId) return;
+    t.running = true;
+    t.paused = false;
+    t.intervalId = setInterval(function () {
+      t.remainingSec -= 1;
+      var d = document.querySelector('.fh-qh-timer-display');
+      if (d) d.textContent = formatMMSS(t.remainingSec);
+      if (t.remainingSec <= 0) {
+        clearInterval(t.intervalId);
+        t.intervalId = null;
+        t.running = false;
+        t.completed = true;
+        try { playTimerChime(); } catch (e) { /* audio optional */ }
+        rerenderPanel();
+      }
+    }, 1000);
+  }
+
+  function pauseTimer() {
+    var t = state.timer;
+    if (!t) return;
+    if (t.intervalId) { clearInterval(t.intervalId); t.intervalId = null; }
+    t.running = false;
+    t.paused = true;
+  }
+
+  function abortTimer() {
+    var t = state.timer;
+    if (!t) return;
+    if (t.intervalId) { clearInterval(t.intervalId); t.intervalId = null; }
+    state.timer = null;
+  }
+
+  function playTimerChime() {
+    if (typeof window === 'undefined' || !window.AudioContext && !window.webkitAudioContext) return;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    var ctx = new Ctx();
+    var osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.frequency.value = 660; osc.type = 'sine';
+    gain.gain.value = 0.05;
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.5);
+  }
+
   function renderPraziSliders() {
     var wrap = el('div', 'fh-qh-prazi-sliders');
 
@@ -1054,8 +1172,11 @@
     rerenderPanel();
   }
 
-  // Placeholder — real implementation lands in the timer commit.
-  function clearTimer() { state.timer = null; }
+  function clearTimer() {
+    var t = state.timer;
+    if (t && t.intervalId) { clearInterval(t.intervalId); t.intervalId = null; }
+    state.timer = null;
+  }
 
   function setActiveTab(cat) {
     state.category = cat;

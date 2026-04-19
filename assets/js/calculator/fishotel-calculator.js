@@ -1254,21 +1254,48 @@
   function handleIcs() {
     var c = state.lastComputed;
     if (!c) { alert('Select a medication first.'); return; }
-    var lines = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FisHotel//Medication Schedule//EN'
-    ];
+
+    if (c.mode === 'bath') {
+      if (!c.bathCalendarEnabled) {
+        alert('This bath protocol is a single-session treatment; no calendar export is available.');
+        return;
+      }
+      return exportBathIcs(c);
+    }
+
+    exportScheduleIcs(c);
+  }
+
+  function icsFmt(dt) {
+    var y = dt.getUTCFullYear();
+    var mo = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    var d  = String(dt.getUTCDate()).padStart(2, '0');
+    var h  = String(dt.getUTCHours()).padStart(2, '0');
+    var mi = String(dt.getUTCMinutes()).padStart(2, '0');
+    var s  = String(dt.getUTCSeconds()).padStart(2, '0');
+    return y + mo + d + 'T' + h + mi + s + 'Z';
+  }
+
+  function icsEscape(text) {
+    if (!text) return '';
+    return String(text).replace(/[\\;,]/g, function (ch) { return '\\' + ch; }).replace(/\n/g, '\\n');
+  }
+
+  function icsDownload(lines, filename) {
+    lines.push('END:VCALENDAR');
+    var blob = new Blob([lines.join('\r\n')], { type: 'text/calendar' });
+    var url  = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function exportScheduleIcs(c) {
+    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FisHotel//Medication Schedule//EN'];
     var dayMs = 86400000, now = new Date();
     var start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    function fmt(dt) {
-      var y = dt.getUTCFullYear();
-      var mo = String(dt.getUTCMonth() + 1).padStart(2, '0');
-      var d  = String(dt.getUTCDate()).padStart(2, '0');
-      var h  = String(dt.getUTCHours()).padStart(2, '0');
-      var mi = String(dt.getUTCMinutes()).padStart(2, '0');
-      var s  = String(dt.getUTCSeconds()).padStart(2, '0');
-      return y + mo + d + 'T' + h + mi + s + 'Z';
-    }
 
     (c.doseDays || []).forEach(function (day, i) {
       var dt = new Date(start.getTime() + (day - 1) * dayMs + 9 * 3600000);
@@ -1276,23 +1303,75 @@
       lines.push(
         'BEGIN:VEVENT',
         'UID:' + Date.now() + '-d' + i + '@fishotel.com',
-        'DTSTAMP:' + fmt(new Date()),
-        'DTSTART:' + fmt(dt),
-        'DTEND:' + fmt(dt2),
-        'SUMMARY:' + c.medName + ' — Dose ' + (i + 1) + ' (' + state.tankGal + ' gal)',
-        'DESCRIPTION:' + c.doseLabel,
+        'DTSTAMP:' + icsFmt(new Date()),
+        'DTSTART:' + icsFmt(dt),
+        'DTEND:' + icsFmt(dt2),
+        'SUMMARY:' + icsEscape(c.medName + ' — Dose ' + (i + 1) + ' (' + state.tankGal + ' gal)'),
+        'DESCRIPTION:' + icsEscape(c.doseLabel),
         'END:VEVENT'
       );
     });
+    icsDownload(lines, (c.medName || 'medication').toLowerCase().replace(/\s+/g, '-') + '-schedule.ics');
+  }
 
-    lines.push('END:VCALENDAR');
-    var blob = new Blob([lines.join('\r\n')], { type: 'text/calendar' });
-    var url  = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = (c.medName || 'medication').toLowerCase().replace(/\s+/g, '-') + '-schedule.ics';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  function exportBathIcs(c) {
+    var bp = c.bathProtocol || {};
+    var tier = c.bathTier || {};
+    var sessions = bathSessionOffsets(tier);
+    var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FisHotel//Bath Schedule//EN'];
+    var dayMs = 86400000, now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var durMs = (tier.duration_minutes ? tier.duration_minutes : 60) * 60 * 1000;
+    var summaryBase = bp.calendar_event_label || (c.medName + ' bath');
+
+    sessions.forEach(function (offsetDays, i) {
+      var dt = new Date(start.getTime() + offsetDays * dayMs + 9 * 3600000);
+      var dt2 = new Date(dt.getTime() + durMs);
+      var desc = (bp.calendar_event_note || '') + ' · Session ' + (i + 1) + ' of ' + sessions.length;
+      lines.push(
+        'BEGIN:VEVENT',
+        'UID:' + Date.now() + '-bath' + i + '@fishotel.com',
+        'DTSTAMP:' + icsFmt(new Date()),
+        'DTSTART:' + icsFmt(dt),
+        'DTEND:' + icsFmt(dt2),
+        'SUMMARY:' + icsEscape(summaryBase + ' — Session ' + (i + 1) + ' (' + state.tankGal + ' gal bath)'),
+        'DESCRIPTION:' + icsEscape(desc),
+        'END:VEVENT'
+      );
+    });
+    icsDownload(lines, (c.medName || 'medication').toLowerCase().replace(/\s+/g, '-') + '-bath.ics');
+  }
+
+  /**
+   * Translate a tier's repeat_schedule into day offsets (Day 1 = offset 0).
+   * Uses declarative fields where present; falls back to parsing the
+   * natural-language repeat_schedule string for "daily for N days" and
+   * "N days after the first session".
+   */
+  function bathSessionOffsets(tier) {
+    var total = tier.sessions_total || 1;
+    var rep = (tier.repeat_schedule || '').toLowerCase();
+    var offsets = [];
+
+    var dailyMatch = rep.match(/daily for (\d+)/);
+    if (dailyMatch) {
+      var n = parseInt(dailyMatch[1], 10);
+      for (var i = 0; i < n; i++) offsets.push(i);
+      return offsets;
+    }
+
+    var weekMatch = rep.match(/(?:approximately\s+)?(\d+)\s*days?\s*after the first/);
+    if (weekMatch) {
+      offsets.push(0);
+      offsets.push(parseInt(weekMatch[1], 10));
+      return offsets;
+    }
+
+    if (total === 1) return [0];
+
+    // Fallback: space sessions one day apart
+    for (var k = 0; k < total; k++) offsets.push(k);
+    return offsets;
   }
 
   // ============================================================================

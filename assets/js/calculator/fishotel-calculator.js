@@ -1357,25 +1357,35 @@
    */
   function applyAdaptiveTankRange(isBath) {
     if (!$tankSlider) return;
+    var newMode = isBath ? 'bath' : 'prolonged';
     var max = isBath ? 10 : 500;
     var min = 3;
     $tankSlider.min = String(min);
     $tankSlider.max = String(max);
 
-    if (isBath) {
-      if (+$tankSlider.value > max) {
-        state.lastProlongedGal = state.tankGal > 10 ? state.tankGal : state.lastProlongedGal;
-        state.tankGal = state.lastBathGal <= max ? state.lastBathGal : max;
-      }
-    } else {
-      if (state.lastProlongedGal && state.tankGal <= 10) {
+    // Only swap stored per-mode values on an actual mode TRANSITION — otherwise
+    // legitimate prolonged values in [3, 10] would get stomped back to the
+    // last prolonged gal on every rerender.
+    var prevMode = state._lastAdaptiveMode;
+    var modeSwitch = (prevMode != null && prevMode !== newMode);
+
+    if (modeSwitch) {
+      if (isBath) {
+        state.lastProlongedGal = state.tankGal;
+        state.tankGal = (state.lastBathGal <= max) ? state.lastBathGal : max;
+      } else {
         state.lastBathGal = state.tankGal;
-        state.tankGal = state.lastProlongedGal;
+        state.tankGal = state.lastProlongedGal || state.tankGal;
       }
     }
 
+    // Always bound to the current range
+    if (state.tankGal < min) state.tankGal = min;
+    if (state.tankGal > max) state.tankGal = max;
+
     $tankSlider.value = String(state.tankGal);
     syncTankText(state.tankGal, min, max);
+    state._lastAdaptiveMode = newMode;
   }
 
   // Keeps the typable text input in lockstep with the slider — both IDs

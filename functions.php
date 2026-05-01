@@ -196,6 +196,55 @@ function fishotel_enqueue_faq_assets() {
 }
 add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_faq_assets' );
 
+// Enqueue About-page styles + display fonts only on the About template
+function fishotel_enqueue_about_assets() {
+    if ( is_page_template( 'page-about.php' ) ) {
+        wp_enqueue_style(
+            'fishotel-about-fonts',
+            'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,800;0,900;1,400;1,500;1,700&display=swap',
+            [],
+            null
+        );
+        wp_enqueue_style(
+            'fishotel-about',
+            FISHOTEL_THEME_URI . '/assets/css/about.css',
+            [ 'fishotel-style', 'fishotel-about-fonts' ],
+            FISHOTEL_THEME_VERSION
+        );
+    }
+}
+add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_about_assets' );
+
+/**
+ * Bootstrap the About page once.
+ *
+ * Runs at admin_init, idempotent via the fh_about_page_bootstrapped option.
+ * Creates /about-us/ as a Draft with the "About — Founder's Edition" template
+ * assigned. Will not touch the page on subsequent runs, even if it's been
+ * deleted — the option flag prevents re-creation. To re-bootstrap, delete the
+ * fh_about_page_bootstrapped option.
+ */
+function fishotel_bootstrap_about_page() {
+    if ( get_option( 'fh_about_page_bootstrapped' ) ) {
+        return;
+    }
+    $existing = get_page_by_path( 'about-us' );
+    if ( ! $existing ) {
+        $page_id = wp_insert_post( [
+            'post_title'   => 'About Us',
+            'post_name'    => 'about-us',
+            'post_status'  => 'draft',
+            'post_type'    => 'page',
+            'post_content' => '', // Body content lives in FisHotel Settings.
+        ] );
+        if ( $page_id && ! is_wp_error( $page_id ) ) {
+            update_post_meta( $page_id, '_wp_page_template', 'page-about.php' );
+        }
+    }
+    update_option( 'fh_about_page_bootstrapped', 1, false );
+}
+add_action( 'admin_init', 'fishotel_bootstrap_about_page' );
+
 // Homepage bubble animation
 function fishotel_hero_inline_js() {
     if ( is_front_page() ) : ?>

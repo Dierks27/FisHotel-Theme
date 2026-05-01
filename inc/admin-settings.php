@@ -142,6 +142,16 @@ class FisHotel_Admin_Settings {
 			'about_body'                  => '', // seeded via get_about_body()
 			'about_signoff'               => '— J.D.',
 			'about_footer_line'           => 'Published by The FisHotel · Est. 2019 · Champlin & Blaine, MN',
+			// About Page — images (attachment IDs + caption + credit per slot)
+			'about_hero_image'              => 0,
+			'about_hero_caption'            => 'Jeff at the FisHotel quarantine shop',
+			'about_hero_credit'             => 'STAFF PHOTO',
+			'about_inline_image_1'          => 0,
+			'about_inline_image_1_caption'  => '',
+			'about_inline_image_1_credit'   => 'ILLUSTRATION',
+			'about_inline_image_2'          => 0,
+			'about_inline_image_2_caption'  => '',
+			'about_inline_image_2_credit'   => 'ILLUSTRATION',
 		];
 	}
 
@@ -207,7 +217,45 @@ class FisHotel_Admin_Settings {
 			FISHOTEL_THEME_VERSION,
 			true
 		);
+		wp_enqueue_media();
+		wp_add_inline_script( 'jquery-core', self::image_picker_js() );
 		wp_add_inline_style( 'wp-admin', self::admin_inline_css() );
+	}
+
+	public static function image_picker_js() {
+		return <<<'JS'
+(function($){
+	$(document).on('click', '.fh-image-picker__choose', function(e){
+		e.preventDefault();
+		var $picker = $(this).closest('.fh-image-picker');
+		var frame = wp.media({
+			title: 'Select an image',
+			button: { text: 'Use this image' },
+			multiple: false,
+			library: { type: 'image' }
+		});
+		frame.on('select', function(){
+			var att = frame.state().get('selection').first().toJSON();
+			var url = (att.sizes && att.sizes.medium) ? att.sizes.medium.url : att.url;
+			$picker.find('.fh-image-picker__id').val(att.id);
+			$picker.find('.fh-image-picker__preview img').attr('src', url);
+			$picker.find('.fh-image-picker__preview').prop('hidden', false);
+			$picker.find('.fh-image-picker__remove').prop('hidden', false);
+			$picker.find('.fh-image-picker__choose').text('Replace Image');
+		});
+		frame.open();
+	});
+	$(document).on('click', '.fh-image-picker__remove', function(e){
+		e.preventDefault();
+		var $picker = $(this).closest('.fh-image-picker');
+		$picker.find('.fh-image-picker__id').val('');
+		$picker.find('.fh-image-picker__preview img').attr('src', '');
+		$picker.find('.fh-image-picker__preview').prop('hidden', true);
+		$picker.find('.fh-image-picker__choose').text('Choose Image');
+		$(this).prop('hidden', true);
+	});
+})(jQuery);
+JS;
 	}
 
 	public static function admin_inline_css() {
@@ -230,6 +278,10 @@ class FisHotel_Admin_Settings {
 		.fh-faq-row-head button { cursor: pointer; }
 		.fh-faq-row .fh-faq-answer-label { display: block; font-weight: 600; font-size: 12px; color: #444; margin: 6px 0 4px; }
 		.fh-faq-actions { margin-top: 10px; }
+		.fh-image-picker { max-width: 320px; }
+		.fh-image-picker__preview { margin: 0 0 10px; padding: 6px; background: #fff; border: 1px solid #ddd; border-radius: 3px; max-width: 320px; }
+		.fh-image-picker__preview img { display: block; max-width: 100%; height: auto; }
+		.fh-image-picker__buttons { margin: 0; display: flex; gap: 10px; align-items: center; }
 		';
 	}
 
@@ -314,6 +366,17 @@ class FisHotel_Admin_Settings {
 					'about_body'          => [ 'label' => 'Article body',     'type' => 'wysiwyg',  'description' => 'Use H2 for section heads. Each paragraph in <p> tags. Links and emphasis welcome.' ],
 					'about_signoff'       => [ 'label' => 'Sign-off',         'type' => 'text',     'placeholder' => '— J.D.' ],
 					'about_footer_line'   => [ 'label' => 'Footer line',      'type' => 'text',     'placeholder' => 'Published by The FisHotel · Est. 2019 · Champlin & Blaine, MN' ],
+					// Photos — each slot is a media-library picker + caption + credit.
+					// Slots gracefully hide when no image is attached.
+					'about_hero_image'             => [ 'label' => 'Hero image',                  'type' => 'image',    'description' => 'Full-width photo between byline and the first section. Hidden when empty.' ],
+					'about_hero_caption'           => [ 'label' => 'Hero caption',                'type' => 'text',     'placeholder' => 'Jeff at the FisHotel quarantine shop' ],
+					'about_hero_credit'            => [ 'label' => 'Hero credit',                 'type' => 'text',     'placeholder' => 'STAFF PHOTO' ],
+					'about_inline_image_1'         => [ 'label' => 'Inline image #1',             'type' => 'image',    'description' => 'Appears between section 1 and section 2, breaking the column flow.' ],
+					'about_inline_image_1_caption' => [ 'label' => 'Inline image #1 caption',     'type' => 'text' ],
+					'about_inline_image_1_credit'  => [ 'label' => 'Inline image #1 credit',      'type' => 'text',     'placeholder' => 'ILLUSTRATION' ],
+					'about_inline_image_2'         => [ 'label' => 'Inline image #2',             'type' => 'image',    'description' => 'Appears between section 3 and section 4, breaking the column flow.' ],
+					'about_inline_image_2_caption' => [ 'label' => 'Inline image #2 caption',     'type' => 'text' ],
+					'about_inline_image_2_credit'  => [ 'label' => 'Inline image #2 credit',      'type' => 'text',     'placeholder' => 'ILLUSTRATION' ],
 				],
 			],
 		];
@@ -353,6 +416,12 @@ class FisHotel_Admin_Settings {
 						'type'              => 'string',
 						'sanitize_callback' => 'wp_kses_post',
 						'default'           => self::defaults()[ $key ] ?? '',
+					] );
+				} elseif ( $field['type'] === 'image' ) {
+					register_setting( self::OPTION_GROUP, $key, [
+						'type'              => 'integer',
+						'sanitize_callback' => 'absint',
+						'default'           => 0,
 					] );
 				} else {
 					register_setting( self::OPTION_GROUP, $key, [
@@ -489,6 +558,21 @@ class FisHotel_Admin_Settings {
 				echo '</div>';
 			}
 			echo '</div>';
+		} elseif ( $type === 'image' ) {
+			$attachment_id = (int) $value;
+			$preview_url   = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'medium' ) : '';
+			?>
+			<div class="fh-image-picker">
+				<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $attachment_id ); ?>" class="fh-image-picker__id">
+				<div class="fh-image-picker__preview"<?php echo $preview_url ? '' : ' hidden'; ?>>
+					<img src="<?php echo esc_url( $preview_url ); ?>" alt="">
+				</div>
+				<p class="fh-image-picker__buttons">
+					<button type="button" class="button fh-image-picker__choose"><?php echo $preview_url ? 'Replace Image' : 'Choose Image'; ?></button>
+					<button type="button" class="button-link button-link-delete fh-image-picker__remove"<?php echo $preview_url ? '' : ' hidden'; ?>>Remove</button>
+				</p>
+			</div>
+			<?php
 		} elseif ( $type === 'wysiwyg' ) {
 			$content = ( $key === 'about_body' ) ? self::get_about_body() : $value;
 			wp_editor(

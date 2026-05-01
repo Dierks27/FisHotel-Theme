@@ -266,7 +266,49 @@
 	vertical-align: middle;
 }
 
-/* 7. Sign-off, end mark, footer ───────────────────────────────── */
+/* 7. Photos (hero + inline) ───────────────────────────────────── */
+.about-photo {
+	margin: 32px 0;
+	text-align: center;
+}
+.about-photo img {
+	width: 100%;
+	height: auto;
+	display: block;
+	border: 1px solid rgba(0, 0, 0, 0.4);
+	filter: sepia(0.25) contrast(1.05) brightness(0.97);
+}
+.about-photo figcaption {
+	margin-top: 12px;
+	font-family: var(--fh-body-serif);
+	font-style: italic;
+	font-size: 14px;
+	line-height: 1.4;
+	color: var(--fh-ink);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.about-photo figcaption .credit {
+	font-style: normal;
+	font-variant: small-caps;
+	letter-spacing: 0.1em;
+	color: rgba(0, 0, 0, 0.55);
+	border-left: 1px solid rgba(0, 0, 0, 0.3);
+	padding-left: 12px;
+}
+.about-photo--hero {
+	margin-top: 8px;        /* sits flush under the heavy rule */
+	margin-bottom: 36px;
+}
+.about-photo--inline {
+	column-span: all;       /* harmless when not in a column context */
+	margin: 40px 0;
+}
+
+/* 8. Sign-off, end mark, footer ───────────────────────────────── */
 .fh-gazette__signoff {
 	text-align: right;
 	font-family: var(--fh-display);
@@ -293,7 +335,7 @@
 	margin: 0;
 }
 
-/* 8. Responsive ───────────────────────────────────────────────── */
+/* 9. Responsive ───────────────────────────────────────────────── */
 @media (max-width: 768px) {
 	.fh-about { padding: 32px 16px 64px; }
 	.fh-gazette { padding: 36px 22px 32px; }
@@ -301,4 +343,14 @@
 	.fh-gazette__pullquote { padding: 22px 18px; margin: 24px 0; }
 	.fh-gazette__pullquote-mark { font-size: 40px; top: 12px; }
 	.fh-gazette__columns > p:first-child::first-letter { font-size: 4em; padding-right: 8px; }
+	.about-photo { margin: 24px 0; }
+	.about-photo--inline { margin: 28px 0; }
+	.about-photo figcaption {
+		flex-direction: column;
+		gap: 4px;
+	}
+	.about-photo figcaption .credit {
+		border-left: 0;
+		padding-left: 0;
+	}
 }

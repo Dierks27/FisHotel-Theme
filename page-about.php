@@ -31,28 +31,80 @@ $pull_quote   = $get( 'about_pull_quote',   '' );
 $signoff      = $get( 'about_signoff',      '' );
 $footer_line  = $get( 'about_footer_line',  '' );
 
+// Image slot meta — IDs of 0 mean "no image attached, hide the figure".
+$hero_id          = (int) $get( 'about_hero_image', 0 );
+$hero_caption     = $get( 'about_hero_caption', '' );
+$hero_credit      = $get( 'about_hero_credit',  '' );
+$inline_1_id      = (int) $get( 'about_inline_image_1', 0 );
+$inline_1_caption = $get( 'about_inline_image_1_caption', '' );
+$inline_1_credit  = $get( 'about_inline_image_1_credit',  '' );
+$inline_2_id      = (int) $get( 'about_inline_image_2', 0 );
+$inline_2_caption = $get( 'about_inline_image_2_caption', '' );
+$inline_2_credit  = $get( 'about_inline_image_2_credit',  '' );
+
 $body = class_exists( 'FisHotel_Admin_Settings' )
 	? FisHotel_Admin_Settings::get_about_body()
 	: '';
 
-// Split body into pre-quote and post-quote halves so the pull quote can
-// physically interrupt the two-column flow. We break after the second <h2>
-// section ("What's broken in this hobby") if it exists; otherwise we put
-// the quote at the midpoint between top-level blocks.
-$body_top    = $body;
-$body_bottom = '';
-
-if ( $pull_quote !== '' && $body !== '' ) {
-	// Split on <h2> boundaries, keep delimiters. Lookahead at offset 0 emits
-	// an empty leading part, so $parts[0] is any prelude before the first
-	// H2, $parts[1] is the first H2 section, etc.
+/**
+ * Split body into per-H2 sections so we can interleave images and the
+ * pull quote between them. preg_split with a leading lookahead emits an
+ * empty $parts[0]; we fold any prelude into the first section.
+ */
+$sections = [];
+if ( $body !== '' ) {
 	$parts = preg_split( '/(?=<h2[\s>])/i', $body );
-	if ( is_array( $parts ) && count( $parts ) >= 4 ) {
-		// Pull quote drops in after the second H2 section.
-		$body_top    = implode( '', array_slice( $parts, 0, 3 ) );
-		$body_bottom = implode( '', array_slice( $parts, 3 ) );
+	if ( is_array( $parts ) && ! empty( $parts ) ) {
+		$prelude  = array_shift( $parts );
+		$sections = $parts;
+		if ( $prelude !== '' ) {
+			if ( ! empty( $sections ) ) {
+				$sections[0] = $prelude . $sections[0];
+			} else {
+				$sections = [ $prelude ];
+			}
+		}
 	}
 }
+
+/**
+ * Render a <figure> if and only if an attachment ID is set. Empty IDs
+ * yield no markup at all — no broken images, no orphan figures.
+ */
+$render_photo = function ( $attachment_id, $caption, $credit, $modifier ) {
+	$attachment_id = (int) $attachment_id;
+	if ( ! $attachment_id ) {
+		return;
+	}
+	$alt = $caption !== '' ? $caption : get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+	$img = wp_get_attachment_image(
+		$attachment_id,
+		'large',
+		false,
+		[
+			'alt'     => $alt,
+			'loading' => 'lazy',
+		]
+	);
+	if ( ! $img ) {
+		return;
+	}
+	?>
+	<figure class="about-photo about-photo--<?php echo esc_attr( $modifier ); ?>">
+		<?php echo $img; // wp_get_attachment_image() output is already escaped. ?>
+		<?php if ( $caption !== '' || $credit !== '' ) : ?>
+			<figcaption>
+				<?php if ( $caption !== '' ) : ?>
+					<span class="caption"><?php echo esc_html( $caption ); ?></span>
+				<?php endif; ?>
+				<?php if ( $credit !== '' ) : ?>
+					<span class="credit"><?php echo esc_html( $credit ); ?></span>
+				<?php endif; ?>
+			</figcaption>
+		<?php endif; ?>
+	</figure>
+	<?php
+};
 ?>
 
 <main class="fh-about" role="main">
@@ -85,25 +137,35 @@ if ( $pull_quote !== '' && $body !== '' ) {
 
 		<div class="fh-gazette__rule fh-gazette__rule--heavy" aria-hidden="true"></div>
 
-		<?php if ( $body !== '' ) : ?>
+		<?php $render_photo( $hero_id, $hero_caption, $hero_credit, 'hero' ); ?>
+
+		<?php if ( ! empty( $sections ) ) : ?>
+			<div class="fh-gazette__body">
+				<?php foreach ( $sections as $i => $section_html ) : ?>
+
+					<div class="fh-gazette__columns">
+						<?php echo wp_kses_post( $section_html ); ?>
+					</div>
+
+					<?php if ( $i === 0 ) : ?>
+						<?php $render_photo( $inline_1_id, $inline_1_caption, $inline_1_credit, 'inline' ); ?>
+					<?php elseif ( $i === 1 && $pull_quote !== '' ) : ?>
+						<blockquote class="fh-gazette__pullquote">
+							<span class="fh-gazette__pullquote-mark fh-gazette__pullquote-mark--open" aria-hidden="true">&#10077;</span>
+							<p><?php echo esc_html( $pull_quote ); ?></p>
+							<span class="fh-gazette__pullquote-mark fh-gazette__pullquote-mark--close" aria-hidden="true">&#10078;</span>
+						</blockquote>
+					<?php elseif ( $i === 2 ) : ?>
+						<?php $render_photo( $inline_2_id, $inline_2_caption, $inline_2_credit, 'inline' ); ?>
+					<?php endif; ?>
+
+				<?php endforeach; ?>
+			</div>
+		<?php elseif ( $body !== '' ) : ?>
 			<div class="fh-gazette__body">
 				<div class="fh-gazette__columns">
-					<?php echo wp_kses_post( $body_top ); ?>
+					<?php echo wp_kses_post( $body ); ?>
 				</div>
-
-				<?php if ( $pull_quote !== '' ) : ?>
-					<blockquote class="fh-gazette__pullquote">
-						<span class="fh-gazette__pullquote-mark fh-gazette__pullquote-mark--open" aria-hidden="true">&#10077;</span>
-						<p><?php echo esc_html( $pull_quote ); ?></p>
-						<span class="fh-gazette__pullquote-mark fh-gazette__pullquote-mark--close" aria-hidden="true">&#10078;</span>
-					</blockquote>
-				<?php endif; ?>
-
-				<?php if ( $body_bottom !== '' ) : ?>
-					<div class="fh-gazette__columns">
-						<?php echo wp_kses_post( $body_bottom ); ?>
-					</div>
-				<?php endif; ?>
 			</div>
 		<?php endif; ?>
 

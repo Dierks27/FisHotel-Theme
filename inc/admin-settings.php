@@ -85,6 +85,24 @@ class FisHotel_Admin_Settings {
 		];
 	}
 
+	/** Default body for the About page (rendered as the article body). */
+	public static function default_about_body() {
+		return "<h2>How a closet became a 1,000-gallon shop</h2>\n"
+			. "<p>I'm Jeff. I run FisHotel out of Blaine, Minnesota — though the mail still goes to Champlin.</p>\n"
+			. "<p>Reefkeeping pulled me in for a stack of reasons that all happen to live in the same hobby: I'm a gadget guy, an ocean guy, a SCUBA guy, and an animal guy. Living in Minnesota means I can't just go diving on a Tuesday — so I brought a piece of the ocean home. A reef calms me down, gives me something to work on, and is never actually \"done.\" Just when I think I know how the tank's going to behave tomorrow, it surprises me.</p>\n"
+			. "<p>In 2019 I went deep on fish disease — how to keep it out of my system, how to actually treat it. That's when I met Bobby (Humblefish to most). He took me under his wing, let me bounce ideas off him, and over time helped me figure out what real quarantine looked like.</p>\n"
+			. "<p>I started QT'ing every fish that went into my own reef. Then a few buddies asked me to QT theirs. That turned into four 10-gallon tanks in my walkout closet. The closet outgrew itself fast, so I built a bigger system in the laundry room. Around then Bobby got out of selling quarantined fish and started pointing people my way — that's when FisHotel really became a thing.</p>\n"
+			. "<p>The laundry room lasted about a year. I'm now in a dedicated shop in Blaine running over 1,000 gallons of water, and FisHotel is my full-time job.</p>\n"
+			. "<h2>What's broken in this hobby</h2>\n"
+			. "<p>Most fish in the trade are flipped. They get bought, listed, and shipped out the door as fast as possible. A lot of sellers act like they've cared for these fish for weeks — the truth is they get them in and out as quickly as they can. By the time the fish actually arrives at a hobbyist's house, it's stressed, starving, and has about a 50/50 shot at surviving.</p>\n"
+			. "<p>That's before you even talk about disease. Plenty of sources say \"we QT\" but what they actually do is hold fish in low-copper systems just long enough to keep them looking alive until shipping. That's not quarantine — that's stalling. The disease shows up in <em>your</em> tank instead of theirs. It's a big reason so many people cycle in and out of this hobby.</p>\n"
+			. "<h2>How FisHotel does it differently</h2>\n"
+			. "<p>Every fish that comes through this shop spends real time here. Two full weeks of active treatment in a dedicated medication system. Then two more weeks of observation in a clean tank — eating well, gaining weight, monitored daily. Nothing gets listed for sale until that whole cycle is done.</p>\n"
+			. "<p>I'm one person, running this myself, with one standard: every fish gets the same protocol regardless of price tag. If you want to ask questions about a fish before you buy, ask. If you want to see its treatment history, you'll get it with the fish.</p>\n"
+			. "<h2>Where to find me</h2>\n"
+			. "<p>You'll regularly catch me on <strong><a href=\"http://Humble.Fish\">Humble.Fish</a></strong> if you want to talk reef. The shop is in Blaine, MN; mail goes to Champlin, MN 55316. For anything else, <strong><a href=\"mailto:Jeff@FisHotel.com\">Jeff@FisHotel.com</a></strong>.</p>";
+	}
+
 	/** All settings with defaults */
 	public static function defaults() {
 		return [
@@ -113,7 +131,27 @@ class FisHotel_Admin_Settings {
 			// FAQ Page — structured content
 			'fh_quarantine_stages'        => [], // seeded below via get_quarantine_stages()
 			'fh_faq_items'                => [], // seeded below via get_faq_items()
+			// About Page — Founder's Edition newspaper
+			'about_masthead'              => 'THE FISHOTEL GAZETTE',
+			'about_edition_line'          => "FOUNDER'S EDITION · EST. 1923 · ONE FISH CENT",
+			'about_dateline'              => 'BLAINE, MINNESOTA',
+			'about_headline'              => 'From a Walkout Closet to 1,000 Gallons',
+			'about_dek'                   => 'How one stubborn Minnesotan brought the ocean home — and why your reef should care.',
+			'about_byline'                => 'By Jeff Dierks · Founder, The FisHotel',
+			'about_pull_quote'            => "That's not quarantine — that's stalling. The disease shows up in your tank instead of theirs.",
+			'about_body'                  => '', // seeded via get_about_body()
+			'about_signoff'               => '— J.D.',
+			'about_footer_line'           => 'Published by The FisHotel · Est. 2019 · Champlin & Blaine, MN',
 		];
+	}
+
+	/** Get the About body, falling back to default if empty. */
+	public static function get_about_body() {
+		$saved = get_option( 'about_body', '' );
+		if ( $saved === '' ) {
+			return self::default_about_body();
+		}
+		return $saved;
 	}
 
 	/** Get quarantine stages, filling missing slots from defaults so we always have exactly 5. */
@@ -262,6 +300,22 @@ class FisHotel_Admin_Settings {
 					'fh_faq_items'                => [ 'label' => 'FAQ items',                 'type' => 'repeater_wysiwyg', 'description' => 'Drag rows to reorder. Answers support bullet lists, bold, and links.' ],
 				],
 			],
+			// About Page section
+			'about' => [
+				'title'  => 'About Page (Founder\'s Edition)',
+				'fields' => [
+					'about_masthead'      => [ 'label' => 'Masthead',         'type' => 'text',     'placeholder' => 'THE FISHOTEL GAZETTE' ],
+					'about_edition_line'  => [ 'label' => 'Edition line',     'type' => 'text',     'placeholder' => "FOUNDER'S EDITION · EST. 1923 · ONE FISH CENT" ],
+					'about_dateline'      => [ 'label' => 'Dateline',         'type' => 'text',     'placeholder' => 'BLAINE, MINNESOTA' ],
+					'about_headline'      => [ 'label' => 'Headline',         'type' => 'text',     'placeholder' => 'From a Walkout Closet to 1,000 Gallons' ],
+					'about_dek'           => [ 'label' => 'Dek (subhead)',    'type' => 'textarea', 'placeholder' => 'How one stubborn Minnesotan brought the ocean home…' ],
+					'about_byline'        => [ 'label' => 'Byline',           'type' => 'text',     'placeholder' => 'By Jeff Dierks · Founder, The FisHotel' ],
+					'about_pull_quote'    => [ 'label' => 'Pull quote',       'type' => 'textarea', 'description' => 'Large centered quotation that breaks the columns.' ],
+					'about_body'          => [ 'label' => 'Article body',     'type' => 'wysiwyg',  'description' => 'Use H2 for section heads. Each paragraph in <p> tags. Links and emphasis welcome.' ],
+					'about_signoff'       => [ 'label' => 'Sign-off',         'type' => 'text',     'placeholder' => '— J.D.' ],
+					'about_footer_line'   => [ 'label' => 'Footer line',      'type' => 'text',     'placeholder' => 'Published by The FisHotel · Est. 2019 · Champlin & Blaine, MN' ],
+				],
+			],
 		];
 
 		foreach ( $fields as $section_id => $section ) {
@@ -293,6 +347,12 @@ class FisHotel_Admin_Settings {
 						'type'              => 'array',
 						'sanitize_callback' => [ __CLASS__, 'sanitize_faq_items' ],
 						'default'           => self::default_faq_items(),
+					] );
+				} elseif ( $field['type'] === 'wysiwyg' ) {
+					register_setting( self::OPTION_GROUP, $key, [
+						'type'              => 'string',
+						'sanitize_callback' => 'wp_kses_post',
+						'default'           => self::defaults()[ $key ] ?? '',
 					] );
 				} else {
 					register_setting( self::OPTION_GROUP, $key, [
@@ -429,6 +489,23 @@ class FisHotel_Admin_Settings {
 				echo '</div>';
 			}
 			echo '</div>';
+		} elseif ( $type === 'wysiwyg' ) {
+			$content = ( $key === 'about_body' ) ? self::get_about_body() : $value;
+			wp_editor(
+				$content,
+				$key,
+				[
+					'textarea_name' => $key,
+					'textarea_rows' => 18,
+					'media_buttons' => false,
+					'tinymce'       => [
+						'toolbar1' => 'formatselect,bold,italic,underline,bullist,numlist,blockquote,link,unlink,undo,redo',
+						'toolbar2' => '',
+						'block_formats' => 'Paragraph=p;Section heading=h2;Sub heading=h3',
+					],
+					'quicktags'     => true,
+				]
+			);
 		} elseif ( $type === 'repeater_wysiwyg' ) {
 			$items = self::get_faq_items();
 			$cats  = self::faq_categories();

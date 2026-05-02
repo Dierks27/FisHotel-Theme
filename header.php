@@ -55,6 +55,26 @@
                     </li>
                 </ul>
             <?php endif; ?>
+
+            <?php if ( class_exists( 'WooCommerce' ) ) :
+                $cart_count = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
+            ?>
+                <div class="site-header__icons">
+                    <a href="<?php echo esc_url( wc_get_account_endpoint_url( 'dashboard' ) ); ?>" class="site-header__icon site-header__icon--account" aria-label="My Account">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <circle cx="12" cy="8" r="4" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M4 21c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                    <a href="<?php echo esc_url( wc_get_cart_url() ); ?>" class="site-header__icon site-header__icon--cart" aria-label="View Cart">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M5 8h14l-1 12H6z" stroke-linejoin="round" />
+                            <path d="M9 8V6a3 3 0 0 1 6 0v2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span class="site-header__icon-count fishotel-cart-count" data-count="<?php echo esc_attr( $cart_count ); ?>"><?php echo esc_html( $cart_count ); ?></span>
+                    </a>
+                </div>
+            <?php endif; ?>
         </nav>
 
         <button class="site-header__toggle" aria-label="Menu" aria-expanded="false">

@@ -1,0 +1,509 @@
+[
+  {
+    "key": "tangs_acanthurus",
+    "id": 1,
+    "name": "Tangs — Acanthurus",
+    "scientific": "Acanthurus",
+    "common_examples": [
+      "Powder Blue",
+      "Achilles",
+      "Sailfin",
+      "Convict",
+      "Powder Brown"
+    ],
+    "description": "Surgeonfish notorious for same-genus aggression. Powder Blue is the most assertive."
+  },
+  {
+    "key": "tangs_zebrasoma",
+    "id": 2,
+    "name": "Tangs — Zebrasoma",
+    "scientific": "Zebrasoma",
+    "common_examples": [
+      "Yellow",
+      "Purple",
+      "Desjardini",
+      "Sailfin",
+      "Scopas"
+    ],
+    "description": "Disc-shaped tangs. Same-genus pairings (Yellow + Purple) fight without serious tank size."
+  },
+  {
+    "key": "tangs_ctenochaetus",
+    "id": 3,
+    "name": "Tangs — Ctenochaetus",
+    "scientific": "Ctenochaetus",
+    "common_examples": [
+      "Kole",
+      "Tomini",
+      "Chevron"
+    ],
+    "description": "Bristletooth tangs. Peaceful with most fish but territorial with conspecifics."
+  },
+  {
+    "key": "tangs_naso",
+    "id": 4,
+    "name": "Tangs — Naso",
+    "scientific": "Naso",
+    "common_examples": [
+      "Naso",
+      "Blonde Naso",
+      "Vlamingii"
+    ],
+    "description": "Largest tangs, most peaceful genus. Need significant tank volume."
+  },
+  {
+    "key": "tangs_paracanthurus",
+    "id": 5,
+    "name": "Tangs — Paracanthurus",
+    "scientific": "Paracanthurus",
+    "common_examples": [
+      "Hippo / Regal Blue Tang"
+    ],
+    "description": "Single species genus. Active swimmer, single per tank typically."
+  },
+  {
+    "key": "dwarf_angels_centropyge",
+    "id": 6,
+    "name": "Dwarf Angels — Centropyge",
+    "scientific": "Centropyge",
+    "common_examples": [
+      "Coral Beauty",
+      "Flame",
+      "Lemonpeel",
+      "Half Black",
+      "Cherub"
+    ],
+    "description": "Small angels. Pairs/trios possible in 100g+ when added simultaneously. Flame is most aggressive."
+  },
+  {
+    "key": "large_angels_pomacanthus",
+    "id": 7,
+    "name": "Large Angels — Pomacanthus",
+    "scientific": "Pomacanthus",
+    "common_examples": [
+      "Emperor",
+      "French",
+      "Majestic",
+      "Asfur",
+      "Annularis"
+    ],
+    "description": "Showpiece angels. Single per tank typically; juveniles transition aggressive at maturity."
+  },
+  {
+    "key": "large_angels_holacanthus",
+    "id": 8,
+    "name": "Large Angels — Holacanthus",
+    "scientific": "Holacanthus",
+    "common_examples": [
+      "Queen",
+      "Rock Beauty",
+      "Passer"
+    ],
+    "description": "Caribbean and Pacific large angels. Rock Beauty has dietary specialization."
+  },
+  {
+    "key": "genicanthus_angels",
+    "id": 9,
+    "name": "Genicanthus Angels",
+    "scientific": "Genicanthus",
+    "common_examples": [
+      "Bellus",
+      "Watanabei",
+      "Lamarck",
+      "Half Black"
+    ],
+    "description": "Planktivorous swallowtail angels. Most peaceful angel genus. Harems work in large tanks."
+  },
+  {
+    "key": "wrasses_halichoeres",
+    "id": 10,
+    "name": "Wrasses — Halichoeres",
+    "scientific": "Halichoeres",
+    "common_examples": [
+      "Melanurus",
+      "Yellow Coris",
+      "Christmas",
+      "Red Coris"
+    ],
+    "description": "Active reef-safe wrasses. Different species can mix; same-species typically pair-only."
+  },
+  {
+    "key": "wrasses_cirrhilabrus",
+    "id": 11,
+    "name": "Wrasses — Cirrhilabrus (Fairy)",
+    "scientific": "Cirrhilabrus",
+    "common_examples": [
+      "Lubbock's",
+      "Solar",
+      "Flame",
+      "Lineatus",
+      "Rhomboid"
+    ],
+    "description": "Fairy wrasses. Compatibility is complex-dependent (see Cirrhilabrus rule book)."
+  },
+  {
+    "key": "wrasses_paracheilinus",
+    "id": 12,
+    "name": "Wrasses — Paracheilinus (Flasher)",
+    "scientific": "Paracheilinus",
+    "common_examples": [
+      "McCosker's",
+      "Carpenter's",
+      "Filamented"
+    ],
+    "description": "Flasher wrasses. Multi-male harems work in 75g+ when added together."
+  },
+  {
+    "key": "wrasses_macropharyngodon",
+    "id": 13,
+    "name": "Wrasses — Macropharyngodon (Leopard)",
+    "scientific": "Macropharyngodon",
+    "common_examples": [
+      "Meleagris",
+      "Bipartitus",
+      "Choati"
+    ],
+    "description": "Leopard wrasses. Sand bed required. Sensitive to bullying — added simultaneously, large tank."
+  },
+  {
+    "key": "wrasses_pseudocheilinus",
+    "id": 14,
+    "name": "Wrasses — Pseudocheilinus",
+    "scientific": "Pseudocheilinus",
+    "common_examples": [
+      "Six Line",
+      "Disappearing",
+      "Mystery"
+    ],
+    "description": "Six Line and relatives. Aggressive to conspecifics and bullies more delicate wrasses."
+  },
+  {
+    "key": "wrasses_anampses",
+    "id": 15,
+    "name": "Wrasses — Anampses",
+    "scientific": "Anampses",
+    "common_examples": [
+      "Yellowtail Coris",
+      "Possum",
+      "Lineatus"
+    ],
+    "description": "Sensitive wrasses, sand bed required. Added together when keeping multiples."
+  },
+  {
+    "key": "hogfish_bodianus",
+    "id": 16,
+    "name": "Hogfish — Bodianus",
+    "scientific": "Bodianus",
+    "common_examples": [
+      "Cuban",
+      "Spanish",
+      "Twinspot",
+      "Lyretail"
+    ],
+    "description": "Larger wrasses. Older specimens predate inverts and small fish."
+  },
+  {
+    "key": "damsels_chrysiptera",
+    "id": 17,
+    "name": "Damsels — Chrysiptera",
+    "scientific": "Chrysiptera",
+    "common_examples": [
+      "Springeri",
+      "Azure",
+      "Talbot",
+      "Yellowtail",
+      "Rolland's"
+    ],
+    "description": "Damsel genus. Springeri/Talbot/Rolland's most peaceful. Yellowtail (parasema) more aggressive."
+  },
+  {
+    "key": "chromis",
+    "id": 18,
+    "name": "Chromis",
+    "scientific": "Chromis",
+    "common_examples": [
+      "Blue Green",
+      "Black",
+      "Vanderbilt"
+    ],
+    "description": "Schooling damsels. Keep odd-numbered groups (5+); pair-off culling is normal."
+  },
+  {
+    "key": "clownfish",
+    "id": 19,
+    "name": "Clownfish",
+    "scientific": "Amphiprion / Premnas",
+    "common_examples": [
+      "Ocellaris",
+      "Percula",
+      "Maroon",
+      "Tomato",
+      "Clarkii"
+    ],
+    "description": "Pair only, conspecific only. Maroon especially aggressive. Cross-species rarely tolerates."
+  },
+  {
+    "key": "gobies_cryptocentrus",
+    "id": 20,
+    "name": "Gobies — Cryptocentrus / Stonogobiops",
+    "scientific": "Cryptocentrus / Stonogobiops",
+    "common_examples": [
+      "Yellow Watchman",
+      "Yashia",
+      "Randall's",
+      "Pinkbar"
+    ],
+    "description": "Shrimp-pair gobies. Territorial; pair only when shrimp-paired together."
+  },
+  {
+    "key": "gobies_gobiodon",
+    "id": 21,
+    "name": "Gobies — Gobiodon / Eviota",
+    "scientific": "Gobiodon / Eviota",
+    "common_examples": [
+      "Green Clown",
+      "Yellow Clown",
+      "Pygmy",
+      "Neon"
+    ],
+    "description": "Tiny perching gobies. Peaceful, multiples OK."
+  },
+  {
+    "key": "gobies_nemateleotris",
+    "id": 22,
+    "name": "Gobies — Nemateleotris (Firefish/Dartfish)",
+    "scientific": "Nemateleotris",
+    "common_examples": [
+      "Firefish",
+      "Helfrichi",
+      "Purple Firefish"
+    ],
+    "description": "Peaceful midwater dartfish. Pair or group when added together. Easy prey for hawks/triggers."
+  },
+  {
+    "key": "gobies_valenciennea",
+    "id": 23,
+    "name": "Gobies — Valenciennea (Sand-sifters)",
+    "scientific": "Valenciennea",
+    "common_examples": [
+      "Diamond",
+      "Sleeper",
+      "Tiger"
+    ],
+    "description": "Sand-sifting gobies. Territorial with conspecifics. Compete with mandarins for pods."
+  },
+  {
+    "key": "blennies_salarias",
+    "id": 24,
+    "name": "Blennies — Salarias / Ecsenius",
+    "scientific": "Salarias / Ecsenius",
+    "common_examples": [
+      "Lawnmower",
+      "Bicolor",
+      "Tailspot",
+      "Midas"
+    ],
+    "description": "Algae-grazing blennies. Territorial with conspecifics; peaceful otherwise."
+  },
+  {
+    "key": "blennies_meiacanthus",
+    "id": 25,
+    "name": "Blennies — Meiacanthus (Fang)",
+    "scientific": "Meiacanthus",
+    "common_examples": [
+      "Forktail",
+      "Canary",
+      "Striped"
+    ],
+    "description": "Fang blennies. Mildly venomous fangs deter predators. Pair-able."
+  },
+  {
+    "key": "cardinalfish",
+    "id": 26,
+    "name": "Cardinalfish",
+    "scientific": "Apogonidae",
+    "common_examples": [
+      "Banggai",
+      "Pajama",
+      "Long-spine"
+    ],
+    "description": "Mid-water schooling fish. Banggai pair/group; introduce together."
+  },
+  {
+    "key": "anthias",
+    "id": 27,
+    "name": "Anthias — Pseudanthias",
+    "scientific": "Pseudanthias",
+    "common_examples": [
+      "Lyretail",
+      "Bartlett's",
+      "Dispar",
+      "Squareback"
+    ],
+    "description": "Single-species harems (1 male + 3+ females). Heavy feeders, demanding."
+  },
+  {
+    "key": "triggerfish_peaceful",
+    "id": 28,
+    "name": "Triggerfish — Peaceful",
+    "scientific": "Pseudobalistes / Sufflamen / Xanthichthys",
+    "common_examples": [
+      "Niger",
+      "Blue Throat",
+      "Crosshatch"
+    ],
+    "description": "Reef-safer triggers. Single per tank. Some reef-compatible with caution."
+  },
+  {
+    "key": "triggerfish_aggressive",
+    "id": 29,
+    "name": "Triggerfish — Aggressive",
+    "scientific": "Balistidae",
+    "common_examples": [
+      "Clown",
+      "Undulated",
+      "Picasso",
+      "Queen"
+    ],
+    "description": "Aggressive triggers. Single only. FOWLR-only."
+  },
+  {
+    "key": "lionfish",
+    "id": 30,
+    "name": "Lionfish — Pterois",
+    "scientific": "Pterois / Dendrochirus",
+    "common_examples": [
+      "Volitans",
+      "Dwarf",
+      "Fuzzy Dwarf",
+      "Antennata"
+    ],
+    "description": "Predators. Eat any fish that fits in their mouth. Venomous spines."
+  },
+  {
+    "key": "eels",
+    "id": 31,
+    "name": "Eels — Muraenidae",
+    "scientific": "Muraenidae",
+    "common_examples": [
+      "Snowflake",
+      "Goldentail",
+      "Zebra",
+      "Tessellata"
+    ],
+    "description": "Predators. Eat fish/inverts. Single typically."
+  },
+  {
+    "key": "groupers",
+    "id": 32,
+    "name": "Groupers — Cephalopholis (small)",
+    "scientific": "Cephalopholis / Variola",
+    "common_examples": [
+      "Miniatus",
+      "V-Tail",
+      "Coral Hind",
+      "Argus"
+    ],
+    "description": "Smaller groupers for home aquaria. Predators. Single only."
+  },
+  {
+    "key": "hawkfish",
+    "id": 33,
+    "name": "Hawkfish — Cirrhitidae",
+    "scientific": "Cirrhitidae",
+    "common_examples": [
+      "Flame",
+      "Longnose",
+      "Pixie",
+      "Falco's"
+    ],
+    "description": "Perching predators. Eat shrimp and small fish. Territorial."
+  },
+  {
+    "key": "puffers",
+    "id": 34,
+    "name": "Puffers — Tetraodontidae",
+    "scientific": "Tetraodontidae",
+    "common_examples": [
+      "Valentini",
+      "Porcupine",
+      "Stars and Stripes"
+    ],
+    "description": "Will nip coral and inverts. Single typically. Larger species need huge tanks."
+  },
+  {
+    "key": "royal_gramma",
+    "id": 35,
+    "name": "Royal Gramma / Grammas",
+    "scientific": "Gramma",
+    "common_examples": [
+      "Royal Gramma",
+      "Brazilian Gramma",
+      "Blackcap Gramma"
+    ],
+    "description": "Cave-dwelling fish. Territorial with conspecifics and similar-niche fish."
+  },
+  {
+    "key": "dottybacks",
+    "id": 36,
+    "name": "Dottybacks / Pseudochromis",
+    "scientific": "Pseudochromis / Pictichromis",
+    "common_examples": [
+      "Orchid",
+      "Sunrise",
+      "Diadema",
+      "Elongatus"
+    ],
+    "description": "Aggressive for size. Peaceful exceptions: Elongatus, Coccinacauda."
+  },
+  {
+    "key": "basslets",
+    "id": 37,
+    "name": "Basslets — Liopropoma",
+    "scientific": "Liopropoma",
+    "common_examples": [
+      "Swissguard",
+      "Candy",
+      "Black Cap"
+    ],
+    "description": "Cave-dwelling basslets. Peaceful but reclusive. Single typically."
+  },
+  {
+    "key": "butterflyfish_reef_safe",
+    "id": 38,
+    "name": "Butterflyfish — Reef Safe",
+    "scientific": "Chaetodontidae (selected)",
+    "common_examples": [
+      "Copperband",
+      "Pyramid",
+      "Heniochus (Bannerfish)"
+    ],
+    "description": "Coral-tolerant butterflies. Copperband eats Aiptasia. Pyramids work in groups."
+  },
+  {
+    "key": "butterflyfish_non_reef_safe",
+    "id": 39,
+    "name": "Butterflyfish — Non Reef Safe",
+    "scientific": "Chaetodontidae",
+    "common_examples": [
+      "Klein's",
+      "Auriga",
+      "Raccoon",
+      "Threadfin"
+    ],
+    "description": "Most Chaetodon will nip corals/clams. FOWLR-only generally."
+  },
+  {
+    "key": "mandarins_dragonets",
+    "id": 40,
+    "name": "Mandarins / Dragonets — Synchiropus",
+    "scientific": "Synchiropus",
+    "common_examples": [
+      "Mandarin",
+      "Spotted Mandarin",
+      "Scooter",
+      "Ruby Red"
+    ],
+    "description": "Pod-eaters. Mature reef with copious copepods required. Single or M+F pair."
+  }
+]

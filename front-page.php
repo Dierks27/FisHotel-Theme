@@ -194,7 +194,7 @@ if (!$available_query->have_posts()) {
         <ul class="fh-features-list">
             <li class="fh-feature"><div class="fh-feature__dot"></div><div><strong>Published Loss Rates</strong>Every importer we use has documented mortality statistics, updated regularly and available before purchase.</div></li>
             <li class="fh-feature"><div class="fh-feature__dot"></div><div><strong>No Surprises</strong>Treatment history, feeding log, and behavioral notes travel with every fish. What happened in quarantine doesn't stay in quarantine.</div></li>
-            <li class="fh-feature"><div class="fh-feature__dot"></div><div><strong>Community-First</strong>Active on Humble.Fish and Reef2Reef. We're hobbyists first, business second.</div></li>
+            <li class="fh-feature"><div class="fh-feature__dot"></div><div><strong>Community-First</strong>Active on Humble.Fish. We're hobbyists first, business second.</div></li>
             <li class="fh-feature"><div class="fh-feature__dot"></div><div><strong>Solo Operated</strong>One person, one standard. Every fish is personal.</div></li>
         </ul>
     </div>
@@ -205,8 +205,7 @@ if (!$available_query->have_posts()) {
 ══════════════════════════════════════ */ ?>
 <section class="fh-quote-section">
     <span class="fh-quote-mark">"</span>
-    <blockquote class="fh-quote-text">I've lost too many fish straight out of the bag. The FisHotel is the only place I order from now — the documentation alone is worth it, let alone getting a fish that actually eats on day one.</blockquote>
-    <cite class="fh-quote-author">— Reef2Reef Community Member</cite>
+    <blockquote class="fh-quote-text">Some of the healthiest, happiest, most well-adjusted quarantined fish on the market.</blockquote>
 </section>
 
 <?php /* ══════════════════════════════════════

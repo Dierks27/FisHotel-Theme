@@ -16,11 +16,6 @@ function fishotel_compat_enqueue() {
 		return;
 	}
 
-	$css_path = FISHOTEL_THEME_DIR . '/assets/css/compatibility-guide.css';
-	$js_path  = FISHOTEL_THEME_DIR . '/assets/js/compatibility-guide.js';
-	$css_ver  = file_exists( $css_path ) ? filemtime( $css_path ) : FISHOTEL_THEME_VERSION;
-	$js_ver   = file_exists( $js_path )  ? filemtime( $js_path )  : FISHOTEL_THEME_VERSION;
-
 	wp_enqueue_style(
 		'fishotel-compat-fonts',
 		'https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap',
@@ -31,14 +26,14 @@ function fishotel_compat_enqueue() {
 		'fishotel-compat',
 		FISHOTEL_THEME_URI . '/assets/css/compatibility-guide.css',
 		[ 'fishotel-style', 'fishotel-compat-fonts' ],
-		$css_ver
+		fishotel_asset_version( 'assets/css/compatibility-guide.css' )
 	);
 
 	wp_enqueue_script(
 		'fishotel-compat',
 		FISHOTEL_THEME_URI . '/assets/js/compatibility-guide.js',
 		[],
-		$js_ver,
+		fishotel_asset_version( 'assets/js/compatibility-guide.js' ),
 		true
 	);
 

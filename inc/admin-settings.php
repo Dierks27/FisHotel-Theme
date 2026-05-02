@@ -699,6 +699,14 @@ JS;
 				submit_button( 'Save Settings' );
 				?>
 			</form>
+
+			<?php
+			// Tools section — backfill button lives here so it shares the
+			// settings screen but doesn't post through the options API form.
+			if ( class_exists( 'FisHotel_Compat_Backfill' ) ) {
+				FisHotel_Compat_Backfill::render_button();
+			}
+			?>
 		</div>
 		<?php
 	}

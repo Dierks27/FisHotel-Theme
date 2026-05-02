@@ -12,6 +12,17 @@ define( 'FISHOTEL_THEME_VERSION', '1.0.2' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
+/**
+ * Cache-bust helper — returns filemtime() for a theme-relative asset path,
+ * falling back to FISHOTEL_THEME_VERSION if the file is missing. Pass to
+ * wp_enqueue_style/script as $ver so browsers (and most edge caches) drop
+ * the cached copy whenever the file actually changes on disk.
+ */
+function fishotel_asset_version( $relative_path ) {
+	$path = FISHOTEL_THEME_DIR . '/' . ltrim( $relative_path, '/' );
+	return file_exists( $path ) ? filemtime( $path ) : FISHOTEL_THEME_VERSION;
+}
+
 // Medication Dosing Calculator
 require_once FISHOTEL_THEME_DIR . '/inc/calculator/init.php';
 // ─────────────────────────────────────────
@@ -82,7 +93,7 @@ function fishotel_enqueue_assets() {
 		'fishotel-style',
 		FISHOTEL_THEME_URI . '/assets/css/main.css',
 		[ 'fishotel-fonts' ],
-		FISHOTEL_THEME_VERSION
+		fishotel_asset_version( 'assets/css/main.css' )
 	);
 
 	// WooCommerce override styles
@@ -91,7 +102,7 @@ function fishotel_enqueue_assets() {
 			'fishotel-woocommerce',
 			FISHOTEL_THEME_URI . '/assets/css/woocommerce.css',
 			[ 'fishotel-style' ],
-			FISHOTEL_THEME_VERSION
+			fishotel_asset_version( 'assets/css/woocommerce.css' )
 		);
 	}
 
@@ -100,7 +111,7 @@ function fishotel_enqueue_assets() {
 		'fishotel-main',
 		FISHOTEL_THEME_URI . '/assets/js/main.js',
 		[ 'jquery' ],
-		FISHOTEL_THEME_VERSION,
+		fishotel_asset_version( 'assets/js/main.js' ),
 		true
 	);
 
@@ -136,6 +147,7 @@ $includes = [
 	'/inc/compatibility-guide-enqueue.php',      // Conditional CSS/JS for the guide
 	'/inc/compatibility-guide-product-meta.php', // WC product → matrix category meta box
 	'/inc/compatibility-guide-rest.php',         // REST endpoint for inventory panel
+	'/inc/compatibility-guide-backfill.php',     // Admin backfill tool for product → category meta
 	'/inc/theme-updater.php',    // Self-updater via raw GitHub branch
 ];
 
@@ -183,7 +195,7 @@ function fishotel_enqueue_home_assets() {
             'fishotel-home',
             FISHOTEL_THEME_URI . '/assets/css/home.css',
             ['fishotel-style'],
-            FISHOTEL_THEME_VERSION
+            fishotel_asset_version( 'assets/css/home.css' )
         );
     }
 }
@@ -196,7 +208,7 @@ function fishotel_enqueue_faq_assets() {
             'fishotel-faq',
             FISHOTEL_THEME_URI . '/assets/css/faq.css',
             [ 'fishotel-style' ],
-            FISHOTEL_THEME_VERSION
+            fishotel_asset_version( 'assets/css/faq.css' )
         );
     }
 }
@@ -209,7 +221,7 @@ function fishotel_enqueue_contacts_assets() {
             'fishotel-contacts',
             FISHOTEL_THEME_URI . '/assets/css/contacts.css',
             [ 'fishotel-style' ],
-            FISHOTEL_THEME_VERSION
+            fishotel_asset_version( 'assets/css/contacts.css' )
         );
     }
 }
@@ -228,7 +240,7 @@ function fishotel_enqueue_about_assets() {
             'fishotel-about',
             FISHOTEL_THEME_URI . '/assets/css/about.css',
             [ 'fishotel-style', 'fishotel-about-fonts' ],
-            FISHOTEL_THEME_VERSION
+            fishotel_asset_version( 'assets/css/about.css' )
         );
     }
 }

@@ -1,0 +1,920 @@
+[
+  {
+    "common": "Yellow Tang",
+    "sci": "Zebrasoma flavescens",
+    "category": "tangs_zebrasoma",
+    "min_tank": 75
+  },
+  {
+    "common": "Purple Tang",
+    "sci": "Zebrasoma xanthurum",
+    "category": "tangs_zebrasoma",
+    "min_tank": 100
+  },
+  {
+    "common": "Sailfin Tang",
+    "sci": "Zebrasoma veliferum",
+    "category": "tangs_zebrasoma",
+    "min_tank": 125
+  },
+  {
+    "common": "Desjardini Tang",
+    "sci": "Zebrasoma desjardinii",
+    "category": "tangs_zebrasoma",
+    "min_tank": 125
+  },
+  {
+    "common": "Scopas Tang",
+    "sci": "Zebrasoma scopas",
+    "category": "tangs_zebrasoma",
+    "min_tank": 75
+  },
+  {
+    "common": "Powder Blue Tang",
+    "sci": "Acanthurus leucosternon",
+    "category": "tangs_acanthurus",
+    "min_tank": 125
+  },
+  {
+    "common": "Powder Brown Tang",
+    "sci": "Acanthurus japonicus",
+    "category": "tangs_acanthurus",
+    "min_tank": 100
+  },
+  {
+    "common": "Achilles Tang",
+    "sci": "Acanthurus achilles",
+    "category": "tangs_acanthurus",
+    "min_tank": 180
+  },
+  {
+    "common": "Convict Tang",
+    "sci": "Acanthurus triostegus",
+    "category": "tangs_acanthurus",
+    "min_tank": 100
+  },
+  {
+    "common": "Sohal Tang",
+    "sci": "Acanthurus sohal",
+    "category": "tangs_acanthurus",
+    "min_tank": 250
+  },
+  {
+    "common": "Lined Tang",
+    "sci": "Acanthurus lineatus",
+    "category": "tangs_acanthurus",
+    "min_tank": 180
+  },
+  {
+    "common": "Kole Tang",
+    "sci": "Ctenochaetus strigosus",
+    "category": "tangs_ctenochaetus",
+    "min_tank": 75
+  },
+  {
+    "common": "Tomini Tang",
+    "sci": "Ctenochaetus tominiensis",
+    "category": "tangs_ctenochaetus",
+    "min_tank": 75
+  },
+  {
+    "common": "Chevron Tang",
+    "sci": "Ctenochaetus hawaiiensis",
+    "category": "tangs_ctenochaetus",
+    "min_tank": 100
+  },
+  {
+    "common": "Naso Tang",
+    "sci": "Naso lituratus",
+    "category": "tangs_naso",
+    "min_tank": 180
+  },
+  {
+    "common": "Blonde Naso Tang",
+    "sci": "Naso elegans",
+    "category": "tangs_naso",
+    "min_tank": 180
+  },
+  {
+    "common": "Vlamingii Tang",
+    "sci": "Naso vlamingii",
+    "category": "tangs_naso",
+    "min_tank": 250
+  },
+  {
+    "common": "Hippo Tang",
+    "sci": "Paracanthurus hepatus",
+    "category": "tangs_paracanthurus",
+    "min_tank": 100
+  },
+  {
+    "common": "Regal Blue Tang",
+    "sci": "Paracanthurus hepatus",
+    "category": "tangs_paracanthurus",
+    "min_tank": 100
+  },
+  {
+    "common": "Coral Beauty Angel",
+    "sci": "Centropyge bispinosa",
+    "category": "dwarf_angels_centropyge",
+    "min_tank": 70
+  },
+  {
+    "common": "Flame Angel",
+    "sci": "Centropyge loricula",
+    "category": "dwarf_angels_centropyge",
+    "min_tank": 70
+  },
+  {
+    "common": "Lemonpeel Angel",
+    "sci": "Centropyge flavissima",
+    "category": "dwarf_angels_centropyge",
+    "min_tank": 70
+  },
+  {
+    "common": "Half Black Angel",
+    "sci": "Centropyge vrolikii",
+    "category": "dwarf_angels_centropyge",
+    "min_tank": 70
+  },
+  {
+    "common": "Cherub Angel",
+    "sci": "Centropyge argi",
+    "category": "dwarf_angels_centropyge",
+    "min_tank": 30
+  },
+  {
+    "common": "Bicolor Angel",
+    "sci": "Centropyge bicolor",
+    "category": "dwarf_angels_centropyge",
+    "min_tank": 70
+  },
+  {
+    "common": "Multicolor Angel",
+    "sci": "Centropyge multicolor",
+    "category": "dwarf_angels_centropyge",
+    "min_tank": 70
+  },
+  {
+    "common": "Potter's Angel",
+    "sci": "Centropyge potteri",
+    "category": "dwarf_angels_centropyge",
+    "min_tank": 70
+  },
+  {
+    "common": "Emperor Angel",
+    "sci": "Pomacanthus imperator",
+    "category": "large_angels_pomacanthus",
+    "min_tank": 220
+  },
+  {
+    "common": "French Angel",
+    "sci": "Pomacanthus paru",
+    "category": "large_angels_pomacanthus",
+    "min_tank": 220
+  },
+  {
+    "common": "Majestic Angel",
+    "sci": "Pomacanthus navarchus",
+    "category": "large_angels_pomacanthus",
+    "min_tank": 180
+  },
+  {
+    "common": "Asfur Angel",
+    "sci": "Pomacanthus asfur",
+    "category": "large_angels_pomacanthus",
+    "min_tank": 220
+  },
+  {
+    "common": "Annularis Angel",
+    "sci": "Pomacanthus annularis",
+    "category": "large_angels_pomacanthus",
+    "min_tank": 220
+  },
+  {
+    "common": "Queen Angel",
+    "sci": "Holacanthus ciliaris",
+    "category": "large_angels_holacanthus",
+    "min_tank": 220
+  },
+  {
+    "common": "Rock Beauty",
+    "sci": "Holacanthus tricolor",
+    "category": "large_angels_holacanthus",
+    "min_tank": 180
+  },
+  {
+    "common": "Passer Angel",
+    "sci": "Holacanthus passer",
+    "category": "large_angels_holacanthus",
+    "min_tank": 220
+  },
+  {
+    "common": "Bellus Angel",
+    "sci": "Genicanthus bellus",
+    "category": "genicanthus_angels",
+    "min_tank": 100
+  },
+  {
+    "common": "Watanabei Angel",
+    "sci": "Genicanthus watanabei",
+    "category": "genicanthus_angels",
+    "min_tank": 100
+  },
+  {
+    "common": "Lamarck Angel",
+    "sci": "Genicanthus lamarck",
+    "category": "genicanthus_angels",
+    "min_tank": 100
+  },
+  {
+    "common": "Half Black Genicanthus",
+    "sci": "Genicanthus melanospilos",
+    "category": "genicanthus_angels",
+    "min_tank": 100
+  },
+  {
+    "common": "Swallowtail Angel",
+    "sci": "Genicanthus semifasciatus",
+    "category": "genicanthus_angels",
+    "min_tank": 100
+  },
+  {
+    "common": "Melanurus Wrasse",
+    "sci": "Halichoeres melanurus",
+    "category": "wrasses_halichoeres",
+    "min_tank": 75
+  },
+  {
+    "common": "Yellow Coris Wrasse",
+    "sci": "Halichoeres chrysus",
+    "category": "wrasses_halichoeres",
+    "min_tank": 50
+  },
+  {
+    "common": "Christmas Wrasse",
+    "sci": "Halichoeres ornatissimus",
+    "category": "wrasses_halichoeres",
+    "min_tank": 50
+  },
+  {
+    "common": "Lubbock's Fairy Wrasse",
+    "sci": "Cirrhilabrus lubbocki",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 40
+  },
+  {
+    "common": "Solar Fairy Wrasse",
+    "sci": "Cirrhilabrus solorensis",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 55
+  },
+  {
+    "common": "Flame Fairy Wrasse",
+    "sci": "Cirrhilabrus jordani",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 90
+  },
+  {
+    "common": "Lineatus Fairy Wrasse",
+    "sci": "Cirrhilabrus lineatus",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 55
+  },
+  {
+    "common": "Rhomboid Fairy Wrasse",
+    "sci": "Cirrhilabrus rhomboidalis",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 75
+  },
+  {
+    "common": "Pintail Fairy Wrasse",
+    "sci": "Cirrhilabrus isosceles",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 40
+  },
+  {
+    "common": "Naoko Fairy Wrasse",
+    "sci": "Cirrhilabrus naokoae",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 55
+  },
+  {
+    "common": "Scott's Fairy Wrasse",
+    "sci": "Cirrhilabrus scottorum",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 120
+  },
+  {
+    "common": "Blue Throat Fairy Wrasse",
+    "sci": "Cirrhilabrus cyanogularis",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 55
+  },
+  {
+    "common": "Conde's Fairy Wrasse",
+    "sci": "Cirrhilabrus condei",
+    "category": "wrasses_cirrhilabrus",
+    "min_tank": 55
+  },
+  {
+    "common": "McCosker's Flasher Wrasse",
+    "sci": "Paracheilinus mccoskeri",
+    "category": "wrasses_paracheilinus",
+    "min_tank": 55
+  },
+  {
+    "common": "Carpenter's Flasher Wrasse",
+    "sci": "Paracheilinus carpenteri",
+    "category": "wrasses_paracheilinus",
+    "min_tank": 55
+  },
+  {
+    "common": "Filamented Flasher Wrasse",
+    "sci": "Paracheilinus filamentosus",
+    "category": "wrasses_paracheilinus",
+    "min_tank": 55
+  },
+  {
+    "common": "Leopard Wrasse",
+    "sci": "Macropharyngodon meleagris",
+    "category": "wrasses_macropharyngodon",
+    "min_tank": 75
+  },
+  {
+    "common": "Black Leopard Wrasse",
+    "sci": "Macropharyngodon negrosensis",
+    "category": "wrasses_macropharyngodon",
+    "min_tank": 75
+  },
+  {
+    "common": "Choati Leopard Wrasse",
+    "sci": "Macropharyngodon choati",
+    "category": "wrasses_macropharyngodon",
+    "min_tank": 75
+  },
+  {
+    "common": "Divided Leopard Wrasse",
+    "sci": "Macropharyngodon bipartitus",
+    "category": "wrasses_macropharyngodon",
+    "min_tank": 75
+  },
+  {
+    "common": "Six Line Wrasse",
+    "sci": "Pseudocheilinus hexataenia",
+    "category": "wrasses_pseudocheilinus",
+    "min_tank": 30
+  },
+  {
+    "common": "Disappearing Wrasse",
+    "sci": "Pseudocheilinus evanidus",
+    "category": "wrasses_pseudocheilinus",
+    "min_tank": 30
+  },
+  {
+    "common": "Mystery Wrasse",
+    "sci": "Pseudocheilinus ocellatus",
+    "category": "wrasses_pseudocheilinus",
+    "min_tank": 75
+  },
+  {
+    "common": "Eight Line Wrasse",
+    "sci": "Pseudocheilinus octotaenia",
+    "category": "wrasses_pseudocheilinus",
+    "min_tank": 50
+  },
+  {
+    "common": "Possum Wrasse",
+    "sci": "Wetmorella nigropinnata",
+    "category": "wrasses_anampses",
+    "min_tank": 30
+  },
+  {
+    "common": "Yellowtail Coris Wrasse",
+    "sci": "Anampses meleagrides",
+    "category": "wrasses_anampses",
+    "min_tank": 100
+  },
+  {
+    "common": "Spanish Hogfish",
+    "sci": "Bodianus rufus",
+    "category": "hogfish_bodianus",
+    "min_tank": 125
+  },
+  {
+    "common": "Twinspot Hogfish",
+    "sci": "Bodianus bimaculatus",
+    "category": "hogfish_bodianus",
+    "min_tank": 50
+  },
+  {
+    "common": "Lyretail Hogfish",
+    "sci": "Bodianus anthioides",
+    "category": "hogfish_bodianus",
+    "min_tank": 100
+  },
+  {
+    "common": "Cuban Hogfish",
+    "sci": "Bodianus pulchellus",
+    "category": "hogfish_bodianus",
+    "min_tank": 100
+  },
+  {
+    "common": "Springeri Damsel",
+    "sci": "Chrysiptera springeri",
+    "category": "damsels_chrysiptera",
+    "min_tank": 30
+  },
+  {
+    "common": "Azure Damsel",
+    "sci": "Chrysiptera hemicyanea",
+    "category": "damsels_chrysiptera",
+    "min_tank": 30
+  },
+  {
+    "common": "Talbot's Damsel",
+    "sci": "Chrysiptera talboti",
+    "category": "damsels_chrysiptera",
+    "min_tank": 30
+  },
+  {
+    "common": "Yellowtail Damsel",
+    "sci": "Chrysiptera parasema",
+    "category": "damsels_chrysiptera",
+    "min_tank": 30
+  },
+  {
+    "common": "Rolland's Damsel",
+    "sci": "Chrysiptera rollandi",
+    "category": "damsels_chrysiptera",
+    "min_tank": 30
+  },
+  {
+    "common": "Blue Green Chromis",
+    "sci": "Chromis viridis",
+    "category": "chromis",
+    "min_tank": 30
+  },
+  {
+    "common": "Black Chromis",
+    "sci": "Chromis atripectoralis",
+    "category": "chromis",
+    "min_tank": 30
+  },
+  {
+    "common": "Vanderbilt Chromis",
+    "sci": "Chromis vanderbilti",
+    "category": "chromis",
+    "min_tank": 30
+  },
+  {
+    "common": "Ocellaris Clownfish",
+    "sci": "Amphiprion ocellaris",
+    "category": "clownfish",
+    "min_tank": 20
+  },
+  {
+    "common": "Percula Clownfish",
+    "sci": "Amphiprion percula",
+    "category": "clownfish",
+    "min_tank": 20
+  },
+  {
+    "common": "Maroon Clownfish",
+    "sci": "Premnas biaculeatus",
+    "category": "clownfish",
+    "min_tank": 30
+  },
+  {
+    "common": "Tomato Clownfish",
+    "sci": "Amphiprion frenatus",
+    "category": "clownfish",
+    "min_tank": 30
+  },
+  {
+    "common": "Clarkii Clownfish",
+    "sci": "Amphiprion clarkii",
+    "category": "clownfish",
+    "min_tank": 30
+  },
+  {
+    "common": "Skunk Clownfish",
+    "sci": "Amphiprion perideraion",
+    "category": "clownfish",
+    "min_tank": 30
+  },
+  {
+    "common": "Yellow Watchman Goby",
+    "sci": "Cryptocentrus cinctus",
+    "category": "gobies_cryptocentrus",
+    "min_tank": 20
+  },
+  {
+    "common": "Yashia Goby",
+    "sci": "Stonogobiops yasha",
+    "category": "gobies_cryptocentrus",
+    "min_tank": 20
+  },
+  {
+    "common": "Pinkbar Goby",
+    "sci": "Cryptocentrus aurora",
+    "category": "gobies_cryptocentrus",
+    "min_tank": 20
+  },
+  {
+    "common": "Randall's Goby",
+    "sci": "Amblyeleotris randalli",
+    "category": "gobies_cryptocentrus",
+    "min_tank": 20
+  },
+  {
+    "common": "Green Clown Goby",
+    "sci": "Gobiodon atrangulatus",
+    "category": "gobies_gobiodon",
+    "min_tank": 10
+  },
+  {
+    "common": "Yellow Clown Goby",
+    "sci": "Gobiodon okinawae",
+    "category": "gobies_gobiodon",
+    "min_tank": 10
+  },
+  {
+    "common": "Neon Goby",
+    "sci": "Elacatinus oceanops",
+    "category": "gobies_gobiodon",
+    "min_tank": 10
+  },
+  {
+    "common": "Pygmy Goby",
+    "sci": "Eviota guttata",
+    "category": "gobies_gobiodon",
+    "min_tank": 10
+  },
+  {
+    "common": "Firefish",
+    "sci": "Nemateleotris magnifica",
+    "category": "gobies_nemateleotris",
+    "min_tank": 20
+  },
+  {
+    "common": "Helfrichi Firefish",
+    "sci": "Nemateleotris helfrichi",
+    "category": "gobies_nemateleotris",
+    "min_tank": 20
+  },
+  {
+    "common": "Purple Firefish",
+    "sci": "Nemateleotris decora",
+    "category": "gobies_nemateleotris",
+    "min_tank": 20
+  },
+  {
+    "common": "Diamond Goby",
+    "sci": "Valenciennea puellaris",
+    "category": "gobies_valenciennea",
+    "min_tank": 30
+  },
+  {
+    "common": "Sleeper Goby",
+    "sci": "Valenciennea strigata",
+    "category": "gobies_valenciennea",
+    "min_tank": 30
+  },
+  {
+    "common": "Lawnmower Blenny",
+    "sci": "Salarias fasciatus",
+    "category": "blennies_salarias",
+    "min_tank": 30
+  },
+  {
+    "common": "Bicolor Blenny",
+    "sci": "Ecsenius bicolor",
+    "category": "blennies_salarias",
+    "min_tank": 30
+  },
+  {
+    "common": "Tailspot Blenny",
+    "sci": "Ecsenius stigmatura",
+    "category": "blennies_salarias",
+    "min_tank": 20
+  },
+  {
+    "common": "Midas Blenny",
+    "sci": "Ecsenius midas",
+    "category": "blennies_salarias",
+    "min_tank": 50
+  },
+  {
+    "common": "Forktail Fang Blenny",
+    "sci": "Meiacanthus atrodorsalis",
+    "category": "blennies_meiacanthus",
+    "min_tank": 30
+  },
+  {
+    "common": "Striped Fang Blenny",
+    "sci": "Meiacanthus grammistes",
+    "category": "blennies_meiacanthus",
+    "min_tank": 30
+  },
+  {
+    "common": "Banggai Cardinalfish",
+    "sci": "Pterapogon kauderni",
+    "category": "cardinalfish",
+    "min_tank": 30
+  },
+  {
+    "common": "Pajama Cardinalfish",
+    "sci": "Sphaeramia nematoptera",
+    "category": "cardinalfish",
+    "min_tank": 30
+  },
+  {
+    "common": "Lyretail Anthias",
+    "sci": "Pseudanthias squamipinnis",
+    "category": "anthias",
+    "min_tank": 75
+  },
+  {
+    "common": "Bartlett's Anthias",
+    "sci": "Pseudanthias bartlettorum",
+    "category": "anthias",
+    "min_tank": 75
+  },
+  {
+    "common": "Dispar Anthias",
+    "sci": "Pseudanthias dispar",
+    "category": "anthias",
+    "min_tank": 100
+  },
+  {
+    "common": "Squareback Anthias",
+    "sci": "Pseudanthias pleurotaenia",
+    "category": "anthias",
+    "min_tank": 100
+  },
+  {
+    "common": "Niger Triggerfish",
+    "sci": "Odonus niger",
+    "category": "triggerfish_peaceful",
+    "min_tank": 100
+  },
+  {
+    "common": "Blue Throat Triggerfish",
+    "sci": "Xanthichthys auromarginatus",
+    "category": "triggerfish_peaceful",
+    "min_tank": 100
+  },
+  {
+    "common": "Crosshatch Triggerfish",
+    "sci": "Xanthichthys mento",
+    "category": "triggerfish_peaceful",
+    "min_tank": 180
+  },
+  {
+    "common": "Clown Triggerfish",
+    "sci": "Balistoides conspicillum",
+    "category": "triggerfish_aggressive",
+    "min_tank": 180
+  },
+  {
+    "common": "Undulated Triggerfish",
+    "sci": "Balistapus undulatus",
+    "category": "triggerfish_aggressive",
+    "min_tank": 180
+  },
+  {
+    "common": "Picasso Triggerfish",
+    "sci": "Rhinecanthus aculeatus",
+    "category": "triggerfish_aggressive",
+    "min_tank": 100
+  },
+  {
+    "common": "Queen Triggerfish",
+    "sci": "Balistes vetula",
+    "category": "triggerfish_aggressive",
+    "min_tank": 220
+  },
+  {
+    "common": "Volitans Lionfish",
+    "sci": "Pterois volitans",
+    "category": "lionfish",
+    "min_tank": 100
+  },
+  {
+    "common": "Dwarf Fuzzy Lionfish",
+    "sci": "Dendrochirus brachypterus",
+    "category": "lionfish",
+    "min_tank": 30
+  },
+  {
+    "common": "Antennata Lionfish",
+    "sci": "Pterois antennata",
+    "category": "lionfish",
+    "min_tank": 50
+  },
+  {
+    "common": "Radiata Lionfish",
+    "sci": "Pterois radiata",
+    "category": "lionfish",
+    "min_tank": 50
+  },
+  {
+    "common": "Snowflake Eel",
+    "sci": "Echidna nebulosa",
+    "category": "eels",
+    "min_tank": 50
+  },
+  {
+    "common": "Goldentail Eel",
+    "sci": "Gymnothorax miliaris",
+    "category": "eels",
+    "min_tank": 75
+  },
+  {
+    "common": "Zebra Eel",
+    "sci": "Gymnomuraena zebra",
+    "category": "eels",
+    "min_tank": 100
+  },
+  {
+    "common": "Miniatus Grouper",
+    "sci": "Cephalopholis miniata",
+    "category": "groupers",
+    "min_tank": 100
+  },
+  {
+    "common": "V-Tail Grouper",
+    "sci": "Cephalopholis urodeta",
+    "category": "groupers",
+    "min_tank": 75
+  },
+  {
+    "common": "Coral Hind",
+    "sci": "Cephalopholis argus",
+    "category": "groupers",
+    "min_tank": 100
+  },
+  {
+    "common": "Flame Hawkfish",
+    "sci": "Neocirrhites armatus",
+    "category": "hawkfish",
+    "min_tank": 50
+  },
+  {
+    "common": "Longnose Hawkfish",
+    "sci": "Oxycirrhites typus",
+    "category": "hawkfish",
+    "min_tank": 50
+  },
+  {
+    "common": "Pixie Hawkfish",
+    "sci": "Cirrhitichthys oxycephalus",
+    "category": "hawkfish",
+    "min_tank": 30
+  },
+  {
+    "common": "Falco's Hawkfish",
+    "sci": "Cirrhitichthys falco",
+    "category": "hawkfish",
+    "min_tank": 30
+  },
+  {
+    "common": "Valentini Puffer",
+    "sci": "Canthigaster valentini",
+    "category": "puffers",
+    "min_tank": 30
+  },
+  {
+    "common": "Porcupine Puffer",
+    "sci": "Diodon holocanthus",
+    "category": "puffers",
+    "min_tank": 100
+  },
+  {
+    "common": "Stars and Stripes Puffer",
+    "sci": "Arothron hispidus",
+    "category": "puffers",
+    "min_tank": 180
+  },
+  {
+    "common": "Royal Gramma",
+    "sci": "Gramma loreto",
+    "category": "royal_gramma",
+    "min_tank": 30
+  },
+  {
+    "common": "Brazilian Gramma",
+    "sci": "Gramma brasiliensis",
+    "category": "royal_gramma",
+    "min_tank": 30
+  },
+  {
+    "common": "Blackcap Gramma",
+    "sci": "Gramma melacara",
+    "category": "royal_gramma",
+    "min_tank": 50
+  },
+  {
+    "common": "Orchid Dottyback",
+    "sci": "Pseudochromis fridmani",
+    "category": "dottybacks",
+    "min_tank": 30
+  },
+  {
+    "common": "Sunrise Dottyback",
+    "sci": "Pseudochromis flavivertex",
+    "category": "dottybacks",
+    "min_tank": 30
+  },
+  {
+    "common": "Diadema Dottyback",
+    "sci": "Pseudochromis diadema",
+    "category": "dottybacks",
+    "min_tank": 30
+  },
+  {
+    "common": "Indigo Dottyback",
+    "sci": "Pseudochromis tapeinosoma",
+    "category": "dottybacks",
+    "min_tank": 30
+  },
+  {
+    "common": "Swissguard Basslet",
+    "sci": "Liopropoma rubre",
+    "category": "basslets",
+    "min_tank": 50
+  },
+  {
+    "common": "Candy Basslet",
+    "sci": "Liopropoma carmabi",
+    "category": "basslets",
+    "min_tank": 50
+  },
+  {
+    "common": "Black Cap Basslet",
+    "sci": "Gramma melacara",
+    "category": "basslets",
+    "min_tank": 50
+  },
+  {
+    "common": "Copperband Butterflyfish",
+    "sci": "Chelmon rostratus",
+    "category": "butterflyfish_reef_safe",
+    "min_tank": 100
+  },
+  {
+    "common": "Pyramid Butterflyfish",
+    "sci": "Hemitaurichthys polylepis",
+    "category": "butterflyfish_reef_safe",
+    "min_tank": 125
+  },
+  {
+    "common": "Heniochus Bannerfish",
+    "sci": "Heniochus diphreutes",
+    "category": "butterflyfish_reef_safe",
+    "min_tank": 75
+  },
+  {
+    "common": "Klein's Butterflyfish",
+    "sci": "Chaetodon kleinii",
+    "category": "butterflyfish_non_reef_safe",
+    "min_tank": 75
+  },
+  {
+    "common": "Auriga Butterflyfish",
+    "sci": "Chaetodon auriga",
+    "category": "butterflyfish_non_reef_safe",
+    "min_tank": 100
+  },
+  {
+    "common": "Raccoon Butterflyfish",
+    "sci": "Chaetodon lunula",
+    "category": "butterflyfish_non_reef_safe",
+    "min_tank": 100
+  },
+  {
+    "common": "Mandarin Dragonet",
+    "sci": "Synchiropus splendidus",
+    "category": "mandarins_dragonets",
+    "min_tank": 30
+  },
+  {
+    "common": "Spotted Mandarin",
+    "sci": "Synchiropus picturatus",
+    "category": "mandarins_dragonets",
+    "min_tank": 30
+  },
+  {
+    "common": "Scooter Dragonet",
+    "sci": "Synchiropus ocellatus",
+    "category": "mandarins_dragonets",
+    "min_tank": 30
+  },
+  {
+    "common": "Ruby Red Dragonet",
+    "sci": "Synchiropus sycorax",
+    "category": "mandarins_dragonets",
+    "min_tank": 30
+  }
+]

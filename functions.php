@@ -254,6 +254,14 @@ add_filter( 'woocommerce_add_to_cart_fragments', function ( $fragments ) {
     <span class="site-header__icon-count fishotel-cart-count" data-count="<?php echo esc_attr( $count ); ?>"><?php echo esc_html( $count ); ?></span>
     <?php
     $fragments['span.fishotel-cart-count'] = ob_get_clean();
+
+    // Mobile drawer's "Cart (N)" — distinct class so it doesn't inherit
+    // the desktop pill styling.
+    $fragments['span.fishotel-drawer-cart-count'] = sprintf(
+        '<span class="fishotel-drawer-cart-count">%d</span>',
+        intval( $count )
+    );
+
     return $fragments;
 } );
 

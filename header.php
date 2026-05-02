@@ -109,7 +109,7 @@
             }
             ?>
             <?php if ( class_exists('WooCommerce') ) : ?>
-            <li class="menu-item"><a href="<?php echo esc_url( wc_get_cart_url() ); ?>">Cart (<?php echo WC()->cart ? WC()->cart->get_cart_contents_count() : 0; ?>)</a></li>
+            <li class="menu-item"><a href="<?php echo esc_url( wc_get_cart_url() ); ?>">Cart (<span class="fishotel-drawer-cart-count"><?php echo intval( WC()->cart ? WC()->cart->get_cart_contents_count() : 0 ); ?></span>)</a></li>
             <li class="menu-item"><a href="<?php echo esc_url( wc_get_account_endpoint_url('dashboard') ); ?>">My Account</a></li>
             <?php endif; ?>
         </ul>

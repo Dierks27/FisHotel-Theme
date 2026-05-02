@@ -24,6 +24,179 @@ class FisHotel_Compat_Backfill {
 	const REPORT_TRANSIENT  = 'fh_compat_backfill_report_';
 	const SETTINGS_PAGE     = 'product_page_fishotel-settings';
 
+	/**
+	 * Genus → matrix-category map for Strategy 4 (genus-from-excerpt).
+	 * Driven by what's actually present in the FisHotel catalog excerpts;
+	 * extend as new genera show up in the "Unknown genus" report bucket.
+	 */
+	const GENUS_MAP = [
+		// Tangs
+		'Acanthurus'         => 'tangs_acanthurus',
+		'Zebrasoma'          => 'tangs_zebrasoma',
+		'Ctenochaetus'       => 'tangs_ctenochaetus',
+		'Naso'               => 'tangs_naso',
+		'Paracanthurus'      => 'tangs_paracanthurus',
+
+		// Angels
+		'Centropyge'         => 'dwarf_angels_centropyge',
+		'Paracentropyge'     => 'dwarf_angels_centropyge',
+		'Apolemichthys'      => 'dwarf_angels_centropyge',
+		'Pomacanthus'        => 'large_angels_pomacanthus',
+		'Holacanthus'        => 'large_angels_holacanthus',
+		'Genicanthus'        => 'genicanthus_angels',
+
+		// Wrasses
+		'Halichoeres'        => 'wrasses_halichoeres',
+		'Thalassoma'         => 'wrasses_halichoeres',
+		'Gomphosus'          => 'wrasses_halichoeres',
+		'Pseudojuloides'     => 'wrasses_halichoeres',
+		'Coris'              => 'wrasses_halichoeres',
+		'Hemigymnus'         => 'wrasses_halichoeres',
+		'Pteragogus'         => 'wrasses_halichoeres',
+		'Cirrhilabrus'       => 'wrasses_cirrhilabrus',
+		'Paracheilinus'      => 'wrasses_paracheilinus',
+		'Macropharyngodon'   => 'wrasses_macropharyngodon',
+		'Iniistius'          => 'wrasses_macropharyngodon',
+		'Pseudocheilinus'    => 'wrasses_pseudocheilinus',
+		'Anampses'           => 'wrasses_anampses',
+		'Wetmorella'         => 'wrasses_anampses',
+		'Pseudocoris'        => 'wrasses_anampses',
+
+		// Hogfish
+		'Bodianus'           => 'hogfish_bodianus',
+
+		// Damsels & Chromis
+		'Chrysiptera'        => 'damsels_chrysiptera',
+		'Pomacentrus'        => 'damsels_chrysiptera',
+		'Stegastes'          => 'damsels_chrysiptera',
+		'Plectroglyphidodon' => 'damsels_chrysiptera',
+		'Dischistodus'       => 'damsels_chrysiptera',
+		'Neoglyphidodon'     => 'damsels_chrysiptera',
+		'Dascyllus'          => 'damsels_chrysiptera',
+		'Chromis'            => 'chromis',
+		'Azurina'            => 'chromis',
+
+		// Clownfish
+		'Amphiprion'         => 'clownfish',
+		'Premnas'            => 'clownfish',
+
+		// Gobies
+		'Cryptocentrus'      => 'gobies_cryptocentrus',
+		'Stonogobiops'       => 'gobies_cryptocentrus',
+		'Amblyeleotris'      => 'gobies_cryptocentrus',
+		'Mahidolia'          => 'gobies_cryptocentrus',
+		'Gobiodon'           => 'gobies_gobiodon',
+		'Eviota'             => 'gobies_gobiodon',
+		'Trimma'             => 'gobies_gobiodon',
+		'Elacatinus'         => 'gobies_gobiodon',
+		'Priolepis'          => 'gobies_gobiodon',
+		'Lythrypnus'         => 'gobies_gobiodon',
+		'Nemateleotris'      => 'gobies_nemateleotris',
+		'Ptereleotris'       => 'gobies_nemateleotris',
+		'Valenciennea'       => 'gobies_valenciennea',
+		'Signigobius'        => 'gobies_valenciennea',
+		'Amblygobius'        => 'gobies_valenciennea',
+
+		// Blennies
+		'Salarias'           => 'blennies_salarias',
+		'Ecsenius'           => 'blennies_salarias',
+		'Atrosalarias'       => 'blennies_salarias',
+		'Cirripectes'        => 'blennies_salarias',
+		'Istiblennius'       => 'blennies_salarias',
+		'Meiacanthus'        => 'blennies_meiacanthus',
+		'Petroscirtes'       => 'blennies_meiacanthus',
+		'Plagiotremus'       => 'blennies_meiacanthus',
+
+		// Cardinalfish (Apogonidae)
+		'Pterapogon'         => 'cardinalfish',
+		'Sphaeramia'         => 'cardinalfish',
+		'Apogon'             => 'cardinalfish',
+		'Apogonichthys'      => 'cardinalfish',
+		'Cheilodipterus'     => 'cardinalfish',
+		'Ostorhinchus'       => 'cardinalfish',
+
+		// Anthias
+		'Pseudanthias'       => 'anthias',
+		'Serranocirrhitus'   => 'anthias',
+		'Mirolabrichthys'    => 'anthias',
+		'Plectranthias'      => 'anthias',
+		'Holanthias'         => 'anthias',
+		'Nemanthias'         => 'anthias',
+
+		// Triggerfish
+		'Odonus'             => 'triggerfish_peaceful',
+		'Xanthichthys'       => 'triggerfish_peaceful',
+		'Sufflamen'          => 'triggerfish_peaceful',
+		'Balistoides'        => 'triggerfish_aggressive',
+		'Balistapus'         => 'triggerfish_aggressive',
+		'Balistes'           => 'triggerfish_aggressive',
+		'Rhinecanthus'       => 'triggerfish_aggressive',
+		'Pseudobalistes'     => 'triggerfish_aggressive',
+		'Melichthys'         => 'triggerfish_aggressive',
+		'Canthidermis'       => 'triggerfish_aggressive',
+
+		// Lionfish
+		'Pterois'            => 'lionfish',
+		'Dendrochirus'       => 'lionfish',
+
+		// Eels (Muraenidae)
+		'Echidna'            => 'eels',
+		'Gymnothorax'        => 'eels',
+		'Gymnomuraena'       => 'eels',
+		'Muraena'            => 'eels',
+		'Rhinomuraena'       => 'eels',
+		'Enchelycore'        => 'eels',
+
+		// Groupers
+		'Cephalopholis'      => 'groupers',
+		'Variola'            => 'groupers',
+		'Plectropomus'       => 'groupers',
+		'Epinephelus'        => 'groupers',
+
+		// Hawkfish (Cirrhitidae)
+		'Neocirrhites'       => 'hawkfish',
+		'Oxycirrhites'       => 'hawkfish',
+		'Cirrhitichthys'     => 'hawkfish',
+		'Paracirrhites'      => 'hawkfish',
+		'Cirrhitops'         => 'hawkfish',
+		'Amblycirrhitus'     => 'hawkfish',
+
+		// Puffers
+		'Canthigaster'       => 'puffers',
+		'Diodon'             => 'puffers',
+		'Arothron'           => 'puffers',
+		'Chilomycterus'      => 'puffers',
+		'Tetraodon'          => 'puffers',
+
+		// Royal Gramma
+		'Gramma'             => 'royal_gramma',
+		'Lipogramma'         => 'royal_gramma',
+
+		// Dottybacks
+		'Pseudochromis'      => 'dottybacks',
+		'Pictichromis'       => 'dottybacks',
+		'Labracinus'         => 'dottybacks',
+		'Manonichthys'       => 'dottybacks',
+		'Cypho'              => 'dottybacks',
+
+		// Basslets
+		'Liopropoma'         => 'basslets',
+		'Serranus'           => 'basslets',
+		'Hypoplectrus'       => 'basslets',
+
+		// Butterflyfish
+		'Chelmon'            => 'butterflyfish_reef_safe',
+		'Hemitaurichthys'    => 'butterflyfish_reef_safe',
+		'Heniochus'          => 'butterflyfish_reef_safe',
+		'Forcipiger'         => 'butterflyfish_reef_safe',
+		'Prognathodes'       => 'butterflyfish_reef_safe',
+		'Chaetodon'          => 'butterflyfish_non_reef_safe',
+		'Roa'                => 'butterflyfish_non_reef_safe',
+
+		// Mandarins / Dragonets
+		'Synchiropus'        => 'mandarins_dragonets',
+	];
+
 	public static function init() {
 		add_action( 'admin_post_' . self::ACTION, [ __CLASS__, 'handle' ] );
 		add_action( 'admin_notices',              [ __CLASS__, 'render_report' ] );
@@ -95,10 +268,11 @@ class FisHotel_Compat_Backfill {
 		$common_keys_sorted = array_keys( $by_common_lower );
 		usort( $common_keys_sorted, function ( $a, $b ) { return strlen( $b ) - strlen( $a ); } );
 
-		$matched   = [];
-		$skipped   = [];
-		$ambiguous = [];
-		$unmatched = [];
+		$matched        = [];
+		$skipped        = [];
+		$ambiguous      = [];
+		$unknown_genus  = [];
+		$unmatched      = [];
 
 		$query = new WP_Query( [
 			'post_type'      => 'product',
@@ -156,7 +330,33 @@ class FisHotel_Compat_Backfill {
 				if ( ! empty( $hits ) ) $matched_on = 'sci';
 			}
 
+			// 4. Genus-from-excerpt — pull `Genus species` tokens out of the
+			//    short description and look the genus up in GENUS_MAP.
+			//    Scans every token (not just the first) so an opening
+			//    common-name phrase like "The Adorned" doesn't mask the real
+			//    sci binomial later in the excerpt. Falls into the
+			//    unknown_genus bucket if a token parses but no genus matches.
 			if ( empty( $hits ) ) {
+				$genus_result = self::resolve_genus_from_excerpt( $product_id );
+				if ( $genus_result['category'] !== '' ) {
+					update_post_meta( $product_id, '_fishotel_compat_category', $genus_result['category'] );
+					$matched[] = [
+						'id'         => $product_id,
+						'title'      => $title,
+						'category'   => $genus_result['category'],
+						'matched_on' => 'genus',
+						'species'    => $genus_result['binomial'],
+					];
+					continue;
+				}
+				if ( $genus_result['genus'] !== '' ) {
+					$unknown_genus[] = [
+						'id'    => $product_id,
+						'title' => $title,
+						'genus' => $genus_result['genus'],
+					];
+					continue;
+				}
 				$unmatched[] = [ 'id' => $product_id, 'title' => $title ];
 				continue;
 			}
@@ -193,18 +393,54 @@ class FisHotel_Compat_Backfill {
 		}
 
 		return [
-			'matched'   => $matched,
-			'skipped'   => $skipped,
-			'ambiguous' => $ambiguous,
-			'unmatched' => $unmatched,
-			'totals'    => [
-				'matched'   => count( $matched ),
-				'skipped'   => count( $skipped ),
-				'ambiguous' => count( $ambiguous ),
-				'unmatched' => count( $unmatched ),
+			'matched'        => $matched,
+			'skipped'        => $skipped,
+			'ambiguous'      => $ambiguous,
+			'unknown_genus'  => $unknown_genus,
+			'unmatched'      => $unmatched,
+			'totals'         => [
+				'matched'        => count( $matched ),
+				'skipped'        => count( $skipped ),
+				'ambiguous'      => count( $ambiguous ),
+				'unknown_genus'  => count( $unknown_genus ),
+				'unmatched'      => count( $unmatched ),
 			],
-			'ran_at'    => time(),
+			'ran_at'         => time(),
 		];
+	}
+
+	/**
+	 * Strategy 4 helper. Scans the product's short description for
+	 * `Genus species` tokens via /\b([A-Z][a-z]+)\s+[a-z]+\b/ and returns:
+	 *   [ category => '', genus => '', binomial => '' ]
+	 *
+	 * - category: matrix-category key if any token's genus is in GENUS_MAP
+	 * - genus:    first token's genus if no map hit (for the unknown bucket)
+	 * - binomial: the matched "Genus species" string for the report
+	 */
+	protected static function resolve_genus_from_excerpt( $product_id ) {
+		$out = [ 'category' => '', 'genus' => '', 'binomial' => '' ];
+		$excerpt = (string) get_post_field( 'post_excerpt', $product_id );
+		if ( $excerpt === '' ) {
+			return $out;
+		}
+		$plain = wp_strip_all_tags( $excerpt );
+		if ( ! preg_match_all( '/\b([A-Z][a-z]+)\s+([a-z]+)\b/', $plain, $matches, PREG_SET_ORDER ) ) {
+			return $out;
+		}
+		foreach ( $matches as $m ) {
+			$genus = $m[1];
+			if ( isset( self::GENUS_MAP[ $genus ] ) ) {
+				$out['category'] = self::GENUS_MAP[ $genus ];
+				$out['genus']    = $genus;
+				$out['binomial'] = $genus . ' ' . $m[2];
+				return $out;
+			}
+		}
+		// No map hit — record the FIRST parseable genus for the unknown bucket.
+		$out['genus']    = $matches[0][1];
+		$out['binomial'] = $matches[0][1] . ' ' . $matches[0][2];
+		return $out;
 	}
 
 	protected static function label_for( $sp ) {
@@ -255,6 +491,7 @@ class FisHotel_Compat_Backfill {
 				<li><strong>Matched:</strong> <?php echo (int) $t['matched']; ?> products</li>
 				<li><strong>Already had meta set:</strong> <?php echo (int) $t['skipped']; ?> products (skipped)</li>
 				<li><strong>Ambiguous</strong> (multiple matches — please assign manually): <?php echo (int) $t['ambiguous']; ?> products</li>
+				<li><strong>Unknown genus</strong> (consider new category): <?php echo (int) ( isset( $t['unknown_genus'] ) ? $t['unknown_genus'] : 0 ); ?> products</li>
 				<li><strong>No match</strong> (please assign manually): <?php echo (int) $t['unmatched']; ?> products</li>
 			</ul>
 
@@ -288,6 +525,24 @@ class FisHotel_Compat_Backfill {
 								);
 								echo esc_html( implode( ', ', $labels ) );
 								?>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				</details>
+			<?php endif; ?>
+
+			<?php if ( ! empty( $report['unknown_genus'] ) ) : ?>
+				<details open style="margin-top:14px;">
+					<summary style="cursor:pointer; font-weight:600; color:#3858a3;">Unknown genus — consider new category (<?php echo (int) $t['unknown_genus']; ?>)</summary>
+					<p class="description" style="margin:8px 0 6px;">
+						Sci binomial parsed but the genus isn't in the FisHotel category map yet.
+						Use this list to decide whether to add new categories in the next matrix release.
+					</p>
+					<ul style="margin:10px 0 0 18px;">
+						<?php foreach ( $report['unknown_genus'] as $row ) : ?>
+							<li>
+								<a href="<?php echo esc_url( get_edit_post_link( $row['id'] ) ); ?>"><?php echo esc_html( $row['title'] ); ?></a>
+								— genus: <code><?php echo esc_html( $row['genus'] ); ?></code>
 							</li>
 						<?php endforeach; ?>
 					</ul>

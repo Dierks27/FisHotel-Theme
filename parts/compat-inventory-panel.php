@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 	<header class="fh-compat-inventory__head">
 		<h2 id="fh-compat-inventory-title" class="fh-compat-inventory__title">What You Can Add Right Now</h2>
 		<p class="fh-compat-inventory__sub">In-stock fish compatible with your tank.</p>
+		<p class="fh-compat-inventory__hint"><em>Tap a fish to view it · Tap + Add to put it on your Considering list.</em></p>
 	</header>
 	<div class="fh-compat-inventory__grid" data-fh-inventory-grid aria-live="polite"></div>
 	<p class="fh-compat-inventory__empty" data-fh-inventory-empty>

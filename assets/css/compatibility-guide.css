@@ -353,6 +353,13 @@
 .fh-compat-inventory__head { margin-bottom: 18px; }
 .fh-compat-inventory__title { font-family: var(--fh-display); font-weight: 700; font-size: 22px; margin: 0; color: var(--fh-c-cream); }
 .fh-compat-inventory__sub  { margin: 4px 0 0; font-style: italic; color: var(--fh-c-mute); font-size: 13px; }
+.fh-compat-inventory__hint {
+	margin: 4px 0 0;
+	font-size: 0.75rem;
+	line-height: 1.45;
+	color: rgba(232, 220, 196, 0.55);
+}
+.fh-compat-inventory__hint em { font-style: italic; }
 
 .fh-compat-inventory__grid {
 	display: grid;
@@ -405,43 +412,54 @@
 }
 .fh-inventory-card:hover .fh-inventory-card__thumb img { transform: scale(1.04); }
 
+/* Solid-gold action pill that overlays the thumbnail's bottom-right.
+   Reads as a button at first glance — the previous round "+" was being
+   parsed as decoration. ~64×28 with text + icon.
+   Added state: cream pill, dark text, "✓ Added", disabled. */
 .fh-inventory-card__quick-add {
 	position: absolute;
 	bottom: 6px;
 	right: 6px;
-	width: 28px;
 	height: 28px;
-	padding: 0;
+	min-width: 64px;
+	padding: 0 10px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba(0, 0, 0, 0.55);
-	color: var(--fh-c-gold);
-	border: 1px solid rgba(212, 165, 116, 0.55);
-	border-radius: 50%;
+	gap: 4px;
+	background: var(--fh-c-gold);
+	color: var(--fh-c-paper);
+	border: 1px solid var(--fh-c-gold);
+	border-radius: 14px;
 	font-family: var(--fh-body);
-	font-size: 18px;
+	font-size: 11px;
 	font-weight: 700;
+	letter-spacing: 0.04em;
 	line-height: 1;
+	white-space: nowrap;
 	cursor: pointer;
-	backdrop-filter: blur(2px);
-	transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 150ms ease;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+	transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 .fh-inventory-card__quick-add:hover,
 .fh-inventory-card__quick-add:focus-visible {
-	background: var(--fh-c-gold);
-	color: var(--fh-c-paper);
-	border-color: var(--fh-c-gold);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
 	outline: none;
-	transform: scale(1.06);
 }
 .fh-inventory-card__quick-add:disabled,
 .fh-inventory-card__quick-add.is-added {
-	background: rgba(76, 175, 80, 0.85);
-	color: #fff;
-	border-color: rgba(76, 175, 80, 0.85);
+	background: var(--fh-c-cream);
+	color: var(--fh-c-paper);
+	border-color: var(--fh-c-cream);
 	cursor: default;
 	transform: none;
+	box-shadow: none;
+}
+.fh-inventory-card__pill-icon {
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1;
 }
 
 .fh-inventory-card__body {

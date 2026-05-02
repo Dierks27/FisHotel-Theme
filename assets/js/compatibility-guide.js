@@ -581,6 +581,54 @@
 			return (parts.length > 1 ? parts[parts.length - 1] : parts[0]).trim();
 		}
 
+		// Single source of truth for whether a product's pill should read
+		// "+ Add" or "✓ Added". Walks state.considering — productId is
+		// stamped onto each fish in addProductToConsidering so removal from
+		// the Considering zone restores the pill on the next render tick.
+		function isInConsidering(productId) {
+			if (productId === undefined || productId === null) return false;
+			const target = String(productId);
+			for (const f of state.considering) {
+				if (f && f.productId !== undefined && f.productId !== null && String(f.productId) === target) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		function applyAddState(btn, inCons, productName) {
+			btn.classList.toggle('is-added', !!inCons);
+			btn.disabled = !!inCons;
+			if (inCons) {
+				btn.innerHTML = '<span class="fh-inventory-card__pill-icon" aria-hidden="true">✓</span> Added';
+				btn.setAttribute('aria-label', 'Added to Considering');
+			} else {
+				btn.innerHTML = '<span class="fh-inventory-card__pill-icon" aria-hidden="true">+</span> Add';
+				if (productName) {
+					btn.setAttribute('aria-label', 'Add ' + productName + ' to Considering');
+				}
+			}
+		}
+
+		// Reconcile pill state of already-rendered tiles to current
+		// state.considering — runs after update() short-circuits on an
+		// unchanged fetch signature so removals from the Considering zone
+		// re-enable the matching tile without a full refetch.
+		function syncButtonStates() {
+			const grid = $('[data-fh-inventory-grid]');
+			if (!grid) return;
+			const cards = grid.querySelectorAll('.fh-inventory-card');
+			for (const card of cards) {
+				const btn = card.querySelector('.fh-inventory-card__quick-add');
+				if (!btn) continue;
+				const inCons = isInConsidering(card.dataset.productId);
+				if (btn.classList.contains('is-added') === inCons) continue; // no-op
+				let name = '';
+				try { name = (JSON.parse(btn.dataset.fhInvAdd || '{}').common) || ''; } catch (e) {}
+				applyAddState(btn, inCons, name);
+			}
+		}
+
 		function renderProducts(products, grid) {
 			grid.innerHTML = '';
 			if (!products.length) {
@@ -596,7 +644,7 @@
 				card.dataset.productId = p.id;
 
 				// Media wrapper holds the linked thumbnail + the overlay
-				// quick-add button. The button is a sibling of the <a> (not a
+				// quick-add pill. The pill is a sibling of the <a> (not a
 				// descendant) — putting <button> inside <a> is invalid HTML.
 				const media = document.createElement('div');
 				media.className = 'fh-inventory-card__media';
@@ -619,15 +667,14 @@
 				const addBtn = document.createElement('button');
 				addBtn.type = 'button';
 				addBtn.className = 'fh-inventory-card__quick-add';
-				addBtn.setAttribute('aria-label', 'Add ' + p.name + ' to Considering');
-				addBtn.textContent = '+';
 				addBtn.dataset.fhInvAdd = JSON.stringify({
-					common:   p.name,
-					sci:      '',
-					category: p.category_key,
-					min_tank: 0,
+					common:    p.name,
+					sci:       '',
+					category:  p.category_key,
+					min_tank:  0,
 					productId: p.id
 				});
+				applyAddState(addBtn, isInConsidering(p.id), p.name);
 				media.appendChild(addBtn);
 
 				card.appendChild(media);
@@ -678,7 +725,12 @@
 
 			const cats = compatibleCategories();
 			const sig  = cats.slice().sort().join('|') + '@' + (state.volume || '');
-			if (sig === lastSig) return; // identical state, skip refetch
+			if (sig === lastSig) {
+				// Same fetched product set; just reconcile pills against
+				// current state.considering so removals re-enable tiles.
+				syncButtonStates();
+				return;
+			}
 			lastSig = sig;
 
 			if (!cats.length) {
@@ -724,20 +776,22 @@
 
 		function addProductToConsidering(payload, sourceBtn) {
 			state.considering.push({
-				id: uid(),
-				common:   payload.common || '',
-				sci:      payload.sci    || '',
-				category: payload.category,
-				min_tank: payload.min_tank || 0
+				id:        uid(),
+				common:    payload.common || '',
+				sci:       payload.sci    || '',
+				category:  payload.category,
+				min_tank:  payload.min_tank || 0,
+				productId: payload.productId !== undefined ? payload.productId : null
 			});
 			saveState();
-			renderAll();
+			// Optimistic visual on the clicked tile so the customer sees the
+			// flip without waiting for the 300ms debounced sync. Removals from
+			// the Considering zone are reconciled by syncButtonStates() inside
+			// the next update() pass.
 			if (sourceBtn) {
-				sourceBtn.disabled = true;
-				sourceBtn.textContent = '✓'; // ✓ — the icon button is a 28px square; "Added" doesn't fit
-				sourceBtn.classList.add('is-added');
-				sourceBtn.setAttribute('aria-label', 'Added to Considering');
+				applyAddState(sourceBtn, true, payload.common);
 			}
+			renderAll();
 		}
 
 		return { schedule, update, addProductToConsidering };

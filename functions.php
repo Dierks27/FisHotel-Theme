@@ -196,6 +196,19 @@ function fishotel_enqueue_faq_assets() {
 }
 add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_faq_assets' );
 
+// Enqueue Contacts-page styles only on pages using the Contacts template
+function fishotel_enqueue_contacts_assets() {
+    if ( is_page_template( 'page-contacts.php' ) ) {
+        wp_enqueue_style(
+            'fishotel-contacts',
+            FISHOTEL_THEME_URI . '/assets/css/contacts.css',
+            [ 'fishotel-style' ],
+            FISHOTEL_THEME_VERSION
+        );
+    }
+}
+add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_contacts_assets' );
+
 // Enqueue About-page styles + display fonts only on the About template
 function fishotel_enqueue_about_assets() {
     if ( is_page_template( 'page-about.php' ) ) {
@@ -244,6 +257,34 @@ function fishotel_bootstrap_about_page() {
     update_option( 'fh_about_page_bootstrapped', 1, false );
 }
 add_action( 'admin_init', 'fishotel_bootstrap_about_page' );
+
+/**
+ * Bootstrap the Contacts page once.
+ *
+ * Idempotent via fh_contacts_page_bootstrapped. Creates /contacts/ as a
+ * Draft with the Contacts template assigned, only if no page exists at
+ * that slug. To re-bootstrap, delete the option.
+ */
+function fishotel_bootstrap_contacts_page() {
+    if ( get_option( 'fh_contacts_page_bootstrapped' ) ) {
+        return;
+    }
+    $existing = get_page_by_path( 'contacts' );
+    if ( ! $existing ) {
+        $page_id = wp_insert_post( [
+            'post_title'   => 'Contacts',
+            'post_name'    => 'contacts',
+            'post_status'  => 'draft',
+            'post_type'    => 'page',
+            'post_content' => '',
+        ] );
+        if ( $page_id && ! is_wp_error( $page_id ) ) {
+            update_post_meta( $page_id, '_wp_page_template', 'page-contacts.php' );
+        }
+    }
+    update_option( 'fh_contacts_page_bootstrapped', 1, false );
+}
+add_action( 'admin_init', 'fishotel_bootstrap_contacts_page' );
 
 // Live cart-count badge — WooCommerce swaps this fragment on AJAX add/remove,
 // so the count in the header updates without a page reload.

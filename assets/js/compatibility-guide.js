@@ -41,7 +41,7 @@
 	]);
 	const TIGHTEN_ONE = { C: 'W', W: 'O', O: 'N', '1': 'N', N: 'N' };
 
-	let state = { volume: '', myTank: [], considering: [] };
+	let state = { volume: '', myTank: [], considering: [], includeCaution: false };
 	let data = null;
 	let conflicts = [];
 	let pendingPick = null;
@@ -74,9 +74,10 @@
 			if (!raw) return;
 			const stored = JSON.parse(raw);
 			if (stored && typeof stored === 'object') {
-				state.volume      = stored.volume || '';
-				state.myTank      = Array.isArray(stored.myTank) ? stored.myTank : [];
-				state.considering = Array.isArray(stored.considering) ? stored.considering : [];
+				state.volume         = stored.volume || '';
+				state.myTank         = Array.isArray(stored.myTank) ? stored.myTank : [];
+				state.considering    = Array.isArray(stored.considering) ? stored.considering : [];
+				state.includeCaution = !!stored.includeCaution;
 			}
 		} catch (e) { /* swallow — bad JSON / quota / privacy mode */ }
 	}
@@ -557,18 +558,33 @@
 		let scheduleTimer = null;
 		let inflight = null;
 
-		function compatibleCategories() {
+		// For each candidate category against the user's tank, compute the
+		// worst pairing verdict (volume-modified). Categories whose worst
+		// verdict is in the allowed set are returned with their worst
+		// verdict + note attached so the renderer can label W tiles with a
+		// caution badge.
+		function compatibleCategoriesWithVerdicts() {
 			if (!data || !data.categories || !state.myTank.length) return [];
+			const allowed = state.includeCaution ? new Set(['C', 'W']) : new Set(['C']);
 			const out = [];
 			for (const cat of data.categories) {
-				let allOk = true;
+				let worstV    = 'C';
+				let worstNote = '';
+				let blocked   = false;
 				for (const fish of state.myTank) {
 					const cell = matrixCell(cat.key, fish.category);
+					const note = cell.note || '';
 					let v = cell.v || 'C';
 					v = applyVolumeModifier(v, cat.key, fish.category, state.volume);
-					if (v !== 'C') { allOk = false; break; }
+					if (!allowed.has(v)) { blocked = true; break; }
+					if (worstOf(worstV, v) !== worstV) {
+						worstV    = v;
+						worstNote = note;
+					}
 				}
-				if (allOk) out.push(cat.key);
+				if (!blocked) {
+					out.push({ key: cat.key, v: worstV, note: worstNote });
+				}
 			}
 			return out;
 		}
@@ -629,7 +645,7 @@
 			}
 		}
 
-		function renderProducts(products, grid) {
+		function renderProducts(products, grid, verdictMap) {
 			grid.innerHTML = '';
 			if (!products.length) {
 				const msg = document.createElement('p');
@@ -638,6 +654,7 @@
 				grid.appendChild(msg);
 				return;
 			}
+			verdictMap = verdictMap || {};
 			for (const p of products) {
 				const card = document.createElement('article');
 				card.className = 'fh-inventory-card';
@@ -663,6 +680,18 @@
 					thumb.appendChild(img);
 				}
 				media.appendChild(thumb);
+
+				// Caution badge for W-verdict tiles. Top-LEFT so it doesn't
+				// collide with the "+ Add" pill in the bottom-right.
+				const verdict = verdictMap[p.category_key];
+				if (verdict && verdict.v === 'W') {
+					const badge = document.createElement('span');
+					badge.className = 'fh-inventory-card__caution';
+					badge.setAttribute('aria-label', 'Caution: ' + (verdict.note || 'pairing requires care'));
+					badge.title = 'Caution: ' + (verdict.note || 'pairing requires care');
+					badge.textContent = '⚠';
+					media.appendChild(badge);
+				}
 
 				const addBtn = document.createElement('button');
 				addBtn.type = 'button';
@@ -723,8 +752,17 @@
 			}
 			empty.hidden = true;
 
-			const cats = compatibleCategories();
-			const sig  = cats.slice().sort().join('|') + '@' + (state.volume || '');
+			const compats = compatibleCategoriesWithVerdicts();
+			const cats = compats.map(function (c) { return c.key; });
+			const verdictMap = {};
+			for (const c of compats) verdictMap[c.key] = { v: c.v, note: c.note };
+
+			// Signature includes the caution flag so flipping the toggle
+			// invalidates the cache and triggers a fresh render with the
+			// new category set.
+			const sig = cats.slice().sort().join('|')
+				+ '@' + (state.volume || '')
+				+ '|cau=' + (state.includeCaution ? 1 : 0);
 			if (sig === lastSig) {
 				// Same fetched product set; just reconcile pills against
 				// current state.considering so removals re-enable tiles.
@@ -756,7 +794,7 @@
 				if (!res.ok) throw new Error('HTTP ' + res.status);
 				const products = await res.json();
 				if (sig !== lastSig) return; // state changed since fetch fired — drop stale result
-				renderProducts(products, grid);
+				renderProducts(products, grid, verdictMap);
 			} catch (err) {
 				if (window.console) console.error('Inventory fetch failed', err);
 				const msg = document.createElement('p');
@@ -958,6 +996,18 @@
 			search.addEventListener('input', function () {
 				clearTimeout(t);
 				t = setTimeout(function () { runSearch(search.value); }, 120);
+			});
+		}
+
+		// Inventory caution toggle — flips state, persists, reschedules
+		// the panel update so the larger / smaller category set fetches.
+		const cautionToggle = $('[data-fh-inventory-include-w]');
+		if (cautionToggle) {
+			cautionToggle.checked = !!state.includeCaution;
+			cautionToggle.addEventListener('change', function () {
+				state.includeCaution = !!cautionToggle.checked;
+				saveState();
+				InventoryPanel.schedule();
 			});
 		}
 	}

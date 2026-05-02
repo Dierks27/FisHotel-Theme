@@ -351,6 +351,14 @@
 
 /* 6. Inventory panel — "What You Can Add Right Now" ──────────── */
 .fh-compat-inventory__head { margin-bottom: 18px; }
+.fh-compat-inventory__head-top {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+.fh-compat-inventory__head-text { min-width: 0; }
 .fh-compat-inventory__title { font-family: var(--fh-display); font-weight: 700; font-size: 22px; margin: 0; color: var(--fh-c-cream); }
 .fh-compat-inventory__sub  { margin: 4px 0 0; font-style: italic; color: var(--fh-c-mute); font-size: 13px; }
 .fh-compat-inventory__hint {
@@ -360,6 +368,28 @@
 	color: rgba(232, 220, 196, 0.55);
 }
 .fh-compat-inventory__hint em { font-style: italic; }
+
+.fh-compat-inventory__toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-family: var(--fh-body);
+	font-size: 12px;
+	letter-spacing: 0.04em;
+	color: var(--fh-c-cream);
+	cursor: pointer;
+	user-select: none;
+	white-space: nowrap;
+	padding: 4px 0;
+}
+.fh-compat-inventory__toggle input[type="checkbox"] {
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	accent-color: var(--fh-c-gold);
+	cursor: pointer;
+}
+.fh-compat-inventory__toggle:hover span { color: var(--fh-c-gold); }
 
 .fh-compat-inventory__grid {
 	display: grid;
@@ -460,6 +490,30 @@
 	font-size: 13px;
 	font-weight: 700;
 	line-height: 1;
+}
+
+/* Caution badge — only rendered when "Include Caution matches" is on
+   AND the tile's category resolves to W (not C) against the user's
+   current tank. Sits in the top-LEFT so it doesn't collide with the
+   bottom-right "+ Add" pill. */
+.fh-inventory-card__caution {
+	position: absolute;
+	top: 6px;
+	left: 6px;
+	width: 24px;
+	height: 24px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.55);
+	color: var(--fh-verdict-w);
+	border: 1px solid rgba(212, 165, 116, 0.55);
+	border-radius: 50%;
+	font-size: 13px;
+	line-height: 1;
+	cursor: help;
+	backdrop-filter: blur(2px);
+	pointer-events: auto;
 }
 
 .fh-inventory-card__body {
@@ -678,8 +732,29 @@
 .fh-compat__legend {
 	display: flex; flex-wrap: wrap; gap: 18px;
 	font-size: 12px; letter-spacing: 0.06em; color: var(--fh-c-cream);
+	list-style: none; margin: 0; padding: 0;
 }
 .fh-compat__legend li { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Inline strip placement — sits between the build-a-tank zones and the
+   conflicts panel so customers see what the colors mean BEFORE they hit
+   their first colored status dot. */
+.fh-compat__legend-strip {
+	background: var(--fh-c-paper);
+	border: 1px solid var(--fh-c-line-strong);
+	padding: 12px 18px;
+}
+.fh-compat__legend--inline {
+	gap: 14px 22px;
+	justify-content: center;
+}
+@media (max-width: 600px) {
+	.fh-compat__legend-strip { padding: 10px 12px; }
+	.fh-compat__legend--inline {
+		gap: 8px 18px;
+		font-size: 11px;
+	}
+}
 .fh-compat__legend-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(0,0,0,0.25) inset; }
 .fh-compat__legend-dot--c { background: var(--fh-verdict-c); }
 .fh-compat__legend-dot--w { background: var(--fh-verdict-w); }

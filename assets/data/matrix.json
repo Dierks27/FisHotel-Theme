@@ -159,6 +159,10 @@
     "mandarins_dragonets": {
       "v": "C",
       "note": ""
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Algae-grazing niche overlap; works in 125g+ added together"
     }
   },
   "tangs_zebrasoma": {
@@ -321,6 +325,10 @@
     "mandarins_dragonets": {
       "v": "C",
       "note": ""
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Algae-grazing niche overlap; works in 125g+ added together"
     }
   },
   "tangs_ctenochaetus": {
@@ -483,6 +491,10 @@
     "mandarins_dragonets": {
       "v": "C",
       "note": ""
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Niche overlap, less aggressive than vs Acanthurus/Zebrasoma"
     }
   },
   "tangs_naso": {
@@ -969,6 +981,10 @@
     "mandarins_dragonets": {
       "v": "C",
       "note": ""
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Some niche overlap on algae; usually fine"
     }
   },
   "large_angels_pomacanthus": {
@@ -1131,6 +1147,10 @@
     "mandarins_dragonets": {
       "v": "C",
       "note": ""
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Both assertive feeders"
     }
   },
   "large_angels_holacanthus": {
@@ -1293,6 +1313,10 @@
     "mandarins_dragonets": {
       "v": "C",
       "note": ""
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Both assertive feeders"
     }
   },
   "genicanthus_angels": {
@@ -1662,7 +1686,7 @@
     },
     "wrasses_cirrhilabrus": {
       "v": "O",
-      "note": "See Cirrhilabrus rule book — complex-dependent"
+      "note": "See Cirrhilabrus rule book \u2014 complex-dependent"
     },
     "wrasses_paracheilinus": {
       "v": "O",
@@ -4533,6 +4557,10 @@
     "mandarins_dragonets": {
       "v": "N",
       "note": "Predation"
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Trigger may nip rabbitfish"
     }
   },
   "triggerfish_aggressive": {
@@ -4695,6 +4723,10 @@
     "mandarins_dragonets": {
       "v": "N",
       "note": "Predation"
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Aggressive trigger may target rabbitfish"
     }
   },
   "lionfish": {
@@ -5181,6 +5213,10 @@
     "mandarins_dragonets": {
       "v": "N",
       "note": "Predation"
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Potential predator"
     }
   },
   "hawkfish": {
@@ -5505,6 +5541,10 @@
     "mandarins_dragonets": {
       "v": "W",
       "note": "Risk"
+    },
+    "rabbitfish_siganus": {
+      "v": "W",
+      "note": "Puffer may nip"
     }
   },
   "royal_gramma": {
@@ -6477,6 +6517,52 @@
     "mandarins_dragonets": {
       "v": "O",
       "note": "Pair only (M+F); single best for most tanks"
+    }
+  },
+  "rabbitfish_siganus": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Algae-grazing niche overlap; works in 125g+ added together"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Algae-grazing niche overlap; works in 125g+ added together"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Niche overlap, less aggressive than vs Acanthurus/Zebrasoma"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Some niche overlap on algae; usually fine"
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Both assertive feeders"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Both assertive feeders"
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Trigger may nip rabbitfish"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Aggressive trigger may target rabbitfish"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Potential predator"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Puffer may nip"
+    },
+    "rabbitfish_siganus": {
+      "v": "1",
+      "note": "Single only or co-introduced pair; same-genus aggression"
     }
   }
 }

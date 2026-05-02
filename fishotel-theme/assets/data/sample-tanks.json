@@ -1,0 +1,212 @@
+[
+  {
+    "key": "reef_starter_75g",
+    "name": "Reef Starter",
+    "subtitle": "Peaceful community for newer reefers",
+    "volume": 75,
+    "fish": [
+      {
+        "common": "Ocellaris Clownfish (pair)",
+        "category": "clownfish",
+        "count": 2
+      },
+      {
+        "common": "Banggai Cardinalfish (pair)",
+        "category": "cardinalfish",
+        "count": 2
+      },
+      {
+        "common": "Royal Gramma",
+        "category": "royal_gramma",
+        "count": 1
+      },
+      {
+        "common": "Yellow Watchman Goby + Pistol Shrimp",
+        "category": "gobies_cryptocentrus",
+        "count": 1
+      },
+      {
+        "common": "Tailspot Blenny",
+        "category": "blennies_salarias",
+        "count": 1
+      },
+      {
+        "common": "Melanurus Wrasse",
+        "category": "wrasses_halichoeres",
+        "count": 1
+      }
+    ],
+    "notes": "Hardy beginner-friendly stocking. Add the wrasse last."
+  },
+  {
+    "key": "mid_reef_125g",
+    "name": "Mid-Size Reef",
+    "subtitle": "Color-rich community with one tang and one dwarf angel",
+    "volume": 125,
+    "fish": [
+      {
+        "common": "Yellow Tang",
+        "category": "tangs_zebrasoma",
+        "count": 1
+      },
+      {
+        "common": "Coral Beauty Angel",
+        "category": "dwarf_angels_centropyge",
+        "count": 1
+      },
+      {
+        "common": "Mocha Storm Clownfish (pair)",
+        "category": "clownfish",
+        "count": 2
+      },
+      {
+        "common": "Blue Green Chromis",
+        "category": "chromis",
+        "count": 5
+      },
+      {
+        "common": "McCosker's Flasher Wrasse",
+        "category": "wrasses_paracheilinus",
+        "count": 1
+      },
+      {
+        "common": "Tailspot Blenny",
+        "category": "blennies_salarias",
+        "count": 1
+      },
+      {
+        "common": "Mandarin Dragonet",
+        "category": "mandarins_dragonets",
+        "count": 1
+      },
+      {
+        "common": "Yashia Goby + Randall's Pistol Shrimp",
+        "category": "gobies_cryptocentrus",
+        "count": 1
+      }
+    ],
+    "notes": "Mature tank required for the mandarin (pod population). Add tang and angel mid-stocking."
+  },
+  {
+    "key": "showcase_reef_220g",
+    "name": "Showcase Reef",
+    "subtitle": "Tang trio + Genicanthus pair + Anthias harem",
+    "volume": 220,
+    "fish": [
+      {
+        "common": "Yellow Tang",
+        "category": "tangs_zebrasoma",
+        "count": 1
+      },
+      {
+        "common": "Powder Brown Tang",
+        "category": "tangs_acanthurus",
+        "count": 1
+      },
+      {
+        "common": "Tomini Tang",
+        "category": "tangs_ctenochaetus",
+        "count": 1
+      },
+      {
+        "common": "Bellus Angel (M+F pair)",
+        "category": "genicanthus_angels",
+        "count": 2
+      },
+      {
+        "common": "Carpenter's Flasher Wrasse trio",
+        "category": "wrasses_paracheilinus",
+        "count": 3
+      },
+      {
+        "common": "Lyretail Anthias harem (1m + 6f)",
+        "category": "anthias",
+        "count": 7
+      },
+      {
+        "common": "Pyramid Butterflyfish trio",
+        "category": "butterflyfish_reef_safe",
+        "count": 3
+      },
+      {
+        "common": "Mocha Storm Clownfish (pair)",
+        "category": "clownfish",
+        "count": 2
+      },
+      {
+        "common": "Royal Gramma",
+        "category": "royal_gramma",
+        "count": 1
+      },
+      {
+        "common": "Black Cap Basslet",
+        "category": "basslets",
+        "count": 1
+      }
+    ],
+    "notes": "Three tang genera fit because of volume. Add tangs and Genicanthus simultaneously. Powder Brown is gentler than Powder Blue."
+  },
+  {
+    "key": "fowlr_predator_180g",
+    "name": "Aggressive FOWLR",
+    "subtitle": "Predator showpiece — no inverts, no small fish",
+    "volume": 180,
+    "fish": [
+      {
+        "common": "Niger Triggerfish",
+        "category": "triggerfish_peaceful",
+        "count": 1
+      },
+      {
+        "common": "Snowflake Eel",
+        "category": "eels",
+        "count": 1
+      },
+      {
+        "common": "Dwarf Lionfish",
+        "category": "lionfish",
+        "count": 1
+      },
+      {
+        "common": "Volitans Lionfish",
+        "category": "lionfish",
+        "count": 1
+      },
+      {
+        "common": "Miniatus Grouper",
+        "category": "groupers",
+        "count": 1
+      }
+    ],
+    "notes": "Heavy bioload — robust skimmer + frequent water changes. All fish must be size-matched to lionfish."
+  },
+  {
+    "key": "nano_pairs_50g",
+    "name": "Peaceful Pairs Nano",
+    "subtitle": "Curated pairs for a small reef",
+    "volume": 50,
+    "fish": [
+      {
+        "common": "Mocha Storm Clownfish (pair)",
+        "category": "clownfish",
+        "count": 2
+      },
+      {
+        "common": "Helfrichi Firefish (pair)",
+        "category": "gobies_nemateleotris",
+        "count": 2
+      },
+      {
+        "common": "Yashia Goby + Pistol Shrimp (pair)",
+        "category": "gobies_cryptocentrus",
+        "count": 2
+      },
+      {
+        "common": "Tailspot Blenny",
+        "category": "blennies_salarias",
+        "count": 1
+      }
+    ],
+    "notes": "All pairs introduced together. Avoid adding any aggressive fish later."
+  }
+]

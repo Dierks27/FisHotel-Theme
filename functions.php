@@ -235,62 +235,43 @@ function fishotel_enqueue_about_assets() {
 add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_about_assets' );
 
 /**
- * Bootstrap the About page once.
+ * Generic page bootstrap: ensure a page exists at $slug and is bound to
+ * $template. Durable against the case where the page already existed on
+ * the default template (the symptom we hit on Contacts and Newsletter).
  *
- * Runs at admin_init, idempotent via the fh_about_page_bootstrapped option.
- * Creates /about-us/ as a Draft with the "About — Founder's Edition" template
- * assigned. Will not touch the page on subsequent runs, even if it's been
- * deleted — the option flag prevents re-creation. To re-bootstrap, delete the
- * fh_about_page_bootstrapped option.
+ * Runs on admin_init — no option-flag gating, because update_post_meta
+ * is idempotent and skipping when the meta is already correct is cheap.
+ * Creates the page as a Draft if it doesn't exist; reasserts the template
+ * meta if it does but the binding is missing or wrong.
  */
-function fishotel_bootstrap_about_page() {
-    if ( get_option( 'fh_about_page_bootstrapped' ) ) {
-        return;
-    }
-    $existing = get_page_by_path( 'about-us' );
-    if ( ! $existing ) {
+function fishotel_bootstrap_template_page( $slug, $template, $title ) {
+    $page = get_page_by_path( $slug );
+    if ( ! $page ) {
         $page_id = wp_insert_post( [
-            'post_title'   => 'About Us',
-            'post_name'    => 'about-us',
+            'post_title'   => $title,
+            'post_name'    => $slug,
             'post_status'  => 'draft',
             'post_type'    => 'page',
-            'post_content' => '', // Body content lives in FisHotel Settings.
+            'post_content' => '', // Body lives in FisHotel Settings / template parts.
         ] );
-        if ( $page_id && ! is_wp_error( $page_id ) ) {
-            update_post_meta( $page_id, '_wp_page_template', 'page-about.php' );
+        if ( ! $page_id || is_wp_error( $page_id ) ) {
+            return;
         }
+        update_post_meta( $page_id, '_wp_page_template', $template );
+        return;
     }
-    update_option( 'fh_about_page_bootstrapped', 1, false );
+    $current = (string) get_post_meta( $page->ID, '_wp_page_template', true );
+    if ( $current !== $template ) {
+        update_post_meta( $page->ID, '_wp_page_template', $template );
+    }
 }
-add_action( 'admin_init', 'fishotel_bootstrap_about_page' );
 
-/**
- * Bootstrap the Contacts page once.
- *
- * Idempotent via fh_contacts_page_bootstrapped. Creates /contacts/ as a
- * Draft with the Contacts template assigned, only if no page exists at
- * that slug. To re-bootstrap, delete the option.
- */
-function fishotel_bootstrap_contacts_page() {
-    if ( get_option( 'fh_contacts_page_bootstrapped' ) ) {
-        return;
-    }
-    $existing = get_page_by_path( 'contacts' );
-    if ( ! $existing ) {
-        $page_id = wp_insert_post( [
-            'post_title'   => 'Contacts',
-            'post_name'    => 'contacts',
-            'post_status'  => 'draft',
-            'post_type'    => 'page',
-            'post_content' => '',
-        ] );
-        if ( $page_id && ! is_wp_error( $page_id ) ) {
-            update_post_meta( $page_id, '_wp_page_template', 'page-contacts.php' );
-        }
-    }
-    update_option( 'fh_contacts_page_bootstrapped', 1, false );
-}
+function fishotel_bootstrap_about_page()    { fishotel_bootstrap_template_page( 'about-us',  'page-about.php',     'About Us' ); }
+function fishotel_bootstrap_contacts_page() { fishotel_bootstrap_template_page( 'contacts',  'page-contacts.php',  'Contacts' ); }
+function fishotel_bootstrap_newsletter_page(){ fishotel_bootstrap_template_page( 'newsletter','page-newsletter.php','Newsletter' ); }
+add_action( 'admin_init', 'fishotel_bootstrap_about_page' );
 add_action( 'admin_init', 'fishotel_bootstrap_contacts_page' );
+add_action( 'admin_init', 'fishotel_bootstrap_newsletter_page' );
 
 // Live cart-count badge — WooCommerce swaps this fragment on AJAX add/remove,
 // so the count in the header updates without a page reload.

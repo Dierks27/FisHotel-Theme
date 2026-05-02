@@ -130,6 +130,7 @@ $includes = [
 	'/inc/variation-display.php', // Visual variation buttons
 	'/inc/widgets.php',
 	'/inc/admin-settings.php',   // FisHotel admin settings page
+	'/inc/contact-form.php',     // Native /contacts/ form handler
 	'/inc/theme-updater.php',    // Self-updater via raw GitHub branch
 ];
 

@@ -49,6 +49,27 @@
         });
     }
 
+    // Nav dropdowns — desktop is pure CSS (:hover / :focus-within); JS only
+    // handles the mobile drawer accordion and the ESC-to-close affordance.
+    function initNavDropdowns() {
+        // Mobile: tap a parent <a> to toggle the accordion instead of navigating.
+        $(document).on('click', '.site-header__drawer-menu .menu-item-has-children > a', function(e) {
+            e.preventDefault();
+            $(this).parent('.menu-item-has-children').toggleClass('is-open');
+        });
+
+        // ESC closes any open dropdown — desktop (blur the focused descendant
+        // so :focus-within releases) and mobile (collapse all open accordions).
+        $(document).on('keydown', function(e) {
+            if (e.key !== 'Escape' && e.keyCode !== 27) return;
+            var active = document.activeElement;
+            if (active && $(active).closest('.site-header__menu .menu-item-has-children').length) {
+                active.blur();
+            }
+            $('.site-header__drawer-menu .menu-item-has-children.is-open').removeClass('is-open');
+        });
+    }
+
     // Qty buttons
     function initQty() {
         $(document).on('click', '.fh-qty__up', function() {
@@ -81,6 +102,7 @@
         initVariationButtons();
         initGallery();
         initMobileNav();
+        initNavDropdowns();
         initQty();
         initHeaderScroll();
     });

@@ -1,0 +1,422 @@
+{
+  "source": "H. Hammond / thewrasseguy.com — Cirrhilabrus Complexes phylogram (2021)",
+  "governingRules": [
+    "Don't mix two species from the same sub-group (hard rule)",
+    "The further apart in the phylogram, the better the mix",
+    "Don't mix aggressive species with others"
+  ],
+  "tankSizeCodes": {
+    "A": 40,
+    "B": 55,
+    "C": 75,
+    "D": 90,
+    "E": 120
+  },
+  "aggressionLevels": [
+    "low",
+    "low-mid",
+    "mid",
+    "mid-high",
+    "high",
+    "highest"
+  ],
+  "complexes": {
+    "laboutei": {
+      "aggression": "mid",
+      "species": [
+        {
+          "sci": "C. laboutei",
+          "size": "D"
+        }
+      ]
+    },
+    "lubbocki": {
+      "aggression": "mid",
+      "species": [
+        {
+          "sci": "C. adornatus",
+          "common": "Adorned, Koi",
+          "size": "A",
+          "mod": "+"
+        },
+        {
+          "sci": "C. cenderawasih",
+          "size": "A"
+        },
+        {
+          "sci": "C. flavidorsalis",
+          "common": "Yellowfin",
+          "size": "A"
+        },
+        {
+          "sci": "C. lubbocki",
+          "common": "Lubbock's",
+          "size": "A"
+        },
+        {
+          "sci": "C. marjorie",
+          "common": "Marjorie's",
+          "size": "A"
+        },
+        {
+          "sci": "C. walindi",
+          "size": "A"
+        }
+      ]
+    },
+    "bathyphilus": {
+      "aggression": "low",
+      "species": [
+        {
+          "sci": "C. bathyphilus",
+          "size": "B"
+        },
+        {
+          "sci": "C. efatensis",
+          "common": "Hooded",
+          "size": "B"
+        },
+        {
+          "sci": "C. nahackyi",
+          "size": "B"
+        }
+      ]
+    },
+    "lanceolatus": {
+      "aggression": "high",
+      "subGroups": {
+        "A": [
+          {
+            "sci": "C. lanceolatus",
+            "size": "E"
+          },
+          {
+            "sci": "C. roseafascia",
+            "common": "Rose Banded",
+            "size": "E"
+          },
+          {
+            "sci": "C. sp",
+            "common": "Ogasawara",
+            "size": "E"
+          }
+        ],
+        "B": [
+          {
+            "sci": "C. claire",
+            "size": "D"
+          },
+          {
+            "sci": "C. jordani",
+            "common": "Flame",
+            "size": "D"
+          },
+          {
+            "sci": "C. shutmani",
+            "common": "Magma",
+            "size": "D"
+          }
+        ],
+        "C": [
+          {
+            "sci": "C. blatteus",
+            "common": "Purple Boned",
+            "size": "D"
+          },
+          {
+            "sci": "C. sanguineus",
+            "common": "Blood Stained",
+            "size": "D"
+          },
+          {
+            "sci": "C. rubrisquamis",
+            "common": "Rosy Scales",
+            "size": "D"
+          },
+          {
+            "sci": "C. wakanda",
+            "common": "Vibranium",
+            "size": "D"
+          }
+        ],
+        "standalone": [
+          {
+            "sci": "C. earlei",
+            "size": "B"
+          }
+        ]
+      }
+    },
+    "lunatus": {
+      "aggression": "mid",
+      "species": [
+        {
+          "sci": "C. brunneus",
+          "common": "Dusky",
+          "size": "A"
+        },
+        {
+          "sci": "C. isosceles",
+          "common": "Pintail, Splendid",
+          "size": "A"
+        },
+        {
+          "sci": "C. johnsoni",
+          "size": "A"
+        },
+        {
+          "sci": "C. lunatus",
+          "common": "Japanese Lunate",
+          "size": "A"
+        },
+        {
+          "sci": "C. cf. lunatus",
+          "common": "Philippian Lunate",
+          "size": "A"
+        },
+        {
+          "sci": "C. squirei",
+          "size": "A"
+        }
+      ]
+    },
+    "rubrimarginatus": {
+      "aggression": "mid",
+      "subGroups": {
+        "A": [
+          {
+            "sci": "C. katoi",
+            "common": "Kato's",
+            "size": "A"
+          },
+          {
+            "sci": "C. pylei",
+            "common": "Pylei",
+            "size": "A",
+            "mod": "+"
+          },
+          {
+            "sci": "C. briangreenei",
+            "common": "Cebu Pylei",
+            "size": "A"
+          }
+        ],
+        "B": [
+          {
+            "sci": "C. lineatus",
+            "size": "B"
+          },
+          {
+            "sci": "C. rubrimarginatus",
+            "common": "Pink Margin",
+            "size": "B"
+          },
+          {
+            "sci": "C. rhomboidalis",
+            "common": "Rhomboid",
+            "size": "C"
+          }
+        ]
+      }
+    },
+    "temminckii": {
+      "aggression": "mid",
+      "subGroups": {
+        "A": [
+          {
+            "sci": "C. temminckii",
+            "size": "D"
+          },
+          {
+            "sci": "C. cf. temminckii",
+            "common": "Blue Stripe",
+            "size": "D"
+          },
+          {
+            "sci": "C. balteatus",
+            "common": "Girdled",
+            "size": "D"
+          },
+          {
+            "sci": "C. katherinae",
+            "size": "D"
+          }
+        ],
+        "B": [
+          {
+            "sci": "C. beauperryi",
+            "common": "Beau's",
+            "size": "B"
+          },
+          {
+            "sci": "C. punctatus",
+            "common": "Finespot",
+            "size": "B"
+          },
+          {
+            "sci": "C. cf. punctatus",
+            "common": "Vila",
+            "size": "B"
+          }
+        ]
+      }
+    },
+    "exquisitius": {
+      "aggression": "low",
+      "species": [
+        {
+          "sci": "C. exquisitus",
+          "size": "B"
+        }
+      ]
+    },
+    "cyanopleura": {
+      "aggression": "mid",
+      "species": [
+        {
+          "sci": "C. aquamarinus",
+          "common": "Chin Strap, Clown Head",
+          "size": "B"
+        },
+        {
+          "sci": "C. auratidorsalis",
+          "common": "Orangeback",
+          "size": "B",
+          "mod": "-"
+        },
+        {
+          "sci": "C. chaliasi",
+          "common": "Rubyhead",
+          "size": "B"
+        },
+        {
+          "sci": "C. cyanopleura",
+          "common": "Blueside",
+          "size": "B"
+        },
+        {
+          "sci": "C. luteovittatus",
+          "common": "Yellowband",
+          "size": "B"
+        },
+        {
+          "sci": "C. randalli",
+          "size": "B"
+        },
+        {
+          "sci": "C. ryukyuensis",
+          "common": "Yellow-flanked",
+          "size": "B"
+        },
+        {
+          "sci": "C. solorensis",
+          "common": "Solar, Darwin's Glow",
+          "size": "B"
+        }
+      ]
+    },
+    "rubriventralis": {
+      "aggression": "low-mid",
+      "species": [
+        {
+          "sci": "C. africanus",
+          "common": "Kwazulu",
+          "size": "B"
+        },
+        {
+          "sci": "C. greeni",
+          "size": "B"
+        },
+        {
+          "sci": "C. humanni",
+          "size": "B"
+        },
+        {
+          "sci": "C. hygroxerus",
+          "common": "Monsoon",
+          "size": "B"
+        },
+        {
+          "sci": "C. joanallenae",
+          "size": "B"
+        },
+        {
+          "sci": "C. morrisoni",
+          "size": "B"
+        },
+        {
+          "sci": "C. naokoae",
+          "common": "Naoko's",
+          "size": "B",
+          "mod": "+"
+        },
+        {
+          "sci": "C. rubeus",
+          "common": "Social, Red & Blue",
+          "size": "B"
+        },
+        {
+          "sci": "C. rubriventralis",
+          "size": "B"
+        }
+      ]
+    },
+    "filamentosus": {
+      "aggression": "mid-high",
+      "subGroups": {
+        "A": [
+          {
+            "sci": "C. filamentosus",
+            "common": "Whipfin",
+            "size": "B"
+          },
+          {
+            "sci": "C. cyanogularis",
+            "common": "Blue Throat",
+            "size": "B"
+          },
+          {
+            "sci": "C. tonozukai",
+            "common": "Tono's",
+            "size": "B"
+          }
+        ],
+        "B": [
+          {
+            "sci": "C. condei",
+            "common": "Conde's",
+            "size": "B"
+          },
+          {
+            "sci": "C. marinda",
+            "size": "B"
+          },
+          {
+            "sci": "C. rubripinnis",
+            "common": "Redfin",
+            "size": "B"
+          },
+          {
+            "sci": "C. walshi",
+            "size": "B"
+          }
+        ]
+      }
+    },
+    "scottorum": {
+      "aggression": "highest",
+      "species": [
+        {
+          "sci": "C. melanomarginatus",
+          "common": "Blackfin",
+          "size": "E"
+        },
+        {
+          "sci": "C. scottorum",
+          "common": "Scott's",
+          "size": "E"
+        }
+      ]
+    }
+  }
+}

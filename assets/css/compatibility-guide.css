@@ -356,8 +356,8 @@
 
 .fh-compat-inventory__grid {
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 16px;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: 12px;
 }
 .fh-compat-inventory__grid.is-loading { opacity: 0.5; pointer-events: none; transition: opacity 150ms ease; }
 
@@ -373,20 +373,29 @@
 	grid-column: 1 / -1;
 }
 
+/* Browse-tile card — quiet by design. The thumb is the only product link;
+   adding to Considering is the small "+" overlay so a 6-wide grid feels
+   scannable rather than salesy. */
 .fh-inventory-card {
 	background: var(--fh-c-paper);
 	border: 1px solid var(--fh-c-line-strong);
 	display: flex; flex-direction: column;
 	min-width: 0;
 	overflow: hidden;
-	transition: border-color 150ms ease, transform 150ms ease;
+	transition: border-color 150ms ease;
 }
 .fh-inventory-card:hover { border-color: var(--fh-c-gold-soft); }
+
+.fh-inventory-card__media {
+	position: relative;
+	aspect-ratio: 1 / 1;
+	background: var(--fh-c-paper-2);
+	overflow: hidden;
+}
 .fh-inventory-card__thumb {
 	display: block;
-	aspect-ratio: 4 / 3;
+	width: 100%; height: 100%;
 	overflow: hidden;
-	background: var(--fh-c-paper-2);
 }
 .fh-inventory-card__thumb img {
 	display: block;
@@ -396,64 +405,87 @@
 }
 .fh-inventory-card:hover .fh-inventory-card__thumb img { transform: scale(1.04); }
 
+.fh-inventory-card__quick-add {
+	position: absolute;
+	bottom: 6px;
+	right: 6px;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.55);
+	color: var(--fh-c-gold);
+	border: 1px solid rgba(212, 165, 116, 0.55);
+	border-radius: 50%;
+	font-family: var(--fh-body);
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1;
+	cursor: pointer;
+	backdrop-filter: blur(2px);
+	transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+.fh-inventory-card__quick-add:hover,
+.fh-inventory-card__quick-add:focus-visible {
+	background: var(--fh-c-gold);
+	color: var(--fh-c-paper);
+	border-color: var(--fh-c-gold);
+	outline: none;
+	transform: scale(1.06);
+}
+.fh-inventory-card__quick-add:disabled,
+.fh-inventory-card__quick-add.is-added {
+	background: rgba(76, 175, 80, 0.85);
+	color: #fff;
+	border-color: rgba(76, 175, 80, 0.85);
+	cursor: default;
+	transform: none;
+}
+
 .fh-inventory-card__body {
-	padding: 14px 14px 12px;
-	display: flex; flex-direction: column; gap: 8px;
+	padding: 10px;
+	display: flex; flex-direction: column; gap: 4px;
 	flex: 1 1 auto;
+	min-width: 0;
 }
 .fh-inventory-card__cat {
 	font-family: var(--fh-body);
-	font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
-	color: var(--fh-c-gold);
+	font-size: 10px;
+	font-weight: 400;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: rgba(232, 220, 196, 0.6);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 .fh-inventory-card__name {
-	font-family: var(--fh-display); font-weight: 700;
-	font-size: 16px; margin: 0; line-height: 1.25;
+	font-family: var(--fh-display);
+	font-weight: 600;
+	font-size: 13px;
+	line-height: 1.3;
+	margin: 0;
 	color: var(--fh-c-cream);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	line-clamp: 2;
+	overflow: hidden;
 }
 .fh-inventory-card__name a { color: inherit; text-decoration: none; }
 .fh-inventory-card__name a:hover { color: var(--fh-c-gold); }
 .fh-inventory-card__price {
-	font-family: var(--fh-display);
-	font-size: 15px;
+	margin-top: auto;
+	font-family: var(--fh-body);
+	font-size: 14px;
+	font-weight: 400;
 	color: var(--fh-c-cream);
 }
 .fh-inventory-card__price .amount,
-.fh-inventory-card__price ins { color: var(--fh-c-gold); text-decoration: none; }
-.fh-inventory-card__price del { color: var(--fh-c-mute); margin-right: 6px; }
-
-.fh-inventory-card__actions {
-	display: flex; gap: 8px;
-	margin-top: auto;
-	padding-top: 8px;
-	flex-wrap: wrap;
-}
-.fh-inventory-card__add {
-	flex: 1 1 auto;
-	background: var(--fh-c-gold);
-	color: var(--fh-c-paper);
-	border: 1px solid var(--fh-c-gold);
-	font-family: var(--fh-body);
-	font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
-	padding: 10px 12px; cursor: pointer; min-height: 40px;
-	transition: background-color 150ms ease, color 150ms ease;
-}
-.fh-inventory-card__add:hover,
-.fh-inventory-card__add:focus-visible { background: transparent; color: var(--fh-c-gold); outline: none; }
-.fh-inventory-card__add:disabled { opacity: 0.5; cursor: default; background: var(--fh-c-paper-2); color: var(--fh-c-mute); border-color: var(--fh-c-line-strong); }
-.fh-inventory-card__view {
-	display: inline-flex; align-items: center; justify-content: center;
-	background: transparent;
-	color: var(--fh-c-cream);
-	border: 1px solid var(--fh-c-line-strong);
-	font-family: var(--fh-body);
-	font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
-	padding: 10px 12px; min-height: 40px;
-	text-decoration: none;
-	transition: border-color 150ms ease, color 150ms ease;
-}
-.fh-inventory-card__view:hover,
-.fh-inventory-card__view:focus-visible { border-color: var(--fh-c-gold); color: var(--fh-c-gold); outline: none; }
+.fh-inventory-card__price ins { color: var(--fh-c-cream); text-decoration: none; font-weight: 400; }
+.fh-inventory-card__price del { color: var(--fh-c-mute); margin-right: 4px; font-size: 12px; }
 
 /* 7. Full matrix view ─────────────────────────────────────────── */
 .fh-compat-matrix__toggle {
@@ -641,11 +673,13 @@
 .fh-compat__credits   { margin: 0; font-size: 12px; color: var(--fh-c-mute); }
 
 /* 10. Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1099px) {
+	.fh-compat-inventory__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 @media (max-width: 900px) {
 	.fh-compat-categories { grid-template-columns: repeat(2, 1fr); }
-	.fh-compat-inventory__grid { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.fh-compat__hero { padding: 48px var(--fh-page-pad) 36px; }
 	.fh-compat__inner { padding: 32px var(--fh-page-pad) 56px; gap: 28px; }
 	.fh-compat-volume__inner {
@@ -666,5 +700,5 @@
 	.fh-compat-modal__panel { margin: 0; max-width: none; max-height: 100vh; height: 100vh; }
 	.fh-compat-modal { padding: 0; }
 
-	.fh-compat-inventory__grid { grid-template-columns: 1fr; }
+	.fh-compat-inventory__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 }

@@ -42,6 +42,8 @@ class FisHotel_Compat_Backfill {
 		'Paracentropyge'     => 'dwarf_angels_centropyge',
 		'Apolemichthys'      => 'dwarf_angels_centropyge',
 		'Pomacanthus'        => 'large_angels_pomacanthus',
+		'Pygoplites'         => 'large_angels_pomacanthus', // regal angel
+		'Chaetodontoplus'    => 'large_angels_pomacanthus',
 		'Holacanthus'        => 'large_angels_holacanthus',
 		'Genicanthus'        => 'genicanthus_angels',
 
@@ -53,6 +55,11 @@ class FisHotel_Compat_Backfill {
 		'Coris'              => 'wrasses_halichoeres',
 		'Hemigymnus'         => 'wrasses_halichoeres',
 		'Pteragogus'         => 'wrasses_halichoeres',
+		'Labroides'          => 'wrasses_halichoeres', // cleaner wrasses
+		'Cheilinus'          => 'wrasses_halichoeres', // Maori-style
+		'Choerodon'          => 'wrasses_halichoeres', // tuskfish
+		'Pseudodax'          => 'wrasses_halichoeres', // chiseltooth
+		'Novaculichthys'     => 'wrasses_halichoeres', // rockmover
 		'Cirrhilabrus'       => 'wrasses_cirrhilabrus',
 		'Paracheilinus'      => 'wrasses_paracheilinus',
 		'Macropharyngodon'   => 'wrasses_macropharyngodon',
@@ -73,6 +80,8 @@ class FisHotel_Compat_Backfill {
 		'Dischistodus'       => 'damsels_chrysiptera',
 		'Neoglyphidodon'     => 'damsels_chrysiptera',
 		'Dascyllus'          => 'damsels_chrysiptera',
+		'Hypsypops'          => 'damsels_chrysiptera', // garibaldi
+		'Paraglyphidodon'    => 'damsels_chrysiptera',
 		'Chromis'            => 'chromis',
 		'Azurina'            => 'chromis',
 
@@ -91,11 +100,13 @@ class FisHotel_Compat_Backfill {
 		'Elacatinus'         => 'gobies_gobiodon',
 		'Priolepis'          => 'gobies_gobiodon',
 		'Lythrypnus'         => 'gobies_gobiodon',
+		'Coryphopterus'      => 'gobies_gobiodon', // small gobies
 		'Nemateleotris'      => 'gobies_nemateleotris',
 		'Ptereleotris'       => 'gobies_nemateleotris',
 		'Valenciennea'       => 'gobies_valenciennea',
 		'Signigobius'        => 'gobies_valenciennea',
 		'Amblygobius'        => 'gobies_valenciennea',
+		'Koumansetta'        => 'gobies_valenciennea', // sand-sifter
 
 		// Blennies
 		'Salarias'           => 'blennies_salarias',
@@ -122,6 +133,7 @@ class FisHotel_Compat_Backfill {
 		'Plectranthias'      => 'anthias',
 		'Holanthias'         => 'anthias',
 		'Nemanthias'         => 'anthias',
+		'Odontanthias'       => 'anthias',
 
 		// Triggerfish
 		'Odonus'             => 'triggerfish_peaceful',
@@ -135,9 +147,14 @@ class FisHotel_Compat_Backfill {
 		'Melichthys'         => 'triggerfish_aggressive',
 		'Canthidermis'       => 'triggerfish_aggressive',
 
-		// Lionfish
+		// Lionfish + venomous predator niche (similar care + behavior)
 		'Pterois'            => 'lionfish',
 		'Dendrochirus'       => 'lionfish',
+		'Parapterois'        => 'lionfish',
+		'Pteroidichthys'     => 'lionfish', // ambon scorpionfish
+		'Iracundus'          => 'lionfish',
+		'Scorpaenopsis'      => 'lionfish',
+		'Rhinopias'          => 'lionfish',
 
 		// Eels (Muraenidae)
 		'Echidna'            => 'eels',
@@ -152,6 +169,7 @@ class FisHotel_Compat_Backfill {
 		'Variola'            => 'groupers',
 		'Plectropomus'       => 'groupers',
 		'Epinephelus'        => 'groupers',
+		'Mycteroperca'       => 'groupers',
 
 		// Hawkfish (Cirrhitidae)
 		'Neocirrhites'       => 'hawkfish',
@@ -178,11 +196,14 @@ class FisHotel_Compat_Backfill {
 		'Labracinus'         => 'dottybacks',
 		'Manonichthys'       => 'dottybacks',
 		'Cypho'              => 'dottybacks',
+		'Ogilbyina'          => 'dottybacks',
+		'Pholidochromis'     => 'dottybacks',
 
-		// Basslets
+		// Basslets / soapfish
 		'Liopropoma'         => 'basslets',
 		'Serranus'           => 'basslets',
 		'Hypoplectrus'       => 'basslets',
+		'Grammistes'         => 'basslets',
 
 		// Butterflyfish
 		'Chelmon'            => 'butterflyfish_reef_safe',

@@ -166,13 +166,16 @@
 
 /* 7. Native contact form (scoped to .fh-contacts-form) ──────── */
 
-/* Honeypot — visually hidden but still in the DOM so bots fill it. */
+/* Honeypot — visually hidden but still in the DOM so bots fill it.
+   1px size (vs collapsing to 0) keeps a11y tooling happy; aria-hidden
+   on the <p> covers screen readers. */
 .fh-contacts-form__honeypot {
 	position: absolute;
 	left: -9999px;
-	opacity: 0;
-	height: 0;
+	width: 1px;
+	height: 1px;
 	overflow: hidden;
+	opacity: 0;
 	pointer-events: none;
 }
 

@@ -135,6 +135,7 @@ $includes = [
 	'/inc/compatibility-guide-data.php',         // JSON loaders + volume modifier helpers
 	'/inc/compatibility-guide-enqueue.php',      // Conditional CSS/JS for the guide
 	'/inc/compatibility-guide-product-meta.php', // WC product → matrix category meta box
+	'/inc/compatibility-guide-rest.php',         // REST endpoint for inventory panel
 	'/inc/theme-updater.php',    // Self-updater via raw GitHub branch
 ];
 

@@ -152,6 +152,16 @@ class FisHotel_Admin_Settings {
 			'about_inline_image_2'          => 0,
 			'about_inline_image_2_caption'  => '',
 			'about_inline_image_2_credit'   => 'ILLUSTRATION',
+			// Contacts page
+			'contacts_eyebrow'              => 'FRONT DESK',
+			'contacts_heading'              => 'Contact',
+			'contacts_location_text'        => 'Champlin, MN 55316',
+			'contacts_location_map_image'   => 0,
+			'contacts_email'                => 'Jeff@FisHotel.com',
+			'contacts_email_label'          => 'Write us',
+			'contacts_forum_url'            => 'https://humble.fish/community/forums/fishotel.41/',
+			'contacts_forum_label'          => 'Visit our Humble.Fish forum',
+			'contacts_form_shortcode'       => '[contact-form-7 title="Contact form 1"]',
 		];
 	}
 
@@ -377,6 +387,21 @@ JS;
 					'about_inline_image_2'         => [ 'label' => 'Inline image #2',             'type' => 'image',    'description' => 'Appears between section 3 and section 4, breaking the column flow.' ],
 					'about_inline_image_2_caption' => [ 'label' => 'Inline image #2 caption',     'type' => 'text' ],
 					'about_inline_image_2_credit'  => [ 'label' => 'Inline image #2 credit',      'type' => 'text',     'placeholder' => 'ILLUSTRATION' ],
+				],
+			],
+			// Contacts Page section
+			'contacts' => [
+				'title'  => 'Contacts Page',
+				'fields' => [
+					'contacts_eyebrow'            => [ 'label' => 'Eyebrow',              'type' => 'text',     'placeholder' => 'FRONT DESK' ],
+					'contacts_heading'            => [ 'label' => 'Heading',              'type' => 'text',     'placeholder' => 'Contact' ],
+					'contacts_location_text'     => [ 'label' => 'Location text',        'type' => 'text',     'placeholder' => 'Champlin, MN 55316' ],
+					'contacts_location_map_image' => [ 'label' => 'Location map image',   'type' => 'image',    'description' => 'Decorative vintage-style map shown above the city text. Hidden when empty.' ],
+					'contacts_email'              => [ 'label' => 'Email address',        'type' => 'text',     'placeholder' => 'Jeff@FisHotel.com' ],
+					'contacts_email_label'        => [ 'label' => 'Email link label',     'type' => 'text',     'placeholder' => 'Write us' ],
+					'contacts_forum_url'          => [ 'label' => 'Forum URL',            'type' => 'text',     'placeholder' => 'https://humble.fish/...' ],
+					'contacts_forum_label'        => [ 'label' => 'Forum link label',     'type' => 'text',     'placeholder' => 'Visit our Humble.Fish forum' ],
+					'contacts_form_shortcode'     => [ 'label' => 'Form shortcode',       'type' => 'text',     'description' => 'Contact Form 7 (or compatible) shortcode rendered in the right column.' ],
 				],
 			],
 		];

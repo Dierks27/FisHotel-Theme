@@ -37,7 +37,6 @@
             <p class="site-footer__col-title">Community</p>
             <ul class="site-footer__col-links">
                 <li><a href="https://humble.fish" target="_blank" rel="noopener">Humble.Fish</a></li>
-                <li><a href="https://reef2reef.com" target="_blank" rel="noopener">Reef2Reef</a></li>
                 <li><a href="<?php echo esc_url( home_url( '/newsletter' ) ); ?>">Newsletter</a></li>
             </ul>
         </div>

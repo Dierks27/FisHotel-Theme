@@ -573,6 +573,14 @@
 			return out;
 		}
 
+		function shortCategoryLabel(label) {
+			// Keep only the part after the em-dash if there is one; categories
+			// like "Tangs — Zebrasoma" collapse to "Zebrasoma", "Cardinalfish"
+			// stays "Cardinalfish".
+			const parts = String(label || '').split(' — ');
+			return (parts.length > 1 ? parts[parts.length - 1] : parts[0]).trim();
+		}
+
 		function renderProducts(products, grid) {
 			grid.innerHTML = '';
 			if (!products.length) {
@@ -587,26 +595,49 @@
 				card.className = 'fh-inventory-card';
 				card.dataset.productId = p.id;
 
+				// Media wrapper holds the linked thumbnail + the overlay
+				// quick-add button. The button is a sibling of the <a> (not a
+				// descendant) — putting <button> inside <a> is invalid HTML.
+				const media = document.createElement('div');
+				media.className = 'fh-inventory-card__media';
+
+				const thumb = document.createElement('a');
+				thumb.className = 'fh-inventory-card__thumb';
+				thumb.href = p.permalink;
+				thumb.target = '_blank';
+				thumb.rel = 'noopener';
+				thumb.setAttribute('aria-label', 'View ' + p.name);
 				if (p.image_url) {
-					const a = document.createElement('a');
-					a.className = 'fh-inventory-card__thumb';
-					a.href = p.permalink;
-					a.target = '_blank';
-					a.rel = 'noopener';
 					const img = document.createElement('img');
 					img.src = p.image_url;
 					img.alt = p.name;
 					img.loading = 'lazy';
-					a.appendChild(img);
-					card.appendChild(a);
+					thumb.appendChild(img);
 				}
+				media.appendChild(thumb);
+
+				const addBtn = document.createElement('button');
+				addBtn.type = 'button';
+				addBtn.className = 'fh-inventory-card__quick-add';
+				addBtn.setAttribute('aria-label', 'Add ' + p.name + ' to Considering');
+				addBtn.textContent = '+';
+				addBtn.dataset.fhInvAdd = JSON.stringify({
+					common:   p.name,
+					sci:      '',
+					category: p.category_key,
+					min_tank: 0,
+					productId: p.id
+				});
+				media.appendChild(addBtn);
+
+				card.appendChild(media);
 
 				const body = document.createElement('div');
 				body.className = 'fh-inventory-card__body';
 				if (p.category_label) {
 					const cat = document.createElement('span');
 					cat.className = 'fh-inventory-card__cat';
-					cat.textContent = p.category_label;
+					cat.textContent = shortCategoryLabel(p.category_label);
 					body.appendChild(cat);
 				}
 				const name = document.createElement('h3');
@@ -626,32 +657,6 @@
 					price.innerHTML = p.price_html;
 					body.appendChild(price);
 				}
-
-				const actions = document.createElement('div');
-				actions.className = 'fh-inventory-card__actions';
-
-				const addBtn = document.createElement('button');
-				addBtn.type = 'button';
-				addBtn.className = 'fh-inventory-card__add';
-				addBtn.textContent = 'Add to Considering';
-				addBtn.dataset.fhInvAdd = JSON.stringify({
-					common:   p.name,
-					sci:      '',
-					category: p.category_key,
-					min_tank: 0,
-					productId: p.id
-				});
-
-				const view = document.createElement('a');
-				view.className = 'fh-inventory-card__view';
-				view.href = p.permalink;
-				view.target = '_blank';
-				view.rel = 'noopener';
-				view.textContent = 'View Product';
-
-				actions.appendChild(addBtn);
-				actions.appendChild(view);
-				body.appendChild(actions);
 
 				card.appendChild(body);
 				grid.appendChild(card);
@@ -729,7 +734,9 @@
 			renderAll();
 			if (sourceBtn) {
 				sourceBtn.disabled = true;
-				sourceBtn.textContent = 'Added';
+				sourceBtn.textContent = '✓'; // ✓ — the icon button is a 28px square; "Added" doesn't fit
+				sourceBtn.classList.add('is-added');
+				sourceBtn.setAttribute('aria-label', 'Added to Considering');
 			}
 		}
 

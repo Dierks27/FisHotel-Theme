@@ -161,7 +161,6 @@ class FisHotel_Admin_Settings {
 			'contacts_email_label'          => 'Write us',
 			'contacts_forum_url'            => 'https://humble.fish/community/forums/fishotel.41/',
 			'contacts_forum_label'          => 'Visit our Humble.Fish forum',
-			'contacts_form_shortcode'       => '[contact-form-7 title="Contact form 1"]',
 		];
 	}
 
@@ -401,7 +400,6 @@ JS;
 					'contacts_email_label'        => [ 'label' => 'Email link label',     'type' => 'text',     'placeholder' => 'Write us' ],
 					'contacts_forum_url'          => [ 'label' => 'Forum URL',            'type' => 'text',     'placeholder' => 'https://humble.fish/...' ],
 					'contacts_forum_label'        => [ 'label' => 'Forum link label',     'type' => 'text',     'placeholder' => 'Visit our Humble.Fish forum' ],
-					'contacts_form_shortcode'     => [ 'label' => 'Form shortcode',       'type' => 'text',     'description' => 'Contact Form 7 (or compatible) shortcode rendered in the right column.' ],
 				],
 			],
 		];

@@ -29,7 +29,6 @@ $email          = $get( 'contacts_email',        '' );
 $email_label    = $get( 'contacts_email_label',  'Write us' );
 $forum_url      = $get( 'contacts_forum_url',    '' );
 $forum_label    = $get( 'contacts_forum_label',  'Visit our Humble.Fish forum' );
-$form_shortcode = $get( 'contacts_form_shortcode', '' );
 
 $map_url = $map_id ? wp_get_attachment_image_url( $map_id, 'large' ) : '';
 $map_alt = $map_id ? get_post_meta( $map_id, '_wp_attachment_image_alt', true ) : '';
@@ -107,13 +106,11 @@ if ( $map_alt === '' ) {
 		<section class="fh-contacts__col fh-contacts__col--right" aria-labelledby="fh-contacts-form-heading">
 			<span class="fh-contacts__eyebrow">Get In Touch</span>
 			<h2 id="fh-contacts-form-heading" class="fh-contacts__form-heading">Send us a message</h2>
-			<div class="fh-contacts-form">
-				<?php
-				if ( $form_shortcode !== '' ) {
-					echo do_shortcode( $form_shortcode );
-				}
-				?>
-			</div>
+			<?php
+			if ( class_exists( 'FisHotel_Contact_Form' ) ) {
+				FisHotel_Contact_Form::render();
+			}
+			?>
 		</section>
 
 	</div>

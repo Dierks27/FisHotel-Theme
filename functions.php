@@ -245,6 +245,18 @@ function fishotel_bootstrap_about_page() {
 }
 add_action( 'admin_init', 'fishotel_bootstrap_about_page' );
 
+// Live cart-count badge — WooCommerce swaps this fragment on AJAX add/remove,
+// so the count in the header updates without a page reload.
+add_filter( 'woocommerce_add_to_cart_fragments', function ( $fragments ) {
+    $count = ( function_exists( 'WC' ) && WC()->cart ) ? WC()->cart->get_cart_contents_count() : 0;
+    ob_start();
+    ?>
+    <span class="site-header__icon-count fishotel-cart-count" data-count="<?php echo esc_attr( $count ); ?>"><?php echo esc_html( $count ); ?></span>
+    <?php
+    $fragments['span.fishotel-cart-count'] = ob_get_clean();
+    return $fragments;
+} );
+
 // Homepage bubble animation
 function fishotel_hero_inline_js() {
     if ( is_front_page() ) : ?>

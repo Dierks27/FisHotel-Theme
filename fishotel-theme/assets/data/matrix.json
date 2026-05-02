@@ -1,0 +1,6482 @@
+{
+  "tangs_acanthurus": {
+    "tangs_acanthurus": {
+      "v": "N",
+      "note": "Same-genus aggression severe; Powder Blue worst"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Cross-genus tangs OK in 125g+ added together"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Different shape but similar feeding niche"
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "W",
+      "note": "Cross-genus, needs 180g+"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Both assertive; significant tank volume"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Both robust assertive"
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Single trigger only"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Predates smaller tangs; size-matched"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Active swimmer near predator"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Active near predator"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "C",
+      "note": ""
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "tangs_zebrasoma": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Cross-genus OK in 125g+"
+    },
+    "tangs_zebrasoma": {
+      "v": "N",
+      "note": "Same-genus brutal in <180g (Yellow vs Purple)"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Similar shape"
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Both robust"
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Single trigger only"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size-matched only"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Active swimmer"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Active swimmer"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "C",
+      "note": ""
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "tangs_ctenochaetus": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Different shape similar niche"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Similar shape"
+    },
+    "tangs_ctenochaetus": {
+      "v": "N",
+      "note": "Territorial conspecifics"
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Tank size"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Tank size"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Single only"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size-matched"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Active"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Active"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "C",
+      "note": ""
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "tangs_naso": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "W",
+      "note": "Multiple OK in 250g+ added together"
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Single trigger only"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size-matched"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Active near predator"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Active near predator"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "C",
+      "note": ""
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "tangs_paracanthurus": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Cross-genus, 180g+"
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "1",
+      "note": "Single Hippo per tank; multiple in 200g+ added simultaneously"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Single trigger"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size-matched"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Active near predator"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Active near predator"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "C",
+      "note": ""
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "dwarf_angels_centropyge": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "O",
+      "note": "Harem (3+) in 100g+ added together; Flame goes last"
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Family aggression in <180g"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Family aggression"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Single trigger"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Both nip-prone"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "large_angels_pomacanthus": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Tank size required"
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Family aggression in <180g"
+    },
+    "large_angels_pomacanthus": {
+      "v": "N",
+      "note": "Single per tank typically; 300g+ to attempt"
+    },
+    "large_angels_holacanthus": {
+      "v": "N",
+      "note": "Cross-genus too aggressive together"
+    },
+    "genicanthus_angels": {
+      "v": "W",
+      "note": "Genicanthus delicate next to Pomacanthus"
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Trigger competing"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Both nip-prone"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "large_angels_holacanthus": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Tank size"
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Family aggression"
+    },
+    "large_angels_pomacanthus": {
+      "v": "N",
+      "note": "Cross-genus aggressive together"
+    },
+    "large_angels_holacanthus": {
+      "v": "N",
+      "note": "Single per tank; Rock Beauty has dietary issues"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Trigger competing"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Both nip-prone"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "genicanthus_angels": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Pomacanthus too aggressive for delicate Genicanthus"
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "O",
+      "note": "Acclimation box if not adding simultaneously; jockey for dominance"
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Single trigger"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "C",
+      "note": ""
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "wrasses_halichoeres": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "O",
+      "note": "Different species OK if added together; same species pair-only"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "O",
+      "note": "Add together; coordinate intro"
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Halichoeres can outcompete delicate Leopards"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "W",
+      "note": "Anampses sensitive next to active Halichoeres"
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size-matched"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Hawkfish predates smaller wrasses"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Puffer nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Compete with mandarins for pods"
+    }
+  },
+  "wrasses_cirrhilabrus": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "O",
+      "note": "Coordinate intro"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "O",
+      "note": "See Cirrhilabrus rule book — complex-dependent"
+    },
+    "wrasses_paracheilinus": {
+      "v": "O",
+      "note": "Add together; similar niche"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Six lines bully fairy wrasses"
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size-matched"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Hawkfish predates"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Puffer nip"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Pod competition"
+    }
+  },
+  "wrasses_paracheilinus": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "O",
+      "note": "Add together"
+    },
+    "wrasses_paracheilinus": {
+      "v": "O",
+      "note": "Multi-male harems work in 75g+ when added together"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Six lines bully flashers"
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size-matched"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Hawkfish predates"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Pod competition"
+    }
+  },
+  "wrasses_macropharyngodon": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "W",
+      "note": "Halichoeres can outcompete"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "O",
+      "note": "Sensitive; sand bed required; add simultaneously"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Six lines bully delicate Leopards"
+    },
+    "wrasses_anampses": {
+      "v": "W",
+      "note": "Both delicate"
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Hawkfish predates"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Pod competition"
+    }
+  },
+  "wrasses_pseudocheilinus": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "W",
+      "note": "Bullies fairies"
+    },
+    "wrasses_paracheilinus": {
+      "v": "W",
+      "note": "Bullies flashers"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Bullies Leopards"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "N",
+      "note": "Six Lines aggressive to conspecifics"
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Niche conflict"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "W",
+      "note": "Six line bullies grammas"
+    },
+    "dottybacks": {
+      "v": "W",
+      "note": "Six line bullies dottybacks"
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Aggressive to mandarin food competition"
+    }
+  },
+  "wrasses_anampses": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "W",
+      "note": "Halichoeres dominant"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Both delicate"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "O",
+      "note": "Sensitive; add simultaneously"
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Size"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "hogfish_bodianus": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Both robust"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Both robust"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "N",
+      "note": "Single only typically"
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "Predates small fish/inverts"
+    },
+    "gobies_gobiodon": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "gobies_nemateleotris": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Both predatory"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Predation risk"
+    }
+  },
+  "damsels_chrysiptera": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "O",
+      "note": "Springeri/Talbot/Rolland's peaceful in groups; Yellowtail (parasema) more aggressive"
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Damsel may be eaten"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "W",
+      "note": "Niche competition"
+    },
+    "dottybacks": {
+      "v": "W",
+      "note": "Niche competition"
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "chromis": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "O",
+      "note": "Odd-numbered groups (5+); pair-off culling normal"
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "May predate"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Eats damsels"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Opportunistic"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "clownfish": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "1",
+      "note": "Pair only, conspecific only; Maroon especially aggressive"
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Eats clowns"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "gobies_cryptocentrus": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "N",
+      "note": "Territorial; pairs only when shrimp-paired together"
+    },
+    "gobies_gobiodon": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "gobies_nemateleotris": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "gobies_valenciennea": {
+      "v": "W",
+      "note": "Substrate competition"
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Predates small gobies"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Substrate competition"
+    }
+  },
+  "gobies_gobiodon": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "gobies_gobiodon": {
+      "v": "O",
+      "note": "Peaceful; multiples OK"
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Predates"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "gobies_nemateleotris": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "O",
+      "note": "Pair or group only if added together"
+    },
+    "gobies_valenciennea": {
+      "v": "W",
+      "note": "Substrate"
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "N",
+      "note": "Trigger predation"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "N",
+      "note": "Hawkfish definitely eats firefish"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "W",
+      "note": "Dottyback bullies firefish"
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "gobies_valenciennea": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "Substrate competition"
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "W",
+      "note": "Substrate"
+    },
+    "gobies_valenciennea": {
+      "v": "N",
+      "note": "Territorial sand-sifters"
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Pod food competition"
+    }
+  },
+  "blennies_salarias": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "N",
+      "note": "Territorial conspecifics"
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "blennies_meiacanthus": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "O",
+      "note": "Pair-able"
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_aggressive": {
+      "v": "C",
+      "note": ""
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Lionfish may try but venomous fang deters"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "hawkfish": {
+      "v": "C",
+      "note": ""
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "cardinalfish": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "O",
+      "note": "Banggais form pairs/groups; introduce together"
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "N",
+      "note": "Trigger predation"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Hawkfish opportunistic"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "anthias": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "O",
+      "note": "Single-species harems (1m+3+f), added together"
+    },
+    "triggerfish_peaceful": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "triggerfish_peaceful": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Both compete"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Both compete"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "W",
+      "note": "May bother"
+    },
+    "chromis": {
+      "v": "W",
+      "note": "May bother"
+    },
+    "clownfish": {
+      "v": "W",
+      "note": "May bother"
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "May bother"
+    },
+    "gobies_gobiodon": {
+      "v": "W",
+      "note": "May bother"
+    },
+    "gobies_nemateleotris": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_valenciennea": {
+      "v": "W",
+      "note": "May bother"
+    },
+    "blennies_salarias": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "anthias": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "triggerfish_peaceful": {
+      "v": "N",
+      "note": "Single trigger per tank typically"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "eels": {
+      "v": "C",
+      "note": ""
+    },
+    "groupers": {
+      "v": "C",
+      "note": ""
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "royal_gramma": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "dottybacks": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "basslets": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "mandarins_dragonets": {
+      "v": "N",
+      "note": "Predation"
+    }
+  },
+  "triggerfish_aggressive": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Aggressive trigger overpowers"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Aggressive trigger overpowers"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "tangs_naso": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "tangs_paracanthurus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "genicanthus_angels": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_halichoeres": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_paracheilinus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_anampses": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "damsels_chrysiptera": {
+      "v": "W",
+      "note": "May predate"
+    },
+    "chromis": {
+      "v": "N",
+      "note": "Eats damsels"
+    },
+    "clownfish": {
+      "v": "N",
+      "note": "Eats clowns"
+    },
+    "gobies_cryptocentrus": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_gobiodon": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_nemateleotris": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_valenciennea": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "blennies_salarias": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "anthias": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Both aggressive"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Single only"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "eels": {
+      "v": "C",
+      "note": "Mutual respect"
+    },
+    "groupers": {
+      "v": "C",
+      "note": "Mutual respect"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "royal_gramma": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "dottybacks": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "basslets": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "mandarins_dragonets": {
+      "v": "N",
+      "note": "Predation"
+    }
+  },
+  "lionfish": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Predates smaller"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Predates smaller"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "tangs_naso": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "tangs_paracanthurus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "genicanthus_angels": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_halichoeres": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_paracheilinus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_anampses": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "damsels_chrysiptera": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "chromis": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "clownfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_cryptocentrus": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_gobiodon": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_nemateleotris": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_valenciennea": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "blennies_salarias": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "blennies_meiacanthus": {
+      "v": "W",
+      "note": "Fang deters"
+    },
+    "cardinalfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "anthias": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Possible if added together, similar size, large tank"
+    },
+    "eels": {
+      "v": "C",
+      "note": "Predator harmony"
+    },
+    "groupers": {
+      "v": "C",
+      "note": "Predator harmony"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "royal_gramma": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "dottybacks": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "basslets": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "mandarins_dragonets": {
+      "v": "N",
+      "note": "Predation"
+    }
+  },
+  "eels": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Active near predator"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Active"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Active"
+    },
+    "tangs_naso": {
+      "v": "W",
+      "note": "Active"
+    },
+    "tangs_paracanthurus": {
+      "v": "W",
+      "note": "Active"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "genicanthus_angels": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_halichoeres": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_paracheilinus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_anampses": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "damsels_chrysiptera": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "chromis": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "clownfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "gobies_gobiodon": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "gobies_nemateleotris": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_valenciennea": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "blennies_salarias": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "blennies_meiacanthus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "cardinalfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "anthias": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": "Mutual respect"
+    },
+    "triggerfish_aggressive": {
+      "v": "C",
+      "note": "Mutual respect"
+    },
+    "lionfish": {
+      "v": "C",
+      "note": "Predator harmony"
+    },
+    "eels": {
+      "v": "N",
+      "note": "Single typically"
+    },
+    "groupers": {
+      "v": "C",
+      "note": "Predator harmony"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "royal_gramma": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "dottybacks": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "basslets": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "mandarins_dragonets": {
+      "v": "N",
+      "note": "Predation"
+    }
+  },
+  "groupers": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "tangs_naso": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "tangs_paracanthurus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "genicanthus_angels": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_halichoeres": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_paracheilinus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "wrasses_anampses": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Tank dynamics"
+    },
+    "damsels_chrysiptera": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "chromis": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "clownfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "gobies_gobiodon": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "gobies_nemateleotris": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "gobies_valenciennea": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "blennies_salarias": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "blennies_meiacanthus": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "cardinalfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "anthias": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "triggerfish_peaceful": {
+      "v": "C",
+      "note": "Mutual respect"
+    },
+    "triggerfish_aggressive": {
+      "v": "C",
+      "note": "Mutual respect"
+    },
+    "lionfish": {
+      "v": "C",
+      "note": "Predator harmony"
+    },
+    "eels": {
+      "v": "C",
+      "note": "Predator harmony"
+    },
+    "groupers": {
+      "v": "N",
+      "note": "Single only"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "royal_gramma": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "dottybacks": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "basslets": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "mandarins_dragonets": {
+      "v": "N",
+      "note": "Predation"
+    }
+  },
+  "hawkfish": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "wrasses_paracheilinus": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Niche conflict"
+    },
+    "wrasses_anampses": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Both predatory"
+    },
+    "damsels_chrysiptera": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "chromis": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "clownfish": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "gobies_gobiodon": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "gobies_nemateleotris": {
+      "v": "N",
+      "note": "Definitely eats firefish"
+    },
+    "gobies_valenciennea": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "blennies_salarias": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "W",
+      "note": "Opportunistic"
+    },
+    "anthias": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "hawkfish": {
+      "v": "N",
+      "note": "Territorial"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "royal_gramma": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "dottybacks": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "basslets": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Predation"
+    }
+  },
+  "puffers": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Both nip-prone"
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "wrasses_paracheilinus": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "wrasses_anampses": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "damsels_chrysiptera": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "chromis": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "clownfish": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "gobies_gobiodon": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "gobies_nemateleotris": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "gobies_valenciennea": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "blennies_salarias": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "blennies_meiacanthus": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "cardinalfish": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "anthias": {
+      "v": "W",
+      "note": "Nip risk"
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Tension"
+    },
+    "puffers": {
+      "v": "N",
+      "note": "Single typically"
+    },
+    "royal_gramma": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "dottybacks": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "basslets": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Both nip"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Both nip"
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Risk"
+    }
+  },
+  "royal_gramma": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Six line bullies"
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "royal_gramma": {
+      "v": "N",
+      "note": "Territorial conspecifics"
+    },
+    "dottybacks": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "basslets": {
+      "v": "W",
+      "note": "Niche overlap"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "dottybacks": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Six line tension"
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "W",
+      "note": "Bullies firefish"
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "royal_gramma": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "dottybacks": {
+      "v": "N",
+      "note": "Aggressive; peaceful exceptions are Elongatus, Coccinacauda"
+    },
+    "basslets": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "basslets": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "royal_gramma": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "dottybacks": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "basslets": {
+      "v": "N",
+      "note": "Single typically"
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "C",
+      "note": ""
+    }
+  },
+  "butterflyfish_reef_safe": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "W",
+      "note": "Both pickier feeders"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Both nip"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "O",
+      "note": "Copperbands pair-only; Pyramids in groups"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Both nip-prone for similar reasons"
+    }
+  },
+  "butterflyfish_non_reef_safe": {
+    "tangs_acanthurus": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "tangs_zebrasoma": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "tangs_ctenochaetus": {
+      "v": "W",
+      "note": "Resource competition"
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "W",
+      "note": "Both pickier feeders"
+    },
+    "dwarf_angels_centropyge": {
+      "v": "W",
+      "note": "Niche"
+    },
+    "large_angels_pomacanthus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "large_angels_holacanthus": {
+      "v": "W",
+      "note": "Both assertive"
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_paracheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_macropharyngodon": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "C",
+      "note": ""
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "triggerfish_aggressive": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "lionfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "eels": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "groupers": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Both nip"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "O",
+      "note": "Schooling species OK; single most"
+    },
+    "mandarins_dragonets": {
+      "v": "W",
+      "note": "Risk"
+    }
+  },
+  "mandarins_dragonets": {
+    "tangs_acanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_zebrasoma": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_ctenochaetus": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_naso": {
+      "v": "C",
+      "note": ""
+    },
+    "tangs_paracanthurus": {
+      "v": "C",
+      "note": ""
+    },
+    "dwarf_angels_centropyge": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_pomacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "large_angels_holacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "genicanthus_angels": {
+      "v": "C",
+      "note": ""
+    },
+    "wrasses_halichoeres": {
+      "v": "W",
+      "note": "Pod competition"
+    },
+    "wrasses_cirrhilabrus": {
+      "v": "W",
+      "note": "Pod competition"
+    },
+    "wrasses_paracheilinus": {
+      "v": "W",
+      "note": "Pod competition"
+    },
+    "wrasses_macropharyngodon": {
+      "v": "W",
+      "note": "Pod competition"
+    },
+    "wrasses_pseudocheilinus": {
+      "v": "W",
+      "note": "Six line aggressive food"
+    },
+    "wrasses_anampses": {
+      "v": "C",
+      "note": ""
+    },
+    "hogfish_bodianus": {
+      "v": "W",
+      "note": "Predation risk"
+    },
+    "damsels_chrysiptera": {
+      "v": "C",
+      "note": ""
+    },
+    "chromis": {
+      "v": "C",
+      "note": ""
+    },
+    "clownfish": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_cryptocentrus": {
+      "v": "W",
+      "note": "Substrate"
+    },
+    "gobies_gobiodon": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_nemateleotris": {
+      "v": "C",
+      "note": ""
+    },
+    "gobies_valenciennea": {
+      "v": "W",
+      "note": "Pod food competition"
+    },
+    "blennies_salarias": {
+      "v": "C",
+      "note": ""
+    },
+    "blennies_meiacanthus": {
+      "v": "C",
+      "note": ""
+    },
+    "cardinalfish": {
+      "v": "C",
+      "note": ""
+    },
+    "anthias": {
+      "v": "C",
+      "note": ""
+    },
+    "triggerfish_peaceful": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "triggerfish_aggressive": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "lionfish": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "eels": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "groupers": {
+      "v": "N",
+      "note": "Predation"
+    },
+    "hawkfish": {
+      "v": "W",
+      "note": "Predation"
+    },
+    "puffers": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "royal_gramma": {
+      "v": "C",
+      "note": ""
+    },
+    "dottybacks": {
+      "v": "C",
+      "note": ""
+    },
+    "basslets": {
+      "v": "C",
+      "note": ""
+    },
+    "butterflyfish_reef_safe": {
+      "v": "W",
+      "note": "Both nip-prone"
+    },
+    "butterflyfish_non_reef_safe": {
+      "v": "W",
+      "note": "Risk"
+    },
+    "mandarins_dragonets": {
+      "v": "O",
+      "note": "Pair only (M+F); single best for most tanks"
+    }
+  }
+}

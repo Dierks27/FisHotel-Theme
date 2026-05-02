@@ -36,7 +36,11 @@ $include   = function ( $file ) use ( $parts_dir ) {
 			<?php $include( 'compat-conflicts-panel.php' ); ?>
 		</div>
 
-		<?php $include( 'compat-sample-tanks.php' ); ?>
+		<?php /* Tested Stocking Plans replaced by the live inventory panel — see v1.1.
+		         The compat-sample-tanks partial and assets/data/sample-tanks.json
+		         are intentionally kept in-tree for possible v2 reuse.
+		   $include( 'compat-sample-tanks.php' ); */ ?>
+		<?php $include( 'compat-inventory-panel.php' ); ?>
 		<?php $include( 'compat-matrix-view.php' ); ?>
 
 		<footer class="fh-compat__footer">

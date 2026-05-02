@@ -396,11 +396,28 @@
 					(s.min_tank ? ' · ' + s.min_tank + 'g+' : '') + '</span>';
 			list.appendChild(row);
 		}
+
+		// Modal body doesn't grow to fit the species list — scroll it into
+		// view so users see the result of their click. Focus the title for
+		// screen-reader / keyboard users (preventScroll so we don't fight
+		// the smooth scroll).
+		const modalBody = $('.fh-compat-modal__body');
+		if (modalBody) {
+			const offset = wrap.offsetTop - modalBody.offsetTop;
+			modalBody.scrollTo({ top: offset, behavior: 'smooth' });
+		}
+		const title = $('[data-fh-species-title]');
+		if (title) {
+			title.setAttribute('tabindex', '-1');
+			try { title.focus({ preventScroll: true }); } catch (e) { title.focus(); }
+		}
 	}
 	function backToCategories() {
 		$('[data-fh-categories]').hidden = false;
 		$('[data-fh-species]').hidden = true;
 		clearPick();
+		const modalBody = $('.fh-compat-modal__body');
+		if (modalBody) modalBody.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 	function runSearch(query) {
 		const results = $('[data-fh-search-results]');
@@ -530,6 +547,196 @@
 	}
 
 	/* ──────────────────────────────────────────
+	 * Inventory panel — live "What You Can Add Right Now"
+	 * Fetches /wp-json/fishotel/v1/compat-products filtered to category
+	 * keys that are 'C' against EVERY fish currently in state.myTank
+	 * (volume modifier applied). Debounced + signature-cached.
+	 * ────────────────────────────────────────── */
+	const InventoryPanel = (function () {
+		let lastSig = '';
+		let scheduleTimer = null;
+		let inflight = null;
+
+		function compatibleCategories() {
+			if (!data || !data.categories || !state.myTank.length) return [];
+			const out = [];
+			for (const cat of data.categories) {
+				let allOk = true;
+				for (const fish of state.myTank) {
+					const cell = matrixCell(cat.key, fish.category);
+					let v = cell.v || 'C';
+					v = applyVolumeModifier(v, cat.key, fish.category, state.volume);
+					if (v !== 'C') { allOk = false; break; }
+				}
+				if (allOk) out.push(cat.key);
+			}
+			return out;
+		}
+
+		function renderProducts(products, grid) {
+			grid.innerHTML = '';
+			if (!products.length) {
+				const msg = document.createElement('p');
+				msg.className = 'fh-compat-inventory__msg';
+				msg.textContent = 'No compatible fish in stock right now.';
+				grid.appendChild(msg);
+				return;
+			}
+			for (const p of products) {
+				const card = document.createElement('article');
+				card.className = 'fh-inventory-card';
+				card.dataset.productId = p.id;
+
+				if (p.image_url) {
+					const a = document.createElement('a');
+					a.className = 'fh-inventory-card__thumb';
+					a.href = p.permalink;
+					a.target = '_blank';
+					a.rel = 'noopener';
+					const img = document.createElement('img');
+					img.src = p.image_url;
+					img.alt = p.name;
+					img.loading = 'lazy';
+					a.appendChild(img);
+					card.appendChild(a);
+				}
+
+				const body = document.createElement('div');
+				body.className = 'fh-inventory-card__body';
+				if (p.category_label) {
+					const cat = document.createElement('span');
+					cat.className = 'fh-inventory-card__cat';
+					cat.textContent = p.category_label;
+					body.appendChild(cat);
+				}
+				const name = document.createElement('h3');
+				name.className = 'fh-inventory-card__name';
+				const nameLink = document.createElement('a');
+				nameLink.href = p.permalink;
+				nameLink.target = '_blank';
+				nameLink.rel = 'noopener';
+				nameLink.textContent = p.name;
+				name.appendChild(nameLink);
+				body.appendChild(name);
+
+				if (p.price_html) {
+					const price = document.createElement('div');
+					price.className = 'fh-inventory-card__price';
+					// price_html is server-rendered WC output — trusted.
+					price.innerHTML = p.price_html;
+					body.appendChild(price);
+				}
+
+				const actions = document.createElement('div');
+				actions.className = 'fh-inventory-card__actions';
+
+				const addBtn = document.createElement('button');
+				addBtn.type = 'button';
+				addBtn.className = 'fh-inventory-card__add';
+				addBtn.textContent = 'Add to Considering';
+				addBtn.dataset.fhInvAdd = JSON.stringify({
+					common:   p.name,
+					sci:      '',
+					category: p.category_key,
+					min_tank: 0,
+					productId: p.id
+				});
+
+				const view = document.createElement('a');
+				view.className = 'fh-inventory-card__view';
+				view.href = p.permalink;
+				view.target = '_blank';
+				view.rel = 'noopener';
+				view.textContent = 'View Product';
+
+				actions.appendChild(addBtn);
+				actions.appendChild(view);
+				body.appendChild(actions);
+
+				card.appendChild(body);
+				grid.appendChild(card);
+			}
+		}
+
+		async function update() {
+			const grid  = $('[data-fh-inventory-grid]');
+			const empty = $('[data-fh-inventory-empty]');
+			if (!grid || !empty) return;
+
+			if (!state.myTank.length) {
+				grid.innerHTML = '';
+				empty.hidden = false;
+				lastSig = '';
+				return;
+			}
+			empty.hidden = true;
+
+			const cats = compatibleCategories();
+			const sig  = cats.slice().sort().join('|') + '@' + (state.volume || '');
+			if (sig === lastSig) return; // identical state, skip refetch
+			lastSig = sig;
+
+			if (!cats.length) {
+				const msg = document.createElement('p');
+				msg.className = 'fh-compat-inventory__msg';
+				msg.textContent = 'No fully-compatible categories with your current tank.';
+				grid.innerHTML = '';
+				grid.appendChild(msg);
+				return;
+			}
+
+			const url = (CFG.urls && CFG.urls.inventory) || '/wp-json/fishotel/v1/compat-products';
+			const params = new URLSearchParams();
+			for (const k of cats) params.append('categories[]', k);
+			params.set('limit', '20');
+			const fullUrl = url + (url.indexOf('?') === -1 ? '?' : '&') + params.toString();
+
+			// Loading affordance
+			grid.classList.add('is-loading');
+
+			try {
+				const res = await fetch(fullUrl, { credentials: 'same-origin' });
+				if (!res.ok) throw new Error('HTTP ' + res.status);
+				const products = await res.json();
+				if (sig !== lastSig) return; // state changed since fetch fired — drop stale result
+				renderProducts(products, grid);
+			} catch (err) {
+				if (window.console) console.error('Inventory fetch failed', err);
+				const msg = document.createElement('p');
+				msg.className = 'fh-compat-inventory__msg';
+				msg.textContent = 'Couldn\'t load inventory right now.';
+				grid.innerHTML = '';
+				grid.appendChild(msg);
+			} finally {
+				grid.classList.remove('is-loading');
+			}
+		}
+
+		function schedule() {
+			clearTimeout(scheduleTimer);
+			scheduleTimer = setTimeout(update, 300);
+		}
+
+		function addProductToConsidering(payload, sourceBtn) {
+			state.considering.push({
+				id: uid(),
+				common:   payload.common || '',
+				sci:      payload.sci    || '',
+				category: payload.category,
+				min_tank: payload.min_tank || 0
+			});
+			saveState();
+			renderAll();
+			if (sourceBtn) {
+				sourceBtn.disabled = true;
+				sourceBtn.textContent = 'Added';
+			}
+		}
+
+		return { schedule, update, addProductToConsidering };
+	})();
+
+	/* ──────────────────────────────────────────
 	 * Full matrix view (lazy)
 	 * ────────────────────────────────────────── */
 	function renderMatrix() {
@@ -574,6 +781,7 @@
 		recalculateConflicts();
 		renderZones();
 		renderConflicts();
+		InventoryPanel.schedule();
 	}
 	function addPendingFish() {
 		if (!pendingPick) return;
@@ -639,6 +847,14 @@
 
 			const sample = e.target.closest('[data-fh-sample-load]');
 			if (sample) { loadSampleTank(sample.dataset.fhSampleLoad); return; }
+
+			const invAdd = e.target.closest('[data-fh-inv-add]');
+			if (invAdd) {
+				try {
+					InventoryPanel.addProductToConsidering(JSON.parse(invAdd.dataset.fhInvAdd), invAdd);
+				} catch (err) { /* malformed payload */ }
+				return;
+			}
 
 			if (e.target.closest('[data-fh-modal-add]')) { addPendingFish(); return; }
 

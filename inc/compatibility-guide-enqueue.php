@@ -49,6 +49,7 @@ function fishotel_compat_enqueue() {
 			'cirrhilabrus' => fishotel_compat_data_url( 'cirrhilabrus' ),
 			'species'      => fishotel_compat_data_url( 'species' ),
 			'sampleTanks'  => fishotel_compat_data_url( 'sample-tanks' ),
+			'inventory'    => esc_url_raw( rest_url( 'fishotel/v1/compat-products' ) ),
 		],
 		'verdictLabels' => [
 			'C' => 'Compatible',

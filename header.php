@@ -19,7 +19,7 @@
 
         <nav class="site-header__nav site-header__nav--left">
             <?php if ( has_nav_menu( 'primary-left' ) ) :
-                wp_nav_menu([ 'theme_location' => 'primary-left', 'container' => false, 'items_wrap' => '<ul class="site-header__menu">%3$s</ul>', 'fallback_cb' => false, 'depth' => 1 ]);
+                wp_nav_menu([ 'theme_location' => 'primary-left', 'container' => false, 'items_wrap' => '<ul class="site-header__menu">%3$s</ul>', 'fallback_cb' => false, 'depth' => 2 ]);
             else : ?>
                 <ul class="site-header__menu">
                     <li <?php if ( is_front_page() ) echo 'class="current-menu-item"'; ?>><a href="<?php echo esc_url( home_url('/') ); ?>">Home</a></li>
@@ -41,7 +41,7 @@
 
         <nav class="site-header__nav site-header__nav--right">
             <?php if ( has_nav_menu( 'primary-right' ) ) :
-                wp_nav_menu([ 'theme_location' => 'primary-right', 'container' => false, 'items_wrap' => '<ul class="site-header__menu">%3$s</ul>', 'fallback_cb' => false, 'depth' => 1 ]);
+                wp_nav_menu([ 'theme_location' => 'primary-right', 'container' => false, 'items_wrap' => '<ul class="site-header__menu">%3$s</ul>', 'fallback_cb' => false, 'depth' => 2 ]);
             else : ?>
                 <ul class="site-header__menu">
                     <li><a href="<?php echo esc_url( home_url('/faqs/') ); ?>">FAQ's</a></li>
@@ -65,15 +65,32 @@
 
     <div class="site-header__drawer" id="mobile-nav" aria-hidden="true">
         <ul class="site-header__drawer-menu">
-            <li><a href="<?php echo esc_url( home_url('/') ); ?>">Home</a></li>
-            <li><a href="<?php echo esc_url( home_url('/our-process/') ); ?>">Our Process</a></li>
-            <li><a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a></li>
-            <li><a href="<?php echo esc_url( home_url('/faqs/') ); ?>">FAQ's</a></li>
-            <li><a href="<?php echo esc_url( home_url('/about-us/') ); ?>">About Us</a></li>
-            <li><a href="<?php echo esc_url( home_url('/newsletter/') ); ?>">Newsletter</a></li>
+            <?php
+            // Combine left + right primary menus in the drawer; children render
+            // as accordions via the .menu-item-has-children + .sub-menu markup
+            // emitted by Walker_Nav_Menu.
+            if ( has_nav_menu( 'primary-left' ) ) {
+                wp_nav_menu([
+                    'theme_location' => 'primary-left',
+                    'container'      => false,
+                    'items_wrap'     => '%3$s',
+                    'fallback_cb'    => false,
+                    'depth'          => 2,
+                ]);
+            }
+            if ( has_nav_menu( 'primary-right' ) ) {
+                wp_nav_menu([
+                    'theme_location' => 'primary-right',
+                    'container'      => false,
+                    'items_wrap'     => '%3$s',
+                    'fallback_cb'    => false,
+                    'depth'          => 2,
+                ]);
+            }
+            ?>
             <?php if ( class_exists('WooCommerce') ) : ?>
-            <li><a href="<?php echo esc_url( wc_get_cart_url() ); ?>">Cart (<?php echo WC()->cart ? WC()->cart->get_cart_contents_count() : 0; ?>)</a></li>
-            <li><a href="<?php echo esc_url( wc_get_account_endpoint_url('dashboard') ); ?>">My Account</a></li>
+            <li class="menu-item"><a href="<?php echo esc_url( wc_get_cart_url() ); ?>">Cart (<?php echo WC()->cart ? WC()->cart->get_cart_contents_count() : 0; ?>)</a></li>
+            <li class="menu-item"><a href="<?php echo esc_url( wc_get_account_endpoint_url('dashboard') ); ?>">My Account</a></li>
             <?php endif; ?>
         </ul>
     </div>

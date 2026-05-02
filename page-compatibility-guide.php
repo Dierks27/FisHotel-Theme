@@ -32,6 +32,16 @@ $include   = function ( $file ) use ( $parts_dir ) {
 		<?php $include( 'compat-tank-volume.php' ); ?>
 		<?php $include( 'compat-tank-zones.php' ); ?>
 
+		<aside class="fh-compat__legend-strip" aria-label="Verdict legend">
+			<ul class="fh-compat__legend fh-compat__legend--inline">
+				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--c" aria-hidden="true"></span> Compatible</li>
+				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--w" aria-hidden="true"></span> Watch / Caution</li>
+				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--o" aria-hidden="true"></span> Order matters</li>
+				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--1" aria-hidden="true"></span> Same-genus / Single only</li>
+				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--n" aria-hidden="true"></span> Not recommended</li>
+			</ul>
+		</aside>
+
 		<div class="fh-compat__panels">
 			<?php $include( 'compat-conflicts-panel.php' ); ?>
 		</div>
@@ -44,13 +54,6 @@ $include   = function ( $file ) use ( $parts_dir ) {
 		<?php $include( 'compat-matrix-view.php' ); ?>
 
 		<footer class="fh-compat__footer">
-			<ul class="fh-compat__legend" aria-label="Verdict legend">
-				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--c" aria-hidden="true"></span> Compatible</li>
-				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--w" aria-hidden="true"></span> Watch / Caution</li>
-				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--o" aria-hidden="true"></span> Order matters</li>
-				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--1" aria-hidden="true"></span> Same-genus / Single only</li>
-				<li><span class="fh-compat__legend-dot fh-compat__legend-dot--n" aria-hidden="true"></span> Not recommended</li>
-			</ul>
 			<p class="fh-compat__disclaimer">
 				Compatibility is a guideline, not a guarantee. Tank size, individual temperament, and order of introduction affect outcomes. When in doubt, <a href="<?php echo esc_url( home_url( '/contacts/' ) ); ?>">contact us</a>.
 			</p>

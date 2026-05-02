@@ -916,5 +916,47 @@
     "sci": "Synchiropus sycorax",
     "category": "mandarins_dragonets",
     "min_tank": 30
+  },
+  {
+    "common": "Foxface Lo",
+    "sci": "Siganus vulpinus",
+    "category": "rabbitfish_siganus",
+    "min_tank": 100
+  },
+  {
+    "common": "One Spot Foxface",
+    "sci": "Siganus unimaculatus",
+    "category": "rabbitfish_siganus",
+    "min_tank": 100
+  },
+  {
+    "common": "Magnificent Foxface",
+    "sci": "Siganus magnificus",
+    "category": "rabbitfish_siganus",
+    "min_tank": 100
+  },
+  {
+    "common": "Bicolor Foxface",
+    "sci": "Siganus uspi",
+    "category": "rabbitfish_siganus",
+    "min_tank": 100
+  },
+  {
+    "common": "Yellow Blotch Rabbitfish",
+    "sci": "Siganus guttatus",
+    "category": "rabbitfish_siganus",
+    "min_tank": 125
+  },
+  {
+    "common": "Starry Rabbitfish",
+    "sci": "Siganus stellatus",
+    "category": "rabbitfish_siganus",
+    "min_tank": 180
+  },
+  {
+    "common": "Black Foxface",
+    "sci": "Siganus niger",
+    "category": "rabbitfish_siganus",
+    "min_tank": 100
   }
 ]

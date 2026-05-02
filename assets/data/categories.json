@@ -2,7 +2,7 @@
   {
     "key": "tangs_acanthurus",
     "id": 1,
-    "name": "Tangs — Acanthurus",
+    "name": "Tangs \u2014 Acanthurus",
     "scientific": "Acanthurus",
     "common_examples": [
       "Powder Blue",
@@ -16,7 +16,7 @@
   {
     "key": "tangs_zebrasoma",
     "id": 2,
-    "name": "Tangs — Zebrasoma",
+    "name": "Tangs \u2014 Zebrasoma",
     "scientific": "Zebrasoma",
     "common_examples": [
       "Yellow",
@@ -30,7 +30,7 @@
   {
     "key": "tangs_ctenochaetus",
     "id": 3,
-    "name": "Tangs — Ctenochaetus",
+    "name": "Tangs \u2014 Ctenochaetus",
     "scientific": "Ctenochaetus",
     "common_examples": [
       "Kole",
@@ -42,7 +42,7 @@
   {
     "key": "tangs_naso",
     "id": 4,
-    "name": "Tangs — Naso",
+    "name": "Tangs \u2014 Naso",
     "scientific": "Naso",
     "common_examples": [
       "Naso",
@@ -54,7 +54,7 @@
   {
     "key": "tangs_paracanthurus",
     "id": 5,
-    "name": "Tangs — Paracanthurus",
+    "name": "Tangs \u2014 Paracanthurus",
     "scientific": "Paracanthurus",
     "common_examples": [
       "Hippo / Regal Blue Tang"
@@ -64,7 +64,7 @@
   {
     "key": "dwarf_angels_centropyge",
     "id": 6,
-    "name": "Dwarf Angels — Centropyge",
+    "name": "Dwarf Angels \u2014 Centropyge",
     "scientific": "Centropyge",
     "common_examples": [
       "Coral Beauty",
@@ -78,7 +78,7 @@
   {
     "key": "large_angels_pomacanthus",
     "id": 7,
-    "name": "Large Angels — Pomacanthus",
+    "name": "Large Angels \u2014 Pomacanthus",
     "scientific": "Pomacanthus",
     "common_examples": [
       "Emperor",
@@ -92,7 +92,7 @@
   {
     "key": "large_angels_holacanthus",
     "id": 8,
-    "name": "Large Angels — Holacanthus",
+    "name": "Large Angels \u2014 Holacanthus",
     "scientific": "Holacanthus",
     "common_examples": [
       "Queen",
@@ -117,7 +117,7 @@
   {
     "key": "wrasses_halichoeres",
     "id": 10,
-    "name": "Wrasses — Halichoeres",
+    "name": "Wrasses \u2014 Halichoeres",
     "scientific": "Halichoeres",
     "common_examples": [
       "Melanurus",
@@ -130,7 +130,7 @@
   {
     "key": "wrasses_cirrhilabrus",
     "id": 11,
-    "name": "Wrasses — Cirrhilabrus (Fairy)",
+    "name": "Wrasses \u2014 Cirrhilabrus (Fairy)",
     "scientific": "Cirrhilabrus",
     "common_examples": [
       "Lubbock's",
@@ -144,7 +144,7 @@
   {
     "key": "wrasses_paracheilinus",
     "id": 12,
-    "name": "Wrasses — Paracheilinus (Flasher)",
+    "name": "Wrasses \u2014 Paracheilinus (Flasher)",
     "scientific": "Paracheilinus",
     "common_examples": [
       "McCosker's",
@@ -156,19 +156,19 @@
   {
     "key": "wrasses_macropharyngodon",
     "id": 13,
-    "name": "Wrasses — Macropharyngodon (Leopard)",
+    "name": "Wrasses \u2014 Macropharyngodon (Leopard)",
     "scientific": "Macropharyngodon",
     "common_examples": [
       "Meleagris",
       "Bipartitus",
       "Choati"
     ],
-    "description": "Leopard wrasses. Sand bed required. Sensitive to bullying — added simultaneously, large tank."
+    "description": "Leopard wrasses. Sand bed required. Sensitive to bullying \u2014 added simultaneously, large tank."
   },
   {
     "key": "wrasses_pseudocheilinus",
     "id": 14,
-    "name": "Wrasses — Pseudocheilinus",
+    "name": "Wrasses \u2014 Pseudocheilinus",
     "scientific": "Pseudocheilinus",
     "common_examples": [
       "Six Line",
@@ -180,7 +180,7 @@
   {
     "key": "wrasses_anampses",
     "id": 15,
-    "name": "Wrasses — Anampses",
+    "name": "Wrasses \u2014 Anampses",
     "scientific": "Anampses",
     "common_examples": [
       "Yellowtail Coris",
@@ -192,7 +192,7 @@
   {
     "key": "hogfish_bodianus",
     "id": 16,
-    "name": "Hogfish — Bodianus",
+    "name": "Hogfish \u2014 Bodianus",
     "scientific": "Bodianus",
     "common_examples": [
       "Cuban",
@@ -205,7 +205,7 @@
   {
     "key": "damsels_chrysiptera",
     "id": 17,
-    "name": "Damsels — Chrysiptera",
+    "name": "Damsels \u2014 Chrysiptera",
     "scientific": "Chrysiptera",
     "common_examples": [
       "Springeri",
@@ -245,7 +245,7 @@
   {
     "key": "gobies_cryptocentrus",
     "id": 20,
-    "name": "Gobies — Cryptocentrus / Stonogobiops",
+    "name": "Gobies \u2014 Cryptocentrus / Stonogobiops",
     "scientific": "Cryptocentrus / Stonogobiops",
     "common_examples": [
       "Yellow Watchman",
@@ -258,7 +258,7 @@
   {
     "key": "gobies_gobiodon",
     "id": 21,
-    "name": "Gobies — Gobiodon / Eviota",
+    "name": "Gobies \u2014 Gobiodon / Eviota",
     "scientific": "Gobiodon / Eviota",
     "common_examples": [
       "Green Clown",
@@ -271,7 +271,7 @@
   {
     "key": "gobies_nemateleotris",
     "id": 22,
-    "name": "Gobies — Nemateleotris (Firefish/Dartfish)",
+    "name": "Gobies \u2014 Nemateleotris (Firefish/Dartfish)",
     "scientific": "Nemateleotris",
     "common_examples": [
       "Firefish",
@@ -283,7 +283,7 @@
   {
     "key": "gobies_valenciennea",
     "id": 23,
-    "name": "Gobies — Valenciennea (Sand-sifters)",
+    "name": "Gobies \u2014 Valenciennea (Sand-sifters)",
     "scientific": "Valenciennea",
     "common_examples": [
       "Diamond",
@@ -295,7 +295,7 @@
   {
     "key": "blennies_salarias",
     "id": 24,
-    "name": "Blennies — Salarias / Ecsenius",
+    "name": "Blennies \u2014 Salarias / Ecsenius",
     "scientific": "Salarias / Ecsenius",
     "common_examples": [
       "Lawnmower",
@@ -308,7 +308,7 @@
   {
     "key": "blennies_meiacanthus",
     "id": 25,
-    "name": "Blennies — Meiacanthus (Fang)",
+    "name": "Blennies \u2014 Meiacanthus (Fang)",
     "scientific": "Meiacanthus",
     "common_examples": [
       "Forktail",
@@ -332,7 +332,7 @@
   {
     "key": "anthias",
     "id": 27,
-    "name": "Anthias — Pseudanthias",
+    "name": "Anthias \u2014 Pseudanthias",
     "scientific": "Pseudanthias",
     "common_examples": [
       "Lyretail",
@@ -345,7 +345,7 @@
   {
     "key": "triggerfish_peaceful",
     "id": 28,
-    "name": "Triggerfish — Peaceful",
+    "name": "Triggerfish \u2014 Peaceful",
     "scientific": "Pseudobalistes / Sufflamen / Xanthichthys",
     "common_examples": [
       "Niger",
@@ -357,7 +357,7 @@
   {
     "key": "triggerfish_aggressive",
     "id": 29,
-    "name": "Triggerfish — Aggressive",
+    "name": "Triggerfish \u2014 Aggressive",
     "scientific": "Balistidae",
     "common_examples": [
       "Clown",
@@ -370,7 +370,7 @@
   {
     "key": "lionfish",
     "id": 30,
-    "name": "Lionfish — Pterois",
+    "name": "Lionfish \u2014 Pterois",
     "scientific": "Pterois / Dendrochirus",
     "common_examples": [
       "Volitans",
@@ -383,7 +383,7 @@
   {
     "key": "eels",
     "id": 31,
-    "name": "Eels — Muraenidae",
+    "name": "Eels \u2014 Muraenidae",
     "scientific": "Muraenidae",
     "common_examples": [
       "Snowflake",
@@ -396,7 +396,7 @@
   {
     "key": "groupers",
     "id": 32,
-    "name": "Groupers — Cephalopholis (small)",
+    "name": "Groupers \u2014 Cephalopholis (small)",
     "scientific": "Cephalopholis / Variola",
     "common_examples": [
       "Miniatus",
@@ -409,7 +409,7 @@
   {
     "key": "hawkfish",
     "id": 33,
-    "name": "Hawkfish — Cirrhitidae",
+    "name": "Hawkfish \u2014 Cirrhitidae",
     "scientific": "Cirrhitidae",
     "common_examples": [
       "Flame",
@@ -422,7 +422,7 @@
   {
     "key": "puffers",
     "id": 34,
-    "name": "Puffers — Tetraodontidae",
+    "name": "Puffers \u2014 Tetraodontidae",
     "scientific": "Tetraodontidae",
     "common_examples": [
       "Valentini",
@@ -459,7 +459,7 @@
   {
     "key": "basslets",
     "id": 37,
-    "name": "Basslets — Liopropoma",
+    "name": "Basslets \u2014 Liopropoma",
     "scientific": "Liopropoma",
     "common_examples": [
       "Swissguard",
@@ -471,7 +471,7 @@
   {
     "key": "butterflyfish_reef_safe",
     "id": 38,
-    "name": "Butterflyfish — Reef Safe",
+    "name": "Butterflyfish \u2014 Reef Safe",
     "scientific": "Chaetodontidae (selected)",
     "common_examples": [
       "Copperband",
@@ -483,7 +483,7 @@
   {
     "key": "butterflyfish_non_reef_safe",
     "id": 39,
-    "name": "Butterflyfish — Non Reef Safe",
+    "name": "Butterflyfish \u2014 Non Reef Safe",
     "scientific": "Chaetodontidae",
     "common_examples": [
       "Klein's",
@@ -496,7 +496,7 @@
   {
     "key": "mandarins_dragonets",
     "id": 40,
-    "name": "Mandarins / Dragonets — Synchiropus",
+    "name": "Mandarins / Dragonets \u2014 Synchiropus",
     "scientific": "Synchiropus",
     "common_examples": [
       "Mandarin",
@@ -505,5 +505,19 @@
       "Ruby Red"
     ],
     "description": "Pod-eaters. Mature reef with copious copepods required. Single or M+F pair."
+  },
+  {
+    "key": "rabbitfish_siganus",
+    "id": 41,
+    "name": "Rabbitfish / Foxface \u2014 Siganus",
+    "scientific": "Siganus",
+    "common_examples": [
+      "Foxface Lo",
+      "One Spot Foxface",
+      "Magnificent Foxface",
+      "Bicolor Foxface",
+      "Yellow Blotch Rabbitfish"
+    ],
+    "description": "Algae-grazing reef fish with venomous dorsal spines for defense. Peaceful with most fish but can be territorial with other rabbitfish and surgeonfish-niche species. Good tang alternative or co-pilot in larger systems."
   }
 ]

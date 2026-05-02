@@ -216,6 +216,9 @@ class FisHotel_Compat_Backfill {
 
 		// Mandarins / Dragonets
 		'Synchiropus'        => 'mandarins_dragonets',
+
+		// Rabbitfish / Foxface
+		'Siganus'            => 'rabbitfish_siganus',
 	];
 
 	public static function init() {

@@ -131,6 +131,10 @@ $includes = [
 	'/inc/widgets.php',
 	'/inc/admin-settings.php',   // FisHotel admin settings page
 	'/inc/contact-form.php',     // Native /contacts/ form handler
+	'/inc/compatibility-guide-bootstrap.php',    // /compatibility-guide/ template assignment
+	'/inc/compatibility-guide-data.php',         // JSON loaders + volume modifier helpers
+	'/inc/compatibility-guide-enqueue.php',      // Conditional CSS/JS for the guide
+	'/inc/compatibility-guide-product-meta.php', // WC product → matrix category meta box
 	'/inc/theme-updater.php',    // Self-updater via raw GitHub branch
 ];
 

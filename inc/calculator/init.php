@@ -23,20 +23,23 @@ function fishotel_enqueue_calculator_assets() {
         return;
     }
 
-    $ver = wp_get_theme()->get( 'Version' );
+    // Use filemtime() for cache-busting so on-disk changes invalidate browser
+    // and edge caches. Was previously the static theme version, which caused
+    // stale JS/CSS to be served after deploys (same symptom we hit on the
+    // bleach calculator during QA round 2).
 
     wp_enqueue_style(
         'fishotel-calculator',
         get_template_directory_uri() . '/assets/css/calculator.css',
         array(),
-        $ver
+        fishotel_asset_version( 'assets/css/calculator.css' )
     );
 
     wp_enqueue_style(
         'fishotel-calculator-print',
         get_template_directory_uri() . '/assets/css/calculator-print.css',
         array( 'fishotel-calculator' ),
-        $ver,
+        fishotel_asset_version( 'assets/css/calculator-print.css' ),
         'print'
     );
 
@@ -44,7 +47,7 @@ function fishotel_enqueue_calculator_assets() {
         'fishotel-calculator',
         get_template_directory_uri() . '/assets/js/calculator/fishotel-calculator.js',
         array(),
-        $ver,
+        fishotel_asset_version( 'assets/js/calculator/fishotel-calculator.js' ),
         true
     );
 

@@ -15,8 +15,8 @@
 	var SODIUM_THIOSULFATE_FACTOR = 7.4;
 	var US_CUP_ML = 236.588;
 	var US_OZ_ML  = 29.5735;
-	var CUP_CAPACITY_ML = 1000;     // visual measuring cup capacity
-	var CUP_TOP_Y = 40, CUP_BOTTOM_Y = 280; // SVG coords for fill rect
+	var CUP_SLOTS = 12;              // pre-rendered cup-icon slots in DOM
+	var CUP_FILL_TOP = 13, CUP_FILL_BOTTOM = 38; // SVG coords inside one cup icon
 
 	var PRESETS = {
 		between_qt_fish: { target_ppm: 200, contact_min: 30 },
@@ -186,28 +186,34 @@
 		renderTimer();
 	}
 
-	// Measuring cup ---------------------------------------------------------
+	// Measuring cup row -----------------------------------------------------
 
 	function updateMeasuringCup(c) {
-		var ml = c.bleach_ml;
-		var frac = Math.max(0, Math.min(1, ml / CUP_CAPACITY_ML));
-		var fillH = (CUP_BOTTOM_Y - CUP_TOP_Y) * frac;
-
-		var fill = document.querySelector('[data-fh="cup_fill"]');
-		if (fill) {
-			fill.setAttribute('y', String(CUP_BOTTOM_Y - fillH));
-			fill.setAttribute('height', String(fillH));
-		}
-
+		var ml   = c.bleach_ml;
 		var cups = ml / US_CUP_ML;
 		var oz   = ml / US_OZ_ML;
+		var fullRange = CUP_FILL_BOTTOM - CUP_FILL_TOP;
+
+		for (var i = 0; i < CUP_SLOTS; i++) {
+			var slot = document.querySelector('[data-fh-cup="' + i + '"]');
+			var fill = document.querySelector('[data-fh-cup-fill="' + i + '"]');
+			if (!slot || !fill) continue;
+
+			// Each slot represents 1 US cup. Fraction = how much of THIS cup is filled.
+			var slotFrac = Math.max(0, Math.min(1, cups - i));
+			var h = fullRange * slotFrac;
+			fill.setAttribute('y', String(CUP_FILL_BOTTOM - h));
+			fill.setAttribute('height', String(h));
+			slot.classList.toggle('is-empty', slotFrac === 0);
+		}
+
 		setText('cup_label', fmt(ml) + ' ml · ' + fmt1(cups) + ' cups · ' + fmt1(oz) + ' oz');
 
 		var repeat = document.querySelector('[data-fh="cup_repeat"]');
 		if (repeat) {
-			if (ml > CUP_CAPACITY_ML) {
-				var fills = Math.ceil(ml / CUP_CAPACITY_ML);
-				repeat.textContent = '× ' + fills + ' cup fills · approx ' + fmt1(cups) + ' cups total';
+			if (cups > CUP_SLOTS) {
+				var extra = cups - CUP_SLOTS;
+				repeat.textContent = '+ ' + fmt1(extra) + ' more cups (' + fmt1(cups) + ' total)';
 				repeat.hidden = false;
 			} else {
 				repeat.hidden = true;
@@ -233,36 +239,21 @@
 		var doneEl = document.querySelector('[data-fh="timer_complete"]');
 		if (doneEl) doneEl.hidden = !timer.completed;
 
-		var ctrls = document.querySelector('[data-fh="timer_controls"]');
-		if (!ctrls) return;
-		ctrls.innerHTML = '';
+		var idle      = !timer.running && !timer.paused && !timer.completed && timer.remainingSec === timer.totalSec;
+		var running   = timer.running && !timer.paused;
+		var paused    = timer.paused;
+		var completed = timer.completed;
 
-		if (timer.completed) {
-			ctrls.appendChild(timerBtn('Start New Cycle', 'primary', function () {
-				timer = { totalSec: 0, remainingSec: 0, running: false, paused: false, completed: false, intervalId: null };
-				schedule();
-			}));
-			return;
-		}
-
-		if (!timer.running && !timer.paused && timer.remainingSec === timer.totalSec) {
-			ctrls.appendChild(timerBtn('Begin Soak', 'primary', startTimer));
-		} else if (timer.running && !timer.paused) {
-			ctrls.appendChild(timerBtn('Pause', '', pauseTimer));
-			ctrls.appendChild(timerBtn('Abort', 'abort', abortTimer));
-		} else if (timer.paused) {
-			ctrls.appendChild(timerBtn('Resume', 'primary', startTimer));
-			ctrls.appendChild(timerBtn('Abort', 'abort', abortTimer));
-		}
+		showTimerBtn('begin',   idle);
+		showTimerBtn('pause',   running);
+		showTimerBtn('resume',  paused);
+		showTimerBtn('reset',   running || paused);
+		showTimerBtn('restart', completed);
 	}
 
-	function timerBtn(label, variant, onClick) {
-		var b = document.createElement('button');
-		b.type = 'button';
-		b.className = 'fh-bleach__timer-btn' + (variant ? ' fh-bleach__timer-btn--' + variant : '');
-		b.textContent = label;
-		b.addEventListener('click', onClick);
-		return b;
+	function showTimerBtn(name, on) {
+		var b = document.querySelector('[data-fh-timer="' + name + '"]');
+		if (b) b.hidden = !on;
 	}
 
 	function formatMMSS(sec) {
@@ -301,7 +292,12 @@
 
 	function abortTimer() {
 		if (timer.intervalId) { clearInterval(timer.intervalId); timer.intervalId = null; }
-		timer = { totalSec: 0, remainingSec: 0, running: false, paused: false, completed: false, intervalId: null };
+		// Reset to idle, then re-sync to current preset on next render.
+		timer.running = false;
+		timer.paused = false;
+		timer.completed = false;
+		timer.totalSec = 0;
+		timer.remainingSec = 0;
 		schedule();
 	}
 
@@ -495,7 +491,18 @@
 		var icsBtn = document.querySelector('[data-fh="action_ics"]');
 		if (icsBtn) icsBtn.addEventListener('click', doIcs);
 
+		bindTimerBtn('begin',   startTimer);
+		bindTimerBtn('pause',   pauseTimer);
+		bindTimerBtn('resume',  startTimer);
+		bindTimerBtn('reset',   abortTimer);
+		bindTimerBtn('restart', abortTimer);
+
 		render();
+	}
+
+	function bindTimerBtn(name, fn) {
+		var b = document.querySelector('[data-fh-timer="' + name + '"]');
+		if (b) b.addEventListener('click', fn);
 	}
 
 	if (document.readyState === 'loading') {

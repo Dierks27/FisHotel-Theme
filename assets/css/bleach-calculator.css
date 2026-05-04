@@ -194,19 +194,38 @@ body.page-template-page-bleach-calculator { background: var(--fh-bleach-bg); }
   line-height: 1.4;
 }
 
-/* Measuring cup --------------------------------------------------------- */
+/* Measuring-cup row ----------------------------------------------------- */
 .fh-bleach__cup-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  margin: 4px 0 18px;
-  padding: 12px 8px 6px;
+  margin: 6px 0 16px;
+  padding: 10px 4px;
   color: var(--fh-bleach-gold);
 }
-.fh-bleach__cup-svg { width: 100%; max-width: 280px; height: auto; display: block; }
-@media (max-width: 768px) { .fh-bleach__cup-svg { max-width: 168px; } /* ~60% on mobile */ }
-.fh-bleach__cup-fill { transition: y 300ms ease, height 300ms ease; }
+.fh-bleach__cup-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.fh-bleach__cup-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 4px;
+  width: 100%;
+  max-width: 360px;
+}
+.fh-bleach__cup-icon {
+  width: 28px;
+  height: 34px;
+  display: block;
+  flex: 0 0 auto;
+  transition: opacity 200ms ease;
+}
+.fh-bleach__cup-icon.is-empty { opacity: 0.22; }
+.fh-bleach__cup-icon-fill { transition: y 280ms ease, height 280ms ease; }
+@media (max-width: 768px) {
+  .fh-bleach__cup-icon { width: 24px; height: 30px; }
+  .fh-bleach__cup-row { max-width: 280px; gap: 2px 3px; }
+}
 .fh-bleach__cup-readout { text-align: center; width: 100%; }
 .fh-bleach__cup-label {
   font-family: 'Courier Prime', ui-monospace, monospace;

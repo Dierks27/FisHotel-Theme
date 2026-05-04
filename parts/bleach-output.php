@@ -19,68 +19,25 @@ defined( 'ABSPATH' ) || exit;
 			<h3 class="fh-bleach__step-name">Bleach Dose</h3>
 
 			<div class="fh-bleach__cup-wrap" aria-hidden="true">
-				<svg class="fh-bleach__cup-svg" viewBox="0 0 320 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Vintage glass measuring cup">
+				<svg class="fh-bleach__cup-defs" width="0" height="0" aria-hidden="true">
 					<defs>
-						<pattern id="fh-bleach-cup-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-							<line x1="0" y1="0" x2="0" y2="6" stroke="currentColor" stroke-width="0.6" opacity="0.55"/>
+						<pattern id="fh-bleach-cup-hatch" patternUnits="userSpaceOnUse" width="5" height="5" patternTransform="rotate(45)">
+							<line x1="0" y1="0" x2="0" y2="5" stroke="currentColor" stroke-width="0.6" opacity="0.55"/>
 						</pattern>
 					</defs>
-
-					<path d="M70 90 Q40 100 40 150 Q40 200 70 210" fill="none" stroke="currentColor" stroke-width="2"/>
-					<path d="M70 102 Q52 110 52 150 Q52 190 70 198" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.7"/>
-
-					<path d="M90 40 L215 40 Q228 40 232 52 L222 64 L218 280 Q218 286 212 286 L98 286 Q92 286 92 280 L88 52 Q90 40 90 40 Z"
-						  fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-
-					<rect class="fh-bleach__cup-fill" data-fh="cup_fill"
-						  x="92" y="280" width="126" height="0"
-						  fill="url(#fh-bleach-cup-hatch)" stroke="none"/>
-
-					<ellipse cx="156" cy="40" rx="65" ry="3.5" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
-
-					<g stroke="currentColor" stroke-width="1" fill="none">
-						<line x1="92" y1="40"  x2="102" y2="40"/>
-						<line x1="92" y1="70"  x2="100" y2="70"/>
-						<line x1="92" y1="100" x2="102" y2="100"/>
-						<line x1="92" y1="130" x2="100" y2="130"/>
-						<line x1="92" y1="160" x2="102" y2="160"/>
-						<line x1="92" y1="190" x2="100" y2="190"/>
-						<line x1="92" y1="220" x2="102" y2="220"/>
-						<line x1="92" y1="250" x2="100" y2="250"/>
-						<line x1="92" y1="265" x2="98"  y2="265"/>
-					</g>
-
-					<g font-family="Playfair Display, Georgia, serif" font-size="11" fill="currentColor" text-anchor="end">
-						<text x="86" y="44">4</text>
-						<text x="86" y="74">3&frac12;</text>
-						<text x="86" y="104">3</text>
-						<text x="86" y="134">2&frac12;</text>
-						<text x="86" y="164">2</text>
-						<text x="86" y="194">1&frac12;</text>
-						<text x="86" y="224">1</text>
-						<text x="86" y="254">&frac12;</text>
-						<text x="86" y="269" font-size="9">&frac14;</text>
-					</g>
-
-					<g stroke="currentColor" stroke-width="1" fill="none">
-						<line x1="218" y1="40"  x2="226" y2="40"/>
-						<line x1="218" y1="100" x2="226" y2="100"/>
-						<line x1="218" y1="160" x2="226" y2="160"/>
-						<line x1="218" y1="220" x2="226" y2="220"/>
-					</g>
-
-					<g font-family="Playfair Display, Georgia, serif" font-size="10" fill="currentColor" text-anchor="start">
-						<text x="230" y="44">1000</text>
-						<text x="230" y="104">750</text>
-						<text x="230" y="164">500</text>
-						<text x="230" y="224">250</text>
-						<text x="252" y="14" font-style="italic" font-size="9" opacity="0.6">ml</text>
-						<text x="84"  y="14" font-style="italic" font-size="9" opacity="0.6" text-anchor="end">cups</text>
-					</g>
-
-					<text x="156" y="232" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
-						  font-size="9" font-style="italic" letter-spacing="2" fill="currentColor" opacity="0.45">APOTHECARY</text>
 				</svg>
+
+				<div class="fh-bleach__cup-row" data-fh="cup_row">
+					<?php for ( $i = 0; $i < 12; $i++ ) : ?>
+						<svg class="fh-bleach__cup-icon is-empty" data-fh-cup="<?php echo (int) $i; ?>" viewBox="0 0 36 44" role="img" aria-hidden="true">
+							<path d="M5 13 Q1 17 1 24 Q1 31 5 33" fill="none" stroke="currentColor" stroke-width="1.1"/>
+							<rect class="fh-bleach__cup-icon-fill" data-fh-cup-fill="<?php echo (int) $i; ?>" x="7" y="38" width="22" height="0" fill="url(#fh-bleach-cup-hatch)"/>
+							<path d="M5 10 L31 10 Q33 10 32.5 13 L29 38 Q28.5 40 26 40 L10 40 Q7.5 40 7 38 L3.5 13 Q3 10 5 10 Z"
+								  fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+							<ellipse cx="18" cy="10" rx="13" ry="1.6" fill="none" stroke="currentColor" stroke-width="0.9" opacity="0.55"/>
+						</svg>
+					<?php endfor; ?>
+				</div>
 
 				<div class="fh-bleach__cup-readout">
 					<div class="fh-bleach__cup-label" data-fh="cup_label">&mdash;</div>
@@ -107,9 +64,13 @@ defined( 'ABSPATH' ) || exit;
 
 			<div class="fh-bleach__timer">
 				<div class="fh-bleach__timer-label">Countdown Timer</div>
-				<div class="fh-bleach__timer-display" data-fh="timer_display" role="timer" aria-live="off">00:00</div>
-				<div class="fh-bleach__timer-controls" data-fh="timer_controls">
-					<!-- buttons rendered by JS to match running/paused/completed state -->
+				<div class="fh-bleach__timer-display" data-fh="timer_display" role="timer" aria-live="off">30:00</div>
+				<div class="fh-bleach__timer-controls">
+					<button type="button" class="fh-bleach__timer-btn fh-bleach__timer-btn--primary" data-fh-timer="begin">Begin Soak</button>
+					<button type="button" class="fh-bleach__timer-btn" data-fh-timer="pause" hidden>Pause</button>
+					<button type="button" class="fh-bleach__timer-btn fh-bleach__timer-btn--primary" data-fh-timer="resume" hidden>Resume</button>
+					<button type="button" class="fh-bleach__timer-btn fh-bleach__timer-btn--abort" data-fh-timer="reset" hidden>Reset</button>
+					<button type="button" class="fh-bleach__timer-btn fh-bleach__timer-btn--primary" data-fh-timer="restart" hidden>Start New Cycle</button>
 				</div>
 				<div class="fh-bleach__timer-complete" data-fh="timer_complete" hidden>Soak complete &mdash; add neutralizer now.</div>
 				<p class="fh-bleach__timer-note">Timer never auto-starts; begin after the bleach is added.</p>

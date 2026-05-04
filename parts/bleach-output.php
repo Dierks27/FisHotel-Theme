@@ -14,9 +14,80 @@ defined( 'ABSPATH' ) || exit;
 
 	<div class="fh-bleach__steps">
 
-		<article class="fh-bleach__step">
+		<article class="fh-bleach__step fh-bleach__step--bleach">
 			<div class="fh-bleach__step-num">1</div>
 			<h3 class="fh-bleach__step-name">Bleach Dose</h3>
+
+			<div class="fh-bleach__cup-wrap" aria-hidden="true">
+				<svg class="fh-bleach__cup-svg" viewBox="0 0 320 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Vintage glass measuring cup">
+					<defs>
+						<pattern id="fh-bleach-cup-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+							<line x1="0" y1="0" x2="0" y2="6" stroke="currentColor" stroke-width="0.6" opacity="0.55"/>
+						</pattern>
+					</defs>
+
+					<path d="M70 90 Q40 100 40 150 Q40 200 70 210" fill="none" stroke="currentColor" stroke-width="2"/>
+					<path d="M70 102 Q52 110 52 150 Q52 190 70 198" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.7"/>
+
+					<path d="M90 40 L215 40 Q228 40 232 52 L222 64 L218 280 Q218 286 212 286 L98 286 Q92 286 92 280 L88 52 Q90 40 90 40 Z"
+						  fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+
+					<rect class="fh-bleach__cup-fill" data-fh="cup_fill"
+						  x="92" y="280" width="126" height="0"
+						  fill="url(#fh-bleach-cup-hatch)" stroke="none"/>
+
+					<ellipse cx="156" cy="40" rx="65" ry="3.5" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+
+					<g stroke="currentColor" stroke-width="1" fill="none">
+						<line x1="92" y1="40"  x2="102" y2="40"/>
+						<line x1="92" y1="70"  x2="100" y2="70"/>
+						<line x1="92" y1="100" x2="102" y2="100"/>
+						<line x1="92" y1="130" x2="100" y2="130"/>
+						<line x1="92" y1="160" x2="102" y2="160"/>
+						<line x1="92" y1="190" x2="100" y2="190"/>
+						<line x1="92" y1="220" x2="102" y2="220"/>
+						<line x1="92" y1="250" x2="100" y2="250"/>
+						<line x1="92" y1="265" x2="98"  y2="265"/>
+					</g>
+
+					<g font-family="Playfair Display, Georgia, serif" font-size="11" fill="currentColor" text-anchor="end">
+						<text x="86" y="44">4</text>
+						<text x="86" y="74">3&frac12;</text>
+						<text x="86" y="104">3</text>
+						<text x="86" y="134">2&frac12;</text>
+						<text x="86" y="164">2</text>
+						<text x="86" y="194">1&frac12;</text>
+						<text x="86" y="224">1</text>
+						<text x="86" y="254">&frac12;</text>
+						<text x="86" y="269" font-size="9">&frac14;</text>
+					</g>
+
+					<g stroke="currentColor" stroke-width="1" fill="none">
+						<line x1="218" y1="40"  x2="226" y2="40"/>
+						<line x1="218" y1="100" x2="226" y2="100"/>
+						<line x1="218" y1="160" x2="226" y2="160"/>
+						<line x1="218" y1="220" x2="226" y2="220"/>
+					</g>
+
+					<g font-family="Playfair Display, Georgia, serif" font-size="10" fill="currentColor" text-anchor="start">
+						<text x="230" y="44">1000</text>
+						<text x="230" y="104">750</text>
+						<text x="230" y="164">500</text>
+						<text x="230" y="224">250</text>
+						<text x="252" y="14" font-style="italic" font-size="9" opacity="0.6">ml</text>
+						<text x="84"  y="14" font-style="italic" font-size="9" opacity="0.6" text-anchor="end">cups</text>
+					</g>
+
+					<text x="156" y="232" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
+						  font-size="9" font-style="italic" letter-spacing="2" fill="currentColor" opacity="0.45">APOTHECARY</text>
+				</svg>
+
+				<div class="fh-bleach__cup-readout">
+					<div class="fh-bleach__cup-label" data-fh="cup_label">&mdash;</div>
+					<div class="fh-bleach__cup-repeat" data-fh="cup_repeat" hidden>&mdash;</div>
+				</div>
+			</div>
+
 			<div class="fh-bleach__big">
 				<span class="fh-bleach__big-num" data-fh="bleach_ml">&mdash;</span>
 				<span class="fh-bleach__big-unit">ml</span>
@@ -35,14 +106,13 @@ defined( 'ABSPATH' ) || exit;
 			<p class="fh-bleach__sub">Let it sit. Don&rsquo;t agitate. Cover if possible.</p>
 
 			<div class="fh-bleach__timer">
-				<div class="fh-bleach__timer-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-					<div class="fh-bleach__timer-fill" data-fh="timer_fill"></div>
-					<span class="fh-bleach__timer-readout" data-fh="timer_readout">0:00 / 30:00</span>
+				<div class="fh-bleach__timer-label">Countdown Timer</div>
+				<div class="fh-bleach__timer-display" data-fh="timer_display" role="timer" aria-live="off">00:00</div>
+				<div class="fh-bleach__timer-controls" data-fh="timer_controls">
+					<!-- buttons rendered by JS to match running/paused/completed state -->
 				</div>
-				<div class="fh-bleach__timer-ctrls">
-					<button type="button" class="fh-bleach__btn" data-fh="timer_start">Start Timer</button>
-					<button type="button" class="fh-bleach__btn fh-bleach__btn--ghost" data-fh="timer_reset">Reset</button>
-				</div>
+				<div class="fh-bleach__timer-complete" data-fh="timer_complete" hidden>Soak complete &mdash; add neutralizer now.</div>
+				<p class="fh-bleach__timer-note">Timer never auto-starts; begin after the bleach is added.</p>
 			</div>
 		</article>
 
@@ -65,34 +135,6 @@ defined( 'ABSPATH' ) || exit;
 		</article>
 
 	</div>
-
-	<figure class="fh-bleach__timeline">
-		<figcaption class="fh-bleach__timeline-title">Chlorine ppm over time</figcaption>
-		<svg class="fh-bleach__timeline-svg" viewBox="0 0 600 180" preserveAspectRatio="none" aria-hidden="true">
-			<g class="fh-bleach__timeline-grid" stroke="currentColor" stroke-width="0.5" opacity="0.18">
-				<line x1="40"  y1="20"  x2="40"  y2="150"/>
-				<line x1="40"  y1="150" x2="580" y2="150"/>
-				<line x1="40"  y1="50"  x2="580" y2="50"  stroke-dasharray="3 4"/>
-				<line x1="40"  y1="100" x2="580" y2="100" stroke-dasharray="3 4"/>
-			</g>
-
-			<rect class="fh-bleach__timeline-danger" data-fh="tl_danger" x="40" y="50" width="200" height="100" fill="var(--fh-bleach-amber)" opacity="0.10"/>
-			<rect class="fh-bleach__timeline-safe"   data-fh="tl_safe"   x="240" y="20" width="340" height="130" fill="var(--fh-bleach-gold)" opacity="0.06"/>
-
-			<polyline class="fh-bleach__timeline-line" data-fh="tl_line"
-				points="40,150 40,50 240,50 240,150 580,150"
-				fill="none" stroke="var(--fh-bleach-blue)" stroke-width="2" stroke-linejoin="round"/>
-
-			<g class="fh-bleach__timeline-labels" font-family="Playfair Display, Georgia, serif" font-size="10" fill="currentColor" opacity="0.65">
-				<text x="40"  y="170" text-anchor="middle">0</text>
-				<text x="240" y="170" text-anchor="middle" data-fh="tl_label_neut">30m</text>
-				<text x="580" y="170" text-anchor="middle" data-fh="tl_label_end">45m</text>
-				<text x="32"  y="54"  text-anchor="end"  data-fh="tl_label_target">200</text>
-				<text x="32"  y="154" text-anchor="end">0</text>
-				<text x="32"  y="14"  text-anchor="end" font-style="italic">ppm</text>
-			</g>
-		</svg>
-	</figure>
 
 	<div class="fh-bleach__actions">
 		<button type="button" class="fh-bleach__btn" data-fh="action_print">Print Schedule</button>

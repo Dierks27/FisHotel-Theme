@@ -1,9 +1,10 @@
 /**
  * FisHotel Bleach-Out Calculator — front-end logic
  *
- * State, math, persistence, timer, illustration tween, timeline graph,
- * print, and .ics export. State lives in localStorage `fishotel_bleach_v1`.
- * Re-render on every input change (debounced through requestAnimationFrame).
+ * State + math live in localStorage `fishotel_bleach_v1`. Re-renders on
+ * every input change (rAF-coalesced). Timer mirrors the existing
+ * /medication-dosing/ countdown — Begin / Pause / Resume / Abort, bell
+ * chime on completion, never auto-starts, never persisted across reload.
  */
 
 (function () {
@@ -12,11 +13,20 @@
 	var STORAGE_KEY = 'fishotel_bleach_v1';
 	var L_PER_GAL = 3.785;
 	var SODIUM_THIOSULFATE_FACTOR = 7.4;
+	var US_CUP_ML = 236.588;
+	var US_OZ_ML  = 29.5735;
+	var CUP_CAPACITY_ML = 1000;     // visual measuring cup capacity
+	var CUP_TOP_Y = 40, CUP_BOTTOM_Y = 280; // SVG coords for fill rect
 
 	var PRESETS = {
 		between_qt_fish: { target_ppm: 200, contact_min: 30 },
 		bleach_bomb:     { target_ppm: 500, contact_min: 60 }
 	};
+
+	var PERSISTED_KEYS = [
+		'volume', 'unit', 'concentration_pct', 'preset',
+		'custom_target_ppm', 'custom_contact_min', 'neutralizer'
+	];
 
 	var DEFAULTS = {
 		volume: 75,
@@ -25,13 +35,14 @@
 		preset: 'between_qt_fish',
 		custom_target_ppm: 200,
 		custom_contact_min: 30,
-		neutralizer: 'thiosulfate',
-		timer_started_at: null
+		neutralizer: 'thiosulfate'
 	};
 
 	var state = loadState();
 	var rafQueued = false;
-	var timerInterval = null;
+
+	// Timer state — never persisted, resets on reload (matches existing calc).
+	var timer = { totalSec: 0, remainingSec: 0, running: false, paused: false, completed: false, intervalId: null };
 
 	function loadState() {
 		try {
@@ -45,8 +56,11 @@
 	}
 
 	function saveState() {
-		try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-		catch (_) {}
+		try {
+			var snap = {};
+			PERSISTED_KEYS.forEach(function (k) { snap[k] = state[k]; });
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
+		} catch (_) {}
 	}
 
 	function resolvePreset() {
@@ -86,13 +100,14 @@
 		return (Math.round(n * 10) / 10).toString();
 	}
 
+	function fmt1(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+
 	// Render -----------------------------------------------------------------
 
 	function render() {
 		rafQueued = false;
 		var c = compute();
 
-		// Inputs (echo state into DOM where needed)
 		setVal('fh-bleach-volume', state.volume);
 		setVal('fh-bleach-conc', state.concentration_pct);
 		setVal('fh-bleach-custom-ppm', state.custom_target_ppm);
@@ -127,7 +142,7 @@
 			'(' + fmt(c.target_ppm) + ' × ' + fmt(c.volume_gal) + ' × 3.785) ÷ (' +
 			fmt(c.conc) + ' × 10) = ' + fmt(c.bleach_ml) + ' ml');
 
-		// Step 2
+		// Step 2 — contact minutes (the timer keeps its own remainingSec)
 		setText('contact_min', fmt(c.contact_min));
 
 		// Step 3
@@ -166,125 +181,165 @@
 				? fmt(c.thiosulfate_g) + ' g sodium thiosulfate'
 				: (c.prime_ml === null ? 'sodium thiosulfate (Prime out of range)' : fmt(c.prime_ml) + ' ml Seachem Prime'));
 
-		updateIllustration(c);
-		updateTimeline(c);
-		updateTimerUI(c);
+		updateMeasuringCup(c);
+		syncTimer(c);
+		renderTimer();
 	}
 
-	function updateIllustration(c) {
-		// Bottle: scale ml against a 100 ml reference (cap at 1.0).
-		var bottleFrac = Math.min(1, c.bleach_ml / 100);
-		var bottleTop = 36;
-		var bottleBottom = 200;
-		var bottleH = (bottleBottom - bottleTop) * bottleFrac;
-		var bottle = document.querySelector('.fh-bleach__bottle-fill');
-		if (bottle) {
-			bottle.setAttribute('y', String(bottleBottom - bottleH));
-			bottle.setAttribute('height', String(bottleH));
+	// Measuring cup ---------------------------------------------------------
+
+	function updateMeasuringCup(c) {
+		var ml = c.bleach_ml;
+		var frac = Math.max(0, Math.min(1, ml / CUP_CAPACITY_ML));
+		var fillH = (CUP_BOTTOM_Y - CUP_TOP_Y) * frac;
+
+		var fill = document.querySelector('[data-fh="cup_fill"]');
+		if (fill) {
+			fill.setAttribute('y', String(CUP_BOTTOM_Y - fillH));
+			fill.setAttribute('height', String(fillH));
 		}
 
-		// Tank: scale ppm against a 1000 ppm reference (cap at 1.0).
-		var tankFrac = Math.min(1, c.target_ppm / 1000);
-		var tankTop = 22;
-		var tankBottom = 180;
-		var tankH = (tankBottom - tankTop) * tankFrac;
-		var tank = document.querySelector('.fh-bleach__tank-fill');
-		if (tank) {
-			tank.setAttribute('y', String(tankBottom - tankH));
-			tank.setAttribute('height', String(tankH));
-		}
-	}
+		var cups = ml / US_CUP_ML;
+		var oz   = ml / US_OZ_ML;
+		setText('cup_label', fmt(ml) + ' ml · ' + fmt1(cups) + ' cups · ' + fmt1(oz) + ' oz');
 
-	function updateTimeline(c) {
-		// X axis: contact_min (rise + plateau) + 15 min for neutralizer + rinse window.
-		// Coordinate frame: x 40..580 (540 wide), y 50..150 (100 tall = ppm scale).
-		var xLeft = 40, xRight = 580, yTop = 20, yBase = 150;
-		var totalMin = c.contact_min + 15;
-		var neutX = xLeft + ((c.contact_min / totalMin) * (xRight - xLeft));
-
-		// ppm-target line — use yTop+30 (~y=50) as the visual "target" plateau.
-		var yTarget = yTop + 30;
-
-		var line = document.querySelector('[data-fh="tl_line"]');
-		if (line) {
-			line.setAttribute('points',
-				xLeft + ',' + yBase + ' ' +
-				xLeft + ',' + yTarget + ' ' +
-				neutX + ',' + yTarget + ' ' +
-				neutX + ',' + yBase + ' ' +
-				xRight + ',' + yBase);
-		}
-
-		var danger = document.querySelector('[data-fh="tl_danger"]');
-		if (danger) {
-			danger.setAttribute('x', String(xLeft));
-			danger.setAttribute('width', String(neutX - xLeft));
-			danger.setAttribute('y', String(yTarget));
-			danger.setAttribute('height', String(yBase - yTarget));
-		}
-		var safe = document.querySelector('[data-fh="tl_safe"]');
-		if (safe) {
-			safe.setAttribute('x', String(neutX));
-			safe.setAttribute('width', String(xRight - neutX));
-			safe.setAttribute('y', String(yTop));
-			safe.setAttribute('height', String(yBase - yTop));
-		}
-
-		setText('tl_label_neut', c.contact_min + 'm');
-		setText('tl_label_end', totalMin + 'm');
-		setText('tl_label_target', String(c.target_ppm));
-	}
-
-	// Timer ------------------------------------------------------------------
-
-	function updateTimerUI(c) {
-		var fill = document.querySelector('[data-fh="timer_fill"]');
-		var read = document.querySelector('[data-fh="timer_readout"]');
-		var totalSec = c.contact_min * 60;
-		var elapsedSec = state.timer_started_at
-			? Math.min(totalSec, Math.floor((Date.now() - state.timer_started_at) / 1000))
-			: 0;
-		var pct = totalSec > 0 ? Math.min(100, (elapsedSec / totalSec) * 100) : 0;
-		if (fill) fill.style.width = pct + '%';
-		if (read) {
-			var rem = Math.max(0, totalSec - elapsedSec);
-			read.textContent = mmss(elapsedSec) + ' / ' + mmss(totalSec) +
-				(state.timer_started_at && rem === 0 ? ' — done' : '');
-		}
-		var bar = document.querySelector('.fh-bleach__timer-bar');
-		if (bar) bar.setAttribute('aria-valuenow', String(Math.round(pct)));
-
-		if (state.timer_started_at && elapsedSec >= totalSec) {
-			stopTimer(false);
+		var repeat = document.querySelector('[data-fh="cup_repeat"]');
+		if (repeat) {
+			if (ml > CUP_CAPACITY_ML) {
+				var fills = Math.ceil(ml / CUP_CAPACITY_ML);
+				repeat.textContent = '× ' + fills + ' cup fills · approx ' + fmt1(cups) + ' cups total';
+				repeat.hidden = false;
+			} else {
+				repeat.hidden = true;
+			}
 		}
 	}
 
-	function mmss(sec) {
+	// Timer (countdown — matches /medication-dosing/) -----------------------
+
+	function syncTimer(c) {
+		var newTotal = Math.round(c.contact_min * 60);
+		// If the timer is idle, slave its total + remaining to the current preset.
+		if (!timer.running && !timer.paused && !timer.completed) {
+			timer.totalSec = newTotal;
+			timer.remainingSec = newTotal;
+		}
+	}
+
+	function renderTimer() {
+		var displayEl = document.querySelector('[data-fh="timer_display"]');
+		if (displayEl) displayEl.textContent = formatMMSS(timer.remainingSec);
+
+		var doneEl = document.querySelector('[data-fh="timer_complete"]');
+		if (doneEl) doneEl.hidden = !timer.completed;
+
+		var ctrls = document.querySelector('[data-fh="timer_controls"]');
+		if (!ctrls) return;
+		ctrls.innerHTML = '';
+
+		if (timer.completed) {
+			ctrls.appendChild(timerBtn('Start New Cycle', 'primary', function () {
+				timer = { totalSec: 0, remainingSec: 0, running: false, paused: false, completed: false, intervalId: null };
+				schedule();
+			}));
+			return;
+		}
+
+		if (!timer.running && !timer.paused && timer.remainingSec === timer.totalSec) {
+			ctrls.appendChild(timerBtn('Begin Soak', 'primary', startTimer));
+		} else if (timer.running && !timer.paused) {
+			ctrls.appendChild(timerBtn('Pause', '', pauseTimer));
+			ctrls.appendChild(timerBtn('Abort', 'abort', abortTimer));
+		} else if (timer.paused) {
+			ctrls.appendChild(timerBtn('Resume', 'primary', startTimer));
+			ctrls.appendChild(timerBtn('Abort', 'abort', abortTimer));
+		}
+	}
+
+	function timerBtn(label, variant, onClick) {
+		var b = document.createElement('button');
+		b.type = 'button';
+		b.className = 'fh-bleach__timer-btn' + (variant ? ' fh-bleach__timer-btn--' + variant : '');
+		b.textContent = label;
+		b.addEventListener('click', onClick);
+		return b;
+	}
+
+	function formatMMSS(sec) {
+		if (sec < 0) sec = 0;
 		var m = Math.floor(sec / 60);
 		var s = sec % 60;
-		return m + ':' + (s < 10 ? '0' : '') + s;
+		return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
 	}
 
 	function startTimer() {
-		if (state.timer_started_at) return;
-		state.timer_started_at = Date.now();
-		saveState();
-		tickTimer();
-		if (!timerInterval) timerInterval = setInterval(tickTimer, 1000);
-	}
-
-	function stopTimer(clear) {
-		if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-		if (clear) {
-			state.timer_started_at = null;
-			saveState();
-		}
+		if (timer.intervalId) return;
+		timer.running = true;
+		timer.paused = false;
+		timer.intervalId = setInterval(function () {
+			timer.remainingSec -= 1;
+			var d = document.querySelector('[data-fh="timer_display"]');
+			if (d) d.textContent = formatMMSS(timer.remainingSec);
+			if (timer.remainingSec <= 0) {
+				clearInterval(timer.intervalId);
+				timer.intervalId = null;
+				timer.running = false;
+				timer.completed = true;
+				playBellChime();
+				schedule();
+			}
+		}, 1000);
 		schedule();
 	}
 
-	function tickTimer() { schedule(); }
+	function pauseTimer() {
+		if (timer.intervalId) { clearInterval(timer.intervalId); timer.intervalId = null; }
+		timer.running = false;
+		timer.paused = true;
+		schedule();
+	}
 
-	// Print + ICS ------------------------------------------------------------
+	function abortTimer() {
+		if (timer.intervalId) { clearInterval(timer.intervalId); timer.intervalId = null; }
+		timer = { totalSec: 0, remainingSec: 0, running: false, paused: false, completed: false, intervalId: null };
+		schedule();
+	}
+
+	function playBellChime() {
+		try {
+			var Ctx = window.AudioContext || window.webkitAudioContext;
+			if (!Ctx) return;
+			var ctx = new Ctx();
+			var now = ctx.currentTime;
+
+			var playPartial = function (freq, gain, startOffset, decayTime) {
+				var osc = ctx.createOscillator();
+				var g = ctx.createGain();
+				osc.type = 'sine';
+				osc.frequency.setValueAtTime(freq, now + startOffset);
+				g.gain.setValueAtTime(0.0001, now + startOffset);
+				g.gain.exponentialRampToValueAtTime(gain, now + startOffset + 0.005);
+				g.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + decayTime);
+				osc.connect(g);
+				g.connect(ctx.destination);
+				osc.start(now + startOffset);
+				osc.stop(now + startOffset + decayTime + 0.05);
+			};
+
+			playPartial(660,  0.25, 0,    2.5);
+			playPartial(990,  0.12, 0,    1.8);
+			playPartial(1320, 0.08, 0,    1.2);
+			playPartial(660,  0.18, 0.65, 2.2);
+			playPartial(990,  0.09, 0.65, 1.6);
+			playPartial(1320, 0.06, 0.65, 1.1);
+
+			setTimeout(function () { try { ctx.close(); } catch (e) {} }, 3500);
+		} catch (e) {
+			// AudioContext unavailable — no-op
+		}
+	}
+
+	// Print + ICS -----------------------------------------------------------
 
 	function doPrint() { window.print(); }
 
@@ -435,20 +490,10 @@
 			});
 		});
 
-		var startBtn = document.querySelector('[data-fh="timer_start"]');
-		if (startBtn) startBtn.addEventListener('click', startTimer);
-		var resetBtn = document.querySelector('[data-fh="timer_reset"]');
-		if (resetBtn) resetBtn.addEventListener('click', function () { stopTimer(true); });
-
 		var printBtn = document.querySelector('[data-fh="action_print"]');
 		if (printBtn) printBtn.addEventListener('click', doPrint);
 		var icsBtn = document.querySelector('[data-fh="action_ics"]');
 		if (icsBtn) icsBtn.addEventListener('click', doIcs);
-
-		// Resume timer if running.
-		if (state.timer_started_at && !timerInterval) {
-			timerInterval = setInterval(tickTimer, 1000);
-		}
 
 		render();
 	}

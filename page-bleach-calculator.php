@@ -28,7 +28,6 @@ $include   = function ( $file ) use ( $parts_dir ) {
 
 		<?php $include( 'bleach-hero.php' ); ?>
 		<?php $include( 'bleach-inputs.php' ); ?>
-		<?php $include( 'bleach-illustration.php' ); ?>
 		<?php $include( 'bleach-output.php' ); ?>
 		<?php $include( 'bleach-warnings.php' ); ?>
 

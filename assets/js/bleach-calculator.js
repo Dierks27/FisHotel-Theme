@@ -15,7 +15,7 @@
 	var SODIUM_THIOSULFATE_FACTOR = 7.4;
 	var US_CUP_ML = 236.588;
 	var US_OZ_ML  = 29.5735;
-	var CUP_SLOTS = 12;              // pre-rendered cup-icon slots in DOM
+	var CUP_DISPLAY_CAP = 8;         // max cup icons shown in the row before overflow indicator
 	var CUP_FILL_TOP = 13, CUP_FILL_BOTTOM = 38; // SVG coords inside one cup icon
 
 	var PRESETS = {
@@ -188,32 +188,54 @@
 
 	// Measuring cup row -----------------------------------------------------
 
+	var CUP_SVG_TEMPLATE =
+		'<svg class="fh-bleach__cup-icon" viewBox="0 0 36 44" role="img" aria-hidden="true">' +
+			'<path d="M5 13 Q1 17 1 24 Q1 31 5 33" fill="none" stroke="currentColor" stroke-width="1.1"/>' +
+			'<rect class="fh-bleach__cup-icon-fill" x="7" y="38" width="22" height="0" fill="url(#fh-bleach-cup-hatch)"/>' +
+			'<path d="M5 10 L31 10 Q33 10 32.5 13 L29 38 Q28.5 40 26 40 L10 40 Q7.5 40 7 38 L3.5 13 Q3 10 5 10 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
+			'<ellipse cx="18" cy="10" rx="13" ry="1.6" fill="none" stroke="currentColor" stroke-width="0.9" opacity="0.55"/>' +
+		'</svg>';
+
 	function updateMeasuringCup(c) {
-		var ml   = c.bleach_ml;
-		var cups = ml / US_CUP_ML;
-		var oz   = ml / US_OZ_ML;
+		var ml       = c.bleach_ml;
+		var cups     = ml / US_CUP_ML;
+		var oz       = ml / US_OZ_ML;
 		var fullRange = CUP_FILL_BOTTOM - CUP_FILL_TOP;
+		var displayed = Math.min(Math.max(0, Math.ceil(cups)), CUP_DISPLAY_CAP);
 
-		for (var i = 0; i < CUP_SLOTS; i++) {
-			var slot = document.querySelector('[data-fh-cup="' + i + '"]');
-			var fill = document.querySelector('[data-fh-cup-fill="' + i + '"]');
-			if (!slot || !fill) continue;
+		var row = document.querySelector('[data-fh="cup_row"]');
+		if (row) {
+			// Add or remove cup elements to match `displayed`. Reusing existing
+			// nodes lets the CSS transition on y/height tween fills in place.
+			var holder = document.createElement('div');
+			while (row.children.length < displayed) {
+				holder.innerHTML = CUP_SVG_TEMPLATE;
+				row.appendChild(holder.firstChild);
+			}
+			while (row.children.length > displayed) {
+				row.removeChild(row.lastChild);
+			}
 
-			// Each slot represents 1 US cup. Fraction = how much of THIS cup is filled.
-			var slotFrac = Math.max(0, Math.min(1, cups - i));
-			var h = fullRange * slotFrac;
-			fill.setAttribute('y', String(CUP_FILL_BOTTOM - h));
-			fill.setAttribute('height', String(h));
-			slot.classList.toggle('is-empty', slotFrac === 0);
+			for (var i = 0; i < displayed; i++) {
+				var slot = row.children[i];
+				var slotFrac = Math.max(0, Math.min(1, cups - i));
+				var h = fullRange * slotFrac;
+				var fill = slot.querySelector('.fh-bleach__cup-icon-fill');
+				if (fill) {
+					fill.setAttribute('y', String(CUP_FILL_BOTTOM - h));
+					fill.setAttribute('height', String(h));
+				}
+				slot.classList.toggle('is-empty', slotFrac === 0);
+			}
 		}
 
 		setText('cup_label', fmt(ml) + ' ml · ' + fmt1(cups) + ' cups · ' + fmt1(oz) + ' oz');
 
 		var repeat = document.querySelector('[data-fh="cup_repeat"]');
 		if (repeat) {
-			if (cups > CUP_SLOTS) {
-				var extra = cups - CUP_SLOTS;
-				repeat.textContent = '+ ' + fmt1(extra) + ' more cups (' + fmt1(cups) + ' total)';
+			if (cups > CUP_DISPLAY_CAP) {
+				var extra = cups - CUP_DISPLAY_CAP;
+				repeat.textContent = '+ ' + fmt1(extra) + ' more cups (= ' + fmt1(cups) + ' cups · ' + fmt(ml) + ' ml total)';
 				repeat.hidden = false;
 			} else {
 				repeat.hidden = true;

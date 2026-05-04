@@ -28,15 +28,7 @@ defined( 'ABSPATH' ) || exit;
 				</svg>
 
 				<div class="fh-bleach__cup-row" data-fh="cup_row">
-					<?php for ( $i = 0; $i < 12; $i++ ) : ?>
-						<svg class="fh-bleach__cup-icon is-empty" data-fh-cup="<?php echo (int) $i; ?>" viewBox="0 0 36 44" role="img" aria-hidden="true">
-							<path d="M5 13 Q1 17 1 24 Q1 31 5 33" fill="none" stroke="currentColor" stroke-width="1.1"/>
-							<rect class="fh-bleach__cup-icon-fill" data-fh-cup-fill="<?php echo (int) $i; ?>" x="7" y="38" width="22" height="0" fill="url(#fh-bleach-cup-hatch)"/>
-							<path d="M5 10 L31 10 Q33 10 32.5 13 L29 38 Q28.5 40 26 40 L10 40 Q7.5 40 7 38 L3.5 13 Q3 10 5 10 Z"
-								  fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-							<ellipse cx="18" cy="10" rx="13" ry="1.6" fill="none" stroke="currentColor" stroke-width="0.9" opacity="0.55"/>
-						</svg>
-					<?php endfor; ?>
+					<!-- cup icons rendered by JS based on cups_needed -->
 				</div>
 
 				<div class="fh-bleach__cup-readout">

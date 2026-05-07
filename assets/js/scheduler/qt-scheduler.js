@@ -173,6 +173,30 @@
     return doses;
   }
 
+  /**
+   * The therapeutic copper level scheduled for a given day. Drives the WC
+   * "bump back to" line so a ramp-day WC tells the user to climb back to
+   * that day's ramp target — not the final 2.5 ppm.
+   */
+  function copperTargetForDay(day, rampDays, therapeutic) {
+    if (day <= rampDays) return (day / rampDays) * therapeutic;
+    return therapeutic;
+  }
+
+  /**
+   * Read the stage_overlay_template entry for a phase, defaulting safely.
+   * Generators use this to copy color_token + collapsed_range_message into
+   * the stages array they emit (the collapse pass needs collapsed_range_message
+   * present for any phase that's allowed to collapse empty-day runs).
+   */
+  function overlayFor(method, phase) {
+    var arr = (method && method.stage_overlay_template) || [];
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].phase === phase) return arr[i];
+    }
+    return {};
+  }
+
   // ---- Cu + Formalin ---------------------------------------------------------
 
   function generateCopperFormalin(method) {
@@ -228,10 +252,10 @@
     entries.push({ day: totalDays, type: 'marker', text: 'End QT — fish cleared.' });
 
     var stages = [
-      { phase: 'ramp',         label: 'Copper Ramp',       color_token: 'amber', startDay: 1,                 endDay: rampDays },
-      { phase: 'therapeutic',  label: 'Therapeutic Hold',  color_token: 'green', startDay: therapStart,       endDay: transferDay - 1 },
-      { phase: 'transfer',     label: 'Transfer',          color_token: 'slate', startDay: transferDay,       endDay: transferDay },
-      { phase: 'observation',  label: 'Clean Observation', color_token: 'teal',  startDay: transferDay + 1,   endDay: totalDays }
+      buildStage(method, 'ramp',         1,                 rampDays),
+      buildStage(method, 'therapeutic',  therapStart,       transferDay - 1),
+      buildStage(method, 'transfer',     transferDay,       transferDay),
+      buildStage(method, 'observation',  transferDay + 1,   totalDays)
     ];
 
     return {
@@ -241,6 +265,24 @@
       methodName: method.name,
       methodId: method.method_id,
       keyMeds: keyMedsForMethod(method)
+    };
+  }
+
+  /**
+   * Compose a stage object from the method's stage_overlay_template entry +
+   * the computed startDay/endDay. Carries collapsed_range_message through
+   * so the collapse pass can compress empty-day runs.
+   */
+  function buildStage(method, phase, startDay, endDay) {
+    var ov = overlayFor(method, phase);
+    return {
+      phase: phase,
+      label: ov.label || phase,
+      color_token: ov.color_token || 'slate',
+      startDay: startDay,
+      endDay: endDay,
+      single_day: !!ov.single_day,
+      collapsed_range_message: ov.collapsed_range_message || null
     };
   }
 
@@ -275,11 +317,15 @@
     var wcPct = method.metro_water_change_pct || 25;
     metroDays.forEach(function (md, idx) {
       if (idx > 0) {
-        // 25% WC + retest + bump copper before dosing metro
+        // 25% WC + retest + bump copper before dosing metro. Use the day's ramp
+        // target — not the final therapeutic — so a Day-3 WC line says "1.50 ppm"
+        // not "2.50 ppm". (Bumping to 2.50 mid-ramp would skip ramp days and
+        // could shock sensitive species.)
+        var dayTargetPpm = copperTargetForDay(md, rampDays, therapeutic);
         entries.push({
           day: md,
           type: 'water_change',
-          text: '<strong>' + wcPct + '% water change</strong>, then retest + bump ' + medLink('copper_power') + ' to ' + therapeutic.toFixed(2) + ' ppm.'
+          text: '<strong>' + wcPct + '% water change</strong>, then retest + bump ' + medLink('copper_power') + ' to ' + dayTargetPpm.toFixed(2) + ' ppm.'
         });
       }
       var mtext = 'Dose ' + medLink('metronidazole') + ' — <strong>' + metroFmt + '</strong> (≈18.75 mg/gal, range 12.5–25)';
@@ -306,10 +352,10 @@
     entries.push({ day: totalDays, type: 'marker', text: 'End QT — fish cleared.' });
 
     var stages = [
-      { phase: 'ramp',         label: 'Copper Ramp',       color_token: 'amber', startDay: 1,                 endDay: rampDays },
-      { phase: 'therapeutic',  label: 'Therapeutic Hold',  color_token: 'green', startDay: therapStart,       endDay: transferDay - 1 },
-      { phase: 'transfer',     label: 'Transfer',          color_token: 'slate', startDay: transferDay,       endDay: transferDay },
-      { phase: 'observation',  label: 'Clean Observation', color_token: 'teal',  startDay: transferDay + 1,   endDay: totalDays }
+      buildStage(method, 'ramp',         1,                 rampDays),
+      buildStage(method, 'therapeutic',  therapStart,       transferDay - 1),
+      buildStage(method, 'transfer',     transferDay,       transferDay),
+      buildStage(method, 'observation',  transferDay + 1,   totalDays)
     ];
 
     return {
@@ -402,9 +448,9 @@
     entries.push({ day: totalDays, type: 'marker', text: 'End QT — fish cleared.' });
 
     var stages = [
-      { phase: 'therapeutic',  label: 'Therapeutic Hold',  color_token: 'green', startDay: 1,                 endDay: holdDays },
-      { phase: 'transfer',     label: 'Transfer',          color_token: 'slate', startDay: transferDay,       endDay: transferDay },
-      { phase: 'observation',  label: 'Clean Observation', color_token: 'teal',  startDay: transferDay + 1,   endDay: totalDays }
+      buildStage(method, 'therapeutic',  1,                 holdDays),
+      buildStage(method, 'transfer',     transferDay,       transferDay),
+      buildStage(method, 'observation',  transferDay + 1,   totalDays)
     ];
 
     return {
@@ -609,6 +655,7 @@
         input.checked = !!state.addons[a.addon_id];
         input.addEventListener('change', function () {
           state.addons[a.addon_id] = input.checked;
+          regenerateScheduleIfRendered();
         });
         row.appendChild(input);
         row.appendChild(el('span', 'fst-addon-label', a.label));
@@ -661,6 +708,7 @@
       tab.addEventListener('click', function () {
         state.params[paramDef.param_id] = opt.value;
         renderConfigPanel();
+        regenerateScheduleIfRendered();
       });
       tabs.appendChild(tab);
     });
@@ -682,6 +730,20 @@
       var rect = $output.getBoundingClientRect();
       window.scrollBy({ top: rect.top - 80, behavior: 'smooth' });
     }
+  }
+
+  /**
+   * If a schedule has already been generated for the current method, recompute
+   * and re-render it in place. Used by param-toggle / addon-checkbox / tank /
+   * temp / start-date handlers so the user sees the change without clicking
+   * Generate again. Switching method does NOT call this — that's intentional.
+   */
+  function regenerateScheduleIfRendered() {
+    if (!state.lastSchedule || !state.methodId) return;
+    var method = getMethod(state.methodId);
+    if (!method) return;
+    state.lastSchedule = generateSchedule(method);
+    renderOutput();
   }
 
   // ============================================================================
@@ -872,6 +934,22 @@
     if ($medList) $medList.style.display = 'none';
   }
 
+  // Within-day bullet order, read as workflow: setup → drain → dose → notes.
+  // Stable sort: ties keep generation order so copper-bump stays before metro
+  // even though both are "dose" type.
+  var ACTION_PRIORITY = { structural: 1, water_change: 2, dose: 3, marker: 4, warning: 5 };
+
+  function sortActionsForDisplay(actions) {
+    return (actions || []).map(function (a, i) { return { a: a, i: i }; })
+      .sort(function (x, y) {
+        var px = ACTION_PRIORITY[x.a.type] || 99;
+        var py = ACTION_PRIORITY[y.a.type] || 99;
+        if (px !== py) return px - py;
+        return x.i - y.i;
+      })
+      .map(function (w) { return w.a; });
+  }
+
   function renderDayCard(item) {
     var stage = item.stage;
     var card = el('div', 'fst-day fst-day--' + (stage ? stage.color_token : 'none'));
@@ -881,7 +959,7 @@
     card.appendChild(band);
 
     var actionList = el('div', 'fst-day-actions');
-    var actions = item.actions || [];
+    var actions = sortActionsForDisplay(item.actions || []);
     if (!actions.length) {
       actionList.appendChild(el('div', 'fst-day-action fst-day-action--obs', 'No action required this day.'));
     } else {
@@ -1154,10 +1232,7 @@
           $startDateInput.value = v;
         }
         state.startDate = v;
-        // Re-render inline if a schedule already exists (no second Generate click required)
-        if (state.lastSchedule && state.methodId) {
-          renderOutput();
-        }
+        regenerateScheduleIfRendered();
       });
     }
 
@@ -1165,11 +1240,7 @@
       $tankSlider.addEventListener('input', function () {
         state.tankGal = +$tankSlider.value;
         if ($tankText) $tankText.value = String(state.tankGal);
-        // Re-render output if a schedule already exists, so volumetric lines stay current
-        if (state.lastSchedule && state.methodId) {
-          state.lastSchedule = generateSchedule(getMethod(state.methodId));
-          renderOutput();
-        }
+        regenerateScheduleIfRendered();
       });
     }
     if ($tankText) {
@@ -1181,10 +1252,7 @@
         if (v < min || v > max) return;
         state.tankGal = v;
         if ($tankSlider) $tankSlider.value = String(v);
-        if (state.lastSchedule && state.methodId) {
-          state.lastSchedule = generateSchedule(getMethod(state.methodId));
-          renderOutput();
-        }
+        regenerateScheduleIfRendered();
       });
       $tankText.addEventListener('blur', function () {
         var min = +($tankSlider && $tankSlider.min || 3);
@@ -1204,8 +1272,10 @@
         var v = parseFloat($tempText.value);
         if (!isNaN(v)) {
           state.tempF = v;
-          // Re-evaluate conflicts (formalin contraindication)
+          // Re-evaluate conflicts (formalin contraindication) and re-render
+          // any schedule already on screen.
           if (state.methodId) renderConfigPanel();
+          regenerateScheduleIfRendered();
         }
       });
     }

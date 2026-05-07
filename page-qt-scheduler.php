@@ -36,12 +36,12 @@ if ( $initial_tank > 500 ) { $initial_tank = 500; }
                 <input id="fst-tank-text" class="fst-tank-text" type="number" min="3" max="500" step="1" value="<?php echo esc_attr( $initial_tank ); ?>" aria-label="Tank volume in gallons">
                 <span class="fst-input-unit">gal</span>
             </div>
-            <div class="fst-input-row">
+            <div class="fst-input-row fst-input-row--temp">
                 <label for="fst-temp" class="fst-input-label">Tank Temp</label>
                 <input id="fst-temp" class="fst-temp-text" type="number" min="60" max="90" step="1" value="77" aria-label="Tank temperature in Fahrenheit">
                 <span class="fst-input-unit">°F</span>
             </div>
-            <div class="fst-input-row">
+            <div class="fst-input-row fst-input-row--startdate">
                 <label for="fst-start-date" class="fst-input-label">Start Date</label>
                 <input id="fst-start-date" class="fst-startdate-input" type="date" aria-label="Day 1 starts on">
             </div>

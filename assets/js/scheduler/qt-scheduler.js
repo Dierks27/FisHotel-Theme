@@ -961,7 +961,14 @@
     var actionList = el('div', 'fst-day-actions');
     var actions = sortActionsForDisplay(item.actions || []);
     if (!actions.length) {
-      actionList.appendChild(el('div', 'fst-day-action fst-day-action--obs', 'No action required this day.'));
+      // Standalone empty day (no dose/water_change/structural/marker). The v1.1
+      // collapse rule keeps single-day empties as own cards — but reusing the
+      // stage's collapsed_range_message reads as part of the stage's rhythm
+      // instead of as a gap. Falls through to the generic fallback only when
+      // a stage has no collapsed_range_message (HTTM stages, in practice never
+      // empty since every HTTM day has actions).
+      var fallback = (stage && stage.collapsed_range_message) || 'No action required this day.';
+      actionList.appendChild(el('div', 'fst-day-action fst-day-action--obs', fallback));
     } else {
       actions.forEach(function (a) {
         var line = el('div', 'fst-day-action fst-day-action--' + a.type);

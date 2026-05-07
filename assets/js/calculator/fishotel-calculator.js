@@ -115,6 +115,8 @@
     // Bath inputs
     bathMode: 'prolonged',  // 'bath' | 'prolonged' for treatment_type === 'both'
     bathTier: null,          // tier_id, null = use default
+    // CP variant — 'one_and_done_standard' | 'one_and_done_aggressive' | 'starter_eod'
+    cpVariant: null,
     // Timer (never persisted; resets on nav/med-switch)
     timer: null,             // { totalSec, remainingSec, running, paused, completed, intervalId }
     // Computed schedule (for print + ics)
@@ -551,6 +553,152 @@
     if (med.special_notes_generic) {
       root.appendChild(renderNote(med.special_notes_generic));
     }
+
+    return root;
+  }
+
+  /**
+   * Chloroquine Phosphate — three-variant renderer reading med.dosing_variants.
+   * Variants: one_and_done_standard (default, 60 mg/gal), one_and_done_aggressive
+   * (80 mg/gal), starter_eod (40 mg/gal start + 8 mg/gal every 48h × 6).
+   */
+  function getCpVariant(med) {
+    var variants = med.dosing_variants || [];
+    var id = state.cpVariant || med.default_variant_id;
+    for (var i = 0; i < variants.length; i++) {
+      if (variants[i].variant_id === id) return variants[i];
+    }
+    for (var j = 0; j < variants.length; j++) {
+      if (variants[j].is_default) return variants[j];
+    }
+    return variants[0] || null;
+  }
+
+  function renderCpVariantToggle(med) {
+    var variants = med.dosing_variants || [];
+    var wrap = el('div', 'fh-qh-sens');
+    wrap.appendChild(el('div', 'fh-qh-senslabel', 'Dosing Protocol'));
+    var tabs = el('div', 'fh-qh-senstabs');
+    variants.forEach(function (v) {
+      var current = state.cpVariant || med.default_variant_id;
+      var t = el('button', 'fh-qh-senstab' + (current === v.variant_id ? ' is-on' : ''));
+      t.type = 'button';
+      t.innerHTML = (v.label || v.variant_id) + '<small>' + (v.sublabel || '') + '</small>';
+      t.addEventListener('click', function () {
+        state.cpVariant = v.variant_id;
+        rerenderPanel();
+      });
+      tabs.appendChild(t);
+    });
+    wrap.appendChild(tabs);
+    return wrap;
+  }
+
+  function renderChloroquine(med) {
+    var root = el('div', 'fh-qh-card');
+    var variant = getCpVariant(med);
+    root.appendChild(renderHeader(med, variant ? variant.label : 'Antiprotozoal'));
+
+    if (!variant) {
+      root.appendChild(renderWarning('No dosing variant data available for chloroquine phosphate.'));
+      return root;
+    }
+
+    root.appendChild(renderCpVariantToggle(med));
+
+    var doseDays = [];
+    var totalDays = +variant.duration_days || 28;
+
+    if (variant.variant_id === 'starter_eod') {
+      // Two-number readout: starter dose + maintenance dose
+      var starterMgPerGal = +variant.starter_dose_mg_per_gal;
+      var maintMgPerGal   = +variant.maintenance_dose_mg_per_gal;
+      var starterMg = state.tankGal * starterMgPerGal;
+      var maintMg   = state.tankGal * maintMgPerGal;
+      var fStart = formatDoseMg(starterMg);
+      var fMaint = formatDoseMg(maintMg);
+
+      var dose = el('div', 'fh-qh-doseblock fh-qh-doseblock-cp-starter');
+      var leftCol = el('div', 'fh-qh-doseinfo');
+      leftCol.innerHTML =
+        '<div class="fh-qh-dosesub">Starter (Day 1)</div>' +
+        '<div><span class="fh-qh-dosenum">' + fStart.value + '</span><span class="fh-qh-doseunit">' + fStart.unit + '</span></div>' +
+        '<div class="fh-qh-doseswing">' + starterMgPerGal + ' mg/gal</div>';
+      var rightCol = el('div', 'fh-qh-doseinfo');
+      rightCol.innerHTML =
+        '<div class="fh-qh-dosesub">Maintenance (every 48h × 6)</div>' +
+        '<div><span class="fh-qh-dosenum">' + fMaint.value + '</span><span class="fh-qh-doseunit">' + fMaint.unit + '</span></div>' +
+        '<div class="fh-qh-doseswing">' + maintMgPerGal + ' mg/gal</div>';
+      dose.appendChild(leftCol);
+      dose.appendChild(rightCol);
+      root.appendChild(dose);
+
+      doseDays = [variant.starter_offset_days || 1].concat(variant.maintenance_offsets_days || []);
+
+      state.lastComputed = {
+        medName: med.name_generic,
+        doseLabel: fStart.value + ' ' + fStart.unit + ' (starter) + ' + fMaint.value + ' ' + fMaint.unit + ' × 6 (maintenance)',
+        doseDays: doseDays,
+        waterChangeDays: [],
+        totalDays: totalDays
+      };
+    } else {
+      // One-and-done variants
+      var mgPerGal = +variant.dose_per_session_mg_per_gal;
+      var totalMg  = state.tankGal * mgPerGal;
+      var f = formatDoseMg(totalMg);
+
+      var doseB = el('div', 'fh-qh-doseblock');
+      var info = el('div', 'fh-qh-doseinfo');
+      info.innerHTML =
+        '<div><span class="fh-qh-dosenum">' + f.value + '</span><span class="fh-qh-doseunit">' + f.unit + '</span></div>' +
+        '<div class="fh-qh-dosesub">Single shot · Day 1</div>' +
+        '<div class="fh-qh-doseswing">' + mgPerGal + ' mg/gal</div>';
+      doseB.appendChild(info);
+      root.appendChild(doseB);
+
+      doseDays = [1];
+
+      state.lastComputed = {
+        medName: med.name_generic,
+        doseLabel: f.value + ' ' + f.unit + ' single dose at ' + mgPerGal + ' mg/gal',
+        doseDays: doseDays,
+        waterChangeDays: [],
+        totalDays: totalDays
+      };
+    }
+
+    // Schedule cells
+    var freqLabel;
+    if (variant.variant_id === 'starter_eod') {
+      freqLabel = 'Day 1 + every 48h';
+    } else {
+      freqLabel = 'Single shot';
+    }
+    root.appendChild(renderScheduleCells([
+      { label: 'Frequency',    value: freqLabel,                                 sub: '' },
+      { label: 'Therapeutic',  value: '14 days',                                 sub: 'then transfer' },
+      { label: 'Total course', value: totalDays + ' days',                       sub: 'incl. 14d observation' }
+    ]));
+
+    // Indication
+    if (variant.indication) {
+      root.appendChild(renderNote(variant.indication));
+    }
+
+    // Variant warnings
+    (variant.warnings || []).forEach(function (w) {
+      root.appendChild(renderWarning(w));
+    });
+
+    // Biofilter advisory
+    if (variant.biofilter_required === false && !variant.biofilter_compatible) {
+      root.appendChild(renderWarning('No biofilter — CP kills nitrifying bacteria. Run on a bare-bottom system; daily ammonia testing required.'));
+    } else if (variant.biofilter_compatible) {
+      root.appendChild(renderNote('Biofilter compatible — maintenance dosing compensates for biofilm-mediated CP biodegradation.'));
+    }
+
+    if (med.special_notes_generic) root.appendChild(renderNote(med.special_notes_generic));
 
     return root;
   }
@@ -1331,6 +1479,8 @@
       node = renderBathCard(med);
     } else if (med.med_id === 'praziquantel') {
       node = renderPrazi(med);
+    } else if (med.med_id === 'chloroquine_phosphate' && Array.isArray(med.dosing_variants) && med.dosing_variants.length) {
+      node = renderChloroquine(med);
     } else if (cat === 'copper') {
       node = renderRampHold(med);
     } else if (cat === 'antibiotic') {
@@ -1436,6 +1586,7 @@
     clearTimer();
     state.medId = medId;
     state.bathTier = null;
+    state.cpVariant = null;
     var med = getMed(medId);
     if (med) {
       state.bathMode = (med.treatment_type === 'bath') ? 'bath' : 'prolonged';
@@ -1444,6 +1595,10 @@
       if (med.category === 'copper') {
         state.targetPpm  = +med.therapeutic_ppm_target || 2.5;
         state.currentPpm = 0;
+      }
+      // CP variant defaults to its declared default
+      if (med.med_id === 'chloroquine_phosphate' && med.default_variant_id) {
+        state.cpVariant = med.default_variant_id;
       }
     }
     if (med && med.category) {

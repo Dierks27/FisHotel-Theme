@@ -14,7 +14,7 @@ class FisHotel_Medication_Data {
 
     const OPTION_KEY   = 'fishotel_medication_data';
     const VERSION_KEY  = 'fishotel_medication_data_schema_version';
-    const SEED_VERSION = '1.9';
+    const SEED_VERSION = '1.10';
 
     public static function maybe_seed() {
         $current_version = get_option( self::VERSION_KEY, '' );

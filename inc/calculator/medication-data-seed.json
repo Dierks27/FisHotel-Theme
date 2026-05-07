@@ -1,8 +1,8 @@
 {
-  "$schema_version": "1.9",
+  "$schema_version": "1.10",
   "generated_at": "2026-04-18T19:25:54Z",
   "primary_generic_source": "Humblefish Medication Dosing Guide (canonical text supplied by user, matching https://humble.fish/community/threads/medication-dosing-guide.1124/)",
-  "notes": "All calculated_brand_mg_per_gal_to_deliver_pure_dose values are based on active_ingredient_pct and the generic LOW dose. Measure weights are left null when not published on the label; this is tracked in the verification log. | v1.1 (2026-04-18): Added MetroPlex in-house scoop weight (150 mg). Added fishotel_default overrides for Copper Power (1.73 ml/gal empirical) and Cupramine (HF ramp). Triple Sulfa substitution surfaced via ui_user_surface_note. Hyposalinity duration 5→30 days. Added sulfa_tmp, minocycline, fenbendazole_internal as meds 23-25. | v1.2 (2026-04-18): Jeff-supplied updates from Fritz/API/Seachem/Copper Power/PolyGuard data dump. Filled measure_weight_mg for NeoPlex (125), KanaPlex (125), SulfaPlex (145), Fritz Maracyn (600), Maracyn Two (600). Confirmed API packets all 2000 mg total weight. Added Copper Power 0.5% Cu(II) and SG 1.12. Added Seachem PolyGuard (med 26) with full 5-active composition disclosure. | v1.3 (2026-04-18): Added bath_protocol framework. Schema additions: treatment_type on every med ('prolonged' | 'bath' | 'both'); bath_protocol nested object on the 8 bath-capable meds (ciprofloxacin, enrofloxacin, fenbendazole (external), formalin_37, hydrogen_peroxide_3, methylene_blue, acriflavine, nitrofuracin_green); temperature_contraindication_celsius=27 on formalin_37 with amber-warning text; root-level default_bath_safety object carrying Noga's universal abort criteria, aeration requirement, default scaleless-fish sensitivity, and bioassay recommendation. Enrofloxacin and Nitrofuracin Green implement Standard/Aggressive tiers per Jeff's discrepancy adjudications. All new data points cite Noga (2nd ed., 2010) by chapter, entry, book page, and PDF page; all Noga material is paraphrased, never quoted. See discrepancy-report.md for the four adjudicated Humblefish-vs-Noga conflicts and the ciprofloxacin/acriflavine Noga gaps.",
+  "notes": "All calculated_brand_mg_per_gal_to_deliver_pure_dose values are based on active_ingredient_pct and the generic LOW dose. Measure weights are left null when not published on the label; this is tracked in the verification log. | v1.1 (2026-04-18): Added MetroPlex in-house scoop weight (150 mg). Added fishotel_default overrides for Copper Power (1.73 ml/gal empirical) and Cupramine (HF ramp). Triple Sulfa substitution surfaced via ui_user_surface_note. Hyposalinity duration 5→30 days. Added sulfa_tmp, minocycline, fenbendazole_internal as meds 23-25. | v1.2 (2026-04-18): Jeff-supplied updates from Fritz/API/Seachem/Copper Power/PolyGuard data dump. Filled measure_weight_mg for NeoPlex (125), KanaPlex (125), SulfaPlex (145), Fritz Maracyn (600), Maracyn Two (600). Confirmed API packets all 2000 mg total weight. Added Copper Power 0.5% Cu(II) and SG 1.12. Added Seachem PolyGuard (med 26) with full 5-active composition disclosure. | v1.3 (2026-04-18): Added bath_protocol framework. Schema additions: treatment_type on every med ('prolonged' | 'bath' | 'both'); bath_protocol nested object on the 8 bath-capable meds (ciprofloxacin, enrofloxacin, fenbendazole (external), formalin_37, hydrogen_peroxide_3, methylene_blue, acriflavine, nitrofuracin_green); temperature_contraindication_celsius=27 on formalin_37 with amber-warning text; root-level default_bath_safety object carrying Noga's universal abort criteria, aeration requirement, default scaleless-fish sensitivity, and bioassay recommendation. Enrofloxacin and Nitrofuracin Green implement Standard/Aggressive tiers per Jeff's discrepancy adjudications. All new data points cite Noga (2nd ed., 2010) by chapter, entry, book page, and PDF page; all Noga material is paraphrased, never quoted. See discrepancy-report.md for the four adjudicated Humblefish-vs-Noga conflicts and the ciprofloxacin/acriflavine Noga gaps. | v1.10 (2026-05-07): Chloroquine Phosphate now carries a `dosing_variants` array with three variants (one_and_done_standard 60 mg/gal default, one_and_done_aggressive 80 mg/gal for Uronema, starter_eod 40 + 8/48h for biofiltered setups). The med calculator and the new QT Scheduler both read variant data from this single source. Each variant declares biofilter_required/compatible, warnings, and a verification_source_citation. Cumulative dose for starter_eod ≈ 88 mg/gal across 14 days per Patin et al. 2021. All v1.3 fields preserved on the chloroquine_phosphate record.",
   "default_bath_safety": {
     "abort_criteria": {
       "description": "Observable signs that require immediate termination of a bath and transfer of the fish to clean, untreated, aerated water — even if the scheduled bath time is incomplete. Applies to every bath_protocol in this schema unless that protocol explicitly overrides a specific field.",
@@ -1027,9 +1027,72 @@
       "verification_source_urls": [
         "https://humble.fish/community/threads/medication-dosing-guide.1124/",
         "https://humble.fish/community/threads/chloroquine-phosphate.16/",
+        "https://humble.fish/community/threads/new-study-on-chloroquine-degradation.8681/",
         "https://reefs.com/magazine/aquarium-fish-chloroquine-a-new-drug-for-treating-fish-diseases/"
       ],
-      "brand_equivalents": []
+      "brand_equivalents": [],
+      "default_variant_id": "one_and_done_standard",
+      "dosing_variants": [
+        {
+          "variant_id": "one_and_done_standard",
+          "label": "One-and-Done Standard",
+          "sublabel": "60 mg/gal · sterile QT",
+          "is_default": true,
+          "dose_per_session_mg_per_gal": 60,
+          "session_count": 1,
+          "session_offsets_days": [1],
+          "frequency_hours": 720,
+          "duration_days": 28,
+          "water_change_pct_before_dose": 0,
+          "biofilter_required": false,
+          "biofilter_compatible": false,
+          "indication": "Routine ich/velvet/brook coverage in sterile QT. Buffer-against-biodegradation level per Humblefish.",
+          "warnings": [],
+          "verification_source_citation": "Humblefish Chloroquine Phosphate thread, Protocol #1 (sterile-tank, 60 mg/gal buffer level for biodegradation)."
+        },
+        {
+          "variant_id": "one_and_done_aggressive",
+          "label": "One-and-Done Aggressive",
+          "sublabel": "80 mg/gal · treats Uronema",
+          "is_default": false,
+          "dose_per_session_mg_per_gal": 80,
+          "session_count": 1,
+          "session_offsets_days": [1],
+          "frequency_hours": 720,
+          "duration_days": 28,
+          "water_change_pct_before_dose": 0,
+          "biofilter_required": false,
+          "biofilter_compatible": false,
+          "indication": "Uronema or refractory parasites in sterile QT.",
+          "warnings": [
+            "Causes appetite suppression, lethargy, and other side effects per Humblefish — reserve for Uronema or refractory presentations."
+          ],
+          "verification_source_citation": "Humblefish Chloroquine Phosphate thread (Uronema dose, 20 mg/L = 80 mg/gal)."
+        },
+        {
+          "variant_id": "starter_eod",
+          "label": "Starter + Every-Other-Day",
+          "sublabel": "40 mg/gal start + 8 mg/gal every 48h",
+          "is_default": false,
+          "starter_dose_mg_per_gal": 40,
+          "starter_offset_days": 1,
+          "maintenance_dose_mg_per_gal": 8,
+          "maintenance_frequency_hours": 48,
+          "maintenance_offsets_days": [3, 5, 7, 9, 11, 13],
+          "session_count": 7,
+          "frequency_hours": 48,
+          "duration_days": 28,
+          "water_change_pct_before_dose": 0,
+          "biofilter_required": false,
+          "biofilter_compatible": true,
+          "cumulative_dose_mg_per_gal": 88,
+          "indication": "Established biofilter setups; maintenance compensates for biofilm-mediated CP biodegradation.",
+          "warnings": [
+            "Cumulative dose ≈ 88 mg/gal across 14 days. Water-column concentration trends 40–60 mg/gal due to ongoing degradation."
+          ],
+          "verification_source_citation": "Humblefish Chloroquine Phosphate thread, Protocol #2. Patin et al. 2021, Science of the Total Environment, 'Towards understanding microbial degradation of chloroquine in large saltwater systems' — confirms biofilm-mediated CP degradation."
+        }
+      ]
     },
     {
       "med_id": "formalin_37",

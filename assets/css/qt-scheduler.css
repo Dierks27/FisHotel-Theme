@@ -50,8 +50,8 @@ body.page-template-page-qt-scheduler { background: var(--fst-bg); }
 .fst-hairline { width: 60px; height: 1px; background: var(--fst-hair); margin: 0 auto 16px; }
 .fst-intro { color: var(--fst-muted); font-size: 14px; max-width: 480px; margin: 0 auto; line-height: 1.5; }
 
-/* ---- Tank + temp inputs row --------------------------------------------- */
-.fst-inputs { display: grid; grid-template-columns: 1fr 240px; gap: 12px; margin-bottom: 20px; }
+/* ---- Tank + temp + start-date inputs row ------------------------------- */
+.fst-inputs { display: grid; grid-template-columns: 1fr 220px 220px; gap: 12px; margin-bottom: 20px; }
 .fst-input-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--fst-tint-weak); border: 0.5px solid var(--fst-tint-strong); border-radius: 3px; }
 .fst-input-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); min-width: 88px; }
 .fst-tank-slider { flex: 1; accent-color: var(--fst-gold); height: 4px; }
@@ -66,7 +66,22 @@ body.page-template-page-qt-scheduler { background: var(--fst-bg); }
 .fst-tank-text::-webkit-inner-spin-button, .fst-tank-text::-webkit-outer-spin-button,
 .fst-temp-text::-webkit-inner-spin-button, .fst-temp-text::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .fst-input-unit { font-size: 12px; color: var(--fst-dim); }
-@media (max-width: 720px) {
+
+/* Start-date input styled to match the other top-row inputs (faux-pill) */
+.fst-startdate-input {
+  background: transparent; color: var(--fst-cream);
+  font-family: var(--fst-font-display); font-size: 16px;
+  border: none; border-bottom: 0.5px solid var(--fst-tint-strong);
+  border-radius: 0; padding: 4px 6px; flex: 1; outline: none;
+  color-scheme: dark; transition: border-color 0.15s;
+}
+.fst-startdate-input:focus { border-bottom-color: var(--fst-gold); }
+.fst-startdate-input::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) hue-rotate(0deg) saturate(2); cursor: pointer; }
+
+@media (max-width: 900px) {
+  .fst-inputs { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 540px) {
   .fst-inputs { grid-template-columns: 1fr; }
 }
 
@@ -144,6 +159,34 @@ body.page-template-page-qt-scheduler { background: var(--fst-bg); }
 .fst-output-head { text-align: center; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 0.5px solid var(--fst-tint-med); }
 .fst-output-title { font-family: var(--fst-font-display); font-size: 24px; color: var(--fst-cream); }
 .fst-output-meta { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fst-gold); margin-top: 6px; }
+.fst-output-daterange { font-family: var(--fst-font-display); font-style: italic; font-size: 13px; color: var(--fst-muted); margin-top: 6px; }
+
+/* ---- Meds + required gear (top of output) ------------------------------ */
+.fst-medsblock { margin: 0 0 22px; padding: 16px 18px; border: 0.5px solid var(--fst-tint-med); border-radius: 3px; background: var(--fst-tint-weak); }
+.fst-medsblock-title { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); margin-bottom: 10px; }
+.fst-medsblock .fst-medlist { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.fst-medsblock .fst-medlist li { font-size: 13px; }
+.fst-medsblock .fst-medlist a.fst-med-link { color: var(--fst-cream); text-decoration: none; padding: 4px 10px; border: 0.5px solid var(--fst-tint-strong); border-radius: 2px; transition: all 0.15s; }
+.fst-medsblock .fst-medlist a.fst-med-link:hover { border-color: var(--fst-gold); color: var(--fst-gold); }
+
+.fst-gear { margin-top: 14px; padding-top: 12px; border-top: 0.5px solid var(--fst-tint-med); }
+.fst-gear-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-dim); margin-bottom: 6px; }
+.fst-gear-list { list-style: none; margin: 0; padding: 0; }
+.fst-gear-list li { font-size: 12px; line-height: 1.6; color: var(--fst-muted); padding-left: 14px; position: relative; }
+.fst-gear-list li::before { content: '·'; position: absolute; left: 4px; color: var(--fst-gold); }
+.fst-gear-item { color: var(--fst-cream); }
+.fst-gear-note { color: var(--fst-dim); font-style: italic; }
+
+/* ---- Daily reminders (collapsible details/summary) --------------------- */
+details.fst-reminders { margin: 0 0 22px; padding: 12px 18px; border: 0.5px solid var(--fst-tint-med); border-radius: 3px; background: var(--fst-tint-weak); }
+details.fst-reminders > summary { cursor: pointer; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); padding: 4px 0; list-style: none; outline: none; }
+details.fst-reminders > summary::-webkit-details-marker { display: none; }
+details.fst-reminders > summary::before { content: '▸ '; color: var(--fst-gold); display: inline-block; transition: transform 0.15s; transform-origin: center; margin-right: 4px; }
+details.fst-reminders[open] > summary::before { content: '▾ '; }
+.fst-reminders-list { margin: 8px 0 4px; padding-left: 18px; color: var(--fst-muted); font-size: 12px; line-height: 1.7; }
+
+/* Inline section label (between blocks of output) */
+.fst-section-label--inline { margin-top: 4px; margin-bottom: 10px; }
 
 .fst-days { display: flex; flex-direction: column; gap: 10px; }
 .fst-day { border: 0.5px solid var(--fst-tint-med); border-radius: 3px; overflow: hidden; }
@@ -174,19 +217,20 @@ body.page-template-page-qt-scheduler { background: var(--fst-bg); }
 .fst-icon--struct { color: var(--fst-amber); }
 .fst-icon--dose { color: var(--fst-gold); }
 
-/* ---- Reminders + references --------------------------------------------- */
-.fst-reminders, .fst-references { margin-top: 20px; padding-top: 16px; border-top: 0.5px solid var(--fst-tint-med); }
-.fst-reminders-title { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); margin-bottom: 8px; }
-.fst-reminders ul, .fst-references ul { margin: 0; padding-left: 18px; color: var(--fst-muted); font-size: 12px; line-height: 1.6; }
+/* ---- References block (still rendered after day list) ------------------ */
+.fst-references { margin-top: 20px; padding-top: 16px; border-top: 0.5px solid var(--fst-tint-med); }
+.fst-references .fst-reminders-title { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); margin-bottom: 8px; }
+.fst-references ul { margin: 0; padding-left: 18px; color: var(--fst-muted); font-size: 12px; line-height: 1.6; }
 .fst-references a { color: var(--fst-gold); text-decoration: underline; }
 
-/* ---- Med list (data-med-sku slots) ------------------------------------- */
-.fst-medlist-wrap { margin-bottom: 24px; padding: 18px 20px; border: 0.5px solid var(--fst-tint-med); border-radius: 3px; background: var(--fst-tint-weak); }
-.fst-medlist-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); margin-bottom: 8px; }
-.fst-medlist { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
-.fst-medlist li { font-size: 13px; }
-.fst-medlist a.fst-med-link { color: var(--fst-cream); text-decoration: none; padding: 4px 10px; border: 0.5px solid var(--fst-tint-strong); border-radius: 2px; transition: all 0.15s; }
-.fst-medlist a.fst-med-link:hover { border-color: var(--fst-gold); color: var(--fst-gold); }
+/* ---- Range card (compressed empty-day run) ----------------------------- */
+.fst-day--range { background: rgba(255, 255, 255, 0.015); }
+.fst-day--range .fst-day-band { background: var(--fst-tint-weak); }
+.fst-day--range .fst-day-actions { padding: 10px 14px; }
+.fst-day--range .fst-day-action--range { color: var(--fst-muted); font-style: italic; }
+
+/* ---- Legacy slot kept hidden (output now renders meds inline) ---------- */
+.fst-medlist-wrap { display: none; }
 
 /* ---- Action footer ------------------------------------------------------ */
 .fst-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
@@ -198,11 +242,6 @@ body.page-template-page-qt-scheduler { background: var(--fst-bg); }
   transition: all 0.15s; font-weight: 300;
 }
 .fst-actbtn:hover { background: var(--fst-tint-med); border-color: var(--fst-gold); }
-.fst-startdate-wrap { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--fst-dim); letter-spacing: 0.12em; text-transform: uppercase; }
-.fst-startdate-input {
-  background: transparent; color: var(--fst-cream); border: 0.5px solid var(--fst-tint-strong);
-  border-radius: 2px; padding: 8px 10px; font-family: var(--fst-font-body); font-size: 12px;
-}
 
 /* ---- Disclaimer + error ------------------------------------------------- */
 .fst-disclaimer { font-size: 11px; color: var(--fst-dim); font-style: italic; text-align: center; line-height: 1.7; margin-top: 24px; max-width: 600px; margin-left: auto; margin-right: auto; }

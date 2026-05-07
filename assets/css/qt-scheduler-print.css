@@ -13,11 +13,29 @@
   .fst-qt-wrap { border: 0 !important; padding: 0 !important; margin: 0 !important; max-width: none !important; }
 
   /* Hide interactive chrome */
-  .fst-inputs, .fst-method-grid, .fst-section-label, .fst-config-panel,
+  .fst-inputs, .fst-method-grid, .fst-config-panel,
   .fst-actions, .fst-medlist-wrap { display: none !important; }
 
+  /* Drop the inline "DAY-BY-DAY" eyebrow on print — section flow is obvious */
+  .fst-section-label { display: none !important; }
+
   .fst-output { border: 0 !important; padding: 0 !important; }
-  .fst-output-head, .fst-output-title, .fst-output-meta { color: #111 !important; }
+  .fst-output-head, .fst-output-title, .fst-output-meta, .fst-output-daterange { color: #111 !important; }
+
+  /* Meds + gear block at the top of the printed schedule */
+  .fst-medsblock { background: white !important; border: 0.5pt solid #999 !important; padding: 6pt 8pt !important; margin-bottom: 8pt !important; }
+  .fst-medsblock-title, .fst-gear-label { color: #111 !important; }
+  .fst-medsblock .fst-medlist { gap: 4pt 10pt !important; }
+  .fst-medsblock .fst-medlist a.fst-med-link { color: #111 !important; border: 0.5pt solid #999 !important; padding: 2pt 6pt !important; font-weight: bold; }
+  .fst-gear-list li { color: #111 !important; }
+  .fst-gear-note { color: #444 !important; }
+
+  /* Reminders details — force-open and compact for print */
+  details.fst-reminders { background: white !important; border: 0.5pt solid #999 !important; padding: 6pt 8pt !important; margin-bottom: 8pt !important; }
+  details.fst-reminders > summary { color: #111 !important; cursor: default; }
+  details.fst-reminders > summary::before { display: none; }
+  details.fst-reminders[open] > summary::before { display: none; }
+  .fst-reminders-list { color: #111 !important; }
 
   .fst-day { page-break-inside: avoid; break-inside: avoid; border: 0.5pt solid #999 !important; margin-bottom: 6pt; }
   .fst-day-band { background: white !important; border-top: 1pt solid #444 !important; padding: 4pt 8pt; }
@@ -26,15 +44,20 @@
   .fst-day--teal   .fst-day-band { border-top-style: dotted; }
   .fst-day--slate  .fst-day-band { border-top-style: double; }
 
+  /* Range cards — compact one-liner */
+  .fst-day--range { background: white !important; }
+  .fst-day--range .fst-day-band { background: white !important; padding: 3pt 8pt; }
+  .fst-day--range .fst-day-actions { padding: 3pt 8pt; }
+
   .fst-day-num, .fst-day-stage { color: #111 !important; }
   .fst-day-actions { padding: 6pt 8pt; }
   .fst-day-action { color: #111 !important; font-size: 10pt; line-height: 1.4; }
-  .fst-day-action--obs { color: #555 !important; font-style: italic; }
+  .fst-day-action--obs, .fst-day-action--range { color: #555 !important; font-style: italic; }
   .fst-day-action a.fst-med-link { color: #111 !important; text-decoration: none; font-weight: bold; }
   .fst-icon { color: #555 !important; }
 
-  .fst-reminders, .fst-references { color: #111 !important; }
-  .fst-reminders ul, .fst-references ul { color: #444 !important; }
+  .fst-references { color: #111 !important; }
+  .fst-references ul { color: #444 !important; }
 
   .fst-eyebrow, .fst-title, .fst-hero { display: none !important; }
 

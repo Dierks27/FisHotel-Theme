@@ -51,10 +51,15 @@ body.page-template-page-qt-scheduler { background: var(--fst-bg); }
 .fst-intro { color: var(--fst-muted); font-size: 14px; max-width: 480px; margin: 0 auto; line-height: 1.5; }
 
 /* ---- Tank + temp + start-date inputs row ------------------------------- */
-.fst-inputs { display: grid; grid-template-columns: 1fr 220px 220px; gap: 12px; margin-bottom: 20px; }
-.fst-input-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--fst-tint-weak); border: 0.5px solid var(--fst-tint-strong); border-radius: 3px; }
-.fst-input-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); min-width: 88px; }
-.fst-tank-slider { flex: 1; accent-color: var(--fst-gold); height: 4px; }
+/* Three columns: tank slider gets the most room; temp is compact; start-date
+   widens to fit "MM/DD/YYYY 📅" plus its label without overflow. */
+.fst-inputs { display: grid; grid-template-columns: 2fr 1fr 1.5fr; gap: 12px; margin-bottom: 20px; }
+.fst-input-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--fst-tint-weak); border: 0.5px solid var(--fst-tint-strong); border-radius: 3px; min-width: 0; }
+.fst-input-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); flex-shrink: 0; }
+.fst-input-row--tank .fst-input-label,
+.fst-input-row--temp .fst-input-label { min-width: 88px; }
+.fst-input-row--startdate .fst-input-label { min-width: auto; }
+.fst-tank-slider { flex: 1; accent-color: var(--fst-gold); height: 4px; min-width: 0; }
 .fst-tank-text, .fst-temp-text {
   font-family: var(--fst-font-display); font-size: 22px; color: var(--fst-cream);
   background: transparent; border: none; border-bottom: 0.5px solid transparent;
@@ -65,24 +70,29 @@ body.page-template-page-qt-scheduler { background: var(--fst-bg); }
 .fst-tank-text:focus, .fst-temp-text:focus { border-bottom-color: var(--fst-gold); }
 .fst-tank-text::-webkit-inner-spin-button, .fst-tank-text::-webkit-outer-spin-button,
 .fst-temp-text::-webkit-inner-spin-button, .fst-temp-text::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.fst-input-unit { font-size: 12px; color: var(--fst-dim); }
+.fst-input-unit { font-size: 12px; color: var(--fst-dim); flex-shrink: 0; }
 
-/* Start-date input styled to match the other top-row inputs (faux-pill) */
+/* Start-date input styled to match the other top-row inputs (faux-pill).
+   font-variant-numeric: tabular-nums prevents digit width from shifting; min-width: 0
+   lets the input shrink inside the flex parent instead of overflowing the column. */
 .fst-startdate-input {
   background: transparent; color: var(--fst-cream);
   font-family: var(--fst-font-display); font-size: 16px;
+  font-variant-numeric: tabular-nums;
   border: none; border-bottom: 0.5px solid var(--fst-tint-strong);
-  border-radius: 0; padding: 4px 6px; flex: 1; outline: none;
-  color-scheme: dark; transition: border-color 0.15s;
+  border-radius: 0; padding: 4px 6px; flex: 1 1 auto; min-width: 0; max-width: 100%;
+  outline: none; color-scheme: dark; transition: border-color 0.15s;
 }
 .fst-startdate-input:focus { border-bottom-color: var(--fst-gold); }
 .fst-startdate-input::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) hue-rotate(0deg) saturate(2); cursor: pointer; }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .fst-inputs { grid-template-columns: 1fr 1fr; }
+  .fst-input-row--tank { grid-column: 1 / -1; }
 }
 @media (max-width: 540px) {
   .fst-inputs { grid-template-columns: 1fr; }
+  .fst-input-row--tank { grid-column: auto; }
 }
 
 /* ---- Method picker grid ------------------------------------------------- */

@@ -111,6 +111,8 @@ body.page-template-page-quarantine-help { background: var(--fh-qh-bg); }
 /* ---- Dose block (pipette/scoops + readout) ----------------------------- */
 .fh-qh-doseblock { display: flex; align-items: center; justify-content: center; gap: 32px; padding: 22px 0; border-top: 0.5px solid var(--fh-qh-tint-med); border-bottom: 0.5px solid var(--fh-qh-tint-med); }
 .fh-qh-doseblock-copper { }
+.fh-qh-doseblock-cp-starter { gap: 56px; }
+.fh-qh-doseblock-cp-starter .fh-qh-doseinfo { text-align: center; }
 .fh-qh-pipette-wrap { flex-shrink: 0; }
 .fh-qh-pipette { display: block; }
 .fh-qh-scoops { display: flex; flex-wrap: wrap; gap: 6px; max-width: 200px; flex-shrink: 0; }

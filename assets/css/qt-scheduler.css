@@ -1,0 +1,219 @@
+/**
+ * FisHotel QT Scheduler — styles
+ *
+ * Reuses the same design tokens as the medication calculator (calculator.css)
+ * — palette is set there. This stylesheet only adds scheduler-specific layout.
+ */
+
+:root {
+  --fst-bg:        #0f0f0f;
+  --fst-gold:      #d4a574;
+  --fst-cream:     #EDE0C0;
+  --fst-muted:     #9a8e80;
+  --fst-dim:       #807469;
+  --fst-dimmer:    #6b6058;
+  --fst-hair:      rgba(212, 165, 116, 0.5);
+  --fst-tint-weak:    rgba(212, 165, 116, 0.05);
+  --fst-tint-med:     rgba(212, 165, 116, 0.15);
+  --fst-tint-strong:  rgba(212, 165, 116, 0.25);
+  --fst-amber:     #d4a574;
+  --fst-green:     #4ea58a;
+  --fst-teal:      #5fa8c0;
+  --fst-slate:     #8a8378;
+  --fst-warn:      #e6b062;
+  --fst-warn-bg:   rgba(230, 176, 98, 0.1);
+  --fst-warn-border: rgba(230, 176, 98, 0.4);
+  --fst-font-display: 'Playfair Display', Georgia, serif;
+  --fst-font-body:    'Josefin Sans', -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ---- Page frame ---------------------------------------------------------- */
+.fst-qt-page { background: var(--fst-bg); color: var(--fst-cream); }
+body.page-template-page-qt-scheduler { background: var(--fst-bg); }
+.fst-qt-wrap {
+  max-width: 920px;
+  margin: 64px auto 80px;
+  padding: 56px 40px 72px;
+  font-family: var(--fst-font-body);
+  font-weight: 300;
+  border: 1px solid rgba(212, 165, 116, 0.28);
+  border-radius: 2px;
+}
+@media (max-width: 900px) {
+  .fst-qt-wrap { margin: 32px 16px 48px; padding: 40px 20px 56px; }
+}
+
+/* ---- Hero ---------------------------------------------------------------- */
+.fst-hero { text-align: center; margin-bottom: 36px; }
+.fst-eyebrow { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--fst-gold); margin-bottom: 10px; font-weight: 400; }
+.fst-title { font-family: var(--fst-font-display); font-size: 40px; color: var(--fst-cream); font-weight: 400; margin: 0 0 16px; line-height: 1.1; }
+.fst-hairline { width: 60px; height: 1px; background: var(--fst-hair); margin: 0 auto 16px; }
+.fst-intro { color: var(--fst-muted); font-size: 14px; max-width: 480px; margin: 0 auto; line-height: 1.5; }
+
+/* ---- Tank + temp inputs row --------------------------------------------- */
+.fst-inputs { display: grid; grid-template-columns: 1fr 240px; gap: 12px; margin-bottom: 20px; }
+.fst-input-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--fst-tint-weak); border: 0.5px solid var(--fst-tint-strong); border-radius: 3px; }
+.fst-input-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); min-width: 88px; }
+.fst-tank-slider { flex: 1; accent-color: var(--fst-gold); height: 4px; }
+.fst-tank-text, .fst-temp-text {
+  font-family: var(--fst-font-display); font-size: 22px; color: var(--fst-cream);
+  background: transparent; border: none; border-bottom: 0.5px solid transparent;
+  width: 80px; text-align: right; padding: 2px 4px; outline: none;
+  appearance: textfield; -moz-appearance: textfield; -webkit-appearance: none;
+  transition: border-color 0.15s;
+}
+.fst-tank-text:focus, .fst-temp-text:focus { border-bottom-color: var(--fst-gold); }
+.fst-tank-text::-webkit-inner-spin-button, .fst-tank-text::-webkit-outer-spin-button,
+.fst-temp-text::-webkit-inner-spin-button, .fst-temp-text::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.fst-input-unit { font-size: 12px; color: var(--fst-dim); }
+@media (max-width: 720px) {
+  .fst-inputs { grid-template-columns: 1fr; }
+}
+
+/* ---- Method picker grid ------------------------------------------------- */
+.fst-section-label { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--fst-gold); margin: 28px 0 12px; }
+.fst-method-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+@media (max-width: 720px) { .fst-method-grid { grid-template-columns: 1fr; } }
+.fst-method-tile {
+  position: relative; text-align: left; padding: 18px 18px 16px;
+  border: 0.5px solid var(--fst-tint-med); border-radius: 3px;
+  background: transparent; cursor: pointer; font-family: var(--fst-font-body);
+  color: var(--fst-cream); transition: all 0.15s; display: flex; flex-direction: column; gap: 6px;
+}
+.fst-method-tile:hover { border-color: var(--fst-tint-strong); }
+.fst-method-tile.is-on { border-color: var(--fst-gold); background: var(--fst-tint-med); }
+.fst-method-tile--default::before {
+  content: 'RECOMMENDED'; position: absolute; top: -10px; left: 14px;
+  padding: 2px 8px; font-size: 9px; letter-spacing: 0.18em; color: var(--fst-bg);
+  background: var(--fst-gold); border-radius: 2px;
+}
+.fst-method-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.fst-method-name { font-family: var(--fst-font-display); font-size: 20px; color: var(--fst-cream); font-weight: 400; line-height: 1.2; }
+.fst-method-badge { padding: 2px 8px; font-size: 10px; letter-spacing: 0.14em; color: var(--fst-gold); background: var(--fst-tint-med); border-radius: 2px; }
+.fst-method-tagline { font-size: 12px; color: var(--fst-gold); letter-spacing: 0.06em; }
+.fst-method-summary { font-size: 12px; color: var(--fst-muted); line-height: 1.5; }
+
+/* ---- Config panel ------------------------------------------------------- */
+.fst-config-panel { border: 0.5px solid var(--fst-tint-strong); border-radius: 3px; padding: 24px 26px; margin-bottom: 24px; }
+.fst-config-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 0.5px solid var(--fst-tint-med); }
+.fst-config-title { font-family: var(--fst-font-display); font-size: 22px; color: var(--fst-cream); }
+.fst-config-tag { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fst-gold); }
+.fst-config-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); margin-bottom: 10px; }
+
+.fst-param { margin-bottom: 18px; }
+.fst-param-help { font-size: 11px; color: var(--fst-dim); font-style: italic; margin-top: 6px; line-height: 1.5; }
+.fst-pills { display: flex; flex-wrap: wrap; border-bottom: 0.5px solid var(--fst-tint-strong); }
+.fst-pill {
+  padding: 10px 16px 10px 0; margin-right: 22px; margin-bottom: -0.5px;
+  background: transparent; border: none; border-bottom: 1.5px solid transparent;
+  font-family: var(--fst-font-body); font-weight: 300; font-size: 12px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--fst-dimmer);
+  cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+}
+.fst-pill small { font-size: 10px; letter-spacing: 0.06em; text-transform: none; color: var(--fst-dim); }
+.fst-pill:hover { color: var(--fst-muted); }
+.fst-pill.is-on { color: var(--fst-gold); border-bottom-color: var(--fst-gold); }
+
+.fst-config-addons { margin-bottom: 18px; }
+.fst-addon-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+.fst-addon-row input { accent-color: var(--fst-gold); }
+.fst-addon-label { font-size: 13px; color: var(--fst-muted); }
+
+.fst-conflicts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.fst-conflict { display: flex; gap: 10px; padding: 10px 14px; border-radius: 3px; font-size: 12px; line-height: 1.5;
+  background: var(--fst-warn-bg); border: 0.5px solid var(--fst-warn-border); border-left: 2px solid var(--fst-warn);
+  color: var(--fst-cream);
+}
+.fst-conflict-icon { color: var(--fst-warn); flex-shrink: 0; }
+.fst-conflict--block {
+  background: rgba(212, 106, 90, 0.12); border-color: rgba(212, 106, 90, 0.4); border-left-color: #d46a5a;
+}
+.fst-conflict--block .fst-conflict-icon { color: #d46a5a; }
+
+.fst-generate-row { text-align: center; padding-top: 6px; }
+.fst-generate-btn {
+  background: var(--fst-gold); color: var(--fst-bg); border: 0.5px solid var(--fst-gold);
+  padding: 13px 28px; font-family: var(--fst-font-body); font-size: 12px;
+  letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; border-radius: 3px;
+  transition: all 0.15s; font-weight: 400;
+}
+.fst-generate-btn:hover { background: #e0b488; border-color: #e0b488; }
+
+/* ---- Output ------------------------------------------------------------- */
+.fst-output { border: 0.5px solid var(--fst-tint-strong); border-radius: 3px; padding: 24px 26px; margin-bottom: 24px; }
+.fst-output-head { text-align: center; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 0.5px solid var(--fst-tint-med); }
+.fst-output-title { font-family: var(--fst-font-display); font-size: 24px; color: var(--fst-cream); }
+.fst-output-meta { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fst-gold); margin-top: 6px; }
+
+.fst-days { display: flex; flex-direction: column; gap: 10px; }
+.fst-day { border: 0.5px solid var(--fst-tint-med); border-radius: 3px; overflow: hidden; }
+.fst-day-band {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 14px; border-top: 4px solid var(--fst-slate);
+  background: var(--fst-tint-weak);
+}
+.fst-day--amber  .fst-day-band { border-top-color: var(--fst-amber); }
+.fst-day--green  .fst-day-band { border-top-color: var(--fst-green); }
+.fst-day--teal   .fst-day-band { border-top-color: var(--fst-teal); }
+.fst-day--slate  .fst-day-band { border-top-color: var(--fst-slate); }
+.fst-day--none   .fst-day-band { border-top-color: var(--fst-tint-strong); }
+.fst-day-num { font-family: var(--fst-font-display); font-size: 16px; color: var(--fst-cream); font-weight: 400; }
+.fst-day-stage { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fst-gold); }
+
+.fst-day-actions { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.fst-day-action {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 13px; line-height: 1.5; color: var(--fst-cream);
+}
+.fst-day-action--obs { color: var(--fst-dim); font-style: italic; }
+.fst-day-action--warning { color: var(--fst-warn); }
+.fst-day-action a.fst-med-link { color: var(--fst-gold); text-decoration: underline; text-decoration-thickness: 0.5px; text-underline-offset: 2px; }
+.fst-day-action a.fst-med-link:hover { color: #e0b488; }
+.fst-icon { flex-shrink: 0; width: 16px; text-align: center; color: var(--fst-gold); font-size: 12px; line-height: 1.5; }
+.fst-icon--water { color: var(--fst-teal); }
+.fst-icon--struct { color: var(--fst-amber); }
+.fst-icon--dose { color: var(--fst-gold); }
+
+/* ---- Reminders + references --------------------------------------------- */
+.fst-reminders, .fst-references { margin-top: 20px; padding-top: 16px; border-top: 0.5px solid var(--fst-tint-med); }
+.fst-reminders-title { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); margin-bottom: 8px; }
+.fst-reminders ul, .fst-references ul { margin: 0; padding-left: 18px; color: var(--fst-muted); font-size: 12px; line-height: 1.6; }
+.fst-references a { color: var(--fst-gold); text-decoration: underline; }
+
+/* ---- Med list (data-med-sku slots) ------------------------------------- */
+.fst-medlist-wrap { margin-bottom: 24px; padding: 18px 20px; border: 0.5px solid var(--fst-tint-med); border-radius: 3px; background: var(--fst-tint-weak); }
+.fst-medlist-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-gold); margin-bottom: 8px; }
+.fst-medlist { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.fst-medlist li { font-size: 13px; }
+.fst-medlist a.fst-med-link { color: var(--fst-cream); text-decoration: none; padding: 4px 10px; border: 0.5px solid var(--fst-tint-strong); border-radius: 2px; transition: all 0.15s; }
+.fst-medlist a.fst-med-link:hover { border-color: var(--fst-gold); color: var(--fst-gold); }
+
+/* ---- Action footer ------------------------------------------------------ */
+.fst-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+.fst-actions .fst-spacer { flex: 1; }
+.fst-actbtn {
+  background: transparent; color: var(--fst-gold); border: 0.5px solid rgba(212,165,116,0.4);
+  padding: 12px 18px; font-family: var(--fst-font-body); font-size: 11px;
+  letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; border-radius: 3px;
+  transition: all 0.15s; font-weight: 300;
+}
+.fst-actbtn:hover { background: var(--fst-tint-med); border-color: var(--fst-gold); }
+.fst-startdate-wrap { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--fst-dim); letter-spacing: 0.12em; text-transform: uppercase; }
+.fst-startdate-input {
+  background: transparent; color: var(--fst-cream); border: 0.5px solid var(--fst-tint-strong);
+  border-radius: 2px; padding: 8px 10px; font-family: var(--fst-font-body); font-size: 12px;
+}
+
+/* ---- Disclaimer + error ------------------------------------------------- */
+.fst-disclaimer { font-size: 11px; color: var(--fst-dim); font-style: italic; text-align: center; line-height: 1.7; margin-top: 24px; max-width: 600px; margin-left: auto; margin-right: auto; }
+.fst-error { padding: 24px; text-align: center; color: #d46a5a; font-size: 13px; }
+
+/* ---- Mobile ------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .fst-qt-wrap { padding: 32px 16px 60px; }
+  .fst-title { font-size: 30px; }
+  .fst-pills { flex-direction: column; }
+  .fst-pill { margin-right: 0; padding: 10px 0; }
+  .fst-actions { flex-direction: column; align-items: stretch; }
+  .fst-actbtn { width: 100%; }
+}

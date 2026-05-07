@@ -1,0 +1,49 @@
+/**
+ * FisHotel QT Scheduler — print styles.
+ * Forces black-on-white (the dark theme prints blank without overrides),
+ * hides interactive chrome, keeps the day cards together across page breaks,
+ * and converts stage colors to border-top hairlines so they print on B&W lasers.
+ */
+
+@media print {
+  body, .fst-qt-page, .fst-qt-wrap { background: white !important; color: #111 !important; }
+  header, footer, nav, .site-header, .site-footer, .site-navigation,
+  .site-header__drawer, .site-header__toggle { display: none !important; }
+
+  .fst-qt-wrap { border: 0 !important; padding: 0 !important; margin: 0 !important; max-width: none !important; }
+
+  /* Hide interactive chrome */
+  .fst-inputs, .fst-method-grid, .fst-section-label, .fst-config-panel,
+  .fst-actions, .fst-medlist-wrap { display: none !important; }
+
+  .fst-output { border: 0 !important; padding: 0 !important; }
+  .fst-output-head, .fst-output-title, .fst-output-meta { color: #111 !important; }
+
+  .fst-day { page-break-inside: avoid; break-inside: avoid; border: 0.5pt solid #999 !important; margin-bottom: 6pt; }
+  .fst-day-band { background: white !important; border-top: 1pt solid #444 !important; padding: 4pt 8pt; }
+  .fst-day--amber  .fst-day-band { border-top-style: solid; }
+  .fst-day--green  .fst-day-band { border-top-style: dashed; }
+  .fst-day--teal   .fst-day-band { border-top-style: dotted; }
+  .fst-day--slate  .fst-day-band { border-top-style: double; }
+
+  .fst-day-num, .fst-day-stage { color: #111 !important; }
+  .fst-day-actions { padding: 6pt 8pt; }
+  .fst-day-action { color: #111 !important; font-size: 10pt; line-height: 1.4; }
+  .fst-day-action--obs { color: #555 !important; font-style: italic; }
+  .fst-day-action a.fst-med-link { color: #111 !important; text-decoration: none; font-weight: bold; }
+  .fst-icon { color: #555 !important; }
+
+  .fst-reminders, .fst-references { color: #111 !important; }
+  .fst-reminders ul, .fst-references ul { color: #444 !important; }
+
+  .fst-eyebrow, .fst-title, .fst-hero { display: none !important; }
+
+  /* Footer line on each printed page */
+  @page { margin: 18mm 14mm; }
+  .fst-print-footer {
+    display: block !important; position: fixed; bottom: 6mm; left: 0; right: 0;
+    text-align: center; font-size: 9pt; color: #666;
+  }
+}
+
+.fst-print-footer { display: none; }

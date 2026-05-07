@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.0.2' );
+define( 'FISHOTEL_THEME_VERSION', '1.1.0' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -25,6 +25,8 @@ function fishotel_asset_version( $relative_path ) {
 
 // Medication Dosing Calculator
 require_once FISHOTEL_THEME_DIR . '/inc/calculator/init.php';
+// QT Scheduler
+require_once FISHOTEL_THEME_DIR . '/inc/scheduler/init.php';
 // ─────────────────────────────────────────
 // THEME SETUP
 // ─────────────────────────────────────────

@@ -28,9 +28,9 @@ if ( $initial_tank > 500 ) { $initial_tank = 500; }
             <p class="fst-intro">Pick a quarantine protocol. We'll build the day-by-day schedule, with brand-specific dosing for your tank.</p>
         </header>
 
-        <!-- Tank volume + temperature inputs -->
+        <!-- Tank volume + temperature + start date inputs -->
         <div class="fst-inputs">
-            <div class="fst-input-row">
+            <div class="fst-input-row fst-input-row--tank">
                 <label for="fst-tank" class="fst-input-label">Tank Volume</label>
                 <input id="fst-tank" class="fst-tank-slider" type="range" min="3" max="500" step="1" value="<?php echo esc_attr( $initial_tank ); ?>">
                 <input id="fst-tank-text" class="fst-tank-text" type="number" min="3" max="500" step="1" value="<?php echo esc_attr( $initial_tank ); ?>" aria-label="Tank volume in gallons">
@@ -40,6 +40,10 @@ if ( $initial_tank > 500 ) { $initial_tank = 500; }
                 <label for="fst-temp" class="fst-input-label">Tank Temp</label>
                 <input id="fst-temp" class="fst-temp-text" type="number" min="60" max="90" step="1" value="77" aria-label="Tank temperature in Fahrenheit">
                 <span class="fst-input-unit">°F</span>
+            </div>
+            <div class="fst-input-row">
+                <label for="fst-start-date" class="fst-input-label">Start Date</label>
+                <input id="fst-start-date" class="fst-startdate-input" type="date" aria-label="Day 1 starts on">
             </div>
         </div>
 
@@ -55,16 +59,12 @@ if ( $initial_tank > 500 ) { $initial_tank = 500; }
 
         <!-- Action footer -->
         <div id="fst-actions" class="fst-actions" style="display:none;">
-            <div class="fst-startdate-wrap">
-                <label for="fst-start-date">Day 1 starts on</label>
-                <input id="fst-start-date" class="fst-startdate-input" type="date">
-            </div>
             <div class="fst-spacer"></div>
             <button type="button" id="fst-print" class="fst-actbtn fst-print-schedule">Print Schedule</button>
             <button type="button" id="fst-ics"   class="fst-actbtn fst-export-ics">Save to Calendar</button>
         </div>
 
-        <!-- Consolidated meds list with data-med-sku slots -->
+        <!-- Legacy slot — meds + reminders now render inside #fst-output. Hidden by default. -->
         <section id="fst-medlist-wrap" class="fst-medlist-wrap" style="display:none;"></section>
 
         <p class="fst-disclaimer">

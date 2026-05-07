@@ -14,7 +14,7 @@
   'use strict';
 
   window.FISHOTEL_QT_METHODS = {
-    $schema_version: '1.0',
+    $schema_version: '1.1',
     generated_at: '2026-05-07T00:00:00Z',
     methods: [
 
@@ -50,10 +50,14 @@
         therapeutic_hold_days: 14,
         observation_days: 14,
         stage_overlay_template: [
-          { phase: 'ramp',         label: 'Copper Ramp',       color_token: 'amber' },
-          { phase: 'therapeutic',  label: 'Therapeutic Hold',  color_token: 'green' },
-          { phase: 'transfer',     label: 'Transfer',          color_token: 'slate', single_day: true },
-          { phase: 'observation',  label: 'Clean Observation', color_token: 'teal'  }
+          { phase: 'ramp',         label: 'Copper Ramp',       color_token: 'amber',
+            collapsed_range_message: 'Continue copper ramp. Test daily.' },
+          { phase: 'therapeutic',  label: 'Therapeutic Hold',  color_token: 'green',
+            collapsed_range_message: 'Therapeutic Hold — maintain copper at 2.5 ppm. Test every 1–2 days. (Formalin window closed Day 10.)' },
+          { phase: 'transfer',     label: 'Transfer',          color_token: 'slate', single_day: true,
+            collapsed_range_message: null },
+          { phase: 'observation',  label: 'Clean Observation', color_token: 'teal',
+            collapsed_range_message: 'Clean observation — no meds. Watch for any returning symptoms.' }
         ],
         conflict_rules: [
           { trigger: 'temp_at_or_above_27c',       severity: 'block',   message: 'Tank temp ≥ 27°C — formalin is contraindicated. Reduce temperature or pick a copper-only protocol.' },
@@ -61,10 +65,15 @@
           { trigger: 'sensitive_species_present',  severity: 'warn',    message: 'Sensitive species (anthias, dragonets, wrasses, scaleless) tolerate the low end of copper better — drop target to ~2.2 ppm if any present.' }
         ],
         daily_reminders: [
+          'Stagger copper and formalin doses by 2–3 hours when both are dosed on the same day. Don\'t slug them in back-to-back.',
           'Test copper with a Hanna HI702 daily during ramp; every 1–2 days during therapeutic hold.',
           'After every water change, retest copper and bump back to 2.5 ppm.',
           'Carbon, Purigen, and UV all OFF in the QT tank for the full course before transfer.',
           'Vigorous aeration is mandatory while formalin is being dosed.'
+        ],
+        required_gear: [
+          { label: 'Hanna HI702 copper checker',   note: 'Required' },
+          { label: 'Vigorous aeration / airstone', note: 'Required — formalin removes ~1 mg/L O₂ per 5 mg/L added' }
         ],
         references: [
           { label: 'Humblefish Medication Dosing Guide', url: 'https://humble.fish/community/threads/medication-dosing-guide.1124/' }
@@ -102,15 +111,19 @@
         ],
         metro_dose_days: [1, 3, 5, 7, 9],
         metro_water_change_pct: 25,
-        prazi_offsets_days: [1, 8],
+        prazi_offsets_days: [2, 8],
         therapeutic_ppm: 2.5,
         therapeutic_hold_days: 14,
         observation_days: 14,
         stage_overlay_template: [
-          { phase: 'ramp',         label: 'Copper Ramp',       color_token: 'amber' },
-          { phase: 'therapeutic',  label: 'Therapeutic Hold',  color_token: 'green' },
-          { phase: 'transfer',     label: 'Transfer',          color_token: 'slate', single_day: true },
-          { phase: 'observation',  label: 'Clean Observation', color_token: 'teal'  }
+          { phase: 'ramp',         label: 'Copper Ramp',       color_token: 'amber',
+            collapsed_range_message: 'Continue copper ramp. Test daily.' },
+          { phase: 'therapeutic',  label: 'Therapeutic Hold',  color_token: 'green',
+            collapsed_range_message: 'Therapeutic Hold — maintain copper at 2.5 ppm. Test every 1–2 days.' },
+          { phase: 'transfer',     label: 'Transfer',          color_token: 'slate', single_day: true,
+            collapsed_range_message: null },
+          { phase: 'observation',  label: 'Clean Observation', color_token: 'teal',
+            collapsed_range_message: 'Clean observation — no meds.' }
         ],
         conflict_rules: [
           { trigger: 'inverts_present',           severity: 'warn', message: 'Strip all invertebrates before adding copper — copper is invert-toxic.' },
@@ -121,6 +134,10 @@
           'After every 25% water change, retest copper and bump back to 2.5 ppm.',
           'Carbon, Purigen, and UV all OFF in the QT tank for the full course before transfer.',
           'Metro is photosensitive — keep tank lights dimmed during dosing.'
+        ],
+        required_gear: [
+          { label: 'Hanna HI702 copper checker', note: 'Required' },
+          { label: 'Aeration / airstone',        note: 'Required' }
         ],
         references: [
           { label: 'Humblefish Medication Dosing Guide', url: 'https://humble.fish/community/threads/medication-dosing-guide.1124/' }
@@ -154,13 +171,16 @@
         optional_addons: [
           { addon_id: 'praziquantel', med_id: 'praziquantel', default_checked: true, label: 'Praziquantel (flukes)' }
         ],
-        prazi_offsets_days: [1, 8],
+        prazi_offsets_days: [2, 8],
         therapeutic_hold_days: 14,
         observation_days: 14,
         stage_overlay_template: [
-          { phase: 'therapeutic',  label: 'Therapeutic Hold',  color_token: 'green' },
-          { phase: 'transfer',     label: 'Transfer',          color_token: 'slate', single_day: true },
-          { phase: 'observation',  label: 'Clean Observation', color_token: 'teal'  }
+          { phase: 'therapeutic',  label: 'Therapeutic Hold',  color_token: 'green',
+            collapsed_range_message: 'Therapeutic Hold — daily ammonia testing. WC only if NH3 > 0.25 ppm; redose CP after any WC to maintain target.' },
+          { phase: 'transfer',     label: 'Transfer',          color_token: 'slate', single_day: true,
+            collapsed_range_message: null },
+          { phase: 'observation',  label: 'Clean Observation', color_token: 'teal',
+            collapsed_range_message: 'Clean observation — no meds.' }
         ],
         conflict_rules: [
           { trigger: 'inverts_present',           severity: 'warn', message: 'CP is toxic to invertebrates — strip all inverts before treatment.' },
@@ -172,6 +192,10 @@
           'Carbon and UV OFF; Seachem Ammonia Alert badge gives passive monitoring.',
           'Water change only if NH3 > 0.25 ppm; for One-and-Done variants, redose CP into the replacement water to maintain concentration.',
           'CP is toxic to inverts — strip first.'
+        ],
+        required_gear: [
+          { label: 'Seachem Ammonia Alert badge',          note: 'Recommended (no reliable hobbyist test for CP itself)' },
+          { label: 'Bare-bottom QT, no biofilter media',   note: 'Required for One-and-Done variants' }
         ],
         references: [
           { label: 'Humblefish CP thread',                  url: 'https://humble.fish/community/threads/chloroquine-phosphate.16/' },
@@ -214,6 +238,11 @@
           '72-hour intervals are non-negotiable — set a calendar alarm.',
           'Bleach 10:1, rinse thoroughly, refill with fresh saltwater after every drain.',
           'Match SG and temp on the receiving tank before each transfer.'
+        ],
+        required_gear: [
+          { label: 'Two identical bare-bottom tanks',                                  note: 'Required — Tank A and Tank B' },
+          { label: 'Heaters maintaining ~80°F in both',                                note: 'Required' },
+          { label: 'Bleach (10:1 dilution) for between-transfer sterilization',        note: 'Required' }
         ],
         references: [
           { label: 'Humblefish TTM thread', url: 'https://humble.fish/community/threads/tank-transfer-method-ttm.7/' }

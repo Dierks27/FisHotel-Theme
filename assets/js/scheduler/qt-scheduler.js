@@ -684,80 +684,171 @@
     }
   }
 
-  function renderOutput() {
-    $output.innerHTML = '';
-    var s = state.lastSchedule;
-    if (!s) {
-      $output.style.display = 'none';
-      return;
-    }
-    $output.style.display = '';
+  // ============================================================================
+  // DATE HELPERS — drive Day labels, range labels, and ICS dates from startDate
+  // ============================================================================
 
-    // Output header
-    var head = el('div', 'fst-output-head');
-    head.appendChild(el('div', 'fst-output-title', s.methodName));
-    head.appendChild(el('div', 'fst-output-meta', s.totalDays + '-day course · ' + state.tankGal + ' gal'));
-    $output.appendChild(head);
+  function dayDate(dayNum) {
+    var start = getStartDate();
+    return new Date(start.getTime() + (dayNum - 1) * 86400000);
+  }
 
-    // Day list — group entries by day
+  function fmtShort(d, opts) {
+    try { return d.toLocaleDateString('en-US', opts); }
+    catch (e) { return d.toDateString(); }
+  }
+
+  function formatDayLabel(dayNum) {
+    var d = dayDate(dayNum);
+    var weekday = fmtShort(d, { weekday: 'short' });
+    var month   = fmtShort(d, { month: 'short' });
+    return 'Day ' + dayNum + ' (' + weekday + ', ' + month + ' ' + d.getDate() + ')';
+  }
+
+  function formatRangeLabel(startDay, endDay) {
+    var d1 = dayDate(startDay);
+    var d2 = dayDate(endDay);
+    var w1 = fmtShort(d1, { weekday: 'short' });
+    var w2 = fmtShort(d2, { weekday: 'short' });
+    var m1 = fmtShort(d1, { month: 'short' });
+    var m2 = fmtShort(d2, { month: 'short' });
+    return 'Days ' + startDay + '–' + endDay
+         + ' (' + w1 + ' ' + m1 + ' ' + d1.getDate()
+         + ' — ' + w2 + ' ' + m2 + ' ' + d2.getDate() + ')';
+  }
+
+  function formatHeaderDateRange(totalDays) {
+    var d1 = dayDate(1);
+    var d2 = dayDate(totalDays);
+    var w1 = fmtShort(d1, { weekday: 'short' });
+    var w2 = fmtShort(d2, { weekday: 'short' });
+    var m1 = fmtShort(d1, { month: 'short' });
+    var m2 = fmtShort(d2, { month: 'short' });
+    return 'Day 1 (' + w1 + ' ' + m1 + ' ' + d1.getDate() + ')'
+         + ' → Day ' + totalDays + ' (' + w2 + ' ' + m2 + ' ' + d2.getDate() + ')';
+  }
+
+  // ============================================================================
+  // VISUAL DAY BUILDER — collapses runs of empty days into range cards
+  //   - empty = no dose/water_change/structural entries (markers don't count)
+  //   - first day of every stage stays as its own card (phase boundary marker)
+  //   - ranges never cross a phase boundary
+  //   - single-day empty stays as own card (range needs ≥2 days)
+  // ============================================================================
+
+  function buildVisualDays(s) {
     var byDay = {};
     s.entries.forEach(function (e) {
       if (!byDay[e.day]) byDay[e.day] = [];
       byDay[e.day].push(e);
     });
 
-    var daysWrap = el('div', 'fst-days');
-
-    for (var d = 1; d <= s.totalDays; d++) {
-      var stage = stageForDay(s.stages, d);
-      var card = el('div', 'fst-day fst-day--' + (stage ? stage.color_token : 'none'));
-
-      var stageBand = el('div', 'fst-day-band');
-      stageBand.style.cssText = ''; // color via class
-      stageBand.appendChild(el('span', 'fst-day-num', 'Day ' + d));
-      if (stage) stageBand.appendChild(el('span', 'fst-day-stage', stage.label));
-      card.appendChild(stageBand);
-
-      var actions = byDay[d];
-      var actionList = el('div', 'fst-day-actions');
-      if (!actions || !actions.length) {
-        actionList.appendChild(el('div', 'fst-day-action fst-day-action--obs', 'Observation only — no meds.'));
-      } else {
-        actions.forEach(function (a) {
-          var line = el('div', 'fst-day-action fst-day-action--' + a.type);
-          if (a.type === 'warning') {
-            line.innerHTML = '<span class="fst-icon">⚠</span><span>' + a.text + '</span>';
-          } else if (a.type === 'water_change') {
-            line.innerHTML = '<span class="fst-icon fst-icon--water">~</span><span>' + a.text + '</span>';
-          } else if (a.type === 'dose') {
-            line.innerHTML = '<span class="fst-icon fst-icon--dose">●</span><span>' + a.text + '</span>';
-          } else if (a.type === 'structural') {
-            line.innerHTML = '<span class="fst-icon fst-icon--struct">▶</span><span>' + a.text + '</span>';
-          } else {
-            line.innerHTML = '<span class="fst-icon">·</span><span>' + a.text + '</span>';
-          }
-          actionList.appendChild(line);
-        });
+    function isActive(day) {
+      var actions = byDay[day] || [];
+      for (var i = 0; i < actions.length; i++) {
+        var t = actions[i].type;
+        if (t === 'dose' || t === 'water_change' || t === 'structural') return true;
       }
-      card.appendChild(actionList);
-      daysWrap.appendChild(card);
+      return false;
     }
+
+    function stageOf(day) {
+      for (var i = 0; i < s.stages.length; i++) {
+        if (day >= s.stages[i].startDay && day <= s.stages[i].endDay) return s.stages[i];
+      }
+      return null;
+    }
+
+    // The last day of each stage often carries a transition marker
+    // ("Day 14 at therapeutic — last day in QT tank", "End QT — fish cleared")
+    // and stays as its own card. Stage-start days collapse normally based on
+    // their action content — phase boundaries between stages always break runs.
+    function isStageEnd(day) {
+      var st = stageOf(day);
+      return !!st && st.endDay === day;
+    }
+
+    var result = [];
+    var d = 1;
+    while (d <= s.totalDays) {
+      var stage = stageOf(d);
+      var stageHasCollapse = stage && stage.collapsed_range_message;
+
+      if (isActive(d) || isStageEnd(d) || !stageHasCollapse) {
+        result.push({ kind: 'day', day: d, stage: stage, actions: byDay[d] || [] });
+        d++;
+        continue;
+      }
+
+      // Try to collapse a run of empty days within this stage, never crossing
+      // into the stage's last day (which always stands alone).
+      var runStart = d, runEnd = d;
+      while (runEnd + 1 <= s.totalDays) {
+        var next = runEnd + 1;
+        var nextStage = stageOf(next);
+        if (nextStage !== stage) break;     // phase boundary breaks
+        if (isStageEnd(next)) break;        // stage-end always own card
+        if (isActive(next)) break;
+        runEnd++;
+      }
+      if (runEnd === runStart) {
+        // Single-day empty stays as its own card — ranges need ≥2 days
+        result.push({ kind: 'day', day: runStart, stage: stage, actions: byDay[runStart] || [] });
+        d = runStart + 1;
+      } else {
+        result.push({ kind: 'range', startDay: runStart, endDay: runEnd, stage: stage });
+        d = runEnd + 1;
+      }
+    }
+    return result;
+  }
+
+  // ============================================================================
+  // OUTPUT RENDER — Method header → Meds + Gear → Reminders → Day list → Refs
+  // ============================================================================
+
+  function renderOutput() {
+    $output.innerHTML = '';
+    var s = state.lastSchedule;
+    if (!s) {
+      $output.style.display = 'none';
+      // Hide actions footer too (until a schedule exists)
+      var act = document.getElementById('fst-actions');
+      if (act) act.style.display = 'none';
+      if ($medList) $medList.style.display = 'none';
+      return;
+    }
+    $output.style.display = '';
+    var method = getMethod(state.methodId);
+
+    // 1. Method header with date range
+    var head = el('div', 'fst-output-head');
+    head.appendChild(el('div', 'fst-output-title', s.methodName));
+    head.appendChild(el('div', 'fst-output-meta', s.totalDays + '-day course · ' + state.tankGal + ' gal'));
+    head.appendChild(el('div', 'fst-output-daterange', formatHeaderDateRange(s.totalDays)));
+    $output.appendChild(head);
+
+    // 2. Meds for this protocol + required gear (inside output)
+    $output.appendChild(renderMedsBlock(s.keyMeds, method));
+
+    // 3. Daily reminders (collapsible, expanded by default)
+    if (method && method.daily_reminders && method.daily_reminders.length) {
+      $output.appendChild(renderRemindersBlock(method));
+    }
+
+    // 4. Day-by-day section
+    var dayLabel = el('div', 'fst-section-label', 'Day-by-day');
+    dayLabel.classList.add('fst-section-label--inline');
+    $output.appendChild(dayLabel);
+
+    var visual = buildVisualDays(s);
+    var daysWrap = el('div', 'fst-days');
+    visual.forEach(function (item) {
+      daysWrap.appendChild(item.kind === 'range' ? renderRangeCard(item) : renderDayCard(item));
+    });
     $output.appendChild(daysWrap);
 
-    // Daily reminders block
-    var method = getMethod(state.methodId);
-    if (method && method.daily_reminders && method.daily_reminders.length) {
-      var rm = el('div', 'fst-reminders');
-      rm.appendChild(el('div', 'fst-reminders-title', 'Daily reminders'));
-      var ul = el('ul');
-      method.daily_reminders.forEach(function (txt) {
-        ul.appendChild(el('li', '', txt));
-      });
-      rm.appendChild(ul);
-      $output.appendChild(rm);
-    }
-
-    // References
+    // 5. References
     if (method && method.references && method.references.length) {
       var refs = el('div', 'fst-references');
       refs.appendChild(el('div', 'fst-reminders-title', 'References'));
@@ -773,49 +864,114 @@
       $output.appendChild(refs);
     }
 
-    // Action footer (print / ics / start date) — rendered into pre-existing row
-    renderActions();
+    // Show action footer (Print/Save buttons live there)
+    var actionsRow = document.getElementById('fst-actions');
+    if (actionsRow) actionsRow.style.display = '';
 
-    // Med list with data-med-sku slots
-    renderMedList(s.keyMeds);
+    // Hide the now-redundant external meds-list slot (we render inside output now)
+    if ($medList) $medList.style.display = 'none';
   }
 
-  function stageForDay(stages, day) {
-    for (var i = 0; i < stages.length; i++) {
-      if (day >= stages[i].startDay && day <= stages[i].endDay) return stages[i];
+  function renderDayCard(item) {
+    var stage = item.stage;
+    var card = el('div', 'fst-day fst-day--' + (stage ? stage.color_token : 'none'));
+    var band = el('div', 'fst-day-band');
+    band.appendChild(el('span', 'fst-day-num', formatDayLabel(item.day)));
+    if (stage) band.appendChild(el('span', 'fst-day-stage', stage.label));
+    card.appendChild(band);
+
+    var actionList = el('div', 'fst-day-actions');
+    var actions = item.actions || [];
+    if (!actions.length) {
+      actionList.appendChild(el('div', 'fst-day-action fst-day-action--obs', 'No action required this day.'));
+    } else {
+      actions.forEach(function (a) {
+        var line = el('div', 'fst-day-action fst-day-action--' + a.type);
+        if (a.type === 'warning') {
+          line.innerHTML = '<span class="fst-icon">⚠</span><span>' + a.text + '</span>';
+        } else if (a.type === 'water_change') {
+          line.innerHTML = '<span class="fst-icon fst-icon--water">~</span><span>' + a.text + '</span>';
+        } else if (a.type === 'dose') {
+          line.innerHTML = '<span class="fst-icon fst-icon--dose">●</span><span>' + a.text + '</span>';
+        } else if (a.type === 'structural') {
+          line.innerHTML = '<span class="fst-icon fst-icon--struct">▶</span><span>' + a.text + '</span>';
+        } else {
+          line.innerHTML = '<span class="fst-icon">·</span><span>' + a.text + '</span>';
+        }
+        actionList.appendChild(line);
+      });
     }
-    return null;
+    card.appendChild(actionList);
+    return card;
   }
 
-  function renderActions() {
-    var actions = document.getElementById('fst-actions');
-    if (!actions) return;
-    actions.style.display = '';
+  function renderRangeCard(item) {
+    var stage = item.stage;
+    var card = el('div', 'fst-day fst-day--range fst-day--' + (stage ? stage.color_token : 'none'));
+    var band = el('div', 'fst-day-band');
+    band.appendChild(el('span', 'fst-day-num', formatRangeLabel(item.startDay, item.endDay)));
+    if (stage) band.appendChild(el('span', 'fst-day-stage', stage.label));
+    card.appendChild(band);
+
+    var msg = (stage && stage.collapsed_range_message) || 'No action required these days.';
+    var body = el('div', 'fst-day-actions');
+    var line = el('div', 'fst-day-action fst-day-action--range');
+    line.innerHTML = '<span class="fst-icon">·</span><span>' + msg + '</span>';
+    body.appendChild(line);
+    card.appendChild(body);
+    return card;
   }
 
-  function renderMedList(keyMeds) {
-    if (!$medList) return;
-    $medList.innerHTML = '';
-    if (!keyMeds || !keyMeds.length) {
-      $medList.style.display = 'none';
-      return;
+  function renderMedsBlock(keyMeds, method) {
+    var wrap = el('section', 'fst-medsblock');
+    wrap.appendChild(el('div', 'fst-medsblock-title', 'Meds for this protocol'));
+
+    if (keyMeds && keyMeds.length) {
+      var ul = el('ul', 'fst-medlist');
+      keyMeds.forEach(function (m) {
+        var li = el('li');
+        var a = el('a', 'fst-med-link');
+        a.setAttribute('data-med-sku', m.sku);
+        a.setAttribute('data-brand-name', m.name);
+        a.href = '#';
+        a.setAttribute('aria-label', 'Buy ' + m.name + ' at FisHotel');
+        a.textContent = m.name;
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+      wrap.appendChild(ul);
     }
-    $medList.style.display = '';
-    var label = el('div', 'fst-medlist-label', 'Meds for this protocol');
-    $medList.appendChild(label);
-    var ul = el('ul', 'fst-medlist');
-    keyMeds.forEach(function (m) {
-      var li = el('li');
-      var a = el('a', 'fst-med-link');
-      a.setAttribute('data-med-sku', m.sku);
-      a.setAttribute('data-brand-name', m.name);
-      a.href = '#';
-      a.setAttribute('aria-label', 'Buy ' + m.name + ' at FisHotel');
-      a.textContent = m.name;
-      li.appendChild(a);
-      ul.appendChild(li);
-    });
-    $medList.appendChild(ul);
+
+    if (method && method.required_gear && method.required_gear.length) {
+      var gear = el('div', 'fst-gear');
+      gear.appendChild(el('div', 'fst-gear-label', 'Required gear'));
+      var gul = el('ul', 'fst-gear-list');
+      method.required_gear.forEach(function (g) {
+        var li = el('li');
+        li.innerHTML = '<span class="fst-gear-item">' + g.label + '</span>'
+                     + (g.note ? '<span class="fst-gear-note"> — ' + g.note + '</span>' : '');
+        gul.appendChild(li);
+      });
+      gear.appendChild(gul);
+      wrap.appendChild(gear);
+    }
+    return wrap;
+  }
+
+  function renderRemindersBlock(method) {
+    var details = document.createElement('details');
+    details.className = 'fst-reminders';
+    details.open = true;
+
+    var summary = document.createElement('summary');
+    summary.className = 'fst-reminders-summary';
+    summary.textContent = 'Daily reminders';
+    details.appendChild(summary);
+
+    var ul = el('ul', 'fst-reminders-list');
+    method.daily_reminders.forEach(function (txt) { ul.appendChild(el('li', '', txt)); });
+    details.appendChild(ul);
+    return details;
   }
 
   // ============================================================================
@@ -884,12 +1040,7 @@
 
     var start = getStartDate();
     var dayMs = 86400000;
-
-    var byDay = {};
-    s.entries.forEach(function (e) {
-      if (!byDay[e.day]) byDay[e.day] = [];
-      byDay[e.day].push(e);
-    });
+    var visual = buildVisualDays(s);
 
     var lines = [];
     lines.push('BEGIN:VCALENDAR');
@@ -901,35 +1052,56 @@
     var nowStamp = icsDateTimeUtc(now);
     var epoch = Date.now();
 
-    for (var d = 1; d <= s.totalDays; d++) {
-      var dayDate = new Date(start.getTime() + (d - 1) * dayMs);
-      var endDate = new Date(dayDate.getTime() + dayMs);
+    visual.forEach(function (item) {
+      if (item.kind === 'range') {
+        // Multi-day VEVENT: DTEND is exclusive per RFC 5545, so day after last
+        var startDate = new Date(start.getTime() + (item.startDay - 1) * dayMs);
+        var endDate   = new Date(start.getTime() + (item.endDay)       * dayMs);
+        var phaseLabel = (item.stage && item.stage.label) || 'Observation';
+        var summary = s.methodName + ' — Days ' + item.startDay + '–' + item.endDay + ': ' + phaseLabel;
+        var description = (item.stage && item.stage.collapsed_range_message)
+          || 'No action required these days.';
 
-      var actions = byDay[d] || [];
+        lines.push('BEGIN:VEVENT');
+        lines.push('UID:fishotel-qt-' + s.methodId + '-range' + item.startDay + '-' + item.endDay + '-' + epoch + '@fishotel.com');
+        lines.push('DTSTAMP:' + nowStamp);
+        lines.push('DTSTART;VALUE=DATE:' + icsDate(startDate));
+        lines.push('DTEND;VALUE=DATE:'   + icsDate(endDate));
+        lines.push(icsFold('SUMMARY:'     + icsEscape(summary)));
+        lines.push(icsFold('DESCRIPTION:' + icsEscape(description)));
+        lines.push('LOCATION:FisHotel QT');
+        lines.push('CATEGORIES:FisHotel,Quarantine');
+        lines.push('END:VEVENT');
+        return;
+      }
+
+      // Single day
+      var d = item.day;
+      var dayD = new Date(start.getTime() + (d - 1) * dayMs);
+      var dayEnd = new Date(dayD.getTime() + dayMs);
+      var actions = item.actions || [];
       var headlineEntry = actions.filter(function (a) { return a.type === 'dose' || a.type === 'structural'; })[0]
                         || actions[0];
       var headline = headlineEntry ? stripHtml(headlineEntry.text) : 'Observation';
-
-      // Trim very long headline for SUMMARY
       if (headline.length > 70) headline = headline.slice(0, 67) + '...';
 
-      var description = actions.length
+      var desc = actions.length
         ? actions.map(function (a) { return '• ' + stripHtml(a.text); }).join('\n')
-        : 'Observation only — no meds.';
+        : 'No action required this day.';
 
-      var summary = s.methodName + ' — Day ' + d + ': ' + headline;
+      var summary2 = s.methodName + ' — Day ' + d + ': ' + headline;
 
       lines.push('BEGIN:VEVENT');
       lines.push('UID:fishotel-qt-' + s.methodId + '-day' + d + '-' + epoch + '@fishotel.com');
       lines.push('DTSTAMP:' + nowStamp);
-      lines.push('DTSTART;VALUE=DATE:' + icsDate(dayDate));
-      lines.push('DTEND;VALUE=DATE:' + icsDate(endDate));
-      lines.push(icsFold('SUMMARY:' + icsEscape(summary)));
-      lines.push(icsFold('DESCRIPTION:' + icsEscape(description)));
+      lines.push('DTSTART;VALUE=DATE:' + icsDate(dayD));
+      lines.push('DTEND;VALUE=DATE:'   + icsDate(dayEnd));
+      lines.push(icsFold('SUMMARY:'     + icsEscape(summary2)));
+      lines.push(icsFold('DESCRIPTION:' + icsEscape(desc)));
       lines.push('LOCATION:FisHotel QT');
       lines.push('CATEGORIES:FisHotel,Quarantine');
       lines.push('END:VEVENT');
-    }
+    });
 
     lines.push('END:VCALENDAR');
 
@@ -971,10 +1143,21 @@
 
     state.tankGal = +($tankSlider && $tankSlider.value) || 30;
     if ($startDateInput) {
+      // Default to today (local TZ, YYYY-MM-DD)
       $startDateInput.value = todayIso();
       state.startDate = todayIso();
       $startDateInput.addEventListener('change', function () {
-        state.startDate = $startDateInput.value;
+        var v = $startDateInput.value;
+        if (!v) {
+          // Defend against manual clear — snap back to today
+          v = todayIso();
+          $startDateInput.value = v;
+        }
+        state.startDate = v;
+        // Re-render inline if a schedule already exists (no second Generate click required)
+        if (state.lastSchedule && state.methodId) {
+          renderOutput();
+        }
       });
     }
 

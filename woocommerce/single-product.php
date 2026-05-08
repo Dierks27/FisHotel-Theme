@@ -42,33 +42,16 @@ while ( have_posts() ) :
     do_action( 'woocommerce_before_single_product' );
 
     // Coming Soon detection. Prefer the plugin helper if it exists; fall
-    // back to checking common release-date meta keys for a future
-    // timestamp. When active, our QT cert + variations + Add-to-Cart
-    // panel is suppressed so the plugin's countdown/notify panel
-    // (rendered via woocommerce_single_product_summary) stands alone.
+    // back to the FisHotel Misc plugin's storage: a UNIX timestamp (UTC)
+    // in `_fh_release_datetime`. When active, our QT cert + variations +
+    // Add-to-Cart panel is suppressed so the plugin's countdown/notify
+    // panel (rendered via woocommerce_single_product_summary) stands alone.
     $is_coming_soon = false;
     if ( function_exists( 'fishotel_cs_is_active' ) ) {
         $is_coming_soon = (bool) fishotel_cs_is_active( $product );
     } else {
-        $cs_meta_keys = [
-            '_fishotel_coming_soon_release',
-            '_fishotel_coming_soon_release_date',
-            '_fishotel_coming_soon_at',
-            '_fishotel_coming_soon_date',
-            '_coming_soon_release',
-            '_coming_soon_release_date',
-            '_coming_soon_date',
-        ];
-        $now = current_time( 'timestamp' );
-        foreach ( $cs_meta_keys as $mk ) {
-            $release = get_post_meta( $product_id, $mk, true );
-            if ( ! $release ) continue;
-            $ts = is_numeric( $release ) ? (int) $release : strtotime( (string) $release );
-            if ( $ts && $ts > $now ) {
-                $is_coming_soon = true;
-                break;
-            }
-        }
+        $release_ts = (int) get_post_meta( $product_id, '_fh_release_datetime', true );
+        $is_coming_soon = $release_ts > current_time( 'timestamp', true );
     }
 ?>
 

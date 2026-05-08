@@ -603,18 +603,17 @@ h1, h2, h3, h4, h5 {
   cursor: pointer;
 }
 
-/* Product grid */
+/* Product grid — explicit breakpoints (desktop default; tablet/mobile
+   overrides live in the media queries below). Cards sit flush on the
+   page background with no surrounding frame; spacing comes from gap. */
 .fh-product-grid {
   max-width: var(--fh-max-width);
   margin: 0 auto;
   padding: 36px var(--fh-page-pad);
   display: grid;
-  /* auto-fit collapses empty tracks; max-track cap keeps cards from stretching
-     when a partial last row would otherwise leave visible blank cells. */
-  grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
-  justify-content: center;
-  gap: 1px;
-  background: var(--fh-border);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  background: transparent;
 }
 
 /* ─────────────────────────────────────────
@@ -1589,6 +1588,13 @@ h1, h2, h3, h4, h5 {
    20. RESPONSIVE
 ───────────────────────────────────────── */
 
+/* Desktop-shrink — under the 4-col threshold, drop to 3 cols. */
+@media (max-width: 1199px) {
+  .fh-product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 /* Tablet — 1024px */
 @media (max-width: 1024px) {
   :root {
@@ -1641,6 +1647,7 @@ h1, h2, h3, h4, h5 {
   /* Products go 2 columns on mobile */
   .fh-product-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
   }
 
   /* Product page stacks */

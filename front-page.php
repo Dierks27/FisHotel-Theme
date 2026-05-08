@@ -43,9 +43,15 @@ get_header(); ?>
    AVAILABLE FISH — live from WooCommerce
 ══════════════════════════════════════ */ ?>
 <?php
+$available_count = class_exists( 'FisHotel_Admin_Settings' )
+    ? (int) FisHotel_Admin_Settings::get( 'fh_home_available_count' )
+    : 8;
+if ( $available_count < 1 )  $available_count = 8;
+if ( $available_count > 24 ) $available_count = 24;
+
 $available_args = [
     'post_type'      => 'product',
-    'posts_per_page' => 8,
+    'posts_per_page' => $available_count,
     'post_status'    => 'publish',
     'tax_query'      => [[
         'taxonomy' => 'product_cat',

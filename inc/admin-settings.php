@@ -111,6 +111,8 @@ class FisHotel_Admin_Settings {
 			'fh_shop_display'             => 'categories',
 			'fh_shop_hide_empty'          => '1',
 			'fh_shop_hidden_cats'         => [],
+			// Homepage
+			'fh_home_available_count'     => 8,
 			// QT Certificate
 			'fh_qt_line_1'                => '14 days observation',
 			'fh_qt_line_2'                => '+ 14 days treatment',
@@ -384,6 +386,20 @@ JS;
 					'fh_shop_hidden_cats' => [ 'label' => 'Hidden categories',     'type' => 'multicheck', 'description' => 'Checked categories will never appear on the shop page.' ],
 				],
 			],
+			// Homepage section
+			'home' => [
+				'title'  => 'Homepage',
+				'fields' => [
+					'fh_home_available_count' => [
+						'label'       => 'Available Now — products to show',
+						'type'        => 'number',
+						'min'         => 1,
+						'max'         => 24,
+						'placeholder' => '8',
+						'description' => "How many fish to display in the homepage \"Available Now\" section. Set higher to show more of the catalog up front, lower for a curated teaser.",
+					],
+				],
+			],
 			// QT Certificate section
 			'qt' => [
 				'title'  => 'QT Certificate',
@@ -531,6 +547,19 @@ JS;
 						'sanitize_callback' => [ __CLASS__, 'sanitize_id_list' ],
 						'default'           => [],
 					] );
+				} elseif ( $field['type'] === 'number' ) {
+					$min = isset( $field['min'] ) ? (int) $field['min'] : null;
+					$max = isset( $field['max'] ) ? (int) $field['max'] : null;
+					register_setting( self::OPTION_GROUP, $key, [
+						'type'              => 'integer',
+						'sanitize_callback' => function ( $val ) use ( $min, $max, $key ) {
+							$n = (int) $val;
+							if ( $min !== null && $n < $min ) $n = $min;
+							if ( $max !== null && $n > $max ) $n = $max;
+							return $n;
+						},
+						'default'           => self::defaults()[ $key ] ?? 0,
+					] );
 				} else {
 					register_setting( self::OPTION_GROUP, $key, [
 						'type'              => 'string',
@@ -615,6 +644,16 @@ JS;
 				esc_attr( $key ),
 				esc_attr( $value ),
 				esc_attr( $args['placeholder'] ?? '' )
+			);
+		} elseif ( $type === 'number' ) {
+			printf(
+				'<input type="number" name="%s" value="%s" class="small-text" placeholder="%s"%s%s%s>',
+				esc_attr( $key ),
+				esc_attr( $value ),
+				esc_attr( $args['placeholder'] ?? '' ),
+				isset( $args['min'] )  ? ' min="'  . esc_attr( (int) $args['min'] )  . '"' : '',
+				isset( $args['max'] )  ? ' max="'  . esc_attr( (int) $args['max'] )  . '"' : '',
+				isset( $args['step'] ) ? ' step="' . esc_attr( (int) $args['step'] ) . '"' : ' step="1"'
 			);
 		} elseif ( $type === 'textarea' ) {
 			printf(

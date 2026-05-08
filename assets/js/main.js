@@ -98,6 +98,55 @@
         });
     }
 
+    // Homepage testimonial rotator — vanilla cross-fade. Skips entirely on
+    // single-quote sections (no [data-fh-testimonials="1"] flag).
+    function initTestimonialRotator() {
+        var section = document.querySelector('.fh-quote-section[data-fh-testimonials="1"]');
+        if (!section) return;
+        var slides = section.querySelectorAll('.fh-quote-slide');
+        var dots   = section.querySelectorAll('.fh-quote-dot');
+        if (slides.length < 2) return;
+
+        var idx = 0;
+        var timer = null;
+        var INTERVAL = 8000;
+
+        function show(next) {
+            if (next === idx) return;
+            slides[idx].classList.remove('is-active');
+            slides[idx].setAttribute('aria-hidden', 'true');
+            dots[idx].classList.remove('is-active');
+            dots[idx].setAttribute('aria-selected', 'false');
+            idx = (next + slides.length) % slides.length;
+            slides[idx].classList.add('is-active');
+            slides[idx].setAttribute('aria-hidden', 'false');
+            dots[idx].classList.add('is-active');
+            dots[idx].setAttribute('aria-selected', 'true');
+        }
+
+        function start() { stop(); timer = setInterval(function () { show(idx + 1); }, INTERVAL); }
+        function stop()  { if (timer) { clearInterval(timer); timer = null; } }
+
+        // Pause on hover anywhere within the section.
+        section.addEventListener('mouseenter', stop);
+        section.addEventListener('mouseleave', start);
+        // Pause when the tab is hidden so we don't burn cycles.
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) stop(); else start();
+        });
+
+        for (var i = 0; i < dots.length; i++) {
+            (function (i) {
+                dots[i].addEventListener('click', function () {
+                    show(i);
+                    start(); // restart timer on manual jump
+                });
+            })(i);
+        }
+
+        start();
+    }
+
     $(document).ready(function() {
         initVariationButtons();
         initGallery();
@@ -105,6 +154,7 @@
         initNavDropdowns();
         initQty();
         initHeaderScroll();
+        initTestimonialRotator();
     });
 
 })(jQuery);

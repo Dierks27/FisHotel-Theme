@@ -113,6 +113,7 @@ class FisHotel_Admin_Settings {
 			'fh_shop_hidden_cats'         => [],
 			// Homepage
 			'fh_home_available_count'     => 8,
+			'fh_home_testimonials'        => [], // seeded via get_home_testimonials()
 			// QT Certificate
 			'fh_qt_line_1'                => '14 days observation',
 			'fh_qt_line_2'                => '+ 14 days treatment',
@@ -198,6 +199,30 @@ class FisHotel_Admin_Settings {
 		return $out;
 	}
 
+	/** Default homepage testimonial seeded from the original hardcoded quote. */
+	public static function default_home_testimonials() {
+		return [
+			[
+				'quote'  => 'Some of the healthiest, happiest, most well-adjusted quarantined fish on the market.',
+				'author' => '',
+				'source' => '',
+			],
+		];
+	}
+
+	/** Get homepage testimonials. Empty array means "hide section". */
+	public static function get_home_testimonials() {
+		$saved = get_option( 'fh_home_testimonials', null );
+		if ( $saved === null ) {
+			// First load — seed with the legacy quote so the homepage doesn't go blank.
+			return self::default_home_testimonials();
+		}
+		if ( ! is_array( $saved ) ) {
+			return [];
+		}
+		return $saved;
+	}
+
 	/** Get FAQ items, falling back to defaults if nothing saved yet. */
 	public static function get_faq_items() {
 		$saved = get_option( 'fh_faq_items', null );
@@ -231,6 +256,13 @@ class FisHotel_Admin_Settings {
 			'fishotel-admin-faq',
 			FISHOTEL_THEME_URI . '/assets/js/admin-faq.js',
 			[ 'jquery', 'jquery-ui-sortable', 'editor', 'quicktags' ],
+			FISHOTEL_THEME_VERSION,
+			true
+		);
+		wp_enqueue_script(
+			'fishotel-admin-testimonials',
+			FISHOTEL_THEME_URI . '/assets/js/admin-testimonials.js',
+			[ 'jquery', 'jquery-ui-sortable' ],
 			FISHOTEL_THEME_VERSION,
 			true
 		);
@@ -361,6 +393,18 @@ JS;
 		.fh-ph-library__remove { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; line-height: 20px; padding: 0; border: 1px solid #ccc; background: #fff; border-radius: 50%; cursor: pointer; font-size: 16px; color: #b32d2e; }
 		.fh-ph-library__remove:hover { background: #b32d2e; color: #fff; border-color: #b32d2e; }
 		.fh-ph-library__placeholder { background: #f3f0e8; border: 1px dashed #c9963a; border-radius: 3px; aspect-ratio: 1 / 1; }
+		.fh-tm-repeater { max-width: 920px; }
+		.fh-tm-list { list-style: none; margin: 0; padding: 0; }
+		.fh-tm-row { background: #fff; border: 1px solid #ddd; border-left: 3px solid #c9963a; border-radius: 3px; padding: 12px 14px 14px; margin: 0 0 14px; }
+		.fh-tm-row.ui-sortable-helper { box-shadow: 0 6px 18px rgba(0,0,0,.15); }
+		.fh-tm-row-head { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+		.fh-tm-row-head .fh-tm-handle { cursor: move; color: #888; font-size: 18px; line-height: 1; user-select: none; padding: 4px 6px; }
+		.fh-tm-row-head strong { flex: 1 1 auto; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+		.fh-tm-label { display: block; font-weight: 600; font-size: 12px; color: #444; margin: 6px 0 10px; }
+		.fh-tm-optional { font-weight: 400; color: #999; }
+		.fh-tm-row textarea { width: 100%; }
+		.fh-tm-row input[type=text] { width: 100%; }
+		.fh-tm-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
 		';
 	}
 
@@ -397,6 +441,17 @@ JS;
 						'max'         => 24,
 						'placeholder' => '8',
 						'description' => "How many fish to display in the homepage \"Available Now\" section. Set higher to show more of the catalog up front, lower for a curated teaser.",
+					],
+				],
+			],
+			// Homepage Testimonials section
+			'home_testimonials' => [
+				'title'  => 'Homepage Testimonials',
+				'fields' => [
+					'fh_home_testimonials' => [
+						'label'       => 'Testimonials',
+						'type'        => 'testimonials_repeater',
+						'description' => "Quotes that appear in the homepage testimonial banner. With one entry, it displays static. With two or more, they auto-rotate.",
 					],
 				],
 			],
@@ -529,6 +584,12 @@ JS;
 						'sanitize_callback' => [ __CLASS__, 'sanitize_faq_items' ],
 						'default'           => self::default_faq_items(),
 					] );
+				} elseif ( $field['type'] === 'testimonials_repeater' ) {
+					register_setting( self::OPTION_GROUP, $key, [
+						'type'              => 'array',
+						'sanitize_callback' => [ __CLASS__, 'sanitize_home_testimonials' ],
+						'default'           => self::default_home_testimonials(),
+					] );
 				} elseif ( $field['type'] === 'wysiwyg' ) {
 					register_setting( self::OPTION_GROUP, $key, [
 						'type'              => 'string',
@@ -610,6 +671,20 @@ JS;
 			if ( $id > 0 && ! in_array( $id, $out, true ) ) {
 				$out[] = $id;
 			}
+		}
+		return $out;
+	}
+
+	public static function sanitize_home_testimonials( $val ) {
+		if ( ! is_array( $val ) ) return [];
+		$out = [];
+		foreach ( $val as $row ) {
+			if ( ! is_array( $row ) ) continue;
+			$quote  = isset( $row['quote'] )  ? trim( wp_kses_post( $row['quote'] ) ) : '';
+			$author = isset( $row['author'] ) ? sanitize_text_field( $row['author'] ) : '';
+			$source = isset( $row['source'] ) ? sanitize_text_field( $row['source'] ) : '';
+			if ( $quote === '' ) continue; // require quote text
+			$out[] = [ 'quote' => $quote, 'author' => $author, 'source' => $source ];
 		}
 		return $out;
 	}
@@ -802,6 +877,19 @@ JS;
 			self::render_faq_row( $key, '__INDEX__', [ 'question' => '', 'answer' => '', 'category' => 'General' ], $cats, true );
 			echo '</script>';
 			echo '</div>';
+		} elseif ( $type === 'testimonials_repeater' ) {
+			$items = self::get_home_testimonials();
+			echo '<div class="fh-tm-repeater" data-name="' . esc_attr( $key ) . '">';
+			echo '<ol class="fh-tm-list">';
+			foreach ( $items as $i => $item ) {
+				self::render_testimonial_row( $key, $i, $item );
+			}
+			echo '</ol>';
+			echo '<p><button type="button" class="button button-secondary fh-tm-add">+ Add Testimonial</button></p>';
+			echo '<script type="text/template" class="fh-tm-row-template">';
+			self::render_testimonial_row( $key, '__INDEX__', [ 'quote' => '', 'author' => '', 'source' => '' ], true );
+			echo '</script>';
+			echo '</div>';
 		}
 
 		if ( ! empty( $args['description'] ) ) {
@@ -856,6 +944,33 @@ JS;
 				);
 			}
 			?>
+		</li>
+		<?php
+	}
+
+	/** Render a single homepage-testimonial row. */
+	protected static function render_testimonial_row( $key, $index, $item, $is_template = false ) {
+		$idx_attr = $is_template ? '__INDEX__' : (int) $index;
+		?>
+		<li class="fh-tm-row" data-index="<?php echo esc_attr( $idx_attr ); ?>">
+			<div class="fh-tm-row-head">
+				<span class="fh-tm-handle" title="Drag to reorder">&#8597;</span>
+				<strong>Testimonial</strong>
+				<button type="button" class="button fh-tm-up" title="Move up">&uarr;</button>
+				<button type="button" class="button fh-tm-down" title="Move down">&darr;</button>
+				<button type="button" class="button button-link-delete fh-tm-delete" title="Delete">Delete</button>
+			</div>
+			<label class="fh-tm-label">Quote
+				<textarea name="<?php echo esc_attr( $key ); ?>[<?php echo esc_attr( $idx_attr ); ?>][quote]" rows="3" placeholder="Quote text" required><?php echo esc_textarea( $item['quote'] ); ?></textarea>
+			</label>
+			<div class="fh-tm-meta">
+				<label class="fh-tm-label">Author <span class="fh-tm-optional">(optional)</span>
+					<input type="text" name="<?php echo esc_attr( $key ); ?>[<?php echo esc_attr( $idx_attr ); ?>][author]" value="<?php echo esc_attr( $item['author'] ); ?>" placeholder="e.g. Mike R.">
+				</label>
+				<label class="fh-tm-label">Source <span class="fh-tm-optional">(optional)</span>
+					<input type="text" name="<?php echo esc_attr( $key ); ?>[<?php echo esc_attr( $idx_attr ); ?>][source]" value="<?php echo esc_attr( $item['source'] ); ?>" placeholder="e.g. Reef2Reef, Humble.Fish">
+				</label>
+			</div>
 		</li>
 		<?php
 	}

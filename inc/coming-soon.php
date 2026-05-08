@@ -100,16 +100,17 @@ function fishotel_cs_render_arrival_panel( $product, $release_ts ) {
 	$mins = (int) floor( ( $diff % 3600 ) / 60 );
 
 	$price_html = $product->get_price_html();
-	$stock_qty  = $product->get_stock_quantity();
+	$stock_qty  = fishotel_cs_total_stock( $product );
 	$avail_line = $price_html;
-	if ( is_numeric( $stock_qty ) && (int) $stock_qty > 0 ) {
+	if ( $stock_qty > 0 ) {
 		$avail_line .= ' <span class="fh-arrival-panel__avail-sep">·</span> ' . sprintf(
 			/* translators: %d is stock count */
-			esc_html( _n( '%d available at release', '%d available at release', (int) $stock_qty, 'fishotel' ) ),
-			(int) $stock_qty
+			esc_html( _n( '%d available at release', '%d available at release', $stock_qty, 'fishotel' ) ),
+			$stock_qty
 		);
 	}
 
+	$sizes      = fishotel_cs_size_options( $product );
 	$notify_url = home_url( '/newsletter/' );
 	?>
 	<div class="fh-arrival-panel" data-fh-countdown="<?php echo esc_attr( $release_ts ); ?>">
@@ -123,11 +124,87 @@ function fishotel_cs_render_arrival_panel( $product, $release_ts ) {
 			<span class="fh-arrival-panel__seg"><span data-m><?php echo (int) $mins; ?></span> Min</span>
 		</div>
 		<div class="fh-arrival-panel__avail"><?php echo wp_kses_post( $avail_line ); ?></div>
+		<?php if ( ! empty( $sizes ) ) : ?>
+		<div class="fh-arrival-panel__sizes">
+			<span class="fh-arrival-panel__sizes-label">Sizes</span>
+			<?php foreach ( $sizes as $size ) : ?>
+				<span class="fh-arrival-panel__bullet" aria-hidden="true">·</span>
+				<span class="fh-arrival-panel__seg"><?php echo esc_html( $size ); ?></span>
+			<?php endforeach; ?>
+		</div>
+		<?php endif; ?>
 		<a href="<?php echo esc_url( $notify_url ); ?>" class="fh-btn fh-btn--ghost fh-btn--full fh-arrival-panel__btn">
 			<?php esc_html_e( 'Notify Me on Arrival', 'fishotel' ); ?>
 		</a>
 	</div>
 	<?php
+}
+
+/**
+ * Total stock for a product. For variable products WC's own
+ * get_stock_quantity() returns null (stock is per-variation), so sum
+ * across published purchasable variations.
+ *
+ * @return int 0 when not numeric / unmanaged.
+ */
+function fishotel_cs_total_stock( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return 0;
+	}
+	if ( $product->is_type( 'variable' ) ) {
+		$total = 0;
+		foreach ( $product->get_children() as $child_id ) {
+			$child = wc_get_product( $child_id );
+			if ( ! $child || ! $child->exists() ) continue;
+			if ( $child->get_status() !== 'publish' ) continue;
+			$q = $child->get_stock_quantity();
+			if ( is_numeric( $q ) ) {
+				$total += (int) $q;
+			}
+		}
+		return $total;
+	}
+	$q = $product->get_stock_quantity();
+	return is_numeric( $q ) ? (int) $q : 0;
+}
+
+/**
+ * Available size options for a variable product. Returns the unique
+ * set of values for whichever variation attribute reads as "size-like"
+ * — falls back to the first variation attribute if no size is found.
+ * Empty array for simple products or variables with no published
+ * variations.
+ *
+ * @param WC_Product $product
+ * @return string[]
+ */
+function fishotel_cs_size_options( $product ) {
+	if ( ! $product instanceof WC_Product || ! $product->is_type( 'variable' ) ) {
+		return [];
+	}
+	$attrs = $product->get_variation_attributes();
+	if ( empty( $attrs ) ) {
+		return [];
+	}
+	// Prefer an attribute key matching /size/ (handles pa_size, size,
+	// attribute_pa_size, etc.). Otherwise use the first attribute.
+	$picked = null;
+	foreach ( $attrs as $key => $values ) {
+		if ( stripos( $key, 'size' ) !== false ) {
+			$picked = $values;
+			break;
+		}
+	}
+	if ( $picked === null ) {
+		$picked = reset( $attrs );
+	}
+	$out = [];
+	foreach ( (array) $picked as $val ) {
+		$val = trim( (string) $val );
+		if ( $val === '' ) continue;
+		$out[] = $val;
+	}
+	return array_values( array_unique( $out ) );
 }
 
 /**

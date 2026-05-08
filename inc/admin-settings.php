@@ -114,6 +114,9 @@ class FisHotel_Admin_Settings {
 			// Homepage
 			'fh_home_available_count'     => 8,
 			'fh_home_testimonials'        => [], // seeded via get_home_testimonials()
+			// Placeholder libraries (default empty arrays)
+			'fh_placeholder_library'      => [],
+			'fh_cs_placeholder_library'   => [],
 			// QT Certificate
 			'fh_qt_line_1'                => '14 days observation',
 			'fh_qt_line_2'                => '+ 14 days treatment',
@@ -487,6 +490,17 @@ JS;
 						'label'       => 'Placeholder images',
 						'type'        => 'placeholder_library',
 						'description' => 'Images here stand in whenever a product has no featured image. Drag thumbnails to reorder, click × to remove. Each product gets a stable assignment that resets the next time it goes out of stock.',
+					],
+				],
+			],
+			// Coming Soon Placeholder Library section
+			'placeholders_cs' => [
+				'title'  => 'Coming Soon Placeholder Library',
+				'fields' => [
+					'fh_cs_placeholder_library' => [
+						'label'       => 'Coming Soon placeholder images',
+						'type'        => 'placeholder_library',
+						'description' => 'Images here stand in whenever a Coming Soon product has no featured image. Drag thumbnails to reorder. Each Coming Soon product gets a stable assignment until its release date passes.',
 					],
 				],
 			],

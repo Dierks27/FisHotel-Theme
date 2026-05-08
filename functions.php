@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.2.0' );
+define( 'FISHOTEL_THEME_VERSION', '1.2.1' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -308,6 +308,32 @@ add_filter( 'woocommerce_add_to_cart_fragments', function ( $fragments ) {
     );
 
     return $fragments;
+} );
+
+// Override the browser-tab title for the Medication Dosing calculator page
+// so it matches the on-page heading. The post itself is still titled
+// "Quarantine Help" in WP admin (used elsewhere); we only swap the
+// document title for this template.
+add_filter( 'document_title_parts', function ( $parts ) {
+	if ( is_page_template( 'page-quarantine-help.php' ) ) {
+		$parts['title'] = 'Medication Dosing';
+	}
+	return $parts;
+} );
+
+// Normalize "Contacts" → "Contact" in nav menu items so the label matches the
+// page heading without forcing an admin menu edit. Preserves casing so a
+// "CONTACTS" item becomes "CONTACT" and "Contacts" becomes "Contact".
+add_filter( 'wp_nav_menu_objects', function ( $items ) {
+	foreach ( $items as $item ) {
+		if ( ! isset( $item->title ) ) continue;
+		if ( $item->title === 'CONTACTS' ) {
+			$item->title = 'CONTACT';
+		} elseif ( $item->title === 'Contacts' ) {
+			$item->title = 'Contact';
+		}
+	}
+	return $items;
 } );
 
 // Homepage bubble animation

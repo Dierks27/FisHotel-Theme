@@ -47,7 +47,8 @@ class FisHotel_Admin_Settings {
 			[
 				'label'       => 'Room Service',
 				'sublabel'    => 'Medicated Food',
-				'duration'    => 'As needed, Days 15–28',
+				'duration'    => 'Days 15–28',
+				'if_needed'   => true,
 				'description' => "For any fish that isn't putting on weight during observation, we provide medicated food with Praziquantel or Fenbendazole — once a day for 3 treatments. We keep watching and won't let them head to check-out until we're confident they're healthy and gaining weight.",
 			],
 			[
@@ -180,11 +181,16 @@ class FisHotel_Admin_Settings {
 		$out      = [];
 		for ( $i = 0; $i < 5; $i++ ) {
 			$row = isset( $saved[ $i ] ) && is_array( $saved[ $i ] ) ? $saved[ $i ] : [];
+			// Fall back to default if_needed only when the saved row is missing
+			// the key entirely (legacy data); an explicit "0" stays off.
+			$default_if_needed = ! empty( $defaults[ $i ]['if_needed'] );
+			$if_needed = array_key_exists( 'if_needed', $row ) ? ! empty( $row['if_needed'] ) : $default_if_needed;
 			$out[ $i ] = [
 				'label'       => isset( $row['label'] )       && $row['label']       !== '' ? $row['label']       : $defaults[ $i ]['label'],
 				'sublabel'    => isset( $row['sublabel'] )    && $row['sublabel']    !== '' ? $row['sublabel']    : $defaults[ $i ]['sublabel'],
 				'duration'    => isset( $row['duration'] )    && $row['duration']    !== '' ? $row['duration']    : $defaults[ $i ]['duration'],
 				'description' => isset( $row['description'] ) && $row['description'] !== '' ? $row['description'] : $defaults[ $i ]['description'],
+				'if_needed'   => $if_needed,
 			];
 		}
 		return $out;
@@ -555,6 +561,7 @@ JS;
 				'sublabel'    => isset( $row['sublabel'] )    ? sanitize_text_field( $row['sublabel'] )        : $defaults[ $i ]['sublabel'],
 				'duration'    => isset( $row['duration'] )    ? sanitize_text_field( $row['duration'] )        : $defaults[ $i ]['duration'],
 				'description' => isset( $row['description'] ) ? sanitize_textarea_field( $row['description'] ) : $defaults[ $i ]['description'],
+				'if_needed'   => ! empty( $row['if_needed'] ),
 			];
 		}
 		return $out;
@@ -674,6 +681,12 @@ JS;
 				printf(
 					'<label style="margin-top:10px;">Description</label><textarea name="%1$s[%2$d][description]">%3$s</textarea>',
 					esc_attr( $key ), (int) $i, esc_textarea( $stage['description'] )
+				);
+				printf(
+					'<label style="margin-top:10px; display:flex; align-items:center; gap:6px; font-weight:600;"><input type="checkbox" name="%1$s[%2$d][if_needed]" value="1" %3$s> Show <em>(if needed)</em> tag on this stage</label>',
+					esc_attr( $key ),
+					(int) $i,
+					checked( ! empty( $stage['if_needed'] ), true, false )
 				);
 				echo '</div>';
 			}

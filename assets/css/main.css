@@ -609,7 +609,10 @@ h1, h2, h3, h4, h5 {
   margin: 0 auto;
   padding: 36px var(--fh-page-pad);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* auto-fit collapses empty tracks; max-track cap keeps cards from stretching
+     when a partial last row would otherwise leave visible blank cells. */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
+  justify-content: center;
   gap: 1px;
   background: var(--fh-border);
 }
@@ -1591,10 +1594,6 @@ h1, h2, h3, h4, h5 {
   :root {
     --fh-page-pad:    32px;
     --fh-section-pad: 56px;
-  }
-
-  .fh-product-grid {
-    grid-template-columns: repeat(3, 1fr);
   }
 
   .fh-product-layout {

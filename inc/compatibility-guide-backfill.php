@@ -22,7 +22,7 @@ class FisHotel_Compat_Backfill {
 	const ACTION            = 'fishotel_compat_backfill';
 	const NONCE             = 'fishotel_compat_backfill_nonce';
 	const REPORT_TRANSIENT  = 'fh_compat_backfill_report_';
-	const SETTINGS_PAGE     = 'product_page_fishotel-settings';
+	const SETTINGS_PAGE     = 'fishotel-theme_page_fishotel-tools';
 
 	/**
 	 * Genus → matrix-category map for Strategy 4 (genus-from-excerpt).
@@ -247,8 +247,8 @@ class FisHotel_Compat_Backfill {
 
 		wp_safe_redirect(
 			add_query_arg(
-				[ 'post_type' => 'product', 'page' => 'fishotel-settings' ],
-				admin_url( 'edit.php' )
+				[ 'page' => 'fishotel-tools' ],
+				admin_url( 'admin.php' )
 			) . '#fh-backfill-report'
 		);
 		exit;

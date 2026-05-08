@@ -36,27 +36,16 @@ class FisHotel_Hotel_Data {
 	public static function init() {
 		add_action( 'add_meta_boxes',                   [ __CLASS__, 'add_meta_box' ] );
 		add_action( 'woocommerce_process_product_meta', [ __CLASS__, 'save_meta' ] );
-		add_action( 'admin_menu',                       [ __CLASS__, 'add_tools_page' ] );
 		add_action( 'wp_ajax_fishotel_run_migration', [ __CLASS__, 'handle_migration' ] );
 	}
 
-	// ── Tools page ──────────────────────────
-	public static function add_tools_page() {
-		add_submenu_page(
-			'edit.php?post_type=product',
-			'FisHotel Tools',
-			'FisHotel Tools',
-			'manage_woocommerce',
-			'fishotel-tools',
-			[ __CLASS__, 'render_tools_page' ]
-		);
-	}
-
-	public static function render_tools_page() {
+	/**
+	 * Tools panels — the body of what used to be the standalone
+	 * "FisHotel Tools" sub-page. Now invoked from the top-level
+	 * FisHotel Theme → Tools sub-page so all admin tools share one home.
+	 */
+	public static function render_tools_panels() {
 		?>
-		<div class="wrap">
-			<h1>FisHotel Tools</h1>
-
 			<div style="background:#fff; border:1px solid #ccd0d4; border-left:4px solid #c9963a; padding:20px 24px; margin:20px 0; max-width:600px;">
 				<h2 style="margin-top:0; font-size:16px;">Check for Theme Updates</h2>
 				<p style="color:#666;">Clears the update cache and checks GitHub for a new version right now.</p>
@@ -76,7 +65,6 @@ class FisHotel_Hotel_Data {
 				</button>
 				<div id="fh-migration-result" style="margin-top:12px;"></div>
 			</div>
-		</div>
 
 		<script>
 		document.getElementById('fh-check-update').addEventListener('click', function() {

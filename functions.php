@@ -20,7 +20,7 @@ define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
  */
 function fishotel_asset_version( $relative_path ) {
 	$path = FISHOTEL_THEME_DIR . '/' . ltrim( $relative_path, '/' );
-	return file_exists( $path ) ? filemtime( $path ) : FISHOTEL_THEME_VERSION;
+	return ( file_exists( $path ) ? filemtime( $path ) : 0 ) . '-' . FISHOTEL_THEME_VERSION;
 }
 
 // Medication Dosing Calculator

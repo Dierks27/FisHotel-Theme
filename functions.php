@@ -143,6 +143,7 @@ $includes = [
 	'/inc/variation-display.php', // Visual variation buttons
 	'/inc/widgets.php',
 	'/inc/admin-settings.php',   // FisHotel admin settings page
+	'/inc/placeholder-library.php', // Product image placeholder library
 	'/inc/contact-form.php',     // Native /contacts/ form handler
 	'/inc/compatibility-guide-bootstrap.php',    // /compatibility-guide/ template assignment
 	'/inc/compatibility-guide-data.php',         // JSON loaders + volume modifier helpers

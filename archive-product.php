@@ -175,7 +175,7 @@ get_header();
     ?>
         <a href="<?php the_permalink(); ?>" class="fh-fish-card">
             <div class="fh-fish-card__image">
-                <?php the_post_thumbnail('fishotel-product-card'); ?>
+                <?php fishotel_product_thumbnail( $pid, 'fishotel-product-card' ); ?>
                 <?php if ($status_label) : ?>
                 <span class="fh-fish-card__status <?php echo esc_attr($status_class); ?>">
                     <?php echo esc_html($status_label); ?>

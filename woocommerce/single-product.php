@@ -132,21 +132,24 @@ while ( have_posts() ) :
     <div class="fh-purchase">
 
         <?php
-        /**
-         * Standard WC summary lifecycle hooks. Defaults (title, price,
-         * add-to-cart, etc.) are removed in inc/woocommerce.php so only
-         * plugin callbacks fire here.
-         */
-        do_action( 'woocommerce_before_single_product_summary' );
-        do_action( 'woocommerce_single_product_summary' );
+        if ( $is_coming_soon ) {
+            // Coming Soon PDP — render our own panel in place of the
+            // live purchase UI. We deliberately skip the summary
+            // lifecycle hooks here so the plugin's own price /
+            // availability output can't leak above the panel.
+            fishotel_cs_render_arrival_panel( $product, $cs_release_ts );
+        } else {
+            /**
+             * Standard WC summary lifecycle hooks. Defaults (title, price,
+             * add-to-cart, etc.) are removed in inc/woocommerce.php so only
+             * plugin callbacks fire here.
+             */
+            do_action( 'woocommerce_before_single_product_summary' );
+            do_action( 'woocommerce_single_product_summary' );
+        }
         ?>
 
-        <?php /* When the product is on a future release we render our own
-                 turquoise Arrival Panel in place of the live purchase UI.
-                 The plugin's own UI is suppressed in inc/coming-soon.php. */ ?>
-        <?php if ( $is_coming_soon ) : ?>
-            <?php fishotel_cs_render_arrival_panel( $product, $cs_release_ts ); ?>
-        <?php else : ?>
+        <?php if ( ! $is_coming_soon ) : ?>
 
         <?php /* QT Certificate Panel */ ?>
         <div class="fh-qt-cert">

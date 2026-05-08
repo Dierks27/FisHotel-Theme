@@ -831,6 +831,20 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   color: rgba(201, 150, 58, 0.45);
   margin: 0 6px;
 }
+/* Sizes — same caps gold treatment as the countdown row. */
+.fh-arrival-panel__sizes {
+  font-family: var(--fh-font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--fh-gold);
+  margin-bottom: 16px;
+}
+.fh-arrival-panel__sizes-label {
+  /* Slightly muted to read as a label distinct from the values. */
+  opacity: 0.75;
+}
 .fh-arrival-panel__btn {
   /* Reuses .fh-btn .fh-btn--ghost .fh-btn--full from main.css for
      shape, typography, and dimensions. Tinted turquoise here only —

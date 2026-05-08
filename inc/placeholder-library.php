@@ -14,8 +14,10 @@ defined( 'ABSPATH' ) || exit;
 
 class FisHotel_Placeholder_Library {
 
-	const OPTION_KEY     = 'fh_placeholder_library';
-	const PRODUCT_META   = '_fishotel_assigned_placeholder_id';
+	const OPTION_KEY      = 'fh_placeholder_library';
+	const OPTION_KEY_CS   = 'fh_cs_placeholder_library';
+	const PRODUCT_META    = '_fishotel_assigned_placeholder_id';
+	const PRODUCT_META_CS = '_fishotel_assigned_cs_placeholder_id';
 
 	public static function init() {
 		add_action( 'woocommerce_product_set_stock', [ __CLASS__, 'on_stock_set' ] );
@@ -23,9 +25,14 @@ class FisHotel_Placeholder_Library {
 		add_action( 'woocommerce_no_stock', [ __CLASS__, 'on_stock_set' ] );
 	}
 
-	/** Library = array of attachment IDs, filtered to those still attached. */
-	public static function get_library() {
-		$ids = get_option( self::OPTION_KEY, [] );
+	/**
+	 * Library = array of attachment IDs, filtered to those still attached.
+	 *
+	 * @param string $variant 'default' (regular library) or 'cs' (Coming Soon library).
+	 */
+	public static function get_library( $variant = 'default' ) {
+		$option_key = ( $variant === 'cs' ) ? self::OPTION_KEY_CS : self::OPTION_KEY;
+		$ids = get_option( $option_key, [] );
 		if ( ! is_array( $ids ) ) {
 			return [];
 		}
@@ -41,43 +48,57 @@ class FisHotel_Placeholder_Library {
 
 	/**
 	 * Resolve which attachment ID should stand in for this product.
-	 * Returns 0 if the library is empty (caller should fall back to the WC
-	 * default placeholder).
+	 * Returns 0 if the requested library is empty (caller should fall back).
 	 */
-	public static function get_for_product( $product_id ) {
+	public static function get_for_product( $product_id, $variant = 'default' ) {
 		$product_id = (int) $product_id;
 		if ( ! $product_id ) {
 			return 0;
 		}
 
-		$library = self::get_library();
+		$library = self::get_library( $variant );
 		if ( empty( $library ) ) {
 			return 0;
 		}
 
-		$assigned = (int) get_post_meta( $product_id, self::PRODUCT_META, true );
+		$meta_key = ( $variant === 'cs' ) ? self::PRODUCT_META_CS : self::PRODUCT_META;
+		$assigned = (int) get_post_meta( $product_id, $meta_key, true );
 		if ( $assigned && in_array( $assigned, $library, true ) ) {
 			return $assigned;
 		}
 
-		// Stable, distributed assignment.
 		$picked = $library[ $product_id % count( $library ) ];
-		update_post_meta( $product_id, self::PRODUCT_META, $picked );
+		update_post_meta( $product_id, $meta_key, $picked );
 		return $picked;
 	}
 
 	/**
-	 * Render the placeholder for a product at the given size. Returns the
-	 * library image if we have one, otherwise the WC default placeholder.
+	 * Render the placeholder for a product at the given size. CS-active
+	 * products try the Coming Soon library first, then fall through to
+	 * the regular library, then the WC default placeholder.
 	 */
 	public static function render( $product_id, $size = 'fishotel-product-card', $attrs = [] ) {
-		$attachment_id = self::get_for_product( $product_id );
+		$attachment_id = 0;
+
+		$cs_active = ( function_exists( 'fishotel_cs_release_ts' ) && fishotel_cs_release_ts( $product_id ) );
+		if ( $cs_active ) {
+			$attachment_id = self::get_for_product( $product_id, 'cs' );
+		} else {
+			// Opportunistic cleanup — once the release passes, drop the
+			// CS assignment so a future re-entry into Coming Soon picks
+			// fresh from the current library.
+			delete_post_meta( $product_id, self::PRODUCT_META_CS );
+		}
+		if ( ! $attachment_id ) {
+			$attachment_id = self::get_for_product( $product_id, 'default' );
+		}
+
 		if ( $attachment_id ) {
 			$alt = isset( $attrs['alt'] ) ? $attrs['alt'] : get_the_title( $product_id );
 			$attrs = array_merge( [ 'alt' => $alt ], $attrs );
 			return wp_get_attachment_image( $attachment_id, $size, false, $attrs );
 		}
-		// Library empty — fall back to WooCommerce default placeholder so we
+		// Both libraries empty — fall back to WooCommerce default so we
 		// never render nothing.
 		if ( function_exists( 'woocommerce_placeholder_img' ) ) {
 			return woocommerce_placeholder_img( $size );
@@ -86,8 +107,8 @@ class FisHotel_Placeholder_Library {
 	}
 
 	/**
-	 * Stock change hook. Clears the assigned placeholder when stock hits 0
-	 * so the next render after restock picks a fresh image.
+	 * Stock change hook. Clears both assigned placeholders when stock hits
+	 * 0 so the next render after restock (or next CS cycle) picks fresh.
 	 *
 	 * @param WC_Product|int $product
 	 */
@@ -103,6 +124,7 @@ class FisHotel_Placeholder_Library {
 		if ( $qty !== null && (int) $qty === 0 ) {
 			$pid = $product->get_parent_id() ? $product->get_parent_id() : $product->get_id();
 			delete_post_meta( $pid, self::PRODUCT_META );
+			delete_post_meta( $pid, self::PRODUCT_META_CS );
 		}
 	}
 }

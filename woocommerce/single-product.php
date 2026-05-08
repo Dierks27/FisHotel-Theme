@@ -95,7 +95,7 @@ while ( have_posts() ) :
             <?php if ($main_img_id) : ?>
                 <?php echo wp_get_attachment_image($main_img_id, 'fishotel-product-hero', false, ['class' => '', 'id' => 'fh-main-img', 'alt' => get_the_title()]); ?>
             <?php else : ?>
-                <?php echo woocommerce_placeholder_img('fishotel-product-hero'); ?>
+                <?php echo FisHotel_Placeholder_Library::render( $product_id, 'fishotel-product-hero', ['id' => 'fh-main-img', 'alt' => get_the_title()] ); ?>
             <?php endif; ?>
         </div>
 
@@ -390,7 +390,7 @@ if (!empty($related_ids)) :
             ?>
                 <a href="<?php echo esc_url($rel->get_permalink()); ?>" class="fh-fish-card">
                     <div class="fh-fish-card__image">
-                        <?php echo $rel->get_image('fishotel-product-card'); ?>
+                        <?php fishotel_product_thumbnail( $rel_id, 'fishotel-product-card' ); ?>
                     </div>
                     <div class="fh-fish-card__body">
                         <div class="fh-fish-card__name"><?php echo esc_html($rel->get_name()); ?></div>

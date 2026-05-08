@@ -234,6 +234,61 @@ class FisHotel_Admin_Settings {
 	public static function image_picker_js() {
 		return <<<'JS'
 (function($){
+	function fhPhLibrarySync($lib){
+		var ids = [];
+		$lib.find('.fh-ph-library__item').each(function(){
+			var id = parseInt($(this).attr('data-id'), 10);
+			if (id) ids.push(id);
+		});
+		$lib.find('.fh-ph-library__input').val(ids.join(','));
+	}
+	$(function(){
+		$('.fh-ph-library__grid').each(function(){
+			var $grid = $(this);
+			if ($.fn.sortable) {
+				$grid.sortable({
+					items: '> li',
+					placeholder: 'fh-ph-library__placeholder',
+					tolerance: 'pointer',
+					update: function(){ fhPhLibrarySync($grid.closest('.fh-ph-library')); }
+				});
+			}
+		});
+	});
+	$(document).on('click', '.fh-ph-library__add', function(e){
+		e.preventDefault();
+		var $lib = $(this).closest('.fh-ph-library');
+		var frame = wp.media({
+			title: 'Select placeholder images',
+			button: { text: 'Add to library' },
+			multiple: 'add',
+			library: { type: 'image' }
+		});
+		frame.on('select', function(){
+			var sel = frame.state().get('selection').toJSON();
+			var existing = {};
+			$lib.find('.fh-ph-library__item').each(function(){
+				existing[$(this).attr('data-id')] = true;
+			});
+			sel.forEach(function(att){
+				if (existing[att.id]) return;
+				var url = (att.sizes && att.sizes.thumbnail) ? att.sizes.thumbnail.url : att.url;
+				var $item = $('<li class="fh-ph-library__item"></li>')
+					.attr('data-id', att.id)
+					.append($('<img>').attr('src', url).attr('alt', ''))
+					.append('<button type="button" class="fh-ph-library__remove" aria-label="Remove">&times;</button>');
+				$lib.find('.fh-ph-library__grid').append($item);
+			});
+			fhPhLibrarySync($lib);
+		});
+		frame.open();
+	});
+	$(document).on('click', '.fh-ph-library__remove', function(e){
+		e.preventDefault();
+		var $lib = $(this).closest('.fh-ph-library');
+		$(this).closest('.fh-ph-library__item').remove();
+		fhPhLibrarySync($lib);
+	});
 	$(document).on('click', '.fh-image-picker__choose', function(e){
 		e.preventDefault();
 		var $picker = $(this).closest('.fh-image-picker');
@@ -291,6 +346,13 @@ JS;
 		.fh-image-picker__preview { margin: 0 0 10px; padding: 6px; background: #fff; border: 1px solid #ddd; border-radius: 3px; max-width: 320px; }
 		.fh-image-picker__preview img { display: block; max-width: 100%; height: auto; }
 		.fh-image-picker__buttons { margin: 0; display: flex; gap: 10px; align-items: center; }
+		.fh-ph-library { max-width: 920px; }
+		.fh-ph-library__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; list-style: none; margin: 0 0 12px; padding: 0; max-width: 760px; }
+		.fh-ph-library__item { position: relative; background: #fff; border: 1px solid #ddd; border-radius: 3px; padding: 4px; cursor: move; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+		.fh-ph-library__item img { display: block; width: 100%; height: 100%; object-fit: cover; }
+		.fh-ph-library__remove { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; line-height: 20px; padding: 0; border: 1px solid #ccc; background: #fff; border-radius: 50%; cursor: pointer; font-size: 16px; color: #b32d2e; }
+		.fh-ph-library__remove:hover { background: #b32d2e; color: #fff; border-color: #b32d2e; }
+		.fh-ph-library__placeholder { background: #f3f0e8; border: 1px dashed #c9963a; border-radius: 3px; aspect-ratio: 1 / 1; }
 		';
 	}
 
@@ -338,6 +400,17 @@ JS;
 				'title'  => 'Branding',
 				'fields' => [
 					'fh_tagline' => [ 'label' => 'Logo tagline', 'type' => 'text', 'placeholder' => 'We quarantine. You reef.' ],
+				],
+			],
+			// Placeholder Library section
+			'placeholders' => [
+				'title'  => 'Product Image Placeholder Library',
+				'fields' => [
+					'fh_placeholder_library' => [
+						'label'       => 'Placeholder images',
+						'type'        => 'placeholder_library',
+						'description' => 'Images here stand in whenever a product has no featured image. Drag thumbnails to reorder, click × to remove. Each product gets a stable assignment that resets the next time it goes out of stock.',
+					],
 				],
 			],
 			// Care Guide section
@@ -446,6 +519,12 @@ JS;
 						'sanitize_callback' => 'absint',
 						'default'           => 0,
 					] );
+				} elseif ( $field['type'] === 'placeholder_library' ) {
+					register_setting( self::OPTION_GROUP, $key, [
+						'type'              => 'array',
+						'sanitize_callback' => [ __CLASS__, 'sanitize_id_list' ],
+						'default'           => [],
+					] );
 				} else {
 					register_setting( self::OPTION_GROUP, $key, [
 						'type'              => 'string',
@@ -477,6 +556,24 @@ JS;
 				'duration'    => isset( $row['duration'] )    ? sanitize_text_field( $row['duration'] )        : $defaults[ $i ]['duration'],
 				'description' => isset( $row['description'] ) ? sanitize_textarea_field( $row['description'] ) : $defaults[ $i ]['description'],
 			];
+		}
+		return $out;
+	}
+
+	/** Accepts an array or comma-separated string of attachment IDs. */
+	public static function sanitize_id_list( $val ) {
+		if ( is_string( $val ) ) {
+			$val = array_map( 'trim', explode( ',', $val ) );
+		}
+		if ( ! is_array( $val ) ) {
+			return [];
+		}
+		$out = [];
+		foreach ( $val as $id ) {
+			$id = (int) $id;
+			if ( $id > 0 && ! in_array( $id, $out, true ) ) {
+				$out[] = $id;
+			}
 		}
 		return $out;
 	}
@@ -613,6 +710,30 @@ JS;
 					'quicktags'     => true,
 				]
 			);
+		} elseif ( $type === 'placeholder_library' ) {
+			$ids = get_option( $key, [] );
+			if ( ! is_array( $ids ) ) $ids = [];
+			$csv = implode( ',', array_map( 'intval', $ids ) );
+			?>
+			<div class="fh-ph-library" data-name="<?php echo esc_attr( $key ); ?>">
+				<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $csv ); ?>" class="fh-ph-library__input">
+				<ul class="fh-ph-library__grid">
+					<?php foreach ( $ids as $id ) :
+						$id  = (int) $id;
+						$url = $id ? wp_get_attachment_image_url( $id, 'thumbnail' ) : '';
+						if ( ! $url ) continue;
+					?>
+						<li class="fh-ph-library__item" data-id="<?php echo esc_attr( $id ); ?>">
+							<img src="<?php echo esc_url( $url ); ?>" alt="">
+							<button type="button" class="fh-ph-library__remove" aria-label="Remove">&times;</button>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+				<p>
+					<button type="button" class="button button-secondary fh-ph-library__add">+ Add Images</button>
+				</p>
+			</div>
+			<?php
 		} elseif ( $type === 'repeater_wysiwyg' ) {
 			$items = self::get_faq_items();
 			$cats  = self::faq_categories();

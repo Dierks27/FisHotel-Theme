@@ -85,7 +85,7 @@ if (!$available_query->have_posts()) {
             ?>
                 <a href="<?php the_permalink(); ?>" class="fh-fish-card">
                     <div class="fh-fish-card__image">
-                        <?php the_post_thumbnail('fishotel-product-card'); ?>
+                        <?php fishotel_product_thumbnail( $pid, 'fishotel-product-card' ); ?>
                         <span class="fh-fish-card__status fh-fish-card__status--available">Available</span>
                         <?php if ($days) : ?>
                         <div class="fh-fish-card__days">

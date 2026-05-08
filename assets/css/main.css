@@ -603,16 +603,16 @@ h1, h2, h3, h4, h5 {
   cursor: pointer;
 }
 
-/* Product grid — explicit breakpoints (desktop default; tablet/mobile
-   overrides live in the media queries below). Cards sit flush on the
-   page background with no surrounding frame; spacing comes from gap. */
+/* Product grid — tight "gallery wall" density. Cards sit on a slightly
+   elevated tile (~2% lighter than page bg); the hairline gap shows the
+   page bg through, separating tiles without color or keylines. */
 .fh-product-grid {
   max-width: var(--fh-max-width);
   margin: 0 auto;
   padding: 36px var(--fh-page-pad);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  gap: 2px;
   background: transparent;
 }
 
@@ -620,15 +620,20 @@ h1, h2, h3, h4, h5 {
    9. FISH CARD (loop item)
 ───────────────────────────────────────── */
 .fh-fish-card {
-  background: var(--fh-bg);
+  /* Tile sits ~2% lighter than the page bg; gallery wall effect comes
+     from the hairline grid gap, not from a colored keyline. */
+  background: rgba(255, 255, 255, 0.025);
   display: block;
   text-decoration: none;
-  transition: background var(--fh-transition);
+  transition: background 200ms ease, box-shadow 200ms ease;
   position: relative;
+  z-index: 0;
 }
 
 .fh-fish-card:hover {
-  background: var(--fh-bg-lt);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 1;
 }
 
 .fh-fish-card__image {
@@ -707,6 +712,13 @@ h1, h2, h3, h4, h5 {
   color: var(--fh-text-1);
   margin-bottom: 3px;
   line-height: 1.2;
+  /* Reserve space for the hover underline so the layout doesn't shift. */
+  padding-bottom: 4px;
+  border-bottom: 1px solid transparent;
+  transition: border-color 200ms ease;
+}
+.fh-fish-card:hover .fh-fish-card__name {
+  border-bottom-color: rgba(74, 157, 184, 0.5);
 }
 
 .fh-fish-card__latin {
@@ -1647,7 +1659,7 @@ h1, h2, h3, h4, h5 {
   /* Products go 2 columns on mobile */
   .fh-product-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 1px;
   }
 
   /* Product page stacks */

@@ -619,6 +619,30 @@ h1, h2, h3, h4, h5 {
 /* ─────────────────────────────────────────
    9. FISH CARD (loop item)
 ───────────────────────────────────────── */
+/* Wrapper is the grid item; the .fh-fish-card anchor inside is the
+   visual tile. Flex-column on the wrapper plus flex:1 on the card lets
+   adjacent cards in the same row visually share a height even when WC
+   plugins (e.g. Coming Soon) inject extra content via
+   woocommerce_after_shop_loop_item below the anchor. */
+.fh-fish-card-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fh-fish-card-wrap > .fh-fish-card {
+  flex: 1 1 auto;
+}
+/* Suppress duplicate scientific-name output that some plugins inject
+   inside our card body (we already render the species line as
+   .fh-fish-card__latin from the product short description). */
+.fh-fish-card .scientific-name,
+.fh-fish-card [class*="scientific-name"],
+.fh-fish-card [class*="sci-name"],
+.fh-fish-card-wrap > .scientific-name,
+.fh-fish-card-wrap > [class*="scientific-name"] {
+  display: none !important;
+}
+
 .fh-fish-card {
   /* Tile sits ~2% lighter than the page bg; gallery wall effect comes
      from the hairline grid gap, not from a colored keyline. */

@@ -207,12 +207,56 @@ if (!$available_query->have_posts()) {
 </section>
 
 <?php /* ══════════════════════════════════════
-   TESTIMONIAL QUOTE
+   TESTIMONIAL QUOTE — admin-managed repeater
 ══════════════════════════════════════ */ ?>
-<section class="fh-quote-section">
-    <span class="fh-quote-mark">"</span>
-    <blockquote class="fh-quote-text">Some of the healthiest, happiest, most well-adjusted quarantined fish on the market.</blockquote>
+<?php
+$testimonials = class_exists( 'FisHotel_Admin_Settings' )
+    ? FisHotel_Admin_Settings::get_home_testimonials()
+    : [];
+$tm_count = count( $testimonials );
+if ( $tm_count > 0 ) :
+    $tm_multi = $tm_count > 1;
+?>
+<section class="fh-quote-section<?php echo $tm_multi ? ' fh-quote-section--multi' : ''; ?>"
+         data-fh-testimonials="<?php echo $tm_multi ? '1' : '0'; ?>">
+    <span class="fh-quote-mark" aria-hidden="true">"</span>
+    <div class="fh-quote-stack">
+        <?php foreach ( $testimonials as $i => $tm ) :
+            $author = isset( $tm['author'] ) ? trim( $tm['author'] ) : '';
+            $source = isset( $tm['source'] ) ? trim( $tm['source'] ) : '';
+            $has_attr = ( $author !== '' || $source !== '' );
+        ?>
+            <figure class="fh-quote-slide<?php echo $i === 0 ? ' is-active' : ''; ?>"
+                    data-index="<?php echo (int) $i; ?>"
+                    aria-hidden="<?php echo $i === 0 ? 'false' : 'true'; ?>">
+                <blockquote class="fh-quote-text"><?php echo wp_kses_post( $tm['quote'] ); ?></blockquote>
+                <?php if ( $has_attr ) : ?>
+                <figcaption class="fh-quote-author">
+                    <?php
+                    $bits = [];
+                    if ( $author !== '' ) $bits[] = esc_html( $author );
+                    if ( $source !== '' ) $bits[] = esc_html( $source );
+                    echo implode( ' <span class="fh-quote-divider" aria-hidden="true">·</span> ', $bits );
+                    ?>
+                </figcaption>
+                <?php endif; ?>
+            </figure>
+        <?php endforeach; ?>
+    </div>
+    <?php if ( $tm_multi ) : ?>
+    <div class="fh-quote-dots" role="tablist" aria-label="Testimonial pagination">
+        <?php foreach ( $testimonials as $i => $tm ) : ?>
+            <button type="button"
+                    class="fh-quote-dot<?php echo $i === 0 ? ' is-active' : ''; ?>"
+                    role="tab"
+                    aria-label="<?php printf( esc_attr__( 'Show testimonial %d', 'fishotel' ), $i + 1 ); ?>"
+                    aria-selected="<?php echo $i === 0 ? 'true' : 'false'; ?>"
+                    data-target="<?php echo (int) $i; ?>"></button>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 </section>
+<?php endif; ?>
 
 <?php /* ══════════════════════════════════════
    CTA SECTION

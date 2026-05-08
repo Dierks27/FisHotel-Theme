@@ -241,14 +241,74 @@ class FisHotel_Admin_Settings {
 		return get_option( $key, $defaults[ $key ] ?? '' );
 	}
 
+	/**
+	 * Top-level menu slug. The Dashboard sub-page reuses this slug so the
+	 * first child entry shows "Dashboard" instead of the parent's title.
+	 */
+	const PARENT_SLUG = 'fishotel-theme';
+
+	/**
+	 * Map of sub-page slug → page config. Drives both menu registration
+	 * and the rendering callback dispatch. Order here = sidebar order.
+	 */
+	public static function pages() {
+		return [
+			'fishotel-theme'         => [
+				'page_title' => 'FisHotel Theme',
+				'menu_title' => 'Dashboard',
+				'render'     => 'render_dashboard',
+			],
+			'fishotel-homepage'      => [ 'page_title' => 'Homepage',      'menu_title' => 'Homepage' ],
+			'fishotel-shop'          => [ 'page_title' => 'Shop Page',     'menu_title' => 'Shop Page' ],
+			'fishotel-product'       => [ 'page_title' => 'Product Page',  'menu_title' => 'Product Page' ],
+			'fishotel-faq'           => [ 'page_title' => 'FAQ Page',      'menu_title' => 'FAQ Page' ],
+			'fishotel-about'         => [ 'page_title' => 'About Page',    'menu_title' => 'About Page' ],
+			'fishotel-contacts'      => [ 'page_title' => 'Contacts Page', 'menu_title' => 'Contacts Page' ],
+			'fishotel-placeholders'  => [ 'page_title' => 'Placeholders',  'menu_title' => 'Placeholders' ],
+			'fishotel-branding'      => [ 'page_title' => 'Branding',      'menu_title' => 'Branding' ],
+			'fishotel-tools'         => [
+				'page_title' => 'Tools',
+				'menu_title' => 'Tools',
+				'render'     => 'render_tools',
+			],
+		];
+	}
+
 	public static function init() {
 		add_action( 'admin_menu', [ __CLASS__, 'add_page' ] );
 		add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
+		add_action( 'admin_init', [ __CLASS__, 'redirect_legacy_urls' ] );
 		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_admin_assets' ] );
 	}
 
+	/**
+	 * The Settings and Tools pages used to live under
+	 * Products → FisHotel Settings / FisHotel Tools. After the reorg the
+	 * old URLs would 404; redirect them to the new top-level menu so any
+	 * bookmarked links still resolve.
+	 */
+	public static function redirect_legacy_urls() {
+		if ( empty( $_GET['page'] ) || empty( $_GET['post_type'] ) ) {
+			return;
+		}
+		if ( $_GET['post_type'] !== 'product' ) {
+			return;
+		}
+		$old = sanitize_key( wp_unslash( $_GET['page'] ) );
+		$map = [
+			'fishotel-settings' => self::PARENT_SLUG,
+			'fishotel-tools'    => 'fishotel-tools',
+		];
+		if ( ! isset( $map[ $old ] ) ) {
+			return;
+		}
+		wp_safe_redirect( admin_url( 'admin.php?page=' . $map[ $old ] ) );
+		exit;
+	}
+
 	public static function enqueue_admin_assets( $hook ) {
-		if ( $hook !== 'product_page_fishotel-settings' ) {
+		if ( $hook !== 'toplevel_page_' . self::PARENT_SLUG
+			&& strpos( $hook, self::PARENT_SLUG . '_page_' ) !== 0 ) {
 			return;
 		}
 		// Ensure TinyMCE / Quicktags are available so wp_editor() instances init reliably
@@ -408,33 +468,59 @@ JS;
 		.fh-tm-row textarea { width: 100%; }
 		.fh-tm-row input[type=text] { width: 100%; }
 		.fh-tm-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+		.fh-dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; max-width: 980px; margin-top: 18px; }
+		.fh-dash-card { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; background: #fff; border: 1px solid #ddd; border-left: 3px solid #c9963a; border-radius: 3px; text-decoration: none; color: inherit; transition: box-shadow .15s ease, transform .15s ease; }
+		.fh-dash-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); transform: translateY(-1px); }
+		.fh-dash-card strong { font-size: 14px; color: #1d2327; }
+		.fh-dash-card span { font-size: 12px; color: #666; line-height: 1.45; }
 		';
 	}
 
 	public static function add_page() {
-		add_submenu_page(
-			'edit.php?post_type=product',
-			'FisHotel Settings',
-			'FisHotel Settings',
-			'manage_woocommerce',
-			'fishotel-settings',
-			[ __CLASS__, 'render_page' ]
+		$pages = self::pages();
+
+		// Top-level menu — uses the same slug as the Dashboard sub-page so
+		// add_submenu_page() with that slug renames the first child entry
+		// from "FisHotel Theme" to "Dashboard".
+		add_menu_page(
+			'FisHotel Theme',
+			'FisHotel Theme',
+			'manage_options',
+			self::PARENT_SLUG,
+			[ __CLASS__, 'render_dashboard' ],
+			'dashicons-admin-customizer',
+			57 // Just below WooCommerce / Products.
 		);
+
+		foreach ( $pages as $slug => $config ) {
+			if ( isset( $config['render'] ) ) {
+				$callback = [ __CLASS__, $config['render'] ];
+			} else {
+				$callback = function () use ( $slug, $config ) {
+					self::render_settings_subpage( $slug, $config['page_title'] );
+				};
+			}
+			add_submenu_page(
+				self::PARENT_SLUG,
+				$config['page_title'],
+				$config['menu_title'],
+				'manage_options',
+				$slug,
+				$callback
+			);
+		}
 	}
 
-	public static function register_settings() {
-		$fields = [
-			// Shop section
-			'shop' => [
-				'title'  => 'Shop Page',
-				'fields' => [
-					'fh_shop_display'     => [ 'label' => 'Shop page display',    'type' => 'select', 'options' => [ 'categories' => 'Categories', 'products' => 'Products', 'both' => 'Both' ] ],
-					'fh_shop_hide_empty'  => [ 'label' => 'Hide empty categories', 'type' => 'checkbox' ],
-					'fh_shop_hidden_cats' => [ 'label' => 'Hidden categories',     'type' => 'multicheck', 'description' => 'Checked categories will never appear on the shop page.' ],
-				],
-			],
-			// Homepage section
+	/**
+	 * Section definitions, keyed by section id, each tagged with the
+	 * sub-page slug it belongs to. register_settings() and the sub-page
+	 * renderer share this map so adding a field only touches one place.
+	 */
+	public static function sections() {
+		return [
+			// Homepage page
 			'home' => [
+				'page'   => 'fishotel-homepage',
 				'title'  => 'Homepage',
 				'fields' => [
 					'fh_home_available_count' => [
@@ -447,8 +533,8 @@ JS;
 					],
 				],
 			],
-			// Homepage Testimonials section
 			'home_testimonials' => [
+				'page'   => 'fishotel-homepage',
 				'title'  => 'Homepage Testimonials',
 				'fields' => [
 					'fh_home_testimonials' => [
@@ -458,16 +544,27 @@ JS;
 					],
 				],
 			],
-			// QT Certificate section
+			// Shop page
+			'shop' => [
+				'page'   => 'fishotel-shop',
+				'title'  => 'Shop Page',
+				'fields' => [
+					'fh_shop_display'     => [ 'label' => 'Shop page display',    'type' => 'select', 'options' => [ 'categories' => 'Categories', 'products' => 'Products', 'both' => 'Both' ] ],
+					'fh_shop_hide_empty'  => [ 'label' => 'Hide empty categories', 'type' => 'checkbox' ],
+					'fh_shop_hidden_cats' => [ 'label' => 'Hidden categories',     'type' => 'multicheck', 'description' => 'Checked categories will never appear on the shop page.' ],
+				],
+			],
+			// Product page
 			'qt' => [
+				'page'   => 'fishotel-product',
 				'title'  => 'QT Certificate',
 				'fields' => [
 					'fh_qt_line_1' => [ 'label' => 'Protocol line 1', 'type' => 'text', 'placeholder' => '14 days observation' ],
 					'fh_qt_line_2' => [ 'label' => 'Protocol line 2', 'type' => 'text', 'placeholder' => '+ 14 days treatment' ],
 				],
 			],
-			// Trust Strip section
 			'trust' => [
+				'page'   => 'fishotel-product',
 				'title'  => 'Trust Strip (below Add to Cart)',
 				'fields' => [
 					'fh_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => '28-day QT protocol' ],
@@ -475,45 +572,17 @@ JS;
 					'fh_trust_3' => [ 'label' => 'Trust item 3', 'type' => 'text', 'placeholder' => 'Ships Mon–Tue' ],
 				],
 			],
-			// Branding section
-			'branding' => [
-				'title'  => 'Branding',
-				'fields' => [
-					'fh_tagline' => [ 'label' => 'Logo tagline', 'type' => 'text', 'placeholder' => 'We quarantine. You reef.' ],
-				],
-			],
-			// Placeholder Library section
-			'placeholders' => [
-				'title'  => 'Product Image Placeholder Library',
-				'fields' => [
-					'fh_placeholder_library' => [
-						'label'       => 'Placeholder images',
-						'type'        => 'placeholder_library',
-						'description' => 'Images here stand in whenever a product has no featured image. Drag thumbnails to reorder, click × to remove. Each product gets a stable assignment that resets the next time it goes out of stock.',
-					],
-				],
-			],
-			// Coming Soon Placeholder Library section
-			'placeholders_cs' => [
-				'title'  => 'Coming Soon Placeholder Library',
-				'fields' => [
-					'fh_cs_placeholder_library' => [
-						'label'       => 'Coming Soon placeholder images',
-						'type'        => 'placeholder_library',
-						'description' => 'Images here stand in whenever a Coming Soon product has no featured image. Drag thumbnails to reorder. Each Coming Soon product gets a stable assignment until its release date passes.',
-					],
-				],
-			],
-			// Care Guide section
 			'care' => [
+				'page'   => 'fishotel-product',
 				'title'  => 'Care Guide Defaults',
 				'fields' => [
 					'fh_default_foods'   => [ 'label' => 'Default Foods & Feeding text',    'type' => 'textarea', 'description' => 'Shown when a product has no Foods & Feeding custom field.' ],
 					'fh_default_habitat' => [ 'label' => 'Default Habitat & Behavior text', 'type' => 'textarea', 'description' => 'Shown when a product has no Habitat & Behavior custom field.' ],
 				],
 			],
-			// FAQ Page section
+			// FAQ page
 			'faq' => [
+				'page'   => 'fishotel-faq',
 				'title'  => 'FAQ Page',
 				'fields' => [
 					'faq_concierge_label'         => [ 'label' => 'Concierge eyebrow',         'type' => 'text',     'placeholder' => 'The Concierge Desk' ],
@@ -525,9 +594,10 @@ JS;
 					'fh_faq_items'                => [ 'label' => 'FAQ items',                 'type' => 'repeater_wysiwyg', 'description' => 'Drag rows to reorder. Answers support bullet lists, bold, and links.' ],
 				],
 			],
-			// About Page section
+			// About page
 			'about' => [
-				'title'  => 'About Page (Founder\'s Edition)',
+				'page'   => 'fishotel-about',
+				'title'  => "About Page (Founder's Edition)",
 				'fields' => [
 					'about_masthead'      => [ 'label' => 'Masthead',         'type' => 'text',     'placeholder' => 'THE FISHOTEL GAZETTE' ],
 					'about_edition_line'  => [ 'label' => 'Edition line',     'type' => 'text',     'placeholder' => "FOUNDER'S EDITION · EST. 1923 · ONE FISH CENT" ],
@@ -552,8 +622,9 @@ JS;
 					'about_inline_image_2_credit'  => [ 'label' => 'Inline image #2 credit',      'type' => 'text',     'placeholder' => 'ILLUSTRATION' ],
 				],
 			],
-			// Contacts Page section
+			// Contacts page
 			'contacts' => [
+				'page'   => 'fishotel-contacts',
 				'title'  => 'Contacts Page',
 				'fields' => [
 					'contacts_eyebrow'            => [ 'label' => 'Eyebrow',              'type' => 'text',     'placeholder' => 'FRONT DESK' ],
@@ -566,14 +637,47 @@ JS;
 					'contacts_forum_label'        => [ 'label' => 'Forum link label',     'type' => 'text',     'placeholder' => 'Visit our Humble.Fish forum' ],
 				],
 			],
+			// Placeholders page
+			'placeholders' => [
+				'page'   => 'fishotel-placeholders',
+				'title'  => 'Product Image Placeholder Library',
+				'fields' => [
+					'fh_placeholder_library' => [
+						'label'       => 'Placeholder images',
+						'type'        => 'placeholder_library',
+						'description' => 'Images here stand in whenever a product has no featured image. Drag thumbnails to reorder, click × to remove. Each product gets a stable assignment that resets the next time it goes out of stock.',
+					],
+				],
+			],
+			'placeholders_cs' => [
+				'page'   => 'fishotel-placeholders',
+				'title'  => 'Coming Soon Placeholder Library',
+				'fields' => [
+					'fh_cs_placeholder_library' => [
+						'label'       => 'Coming Soon placeholder images',
+						'type'        => 'placeholder_library',
+						'description' => 'Images here stand in whenever a Coming Soon product has no featured image. Drag thumbnails to reorder. Each Coming Soon product gets a stable assignment until its release date passes.',
+					],
+				],
+			],
+			// Branding page
+			'branding' => [
+				'page'   => 'fishotel-branding',
+				'title'  => 'Branding',
+				'fields' => [
+					'fh_tagline' => [ 'label' => 'Logo tagline', 'type' => 'text', 'placeholder' => 'We quarantine. You reef.' ],
+				],
+			],
 		];
+	}
 
-		foreach ( $fields as $section_id => $section ) {
+	public static function register_settings() {
+		foreach ( self::sections() as $section_id => $section ) {
 			add_settings_section(
 				'fh_section_' . $section_id,
 				$section['title'],
 				'__return_null',
-				self::OPTION_GROUP
+				$section['page']
 			);
 
 			foreach ( $section['fields'] as $key => $field ) {
@@ -647,7 +751,7 @@ JS;
 					$key,
 					$field['label'],
 					[ __CLASS__, 'render_field' ],
-					self::OPTION_GROUP,
+					$section['page'],
 					'fh_section_' . $section_id,
 					array_merge( $field, [ 'key' => $key ] )
 				);
@@ -989,26 +1093,84 @@ JS;
 		<?php
 	}
 
-	public static function render_page() {
+	/**
+	 * Generic sub-page renderer used for every Settings-API-backed page.
+	 * Each sub-page only renders the sections registered against its own
+	 * page slug, keeping forms small and focused.
+	 */
+	public static function render_settings_subpage( $page_slug, $title ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'fishotel' ) );
+		}
 		?>
 		<div class="wrap">
-			<h1>FisHotel Settings</h1>
-			<p style="color:#666; margin-bottom:20px;">Every value shown on the product page and shop. Change it here, see it live.</p>
+			<h1><?php echo esc_html( $title ); ?></h1>
 			<form method="post" action="options.php">
 				<?php
 				settings_fields( self::OPTION_GROUP );
-				do_settings_sections( self::OPTION_GROUP );
+				do_settings_sections( $page_slug );
 				submit_button( 'Save Settings' );
 				?>
 			</form>
+		</div>
+		<?php
+	}
 
-			<?php
-			// Tools section — backfill button lives here so it shares the
-			// settings screen but doesn't post through the options API form.
-			if ( class_exists( 'FisHotel_Compat_Backfill' ) ) {
-				FisHotel_Compat_Backfill::render_button();
-			}
-			?>
+	/**
+	 * Dashboard landing page — a card grid linking to every sub-page so
+	 * the user can scan what's editable without diving in.
+	 */
+	public static function render_dashboard() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'fishotel' ) );
+		}
+		$cards = [
+			'fishotel-homepage'     => [ 'title' => 'Homepage',      'desc' => 'Available Now count and homepage testimonials.' ],
+			'fishotel-shop'         => [ 'title' => 'Shop Page',     'desc' => 'Display mode and which categories to hide.' ],
+			'fishotel-product'      => [ 'title' => 'Product Page',  'desc' => 'QT certificate, trust strip, care guide defaults.' ],
+			'fishotel-faq'          => [ 'title' => 'FAQ Page',      'desc' => 'Concierge intro, quarantine stages, FAQ items.' ],
+			'fishotel-about'        => [ 'title' => 'About Page',    'desc' => "Founder's Edition masthead, headline, byline, body." ],
+			'fishotel-contacts'     => [ 'title' => 'Contacts Page', 'desc' => 'Email, forum, location text and map image.' ],
+			'fishotel-placeholders' => [ 'title' => 'Placeholders',  'desc' => 'In-stock and Coming Soon placeholder libraries.' ],
+			'fishotel-branding'     => [ 'title' => 'Branding',      'desc' => 'Logo tagline and global brand variables.' ],
+			'fishotel-tools'        => [ 'title' => 'Tools',         'desc' => 'Theme update check, product migration, compat backfill.' ],
+		];
+		?>
+		<div class="wrap">
+			<h1>FisHotel Theme</h1>
+			<p style="color:#666; max-width:760px;">Theme-side content and configuration, organized by where it appears on the site. Pick a section below to edit.</p>
+			<div class="fh-dash-grid">
+				<?php foreach ( $cards as $slug => $card ) : ?>
+					<a class="fh-dash-card" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $slug ) ); ?>">
+						<strong><?php echo esc_html( $card['title'] ); ?></strong>
+						<span><?php echo esc_html( $card['desc'] ); ?></span>
+					</a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Tools sub-page — theme update check, product description migration,
+	 * and the Compatibility Guide backfill button. Wired up by the host
+	 * classes which render their own buttons + handle their own AJAX.
+	 */
+	public static function render_tools() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'fishotel' ) );
+		}
+		?>
+		<div class="wrap">
+			<h1>FisHotel Tools</h1>
+
+			<?php if ( class_exists( 'FisHotel_Hotel_Data' ) ) : ?>
+				<?php FisHotel_Hotel_Data::render_tools_panels(); ?>
+			<?php endif; ?>
+
+			<?php if ( class_exists( 'FisHotel_Compat_Backfill' ) ) : ?>
+				<?php FisHotel_Compat_Backfill::render_button(); ?>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

@@ -27,6 +27,49 @@ add_filter( 'loop_shop_columns', function() { return 4; } );
 add_filter( 'loop_shop_per_page', function() { return 16; } );
 
 /*
+ * Strip PayPal Pay Later / Pay-in-4 messaging from the PDP summary hook.
+ * The WooCommerce PayPal Payments plugin registers a message-renderer
+ * callback against woocommerce_single_product_summary. We don't want
+ * that line above the purchase panel. Run on template_redirect so the
+ * plugin has finished registering its hooks before we strip them.
+ */
+add_action( 'template_redirect', function () {
+	if ( ! is_product() ) {
+		return;
+	}
+	if ( empty( $GLOBALS['wp_filter']['woocommerce_single_product_summary'] ) ) {
+		return;
+	}
+	$hook = $GLOBALS['wp_filter']['woocommerce_single_product_summary'];
+	if ( ! is_object( $hook ) || empty( $hook->callbacks ) ) {
+		return;
+	}
+	foreach ( $hook->callbacks as $priority => $cbs ) {
+		foreach ( $cbs as $key => $cb ) {
+			$fn = isset( $cb['function'] ) ? $cb['function'] : null;
+			$class  = '';
+			$method = '';
+			if ( is_array( $fn ) ) {
+				$class  = is_object( $fn[0] ) ? get_class( $fn[0] ) : (string) $fn[0];
+				$method = isset( $fn[1] ) ? (string) $fn[1] : '';
+			} elseif ( is_string( $fn ) ) {
+				$method = $fn;
+			}
+			$is_paypal = ( stripos( $class, 'PayPal' ) !== false );
+			$is_message = (
+				stripos( $class, 'Message' ) !== false ||
+				stripos( $method, 'message' ) !== false ||
+				stripos( $method, 'pay_later' ) !== false ||
+				stripos( $method, 'paylater' ) !== false
+			);
+			if ( $is_paypal && $is_message ) {
+				unset( $hook->callbacks[ $priority ][ $key ] );
+			}
+		}
+	}
+}, 1 );
+
+/*
  * ─────────────────────────────────────────
  * STANDARD WC HOOK COMPATIBILITY
  *

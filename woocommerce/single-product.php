@@ -40,6 +40,36 @@ while ( have_posts() ) :
      * notices, badges here.
      */
     do_action( 'woocommerce_before_single_product' );
+
+    // Coming Soon detection. Prefer the plugin helper if it exists; fall
+    // back to checking common release-date meta keys for a future
+    // timestamp. When active, our QT cert + variations + Add-to-Cart
+    // panel is suppressed so the plugin's countdown/notify panel
+    // (rendered via woocommerce_single_product_summary) stands alone.
+    $is_coming_soon = false;
+    if ( function_exists( 'fishotel_cs_is_active' ) ) {
+        $is_coming_soon = (bool) fishotel_cs_is_active( $product );
+    } else {
+        $cs_meta_keys = [
+            '_fishotel_coming_soon_release',
+            '_fishotel_coming_soon_release_date',
+            '_fishotel_coming_soon_at',
+            '_fishotel_coming_soon_date',
+            '_coming_soon_release',
+            '_coming_soon_release_date',
+            '_coming_soon_date',
+        ];
+        $now = current_time( 'timestamp' );
+        foreach ( $cs_meta_keys as $mk ) {
+            $release = get_post_meta( $product_id, $mk, true );
+            if ( ! $release ) continue;
+            $ts = is_numeric( $release ) ? (int) $release : strtotime( (string) $release );
+            if ( $ts && $ts > $now ) {
+                $is_coming_soon = true;
+                break;
+            }
+        }
+    }
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -134,6 +164,11 @@ while ( have_posts() ) :
         do_action( 'woocommerce_before_single_product_summary' );
         do_action( 'woocommerce_single_product_summary' );
         ?>
+
+        <?php /* When Coming Soon is active the plugin's countdown/notify
+                 panel renders via woocommerce_single_product_summary above.
+                 Suppress the live purchase UI so the two don't double up. */ ?>
+        <?php if ( ! $is_coming_soon ) : ?>
 
         <?php /* QT Certificate Panel */ ?>
         <div class="fh-qt-cert">
@@ -253,6 +288,8 @@ while ( have_posts() ) :
             <?php do_action('woocommerce_after_add_to_cart_button'); ?>
         </form>
         <?php do_action('woocommerce_after_add_to_cart_form'); ?>
+
+        <?php endif; /* ! $is_coming_soon */ ?>
 
         <?php /* Product meta */ ?>
         <div class="fh-product-meta product_meta">

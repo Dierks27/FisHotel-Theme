@@ -69,6 +69,9 @@ $faqs = class_exists( 'FisHotel_Admin_Settings' )
 						<?php if ( ! empty( $stage['duration'] ) ) : ?>
 							<span class="fh-qt-duration"><?php echo esc_html( $stage['duration'] ); ?></span>
 						<?php endif; ?>
+						<?php if ( ! empty( $stage['if_needed'] ) ) : ?>
+							<span class="fh-qt-if-needed">(if needed)</span>
+						<?php endif; ?>
 						<h3 class="fh-qt-label"><?php echo esc_html( $stage['label'] ); ?></h3>
 						<?php if ( ! empty( $stage['sublabel'] ) ) : ?>
 							<p class="fh-qt-sublabel"><?php echo esc_html( $stage['sublabel'] ); ?></p>

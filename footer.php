@@ -28,7 +28,7 @@
         <div>
             <p class="site-footer__col-title">Info</p>
             <ul class="site-footer__col-links">
-                <li><a href="<?php echo esc_url( home_url( '/faq' ) ); ?>">FAQ's</a></li>
+                <li><a href="<?php echo esc_url( home_url( '/faq' ) ); ?>">FAQ</a></li>
                 <li><a href="<?php echo esc_url( home_url( '/about-us' ) ); ?>">About Us</a></li>
                 <li><a href="<?php echo esc_url( home_url( '/shop' ) ); ?>">Shop</a></li>
             </ul>
@@ -44,9 +44,6 @@
     <div class="site-footer__bottom">
         <span class="site-footer__copy">
             &copy; <?php echo date( 'Y' ); ?> The FisHotel &middot; fishotel.com
-        </span>
-        <span class="site-footer__copy">
-            <?php printf( esc_html__( 'Powered by %s', 'fishotel' ), '<a href="https://wordpress.org">WordPress</a>' ); ?>
         </span>
     </div>
 </footer>

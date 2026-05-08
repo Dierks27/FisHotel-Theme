@@ -123,33 +123,30 @@
   font-family: var(--fh-serif); font-size: 100px; line-height: .5;
   color: rgba(41,24,16,.2); display: block; margin-bottom: 32px;
 }
-/* Stacked slides — absolute-positioned so transitions don't shift layout.
-   Container reserves vertical space via the active slide; inactive slides
-   sit on top, hidden via opacity. */
+/* Stacked slides — CSS grid overlap. Every slide occupies the same
+   1×1 cell, so the container sizes itself to the tallest slide and
+   the band height never changes between rotations. Opacity drives
+   visibility. */
 .fh-quote-stack {
-  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
   max-width: 760px;
   margin: 0 auto;
-  min-height: 6em;
 }
 .fh-quote-slide {
+  grid-area: 1 / 1;
   margin: 0;
-  position: absolute;
-  inset: 0;
   opacity: 0;
   pointer-events: none;
   transition: opacity 400ms ease;
 }
 .fh-quote-slide.is-active {
-  position: relative;
   opacity: 1;
   pointer-events: auto;
 }
-.fh-quote-section:not(.fh-quote-section--multi) .fh-quote-stack {
-  min-height: 0;
-}
+/* Single-entry sections: only one slide exists, grid cell sizes to it
+   naturally. Force opacity:1 so the static rendering is visible. */
 .fh-quote-section:not(.fh-quote-section--multi) .fh-quote-slide {
-  position: relative;
   opacity: 1;
   pointer-events: auto;
 }

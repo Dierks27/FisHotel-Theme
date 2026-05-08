@@ -33,6 +33,13 @@ while ( have_posts() ) :
     if (!$region && !empty($hotel['region'])) {
         $region = $hotel['region'];
     }
+
+    /**
+     * Fires once per product on the PDP, before any of our markup.
+     * Standard WC hook — plugins (e.g. Coming Soon) inject countdowns,
+     * notices, badges here.
+     */
+    do_action( 'woocommerce_before_single_product' );
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -117,6 +124,16 @@ while ( have_posts() ) :
 
     <?php /* ── PURCHASE PANEL ── */ ?>
     <div class="fh-purchase">
+
+        <?php
+        /**
+         * Standard WC summary lifecycle hooks. Defaults (title, price,
+         * add-to-cart, etc.) are removed in inc/woocommerce.php so only
+         * plugin callbacks fire here.
+         */
+        do_action( 'woocommerce_before_single_product_summary' );
+        do_action( 'woocommerce_single_product_summary' );
+        ?>
 
         <?php /* QT Certificate Panel */ ?>
         <div class="fh-qt-cert">
@@ -238,7 +255,8 @@ while ( have_posts() ) :
         <?php do_action('woocommerce_after_add_to_cart_form'); ?>
 
         <?php /* Product meta */ ?>
-        <div class="fh-product-meta">
+        <div class="fh-product-meta product_meta">
+            <?php do_action( 'woocommerce_product_meta_start' ); ?>
             <?php if ($product->get_sku()) : ?>
             <div class="fh-product-meta__row">
                 <span class="fh-product-meta__label">SKU</span>
@@ -255,10 +273,13 @@ while ( have_posts() ) :
                 <span><?php echo wc_get_product_tag_list($product_id, ', '); ?></span>
             </div>
             <?php endif; ?>
+            <?php do_action( 'woocommerce_product_meta_end' ); ?>
         </div>
 
     </div><!-- .fh-purchase -->
 </div><!-- .fh-product-layout -->
+
+<?php do_action( 'woocommerce_after_single_product_summary' ); ?>
 
 <?php /* ── ABOUT THIS SPECIES — Stat Grid from meta fields ── */ ?>
 <?php
@@ -387,24 +408,38 @@ if (!empty($related_ids)) :
         <div class="fh-product-grid">
             <?php foreach ($related_products as $rel) :
                 $rel_id = $rel->get_ID();
+                // Set up the WC product loop globals so plugin callbacks
+                // hooked into woocommerce_*_shop_loop_item see the right
+                // product instead of the parent PDP product.
+                $GLOBALS['post']    = get_post( $rel_id );
+                $GLOBALS['product'] = $rel;
+                setup_postdata( $GLOBALS['post'] );
             ?>
-                <a href="<?php echo esc_url($rel->get_permalink()); ?>" class="fh-fish-card">
-                    <div class="fh-fish-card__image">
-                        <?php fishotel_product_thumbnail( $rel_id, 'fishotel-product-card' ); ?>
-                    </div>
-                    <div class="fh-fish-card__body">
-                        <div class="fh-fish-card__name"><?php echo esc_html($rel->get_name()); ?></div>
-                        <div class="fh-fish-card__latin"><?php echo wp_kses_post($rel->get_short_description()); ?></div>
-                        <div class="fh-fish-card__footer">
-                            <span class="fh-fish-card__price"><?php echo $rel->get_price_html(); ?></span>
+                <div class="fh-fish-card-wrap product">
+                    <?php do_action( 'woocommerce_before_shop_loop_item' ); ?>
+                    <a href="<?php echo esc_url($rel->get_permalink()); ?>" class="fh-fish-card">
+                        <div class="fh-fish-card__image">
+                            <?php fishotel_product_thumbnail( $rel_id, 'fishotel-product-card' ); ?>
+                            <?php do_action( 'woocommerce_before_shop_loop_item_title' ); ?>
                         </div>
-                    </div>
-                </a>
-            <?php endforeach; ?>
+                        <div class="fh-fish-card__body">
+                            <div class="fh-fish-card__name"><?php echo esc_html($rel->get_name()); ?></div>
+                            <?php do_action( 'woocommerce_after_shop_loop_item_title' ); ?>
+                            <div class="fh-fish-card__latin"><?php echo wp_kses_post($rel->get_short_description()); ?></div>
+                            <div class="fh-fish-card__footer">
+                                <span class="fh-fish-card__price"><?php echo $rel->get_price_html(); ?></span>
+                            </div>
+                        </div>
+                    </a>
+                    <?php do_action( 'woocommerce_after_shop_loop_item' ); ?>
+                </div>
+            <?php endforeach; wp_reset_postdata(); ?>
         </div>
     </div>
 </div>
 <?php endif; ?>
+
+<?php do_action( 'woocommerce_after_single_product' ); ?>
 
 <?php endwhile; ?>
 

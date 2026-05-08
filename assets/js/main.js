@@ -98,6 +98,40 @@
         });
     }
 
+    // Arrival Panel countdown — minute precision is calm; no seconds.
+    // Reads release timestamp (UTC) from data-fh-countdown on the panel
+    // and updates child spans tagged data-d / data-h / data-m. Once the
+    // release passes the panel reloads to fall through to the live
+    // purchase UI on next render.
+    function initArrivalCountdown() {
+        var els = document.querySelectorAll('.fh-arrival-panel[data-fh-countdown]');
+        if (!els.length) return;
+        function tick() {
+            var now = Math.floor(Date.now() / 1000);
+            els.forEach(function (el) {
+                var ts = parseInt(el.getAttribute('data-fh-countdown'), 10) || 0;
+                var diff = ts - now;
+                if (diff <= 0) {
+                    // Reload once when the release moment passes so the
+                    // server-rendered panel switches to the purchase UI.
+                    if (!el.dataset.expired) {
+                        el.dataset.expired = '1';
+                        window.location.reload();
+                    }
+                    return;
+                }
+                var d = Math.floor(diff / 86400);
+                var h = Math.floor((diff % 86400) / 3600);
+                var m = Math.floor((diff % 3600) / 60);
+                var dEl = el.querySelector('[data-d]'); if (dEl) dEl.textContent = d;
+                var hEl = el.querySelector('[data-h]'); if (hEl) hEl.textContent = h;
+                var mEl = el.querySelector('[data-m]'); if (mEl) mEl.textContent = m;
+            });
+        }
+        tick();
+        setInterval(tick, 30000);
+    }
+
     // Homepage testimonial rotator — vanilla cross-fade. Skips entirely on
     // single-quote sections (no [data-fh-testimonials="1"] flag).
     function initTestimonialRotator() {
@@ -155,6 +189,7 @@
         initQty();
         initHeaderScroll();
         initTestimonialRotator();
+        initArrivalCountdown();
     });
 
 })(jQuery);

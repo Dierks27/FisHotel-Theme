@@ -41,18 +41,11 @@ while ( have_posts() ) :
      */
     do_action( 'woocommerce_before_single_product' );
 
-    // Coming Soon detection. Prefer the plugin helper if it exists; fall
-    // back to the FisHotel Misc plugin's storage: a UNIX timestamp (UTC)
-    // in `_fh_release_datetime`. When active, our QT cert + variations +
-    // Add-to-Cart panel is suppressed so the plugin's countdown/notify
-    // panel (rendered via woocommerce_single_product_summary) stands alone.
-    $is_coming_soon = false;
-    if ( function_exists( 'fishotel_cs_is_active' ) ) {
-        $is_coming_soon = (bool) fishotel_cs_is_active( $product );
-    } else {
-        $release_ts = (int) get_post_meta( $product_id, '_fh_release_datetime', true );
-        $is_coming_soon = $release_ts > current_time( 'timestamp', true );
-    }
+    // Coming Soon detection — single source of truth in inc/coming-soon.php.
+    // When active, our QT cert + variations + Add-to-Cart block is
+    // suppressed and the theme renders its own Arrival Panel in its place.
+    $cs_release_ts  = fishotel_cs_release_ts( $product_id );
+    $is_coming_soon = (bool) $cs_release_ts;
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -148,10 +141,12 @@ while ( have_posts() ) :
         do_action( 'woocommerce_single_product_summary' );
         ?>
 
-        <?php /* When Coming Soon is active the plugin's countdown/notify
-                 panel renders via woocommerce_single_product_summary above.
-                 Suppress the live purchase UI so the two don't double up. */ ?>
-        <?php if ( ! $is_coming_soon ) : ?>
+        <?php /* When the product is on a future release we render our own
+                 turquoise Arrival Panel in place of the live purchase UI.
+                 The plugin's own UI is suppressed in inc/coming-soon.php. */ ?>
+        <?php if ( $is_coming_soon ) : ?>
+            <?php fishotel_cs_render_arrival_panel( $product, $cs_release_ts ); ?>
+        <?php else : ?>
 
         <?php /* QT Certificate Panel */ ?>
         <div class="fh-qt-cert">
@@ -441,13 +436,19 @@ if (!empty($related_ids)) :
                         <div class="fh-fish-card__image">
                             <?php fishotel_product_thumbnail( $rel_id, 'fishotel-product-card' ); ?>
                             <?php do_action( 'woocommerce_before_shop_loop_item_title' ); ?>
+                            <?php fishotel_cs_render_card_badge( $rel_id ); ?>
                         </div>
                         <div class="fh-fish-card__body">
                             <div class="fh-fish-card__name"><?php echo esc_html($rel->get_name()); ?></div>
                             <?php do_action( 'woocommerce_after_shop_loop_item_title' ); ?>
                             <div class="fh-fish-card__latin"><?php echo wp_kses_post($rel->get_short_description()); ?></div>
                             <div class="fh-fish-card__footer">
+                                <?php $rel_cs = fishotel_cs_release_ts( $rel_id ); ?>
+                                <?php if ( $rel_cs ) : ?>
+                                    <?php fishotel_cs_render_card_line( $rel_id ); ?>
+                                <?php else : ?>
                                 <span class="fh-fish-card__price"><?php echo $rel->get_price_html(); ?></span>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </a>

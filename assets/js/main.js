@@ -85,14 +85,20 @@
         });
     }
 
-    // Header scroll-shrink
+    // Header scroll-shrink — hysteresis prevents the toggle feedback loop:
+    // shrinking the header lifts content, which can drop scrollY back below
+    // a single threshold and re-expand the header. The 20–60px dead zone
+    // (40px > the ~35px height delta) breaks that oscillation.
     function initHeaderScroll() {
         var $header = $('#masthead');
-        var threshold = 60;
+        var COMPACT_ON  = 60;
+        var COMPACT_OFF = 20;
         $(window).on('scroll', function() {
-            if (window.scrollY > threshold) {
+            var scrollY = window.scrollY;
+            var isCompact = $header.hasClass('site-header--compact');
+            if (scrollY > COMPACT_ON && !isCompact) {
                 $header.addClass('site-header--compact');
-            } else {
+            } else if (scrollY < COMPACT_OFF && isCompact) {
                 $header.removeClass('site-header--compact');
             }
         });

@@ -15,16 +15,14 @@
  * import command finds existing imports by that meta, so renaming a
  * product after import does NOT cause a duplicate on re-run.
  *
- * EA wholesale strategy (spec §4 note):
- *   1. Live API. For the FIRST ea-mode product, log the raw meta_data
- *      so we can see whether wholesale comes through the WC REST API.
- *      If wholesale-detection returns a value, use it on every variation.
- *   2. Range fallback. If detection fails, distribute the spec's
- *      wholesale + retail ranges proportionally across the variation
- *      count, smallest at the low end, largest at the high end.
- *   3. Manual. If no live data AND no range (EA returned no match),
- *      create 3 placeholder variations (Small / Medium / Large) and
- *      warn the operator.
+ * Variation source (Phase 1.6): the EA WC REST API is wholesale-role-
+ * gated for Jeff's account — every list endpoint returns 403. We
+ * confirmed this empirically across 10 endpoints. The importer no
+ * longer attempts a live fetch and builds 3 placeholder variations
+ * (Small / Medium / Large) from the catalog's wholesale_range /
+ * retail_range (Phase 1 spec §6 "Source data"), distributed linearly
+ * across the low / mid / high. See /docs/specs/ea-api-status.md for
+ * the full rationale.
  *
  * All products created in `draft` status — Jeff publishes after
  * adding descriptions / photos / per-product attributes.
@@ -224,14 +222,12 @@ class FisHotel_Med_Importer_CLI {
 			FisHotel_Med_Taxonomy::ensure_attributes();
 		}
 
-		$catalog       = self::catalog();
-		$summary       = [
-			'created'      => 0,
-			'skipped'      => 0,
-			'failed'       => 0,
-			'needs_manual' => [], // titles flagged for follow-up.
+		$catalog = self::catalog();
+		$summary = [
+			'created' => 0,
+			'skipped' => 0,
+			'failed'  => 0,
 		];
-		$ea_log_sample_done = false;
 
 		foreach ( $catalog as $import_id => $row ) {
 			$existing = $this->find_by_import_id( (int) $import_id );
@@ -254,20 +250,12 @@ class FisHotel_Med_Importer_CLI {
 					continue;
 				}
 
-				$inspect_sample = ( ! $ea_log_sample_done );
-				$result = $this->create_ea_product( (int) $import_id, $row, $inspect_sample );
-				if ( $inspect_sample ) {
-					$ea_log_sample_done = true;
-				}
-				if ( ! empty( $result['needs_manual'] ) ) {
-					$summary['needs_manual'][] = $row['title'];
-				}
+				$result = $this->create_ea_product( (int) $import_id, $row );
 				WP_CLI::log( sprintf(
-					'Created: %s (#%d) with %d variations — wholesale source: %s.',
+					'Created: %s (#%d) with %d variations.',
 					$row['title'],
 					$result['product_id'],
-					$result['variation_count'],
-					$result['wholesale_source']
+					$result['variation_count']
 				) );
 				$summary['created']++;
 			} catch ( Exception $e ) {
@@ -278,12 +266,6 @@ class FisHotel_Med_Importer_CLI {
 
 		WP_CLI::log( '' );
 		WP_CLI::log( sprintf( 'Summary: %d created, %d skipped, %d failed.', $summary['created'], $summary['skipped'], $summary['failed'] ) );
-		if ( ! empty( $summary['needs_manual'] ) ) {
-			WP_CLI::log( 'Needs manual wholesale entry / placeholder review:' );
-			foreach ( $summary['needs_manual'] as $t ) {
-				WP_CLI::log( '  - ' . $t );
-			}
-		}
 		WP_CLI::success( 'Import complete.' );
 	}
 
@@ -319,20 +301,23 @@ class FisHotel_Med_Importer_CLI {
 	}
 
 	/**
-	 * Create an ea-mode product. Fetches the EA payload + variations,
-	 * creates the variable product, and seeds each variation with the
-	 * computed FisHotel price (using the existing pricing function).
+	 * Create an ea-mode product.
 	 *
-	 * Falls back to spec-range distribution if the EA lookup fails,
-	 * and to "Small / Medium / Large" placeholders if there are no
-	 * EA variations to mirror.
+	 * Phase 1.6: the EA WC REST API is wholesale-role-gated for Jeff's
+	 * account — every list endpoint returns 403. We confirmed this
+	 * empirically across 10 endpoints; the gate is not lift-able from
+	 * this side. So the importer no longer attempts a live fetch and
+	 * builds variations directly from the catalog's wholesale_range /
+	 * retail_range (Phase 1 spec §6 "Source data"), distributed linearly
+	 * across three Small / Medium / Large placeholder sizes.
 	 *
-	 * @param bool $inspect_sample When true, log the EA payload's
-	 *                             meta_data so we can verify whether
-	 *                             wholesale comes through the API.
-	 * @return array { product_id:int, variation_count:int, wholesale_source:string, needs_manual:bool }
+	 * The EA REST client + its fetch helpers stay in the codebase
+	 * unchanged so the live path can be re-enabled if EA ever opens
+	 * up the API — but they are not invoked from the importer.
+	 *
+	 * @return array { product_id:int, variation_count:int }
 	 */
-	protected function create_ea_product( $import_id, $row, $inspect_sample ) {
+	protected function create_ea_product( $import_id, $row ) {
 		$post_id = wp_insert_post( [
 			'post_title'   => $row['title'],
 			'post_status'  => 'draft',
@@ -348,64 +333,12 @@ class FisHotel_Med_Importer_CLI {
 		$this->assign_categories( $post_id, $row['category'] );
 		$this->set_universal_meta( $post_id, $import_id, $row );
 
-		$ea_url  = $this->build_ea_url( $row['ea_slug'] );
+		$ea_url = $this->build_ea_url( $row['ea_slug'] );
 		if ( $ea_url !== '' ) {
 			update_post_meta( $post_id, '_fishotel_ea_url', $ea_url );
 		}
 
-		// Try the live API first.
-		$ea_payload = FisHotel_Med_EA_REST::fetch_by_slug( $row['ea_slug'] );
-		$wholesale_source = 'placeholder';
-		$variation_specs  = []; // [ ['size'=>str, 'wholesale'=>float, 'retail'=>float, 'stock_status'=>str] ]
-		$needs_manual = false;
-
-		if ( is_wp_error( $ea_payload ) ) {
-			WP_CLI::warning( sprintf(
-				'EA lookup failed for %s (%s): %s — falling back to placeholders.',
-				$row['title'],
-				$row['ea_slug'],
-				$ea_payload->get_error_message()
-			) );
-			$variation_specs  = $this->placeholder_variations( $row );
-			$wholesale_source = $variation_specs ? 'range' : 'placeholder';
-			$needs_manual     = true;
-		} else {
-			// Save the canonical EA IDs from the live payload.
-			if ( isset( $ea_payload['id'] ) ) {
-				update_post_meta( $post_id, '_fishotel_ea_product_id', (int) $ea_payload['id'] );
-			}
-			if ( isset( $ea_payload['sku'] ) && $ea_payload['sku'] !== '' ) {
-				update_post_meta( $post_id, '_fishotel_ea_sku', sanitize_text_field( (string) $ea_payload['sku'] ) );
-			}
-			if ( $inspect_sample ) {
-				$this->log_ea_sample( $ea_payload );
-			}
-
-			$variations_raw = FisHotel_Med_EA_REST::fetch_variations( (int) ( $ea_payload['id'] ?? 0 ) );
-			if ( is_wp_error( $variations_raw ) || empty( $variations_raw ) ) {
-				// Variation fetch failed or EA has no variations on this
-				// product. Use range fallback so we still get sized rows.
-				if ( is_wp_error( $variations_raw ) ) {
-					WP_CLI::warning( sprintf(
-						'EA variation fetch failed for %s: %s — using range fallback.',
-						$row['title'],
-						$variations_raw->get_error_message()
-					) );
-				}
-				$variation_specs  = $this->placeholder_variations( $row );
-				$wholesale_source = 'range';
-				$needs_manual     = true;
-			} else {
-				// Build specs from the EA variations array. wholesale = detected
-				// from meta_data if available; otherwise range-distributed.
-				$variation_specs  = $this->variations_from_ea( $variations_raw, $row, $wholesale_source );
-				if ( $wholesale_source === 'live' ) {
-					$needs_manual = false;
-				} else {
-					$needs_manual = true;
-				}
-			}
-		}
+		$variation_specs = $this->placeholder_variations( $row );
 
 		// Build the parent's Size attribute from the resolved variation list.
 		$size_labels = wp_list_pluck( $variation_specs, 'size' );
@@ -422,10 +355,8 @@ class FisHotel_Med_Importer_CLI {
 		}
 
 		return [
-			'product_id'       => $post_id,
-			'variation_count'  => $count,
-			'wholesale_source' => $wholesale_source,
-			'needs_manual'     => $needs_manual,
+			'product_id'      => $post_id,
+			'variation_count' => $count,
 		];
 	}
 
@@ -469,89 +400,9 @@ class FisHotel_Med_Importer_CLI {
 	}
 
 	/**
-	 * Resolved variation specs from EA's variations array. Determines
-	 * wholesale source by reference — sets to 'live' when detected on
-	 * any variation, otherwise 'range' (proportional distribution).
-	 *
-	 * @param array  $variations_raw     EA payload variations.
-	 * @param array  $row                Catalog row.
-	 * @param string $wholesale_source   By-ref output: 'live' or 'range'.
-	 * @return array
-	 */
-	protected function variations_from_ea( $variations_raw, $row, &$wholesale_source ) {
-		// Stable order: sort by menu_order, then variation id, so the
-		// pricing function's size_index matches EA's display order.
-		usort( $variations_raw, function ( $a, $b ) {
-			$ma = isset( $a['menu_order'] ) ? (int) $a['menu_order'] : 0;
-			$mb = isset( $b['menu_order'] ) ? (int) $b['menu_order'] : 0;
-			if ( $ma !== $mb ) return $ma <=> $mb;
-			return (int) ( $a['id'] ?? 0 ) <=> (int) ( $b['id'] ?? 0 );
-		} );
-
-		$any_wholesale_live = false;
-		$specs = [];
-		$count = count( $variations_raw );
-
-		foreach ( $variations_raw as $i => $var ) {
-			$size = $this->extract_size_label( $var );
-			if ( $size === '' ) {
-				$size = sprintf( 'Size %d', $i + 1 );
-			}
-
-			$retail = isset( $var['regular_price'] ) && is_numeric( $var['regular_price'] )
-				? (float) $var['regular_price']
-				: 0.0;
-			if ( $retail <= 0 && isset( $var['price'] ) && is_numeric( $var['price'] ) ) {
-				$retail = (float) $var['price'];
-			}
-
-			$wholesale = FisHotel_Med_EA_REST::extract_wholesale( $var );
-			if ( $wholesale !== null ) {
-				$any_wholesale_live = true;
-			}
-
-			$specs[] = [
-				'size'         => $size,
-				'wholesale'    => $wholesale, // null = needs range fallback
-				'retail'       => $retail,
-				'stock_status' => $this->stock_status_from_ea( $var ),
-				'ea_sku'       => isset( $var['sku'] ) ? (string) $var['sku'] : '',
-			];
-		}
-
-		if ( $any_wholesale_live ) {
-			$wholesale_source = 'live';
-			// Fill any nulls with range-distributed values to keep the
-			// pricing function happy on partial responses.
-			foreach ( $specs as $i => $spec ) {
-				if ( $spec['wholesale'] === null && $row['wholesale_range'] ) {
-					$specs[ $i ]['wholesale'] = $this->interpolate_range( $row['wholesale_range'], $i, $count );
-				}
-			}
-		} else {
-			$wholesale_source = 'range';
-			foreach ( $specs as $i => $spec ) {
-				$specs[ $i ]['wholesale'] = $row['wholesale_range']
-					? $this->interpolate_range( $row['wholesale_range'], $i, $count )
-					: 0.0;
-			}
-		}
-
-		// If retail came back as 0 from EA for some reason, fall back to
-		// the spec range too so the pricing function still has a floor.
-		foreach ( $specs as $i => $spec ) {
-			if ( $spec['retail'] <= 0 && $row['retail_range'] ) {
-				$specs[ $i ]['retail'] = $this->interpolate_range( $row['retail_range'], $i, $count );
-			}
-		}
-
-		return $specs;
-	}
-
-	/**
 	 * Three placeholder variations (Small / Medium / Large) using the
-	 * spec's low / mid / high. Used when EA returns no match OR when
-	 * the variation fetch fails after a successful parent lookup.
+	 * spec's low / mid / high. As of Phase 1.6 this is the only source
+	 * of variation data — see create_ea_product() for context.
 	 */
 	protected function placeholder_variations( $row ) {
 		$wr = $row['wholesale_range'] ?: [ 0.0, 0.0 ];
@@ -579,37 +430,6 @@ class FisHotel_Med_Importer_CLI {
 		}
 		$t = $i / max( 1, $count - 1 );
 		return round( $low + ( $high - $low ) * $t, 2 );
-	}
-
-	/**
-	 * Pull the size label from an EA variation's attributes array. EA
-	 * names size attributes inconsistently ("Size", "Weight", "Volume")
-	 * — fall back to the first attribute when nothing matches.
-	 */
-	protected function extract_size_label( $var ) {
-		if ( ! isset( $var['attributes'] ) || ! is_array( $var['attributes'] ) ) return '';
-		// Prefer attribute named like "size", "weight", "volume".
-		$size_like = [ 'size', 'weight', 'volume' ];
-		foreach ( $var['attributes'] as $attr ) {
-			$name = isset( $attr['name'] ) ? strtolower( (string) $attr['name'] ) : '';
-			foreach ( $size_like as $needle ) {
-				if ( $name !== '' && strpos( $name, $needle ) !== false ) {
-					return isset( $attr['option'] ) ? (string) $attr['option'] : '';
-				}
-			}
-		}
-		// Otherwise pick the first attribute's option.
-		$first = $var['attributes'][0] ?? null;
-		return ( is_array( $first ) && isset( $first['option'] ) ) ? (string) $first['option'] : '';
-	}
-
-	/** Normalize EA's stock_status to our local enum. */
-	protected function stock_status_from_ea( $var ) {
-		$s = isset( $var['stock_status'] ) ? (string) $var['stock_status'] : 'instock';
-		if ( ! in_array( $s, [ 'instock', 'outofstock', 'onbackorder' ], true ) ) {
-			$s = 'instock';
-		}
-		return $s;
 	}
 
 	/**
@@ -722,37 +542,4 @@ class FisHotel_Med_Importer_CLI {
 		return array_map( 'intval', $query->posts );
 	}
 
-	/**
-	 * One-time diagnostic: log a slice of the EA payload's meta_data
-	 * so the operator can see whether wholesale prices come through
-	 * the API or live in a meta key we haven't accounted for.
-	 *
-	 * We log only meta keys + a redacted value (length only) — never
-	 * full values, so EA's internal meta doesn't get spilled to logs.
-	 */
-	protected function log_ea_sample( $payload ) {
-		WP_CLI::log( '--- EA payload diagnostic (first ea-mode product) ---' );
-		$keys = [];
-		if ( ! empty( $payload['meta_data'] ) && is_array( $payload['meta_data'] ) ) {
-			foreach ( $payload['meta_data'] as $meta ) {
-				if ( ! is_array( $meta ) || empty( $meta['key'] ) ) continue;
-				$keys[] = (string) $meta['key'];
-			}
-		}
-		if ( ! empty( $keys ) ) {
-			WP_CLI::log( 'meta_data keys: ' . implode( ', ', $keys ) );
-		} else {
-			WP_CLI::log( 'meta_data: (empty or missing)' );
-		}
-		// Plus a quick summary of the top-level price fields so we can
-		// see whether `price` and `regular_price` differ for this user.
-		$summary = [];
-		foreach ( [ 'price', 'regular_price', 'sale_price' ] as $k ) {
-			if ( isset( $payload[ $k ] ) ) {
-				$summary[] = $k . '=' . (string) $payload[ $k ];
-			}
-		}
-		WP_CLI::log( 'top-level prices: ' . implode( ' · ', $summary ) );
-		WP_CLI::log( '------------------------------------------------------' );
-	}
 }

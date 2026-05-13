@@ -152,41 +152,48 @@ class FisHotel_Med_Settings {
 	}
 
 	/**
-	 * Secret-aware sanitizer. If the incoming value is empty or matches
-	 * the masked placeholder, we keep the existing stored value untouched.
-	 * Otherwise we sanitize and overwrite. Returning the existing option
-	 * means a save with the masked value visible doesn't blow away the key.
+	 * Secret-aware sanitizer. The render path shows the stored secret
+	 * as a masked `<code>` row with a Replace button — the password
+	 * input itself is always `value=""`. That means a normal Save with
+	 * the mask still showing submits an empty string. Returning `''`
+	 * here would wipe the stored credential on every save, so:
+	 *
+	 *   - Empty input → look up the current option via current_filter()
+	 *     and retain whatever's stored. To clear a credential, the
+	 *     admin deletes the wp_options row directly.
+	 *   - Masked-bullet sentinel (defensive — shouldn't normally occur
+	 *     given the form structure) → same: retain stored value.
+	 *   - Real input → sanitize_text_field and overwrite.
+	 *
+	 * current_filter() during settings-API save is
+	 * `sanitize_option_{option_name}`, so we strip the prefix to recover
+	 * the option key and re-read its existing value.
 	 */
 	public static function sanitize_secret_field( $val ) {
-		// The settings.php form uses the option key as the option's
-		// option_name; WP looks up current_filter() to find which one
-		// we're sanitizing for. There isn't a clean way to read that
-		// here, so we accept either: (a) the masked sentinel — meaning
-		// "no change" — or (b) a plain value. The masked sentinel is
-		// always 12+ bullets followed by 4 hex-like chars.
 		$val = is_string( $val ) ? trim( $val ) : '';
-		if ( $val === '' ) {
-			return ''; // explicit clear via the Replace button
-		}
-		if ( preg_match( '/^\xE2\x80\xA2+/', $val ) || strpos( $val, '••••' ) === 0 ) {
-			// Masked sentinel — caller hit Save without entering anything new.
-			// We don't know which key we're for here, but returning '' would
-			// wipe it. So return the masked string and let pre_update_option
-			// intercept; see filter below.
-			return $val;
+		if ( $val === '' || preg_match( '/^\xE2\x80\xA2{4,}/', $val ) ) {
+			$filter = current_filter();
+			if ( $filter && strpos( $filter, 'sanitize_option_' ) === 0 ) {
+				$option = substr( $filter, strlen( 'sanitize_option_' ) );
+				$existing = (string) get_option( $option, '' );
+				if ( $existing !== '' ) {
+					return $existing;
+				}
+			}
+			return '';
 		}
 		return sanitize_text_field( $val );
 	}
 
 	/**
-	 * Intercept pre-update for the two secret options: if the new value
-	 * starts with the masked-bullet sentinel, retain the old value.
+	 * Defensive pre_update_option filter — if a save somehow reaches
+	 * this hook with the masked-bullet sentinel as the new value
+	 * (e.g. a future template renders it directly into the input),
+	 * fall back to the stored value rather than overwriting.
 	 */
 	public static function preserve_masked_secret( $new_value, $old_value, $option ) {
 		if ( ! is_string( $new_value ) ) return $new_value;
-		// Treat any value that's all bullets (or starts with at least
-		// 4 bullets and is shorter than a real key) as "unchanged".
-		if ( $new_value === '' ) return $new_value;
+		if ( $new_value === '' ) return $old_value !== '' ? $old_value : $new_value;
 		if ( preg_match( '/^\xE2\x80\xA2{4,}/', $new_value ) ) {
 			return $old_value;
 		}

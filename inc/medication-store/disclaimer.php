@@ -80,7 +80,8 @@ class FisHotel_Med_Disclaimer {
 		if ( ! fishotel_med_cart_has_meds() ) {
 			return;
 		}
-		$ack = isset( $_POST[ self::FIELD_NAME ] ) && (string) $_POST[ self::FIELD_NAME ] === '1';
+		$raw = isset( $_POST[ self::FIELD_NAME ] ) ? sanitize_text_field( wp_unslash( $_POST[ self::FIELD_NAME ] ) ) : '';
+		$ack = ( $raw === '1' );
 		if ( ! $ack ) {
 			wc_add_notice(
 				__( 'You must acknowledge the ornamental-use-only terms before placing your order.', 'fishotel' ),

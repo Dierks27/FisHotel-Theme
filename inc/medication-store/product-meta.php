@@ -127,7 +127,8 @@ class FisHotel_Med_Product_Meta {
 
 	public static function save_product_meta( $post_id ) {
 		if ( ! isset( $_POST['_fishotel_med_nonce'] ) ) return;
-		if ( ! wp_verify_nonce( wp_unslash( $_POST['_fishotel_med_nonce'] ), self::NONCE ) ) return;
+		$nonce = sanitize_text_field( wp_unslash( $_POST['_fishotel_med_nonce'] ) );
+		if ( ! wp_verify_nonce( $nonce, self::NONCE ) ) return;
 		if ( ! current_user_can( 'edit_product', $post_id ) ) return;
 
 		$mode_in = isset( $_POST['_fishotel_fulfillment'] ) ? sanitize_text_field( wp_unslash( $_POST['_fishotel_fulfillment'] ) ) : 'ea';
@@ -156,8 +157,9 @@ class FisHotel_Med_Product_Meta {
 		$wholesale = get_post_meta( $vid, '_fishotel_wholesale', true );
 		$ea_retail = get_post_meta( $vid, '_fishotel_ea_retail', true );
 
-		echo '<div class="fishotel-med-var-row" style="display:flex; flex-wrap:wrap; gap:8px 16px; margin:6px 0;">';
-
+		// WC's woocommerce_wp_text_input emits its own <p class="form-row">
+		// — let them stack naturally inside the variation row rather
+		// than wrapping in a flex container that fights WC's layout.
 		woocommerce_wp_text_input( [
 			'id'            => "_fishotel_wholesale_{$loop}",
 			'name'          => "_fishotel_wholesale[{$loop}]",
@@ -166,7 +168,7 @@ class FisHotel_Med_Product_Meta {
 			'data_type'     => 'price',
 			'desc_tip'      => true,
 			'description'   => __( 'Wholesale cost from EA for this size.', 'fishotel' ),
-			'wrapper_class' => 'form-row',
+			'wrapper_class' => 'form-row form-row-first',
 		] );
 
 		woocommerce_wp_text_input( [
@@ -177,10 +179,8 @@ class FisHotel_Med_Product_Meta {
 			'data_type'     => 'price',
 			'desc_tip'      => true,
 			'description'   => __( 'EA\'s retail price for this size — acts as the FisHotel price floor.', 'fishotel' ),
-			'wrapper_class' => 'form-row',
+			'wrapper_class' => 'form-row form-row-last',
 		] );
-
-		echo '</div>';
 	}
 
 	public static function save_variation_fields( $variation_id, $loop ) {

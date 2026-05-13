@@ -31,8 +31,11 @@ class FisHotel_Med_Packing_Slip {
 	const ACTION_EMAIL = 'fishotel_med_packing_slip_email';
 
 	public static function init() {
-		// Admin button on the classic order edit screen.
-		add_action( 'woocommerce_admin_order_data_after_order_details', [ __CLASS__, 'render_order_actions' ] );
+		// Meta box renders on both legacy and HPOS order screens by
+		// targeting both screen IDs. Using a meta box (vs. the
+		// woocommerce_admin_order_data_after_order_details hook) is
+		// the only approach that survives HPOS unconditionally.
+		add_action( 'add_meta_boxes', [ __CLASS__, 'register_meta_box' ] );
 
 		// Admin POST handlers (open print view / send email).
 		add_action( 'admin_post_' . self::ACTION_VIEW,  [ __CLASS__, 'handle_view' ] );
@@ -42,13 +45,59 @@ class FisHotel_Med_Packing_Slip {
 		add_action( 'woocommerce_order_status_processing', [ __CLASS__, 'maybe_auto_email' ], 20, 2 );
 	}
 
+	/** Register the EA Packing Slip meta box on legacy + HPOS screens. */
+	public static function register_meta_box() {
+		// Legacy post-type-based edit screen.
+		add_meta_box(
+			'fishotel-med-packing-slip',
+			__( 'EA Packing Slip', 'fishotel' ),
+			[ __CLASS__, 'render_meta_box' ],
+			'shop_order',
+			'side',
+			'default'
+		);
+		// HPOS Custom Orders Table screen.
+		add_meta_box(
+			'fishotel-med-packing-slip',
+			__( 'EA Packing Slip', 'fishotel' ),
+			[ __CLASS__, 'render_meta_box' ],
+			wc_get_page_screen_id( 'shop-order' ),
+			'side',
+			'default'
+		);
+	}
+
 	/**
-	 * Print the two action buttons inside the order data box. Only
-	 * shown when the order contains at least one EA-mode med line.
+	 * Render the meta box. WP calls this with a WP_Post on legacy, WC
+	 * calls it with a WC_Order on HPOS. Normalize both into a WC_Order
+	 * before dispatching to the shared body.
+	 */
+	public static function render_meta_box( $post_or_order ) {
+		$order = null;
+		if ( $post_or_order instanceof WC_Order ) {
+			$order = $post_or_order;
+		} elseif ( $post_or_order instanceof WP_Post ) {
+			$order = wc_get_order( $post_or_order->ID );
+		}
+		if ( ! $order instanceof WC_Order ) {
+			echo '<p style="color:#666;">' . esc_html__( 'Order not loaded yet.', 'fishotel' ) . '</p>';
+			return;
+		}
+		if ( ! self::order_has_ea_items( $order ) ) {
+			echo '<p style="margin:0;color:#666;font-style:italic;">'
+				. esc_html__( 'No EA-mode items in this order.', 'fishotel' )
+				. '</p>';
+			return;
+		}
+		self::render_order_actions( $order );
+	}
+
+	/**
+	 * Render the two action buttons. Called from the meta box once we've
+	 * confirmed the order has at least one EA-mode med line.
 	 */
 	public static function render_order_actions( $order ) {
 		if ( ! $order instanceof WC_Order ) return;
-		if ( ! self::order_has_ea_items( $order ) ) return;
 
 		$order_id = $order->get_id();
 		$view_url  = wp_nonce_url(
@@ -61,15 +110,20 @@ class FisHotel_Med_Packing_Slip {
 		);
 
 		$dena = (string) FisHotel_Med_Settings::get( 'fishotel_ea_fulfillment_email' );
+		$slip_sent = isset( $_GET['fishotel_slip_sent'] ) ? (int) $_GET['fishotel_slip_sent'] : null;
 		?>
 		<div class="fishotel-med-slip-actions">
-			<h3 style="margin:14px 0 6px;"><?php esc_html_e( 'EA Packing Slip', 'fishotel' ); ?></h3>
+			<?php if ( $slip_sent === 1 ) : ?>
+				<p class="notice notice-success" style="margin:0 0 10px;padding:6px 10px;"><?php esc_html_e( 'Packing slip emailed.', 'fishotel' ); ?></p>
+			<?php elseif ( $slip_sent === 0 ) : ?>
+				<p class="notice notice-error" style="margin:0 0 10px;padding:6px 10px;"><?php esc_html_e( 'Packing slip email failed — see order notes.', 'fishotel' ); ?></p>
+			<?php endif; ?>
 			<p style="margin:0 0 8px;">
 				<a class="button button-primary" href="<?php echo esc_url( $view_url ); ?>" target="_blank">
-					<?php esc_html_e( 'Generate EA Packing Slip', 'fishotel' ); ?>
+					<?php esc_html_e( 'Generate Slip', 'fishotel' ); ?>
 				</a>
 				<a class="button button-secondary" href="<?php echo esc_url( $email_url ); ?>">
-					<?php esc_html_e( 'Email Packing Slip to Dena', 'fishotel' ); ?>
+					<?php esc_html_e( 'Email to Dena', 'fishotel' ); ?>
 				</a>
 			</p>
 			<p class="description" style="margin:0;">
@@ -79,7 +133,7 @@ class FisHotel_Med_Packing_Slip {
 					<?php
 					printf(
 						/* translators: %s = email address */
-						esc_html__( 'Email will go to %s. Generate button opens a print-ready view — use your browser to save as PDF.', 'fishotel' ),
+						esc_html__( 'Email will go to %s. Generate opens a print-ready view — use your browser to save as PDF.', 'fishotel' ),
 						'<code>' . esc_html( $dena ) . '</code>'
 					);
 					?>
@@ -197,8 +251,8 @@ class FisHotel_Med_Packing_Slip {
 		}
 
 		$subject = sprintf(
-			/* translators: %d = order number */
-			__( 'FisHotel EA packing slip — Order #%d', 'fishotel' ),
+			/* translators: %s = order number */
+			__( 'FisHotel EA packing slip — Order #%s', 'fishotel' ),
 			$order->get_order_number()
 		);
 		$body    = self::build_slip_html( $order, /*for_email=*/ true );

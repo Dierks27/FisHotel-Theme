@@ -15,9 +15,13 @@ defined( 'ABSPATH' ) || exit;
 
 class FisHotel_Med_Pricing {
 
-	public static function init() {
-		add_action( 'wp_ajax_fishotel_med_recompute_prices', [ __CLASS__, 'ajax_recompute' ] );
-	}
+	/**
+	 * Phase 1 has no admin recompute trigger — variation save handles
+	 * the per-row update via FisHotel_Med_Product_Meta::save_variation_fields().
+	 * recompute_for_product() stays public so a Phase 2 admin button or
+	 * WP-CLI command can call it directly.
+	 */
+	public static function init() {}
 
 	/**
 	 * Recompute the WC price meta for every variation on a given parent
@@ -65,18 +69,5 @@ class FisHotel_Med_Pricing {
 			wc_delete_product_transients( $product_id );
 		}
 		return $out;
-	}
-
-	public static function ajax_recompute() {
-		if ( ! current_user_can( 'edit_products' ) ) {
-			wp_send_json_error( 'Unauthorized', 403 );
-		}
-		check_ajax_referer( 'fishotel_med_recompute', 'nonce' );
-		$pid = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
-		if ( ! $pid ) {
-			wp_send_json_error( 'Missing product_id' );
-		}
-		$result = self::recompute_for_product( $pid );
-		wp_send_json_success( $result );
 	}
 }

@@ -44,6 +44,13 @@ FisHotel_Med_Disclaimer::init();
 FisHotel_Med_Product_Display::init();
 FisHotel_Med_Packing_Slip::init();
 
+// WP-CLI importer (Phase 1.5) — only loaded under wp-cli so the
+// command class doesn't sit in memory on every web request.
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	require_once FISHOTEL_MED_DIR . '/cli/class-importer-cli.php';
+	WP_CLI::add_command( 'fishotel-meds', 'FisHotel_Med_Importer_CLI' );
+}
+
 /**
  * Enqueue medication-store frontend assets:
  *   - Disclaimer modal CSS + JS on Medications archive and any

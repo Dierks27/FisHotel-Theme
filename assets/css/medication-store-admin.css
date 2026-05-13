@@ -1,0 +1,89 @@
+/*
+ * FisHotel Medication Store — admin
+ *
+ * Styles for:
+ *   - The "FisHotel Medication" product-data tab + its options groups.
+ *   - The Settings page's masked-secret rows.
+ *   - The order-screen "EA Packing Slip" panel.
+ *
+ * Tone-matched to WP admin (#fff cards, gold left accent #c9963a) so
+ * it fits with the rest of the FisHotel admin UI in admin-settings.php.
+ */
+
+/* Settings page: secret rows */
+.fishotel-med-secret {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+.fishotel-med-secret__mask {
+	font-family: Menlo, Consolas, "Courier New", monospace;
+	font-size: 13px;
+	background: #f3efe2;
+	border: 1px solid #d8d1bd;
+	padding: 5px 10px;
+	border-radius: 3px;
+	color: #4a3a1f;
+}
+.fishotel-med-secret__input {
+	flex: 1 1 280px;
+}
+
+/* Product data box — medication tab icon (uses dashicons-heart). */
+.woocommerce ul.wc-tabs li.fishotel_med_options.fishotel_med_tab a::before,
+#woocommerce-product-data ul.product_data_tabs li.fishotel_med_options a::before {
+	content: "\f487";
+	font-family: "dashicons";
+}
+
+/* Product data box — mode-driven field visibility. Toggled by the
+ * admin JS so EA-only fields disappear in Amazon mode and vice-versa. */
+.fishotel-med-fields-ea,
+.fishotel-med-fields-amazon {
+	border-top: 1px solid #e3e3e3;
+	padding-top: 8px;
+	margin-top: 8px;
+}
+.fishotel-med-fields-ea[data-fishotel-hidden="1"],
+.fishotel-med-fields-amazon[data-fishotel-hidden="1"] {
+	display: none;
+}
+
+/* Sync button row */
+.fishotel-med-sync-btn {
+	margin-right: 10px !important;
+}
+.fishotel-med-sync-status {
+	font-size: 12px;
+	color: #555;
+	font-style: italic;
+}
+.fishotel-med-sync-status[data-state="ok"]    { color: #2e7d32; font-style: normal; }
+.fishotel-med-sync-status[data-state="error"] { color: #b32d2e; font-style: normal; }
+.fishotel-med-sync-status[data-state="busy"]  { color: #555;    font-style: italic; }
+
+/* Variation-row pricing pair */
+.fishotel-med-var-row {
+	background: #fafafa;
+	border: 1px solid #ebebeb;
+	border-radius: 3px;
+	padding: 8px 10px;
+}
+
+/* Order-screen packing slip card */
+.fishotel-med-slip-actions {
+	margin: 16px 0 4px;
+	padding: 12px 14px;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-left: 3px solid #c9963a;
+	border-radius: 3px;
+}
+.fishotel-med-slip-actions h3 {
+	margin: 0 0 8px !important;
+	font-size: 13px !important;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	color: #555;
+}

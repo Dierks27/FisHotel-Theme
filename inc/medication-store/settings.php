@@ -76,6 +76,14 @@ class FisHotel_Med_Settings {
 	public static function init() {
 		add_action( 'admin_menu', [ __CLASS__, 'register_menu' ], 20 );
 		add_action( 'admin_init', [ __CLASS__, 'register_fields' ] );
+		// Phase 1.6 fix: WP's update_option short-circuits when the
+		// submitted value equals the option's registered default (because
+		// get_option returns the registered default when the row is
+		// missing — so the "value changed?" check fails and no row is
+		// ever created). Force-persist every non-credential field on
+		// save so wp_options reflects the on-disk state regardless of
+		// whether the user actually typed anything new.
+		add_action( 'admin_init', [ __CLASS__, 'force_persist_non_credential_fields' ], 20 );
 	}
 
 	public static function register_menu() {
@@ -123,10 +131,7 @@ class FisHotel_Med_Settings {
 		] );
 		register_setting( self::OPTION_GROUP, 'fishotel_med_disclaimer_days', [
 			'type'              => 'integer',
-			'sanitize_callback' => function ( $val ) {
-				$n = (int) $val;
-				return ( $n < 1 ) ? 30 : min( $n, 3650 );
-			},
+			'sanitize_callback' => [ __CLASS__, 'sanitize_disclaimer_days' ],
 			'default'           => 30,
 		] );
 		register_setting( self::OPTION_GROUP, 'fishotel_med_checkout_label', [
@@ -146,9 +151,92 @@ class FisHotel_Med_Settings {
 		] );
 		register_setting( self::OPTION_GROUP, 'fishotel_med_auto_email_slip', [
 			'type'              => 'integer',
-			'sanitize_callback' => function ( $val ) { return $val ? 1 : 0; },
+			'sanitize_callback' => [ __CLASS__, 'sanitize_bool_flag' ],
 			'default'           => 0,
 		] );
+	}
+
+	/** Clamp the disclaimer-cookie-days value to a sane range. */
+	public static function sanitize_disclaimer_days( $val ) {
+		$n = (int) $val;
+		if ( $n < 1 ) return 30;
+		return min( $n, 3650 );
+	}
+
+	/** Normalize a checkbox / boolean-ish POST value to 0|1. */
+	public static function sanitize_bool_flag( $val ) {
+		return $val ? 1 : 0;
+	}
+
+	/**
+	 * Non-credential field map: option key => sanitize callback.
+	 * Single source of truth shared by register_fields() and
+	 * force_persist_non_credential_fields().
+	 */
+	protected static function non_credential_fields() {
+		return [
+			'fishotel_ea_store_url'            => [ __CLASS__, 'sanitize_store_url' ],
+			'fishotel_ea_fulfillment_email'    => 'sanitize_email',
+			'fishotel_amazon_tag'              => 'sanitize_text_field',
+			'fishotel_med_disclaimer_body'     => 'wp_kses_post',
+			'fishotel_med_disclaimer_days'     => [ __CLASS__, 'sanitize_disclaimer_days' ],
+			'fishotel_med_checkout_label'      => 'sanitize_textarea_field',
+			'fishotel_med_free_ship_threshold' => [ __CLASS__, 'sanitize_money' ],
+			'fishotel_med_ship_flat'           => [ __CLASS__, 'sanitize_money' ],
+			'fishotel_med_auto_email_slip'     => [ __CLASS__, 'sanitize_bool_flag' ],
+		];
+	}
+
+	/**
+	 * Force-persist non-credential fields on save (Phase 1.6 fix).
+	 *
+	 * Runs on admin_init at priority 20, after register_setting() at
+	 * priority 10. Fires only when the form was submitted to options.php
+	 * for our option group, gated by nonce + capability checks.
+	 *
+	 * Sequence:
+	 *   1. Nonce + capability + option_page check.
+	 *   2. For each non-credential field, sanitize the POST value.
+	 *   3. Check wp_options directly (NOT via get_option, which would
+	 *      return the registered default) to decide whether to call
+	 *      add_option (row missing) or update_option (row exists).
+	 *
+	 * Credential fields (consumer_key, consumer_secret) are NOT touched
+	 * here — their existing "empty input = no change" sanitizer + the
+	 * pre_update_option filter handle the masked-secret round-trip.
+	 */
+	public static function force_persist_non_credential_fields() {
+		if ( ! isset( $_POST['option_page'] ) ) return;
+		$option_page = sanitize_text_field( wp_unslash( $_POST['option_page'] ) );
+		if ( $option_page !== self::OPTION_GROUP ) return;
+		if ( ! current_user_can( 'manage_options' ) ) return;
+		check_admin_referer( self::OPTION_GROUP . '-options' );
+
+		foreach ( self::non_credential_fields() as $key => $sanitizer ) {
+			$raw = array_key_exists( $key, $_POST )
+				? wp_unslash( $_POST[ $key ] )
+				: '';
+			$value = call_user_func( $sanitizer, $raw );
+			self::force_persist_option( $key, $value );
+		}
+	}
+
+	/**
+	 * Persist a single option, bypassing WP's "value matches default"
+	 * skip. Direct wp_options row check avoids get_option's registered-
+	 * default behavior.
+	 */
+	protected static function force_persist_option( $key, $value ) {
+		global $wpdb;
+		$found = $wpdb->get_var( $wpdb->prepare(
+			"SELECT option_id FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
+			$key
+		) );
+		if ( $found === null ) {
+			add_option( $key, $value );
+		} else {
+			update_option( $key, $value );
+		}
 	}
 
 	/**
@@ -272,7 +360,10 @@ class FisHotel_Med_Settings {
 									spellcheck="false"
 									<?php echo $has_key ? 'hidden' : ''; ?>>
 							</div>
-							<p class="description">WC REST API consumer key from EverythingAquatic.</p>
+							<p class="description">
+								WC REST API consumer key from EverythingAquatic.<br>
+								<strong>Not currently used</strong> — EA's REST API is wholesale-gated for this account and returns 403 on every list endpoint. Kept for future re-enablement if the gate lifts.
+							</p>
 						</td>
 					</tr>
 					<tr>
@@ -293,7 +384,10 @@ class FisHotel_Med_Settings {
 									spellcheck="false"
 									<?php echo $has_secret ? 'hidden' : ''; ?>>
 							</div>
-							<p class="description">WC REST API consumer secret. Sent as Basic Auth on every sync.</p>
+							<p class="description">
+								WC REST API consumer secret. Sent as Basic Auth on every sync.<br>
+								<strong>Not currently used</strong> — see the note on the Consumer Key above.
+							</p>
 						</td>
 					</tr>
 					<tr>

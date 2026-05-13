@@ -5,10 +5,23 @@
  * Spec §2 → "Use Basic Auth header on REST requests
  * (consumer_key:consumer_secret base64-encoded), not OAuth."
  *
- * All requests go through fetch_product(); we do NOT log credentials,
+ * All requests go through do_request(); we do NOT log credentials,
  * URLs, or response bodies anywhere persistent. Errors surface to the
  * caller as WP_Error so the admin notice can show them without leaking
  * the key.
+ *
+ * ─── PHASE 1.6 STATUS — NOT CURRENTLY USED ──────────────────────────
+ * EA's WC REST API is wholesale-role-gated for Jeff's consumer key.
+ * Every list endpoint returns 403 ("woocommerce_rest_cannot_view"),
+ * and product IDs are not discoverable from any public surface, so
+ * single-resource fetches can't be used either. See
+ * /docs/specs/ea-api-status.md for the empirical test matrix.
+ *
+ * fetch_by_slug(), fetch_variations(), fetch_product(), and
+ * extract_wholesale() are kept in place — cheap insurance against
+ * having to rewrite the auth + HTTP plumbing if EA ever opens the
+ * gate — but nothing in the medication-store module calls them as
+ * of Phase 1.6.
  *
  * @package FisHotel
  */

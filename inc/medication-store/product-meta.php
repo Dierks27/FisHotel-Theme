@@ -107,10 +107,16 @@ class FisHotel_Med_Product_Meta {
 
 				<p class="form-field">
 					<label><?php esc_html_e( 'Stock sync', 'fishotel' ); ?></label>
-					<button type="button" class="button button-secondary fishotel-med-sync-btn" data-product-id="<?php echo esc_attr( $pid ); ?>">
-						<?php esc_html_e( 'Sync stock from EA', 'fishotel' ); ?>
-					</button>
-					<span class="fishotel-med-sync-status" data-status="<?php echo esc_attr( $sync_label ); ?>"><?php echo esc_html( $sync_label ); ?></span>
+					<?php if ( defined( 'FISHOTEL_MED_EA_API_ENABLED' ) && FISHOTEL_MED_EA_API_ENABLED ) : ?>
+						<button type="button" class="button button-secondary fishotel-med-sync-btn" data-product-id="<?php echo esc_attr( $pid ); ?>">
+							<?php esc_html_e( 'Sync stock from EA', 'fishotel' ); ?>
+						</button>
+						<span class="fishotel-med-sync-status" data-status="<?php echo esc_attr( $sync_label ); ?>"><?php echo esc_html( $sync_label ); ?></span>
+					<?php else : ?>
+						<span class="description" style="display:block;">
+							<?php esc_html_e( 'Stock sync from EA is not available — EA\'s REST API is wholesale-role-gated for this account and returns 403 on every list endpoint. See /docs/specs/ea-api-status.md for details. Define FISHOTEL_MED_EA_API_ENABLED to re-enable if the gate ever lifts.', 'fishotel' ); ?>
+						</span>
+					<?php endif; ?>
 				</p>
 			</div>
 

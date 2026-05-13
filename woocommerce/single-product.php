@@ -46,6 +46,13 @@ while ( have_posts() ) :
     // suppressed and the theme renders its own Arrival Panel in its place.
     $cs_release_ts  = fishotel_cs_release_ts( $product_id );
     $is_coming_soon = (bool) $cs_release_ts;
+
+    // Amazon-mode medication detection — when true, the medication
+    // store module renders a "Buy on Amazon" outbound CTA in place
+    // of the QT cert + variations + Add-to-Cart block.
+    $is_amazon_med = function_exists( 'fishotel_med_is_amazon_panel' )
+        ? fishotel_med_is_amazon_panel( $product )
+        : false;
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -138,6 +145,12 @@ while ( have_posts() ) :
             // lifecycle hooks here so the plugin's own price /
             // availability output can't leak above the panel.
             fishotel_cs_render_arrival_panel( $product, $cs_release_ts );
+        } elseif ( $is_amazon_med ) {
+            // Amazon-mode medication — render the outbound CTA panel.
+            // We still fire `before_single_product_summary` so the
+            // medication eyebrow + any plugin badges render above it.
+            do_action( 'woocommerce_before_single_product_summary' );
+            fishotel_med_render_amazon_panel( $product );
         } else {
             /**
              * Standard WC summary lifecycle hooks. Defaults (title, price,
@@ -149,7 +162,7 @@ while ( have_posts() ) :
         }
         ?>
 
-        <?php if ( ! $is_coming_soon ) : ?>
+        <?php if ( ! $is_coming_soon && ! $is_amazon_med ) : ?>
 
         <?php /* QT Certificate Panel */ ?>
         <div class="fh-qt-cert">
@@ -270,7 +283,7 @@ while ( have_posts() ) :
         </form>
         <?php do_action('woocommerce_after_add_to_cart_form'); ?>
 
-        <?php endif; /* ! $is_coming_soon */ ?>
+        <?php endif; /* ! $is_coming_soon && ! $is_amazon_med */ ?>
 
         <?php /* Product meta */ ?>
         <div class="fh-product-meta product_meta">

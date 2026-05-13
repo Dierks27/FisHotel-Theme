@@ -27,6 +27,8 @@ function fishotel_asset_version( $relative_path ) {
 require_once FISHOTEL_THEME_DIR . '/inc/calculator/init.php';
 // QT Scheduler
 require_once FISHOTEL_THEME_DIR . '/inc/scheduler/init.php';
+// Medication Store (Phase 1) — universal product model, EA sync, disclaimer wall.
+require_once FISHOTEL_THEME_DIR . '/inc/medication-store/init.php';
 // ─────────────────────────────────────────
 // THEME SETUP
 // ─────────────────────────────────────────

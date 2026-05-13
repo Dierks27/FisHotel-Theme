@@ -1,0 +1,167 @@
+/*
+ * FisHotel Medication Store — frontend
+ *
+ * - Disclaimer modal (Layer 1) on category archives + medication PDPs.
+ * - Eyebrow tagline above the hero title in the purchase panel.
+ * - "Buy on Amazon" outbound CTA + disclosure.
+ * - "Fulfilled by EverythingAquatic" disclosure footer (EA mode).
+ * - Checkout disclaimer checkbox.
+ *
+ * Palette aligned with the dark grand-hotel system (style.css tokens):
+ *   #0f0f0f base, #d4a574 gold accent, Courier Prime for the legal body,
+ *   Roboto Slab for headings. Modal is locked (no Esc/click-outside).
+ */
+
+/* ───── Disclaimer modal (Layer 1) ───── */
+.fishotel-med-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 99998;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+}
+.fishotel-med-modal[hidden] { display: none; }
+.fishotel-med-modal__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(15, 15, 15, 0.95);
+}
+.fishotel-med-modal__card {
+	position: relative;
+	z-index: 1;
+	max-width: 580px;
+	width: 100%;
+	background: #0f0f0f;
+	color: #e8e4dc;
+	border: 1px solid #d4a574;
+	box-shadow: 0 24px 64px rgba(0,0,0,.6);
+	padding: 32px 28px 26px;
+	font-family: "Courier Prime", "Courier New", monospace;
+	font-size: 15px;
+	line-height: 1.6;
+}
+.fishotel-med-modal__title {
+	margin: 0 0 18px;
+	font-family: "Bebas Neue", "Roboto Slab", "Roboto Condensed", Georgia, serif;
+	font-size: 28px;
+	letter-spacing: 3px;
+	text-align: center;
+	color: #d4a574;
+	font-weight: 400;
+}
+.fishotel-med-modal__body p {
+	margin: 0 0 14px;
+	color: #d8d2c4;
+}
+.fishotel-med-modal__body p:last-child { margin-bottom: 0; }
+.fishotel-med-modal__actions {
+	display: flex;
+	gap: 12px;
+	margin-top: 24px;
+	flex-wrap: wrap;
+}
+.fishotel-med-modal__btn {
+	flex: 1 1 200px;
+	padding: 12px 16px;
+	background: transparent;
+	border: 1px solid #d4a574;
+	color: #d4a574;
+	font-family: "Bebas Neue", "Roboto Slab", Georgia, serif;
+	font-size: 14px;
+	letter-spacing: 2px;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: background .15s ease, color .15s ease;
+}
+.fishotel-med-modal__btn--agree {
+	background: #d4a574;
+	color: #0f0f0f;
+}
+.fishotel-med-modal__btn--agree:hover {
+	background: #e0b585;
+}
+.fishotel-med-modal__btn--decline:hover {
+	background: rgba(212, 165, 116, 0.1);
+}
+
+/* Hide page scrollbars while modal is open (toggled by JS via body class). */
+body.fishotel-med-modal-open { overflow: hidden; }
+
+/* ───── Eyebrow tagline + EA disclosure ───── */
+.fishotel-med-eyebrow {
+	font-family: "Roboto Slab", Georgia, serif;
+	font-size: 12px;
+	letter-spacing: 3px;
+	text-transform: uppercase;
+	color: var(--fh-gold, #c9963a);
+	margin: 0 0 6px;
+}
+.fishotel-med-ea-disclosure {
+	margin: 16px 0 0;
+	padding: 10px 14px;
+	font-size: 12px;
+	letter-spacing: 0.5px;
+	color: var(--fh-text-3, #686058);
+	border-top: 1px dashed rgba(201, 150, 58, 0.3);
+	font-style: italic;
+}
+
+/* ───── Amazon CTA panel ───── */
+.fishotel-med-amazon-panel {
+	margin: 16px 0 0;
+	padding: 18px;
+	background: rgba(15, 15, 15, 0.4);
+	border: 1px solid rgba(201, 150, 58, 0.35);
+}
+.fishotel-med-amazon-panel__btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+.fishotel-med-amazon-panel__arrow {
+	font-size: 18px;
+	transition: transform .15s ease;
+}
+.fishotel-med-amazon-panel__btn:hover .fishotel-med-amazon-panel__arrow {
+	transform: translateX(3px);
+}
+.fishotel-med-amazon-panel__note {
+	margin: 12px 0 0;
+	font-size: 12px;
+	color: var(--fh-text-3, #686058);
+	line-height: 1.5;
+}
+.fishotel-med-amazon-panel__warning {
+	margin: 0;
+	padding: 10px;
+	background: rgba(179, 45, 46, 0.1);
+	border-left: 3px solid #b32d2e;
+	color: #e8b5b5;
+	font-size: 13px;
+}
+
+/* ───── Checkout acknowledgment ───── */
+.fishotel-med-checkout-ack {
+	margin: 18px 0;
+	padding: 14px 16px;
+	background: rgba(212, 165, 116, 0.08);
+	border-left: 3px solid #d4a574;
+}
+.fishotel-med-checkout-ack__label {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	cursor: pointer;
+	font-size: 13px;
+	line-height: 1.5;
+}
+.fishotel-med-checkout-ack__label input[type="checkbox"] {
+	flex: 0 0 auto;
+	margin-top: 3px;
+	width: 16px;
+	height: 16px;
+	cursor: pointer;
+}

@@ -54,13 +54,13 @@ while ( have_posts() ) :
         ? fishotel_med_is_amazon_panel( $product )
         : false;
 
-    // Product class drives the description heading copy + whether the
-    // QT cert renders. `fish` is the original livestock case; `medication`
-    // and `food` (freeze-dried) are Phase 3 additions where the QT cert
-    // is nonsense and the "About This Fish" label is wrong.
-    $product_class = function_exists( 'fishotel_classify_product' )
-        ? fishotel_classify_product( $product_id )
-        : 'fish';
+    // Allowlist gate for fish-specific UI (QT badge, trust strip,
+    // "About This Species" data table, prose heading copy). Anything
+    // not in the quarantined-fish category — meds, foods, future
+    // categories Jeff adds — falls through to the non-fish branches.
+    $is_fish = function_exists( 'fishotel_is_quarantined_fish' )
+        ? fishotel_is_quarantined_fish( $product_id )
+        : false;
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -172,10 +172,10 @@ while ( have_posts() ) :
 
         <?php if ( ! $is_coming_soon && ! $is_amazon_med ) : ?>
 
-        <?php /* QT Certificate Panel — livestock only. Medications + foods
-                never went through quarantine so the badge makes no sense
-                on those PDPs. */ ?>
-        <?php if ( $product_class === 'fish' ) : ?>
+        <?php /* QT Certificate Panel — quarantined-fish only. Anything
+                outside that category (meds, foods, gift cards, future
+                non-fish products) skips the badge entirely. */ ?>
+        <?php if ( $is_fish ) : ?>
         <div class="fh-qt-cert">
             <div class="fh-qt-cert__header">
                 <span class="fh-qt-cert__check">&#10003;</span>
@@ -280,16 +280,21 @@ while ( have_posts() ) :
                 </button>
             </div>
 
-            <?php /* Trust strip */
-            $t1 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_1') : '28-day QT protocol';
-            $t2 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_2') : 'Live arrival guarantee';
-            $t3 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_3') : 'Ships Mon–Tue';
+            <?php /* Trust strip — quarantined-fish only. The three default
+                    badges (28-day QT, Live arrival, Mon–Wed shipping) are
+                    all livestock-specific; replacements for meds/foods
+                    will be designed separately. */ ?>
+            <?php if ( $is_fish ) :
+                $t1 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_1') : '28-day QT protocol';
+                $t2 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_2') : 'Live arrival guarantee';
+                $t3 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_3') : 'Ships Mon–Tue';
             ?>
             <div class="fh-trust-strip">
                 <?php if ( $t1 ) : ?><span class="fh-trust-strip__item">&#10003; <?php echo esc_html( $t1 ); ?></span><?php endif; ?>
                 <?php if ( $t2 ) : ?><span class="fh-trust-strip__item">&#10003; <?php echo esc_html( $t2 ); ?></span><?php endif; ?>
                 <?php if ( $t3 ) : ?><span class="fh-trust-strip__item">&#10003; <?php echo esc_html( $t3 ); ?></span><?php endif; ?>
             </div>
+            <?php endif; ?>
 
             <?php do_action('woocommerce_after_add_to_cart_button'); ?>
         </form>
@@ -356,6 +361,12 @@ if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
     <div class="fh-species__inner">
         <span class="fh-eyebrow">Description</span>
         <span class="fh-rule"></span>
+
+        <?php /* "About This Species" H2 + structured spec table are
+                quarantined-fish-only — the rows are populated from
+                _fh_scientific_name / _fh_max_length / etc., none of
+                which apply to meds or foods. */ ?>
+        <?php if ( $is_fish ) : ?>
         <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">About This <em style="font-style:normal; color:var(--fh-gold);">Species</em></h2>
 
         <?php if ( ! empty( $spec_rows ) ) : ?>
@@ -367,6 +378,7 @@ if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
             </tr>
             <?php endforeach; ?>
         </table>
+        <?php endif; ?>
         <?php endif; ?>
 
         <?php
@@ -389,15 +401,26 @@ if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
             $prose = trim( preg_replace( '/\n{3,}/', "\n\n", $prose ) );
         ?>
         <?php if ( $prose ) :
-            $prose_label_map = [
-                'medication' => 'About This Medication',
-                'food'       => 'About This Food',
-                'fish'       => 'About This Fish',
-            ];
-            $prose_label = $prose_label_map[ $product_class ] ?? $prose_label_map['fish'];
+            // Sub-heading varies by product category. Anything outside
+            // fish/meds/foods (gift cards, merch, future categories)
+            // renders no heading — the prose still appears below the
+            // "Description" eyebrow.
+            $prose_cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
+            $prose_cats = is_wp_error( $prose_cats ) ? [] : (array) $prose_cats;
+            if ( $is_fish ) {
+                $prose_label = 'About This Fish';
+            } elseif ( in_array( 'medications', $prose_cats, true ) ) {
+                $prose_label = 'About This Medication';
+            } elseif ( in_array( 'foods', $prose_cats, true ) || in_array( 'freeze-dried-foods', $prose_cats, true ) ) {
+                $prose_label = 'About This Food';
+            } else {
+                $prose_label = '';
+            }
         ?>
         <div class="fh-species__prose">
+            <?php if ( $prose_label !== '' ) : ?>
             <h3 class="fh-species__prose-label"><?php echo esc_html( $prose_label ); ?></h3>
+            <?php endif; ?>
             <p><?php echo wp_kses_post( nl2br( esc_html( $prose ) ) ); ?></p>
         </div>
         <?php endif; ?>

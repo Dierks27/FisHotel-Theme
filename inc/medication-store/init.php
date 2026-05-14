@@ -44,11 +44,17 @@ FisHotel_Med_Disclaimer::init();
 FisHotel_Med_Product_Display::init();
 FisHotel_Med_Packing_Slip::init();
 
-// WP-CLI importer (Phase 1.5) — only loaded under wp-cli so the
-// command class doesn't sit in memory on every web request.
+// WP-CLI commands (Phase 1.5 importer + Phase 2 bulk helpers) — only
+// loaded under wp-cli so the command classes don't sit in memory on
+// every web request. The bulk helpers are registered as explicit
+// subcommands so they slot in alongside the importer's auto-discovered
+// methods under the same `fishotel-meds` namespace.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once FISHOTEL_MED_DIR . '/cli/class-importer-cli.php';
+	require_once FISHOTEL_MED_DIR . '/cli/class-bulk-cli.php';
 	WP_CLI::add_command( 'fishotel-meds', 'FisHotel_Med_Importer_CLI' );
+	WP_CLI::add_command( 'fishotel-meds flatten-categories', array( 'FisHotel_Med_Bulk_CLI', 'flatten_categories' ) );
+	WP_CLI::add_command( 'fishotel-meds tags-init', array( 'FisHotel_Med_Bulk_CLI', 'tags_init' ) );
 }
 
 /**

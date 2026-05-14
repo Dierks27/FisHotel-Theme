@@ -155,6 +155,25 @@ function fishotel_is_food_product( $product_id = null ) {
 }
 
 /**
+ * True when a product is Tier 2 — i.e. an Amazon affiliate item, keyed
+ * on a non-empty `_fishotel_amazon_asin` post meta value. The check is
+ * orthogonal to product_cat so it correctly identifies affiliate items
+ * regardless of whether they live in Medications (Copper Power today)
+ * or some future category (Seachem etc.).
+ *
+ * @param int|null $product_id Defaults to the current loop ID.
+ * @return bool
+ */
+function fishotel_is_amazon_affiliate_product( $product_id = null ) {
+    $product_id = $product_id ? (int) $product_id : (int) get_the_ID();
+    if ( ! $product_id ) {
+        return false;
+    }
+    $asin = (string) get_post_meta( $product_id, '_fishotel_amazon_asin', true );
+    return trim( $asin ) !== '';
+}
+
+/**
  * Render the three-line trust strip below Add to Cart. Single markup
  * pipeline for the fish / medication / food variants — content swaps,
  * markup + classes stay identical so the visual layout matches across
@@ -194,33 +213,32 @@ function fishotel_get_trust_strip_items( $product_id = null ) {
         return [];
     }
 
-    $get = function ( $key, $fallback ) {
-        $v = class_exists( 'FisHotel_Admin_Settings' )
+    // Defaults live in FisHotel_Admin_Settings::defaults() + register_setting().
+    // FisHotel_Admin_Settings::get() falls back to that default both when
+    // the option key is absent from the DB AND when the stored value is
+    // an empty string (Phase 3.5.1) so callers no longer need their own
+    // ?: ladder.
+    $get = function ( $key ) {
+        return class_exists( 'FisHotel_Admin_Settings' )
             ? (string) FisHotel_Admin_Settings::get( $key )
             : '';
-        return $v !== '' ? $v : $fallback;
     };
 
+    // Branch order matters: Tier 2 (Amazon-affiliate) products are still
+    // categorised under medications, so the affiliate check has to win
+    // before the medication branch. Fish gates first because it's the
+    // dominant category and the helper is the cheapest.
     if ( fishotel_is_quarantined_fish( $product_id ) ) {
-        return [
-            $get( 'fh_trust_1', '28-day QT protocol' ),
-            $get( 'fh_trust_2', 'Live arrival guarantee' ),
-            $get( 'fh_trust_3', 'Ships Mon–Tue' ),
-        ];
+        return [ $get( 'fh_trust_1' ), $get( 'fh_trust_2' ), $get( 'fh_trust_3' ) ];
+    }
+    if ( fishotel_is_amazon_affiliate_product( $product_id ) ) {
+        return [ $get( 'fh_tier2_trust_1' ), $get( 'fh_tier2_trust_2' ), $get( 'fh_tier2_trust_3' ) ];
     }
     if ( fishotel_is_medication_product( $product_id ) ) {
-        return [
-            $get( 'fh_med_trust_1', 'The same meds we use in QT' ),
-            $get( 'fh_med_trust_2', 'Trusted partner fulfillment' ),
-            $get( 'fh_med_trust_3', 'Ships in 1-2 business days' ),
-        ];
+        return [ $get( 'fh_med_trust_1' ), $get( 'fh_med_trust_2' ), $get( 'fh_med_trust_3' ) ];
     }
     if ( fishotel_is_food_product( $product_id ) ) {
-        return [
-            $get( 'fh_food_trust_1', 'The same foods we feed in-house' ),
-            $get( 'fh_food_trust_2', 'Trusted partner fulfillment' ),
-            $get( 'fh_food_trust_3', 'Ships in 1-2 business days' ),
-        ];
+        return [ $get( 'fh_food_trust_1' ), $get( 'fh_food_trust_2' ), $get( 'fh_food_trust_3' ) ];
     }
     return [];
 }

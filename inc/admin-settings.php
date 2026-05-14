@@ -14,6 +14,22 @@ class FisHotel_Admin_Settings {
 
 	const OPTION_GROUP = 'fishotel_settings';
 
+	/**
+	 * Per-sub-page settings group. Each subpage's <form> submits to
+	 * options.php with this group name; WordPress then only iterates +
+	 * sanitizes the options registered to that group. Without per-page
+	 * groups, a save on the Product Page would also iterate every
+	 * Homepage / About / Contacts option — fields not present in the
+	 * POST body get sanitized as empty and silently overwrite stored
+	 * values. (See Phase 3.5.1 root cause.)
+	 *
+	 * @param string $page_slug e.g. `fishotel-product`
+	 * @return string e.g. `fishotel_product`
+	 */
+	public static function group_for_page( $page_slug ) {
+		return str_replace( '-', '_', (string) $page_slug );
+	}
+
 	/** FAQ item categories whitelist */
 	public static function faq_categories() {
 		return [
@@ -132,6 +148,10 @@ class FisHotel_Admin_Settings {
 			'fh_food_trust_1'             => 'The same foods we feed in-house',
 			'fh_food_trust_2'             => 'Trusted partner fulfillment',
 			'fh_food_trust_3'             => 'Ships in 1-2 business days',
+			// Trust Strip — tier 2 / Amazon-affiliate medications (Phase 3.5.1)
+			'fh_tier2_trust_1'            => 'The same meds we use in QT',
+			'fh_tier2_trust_2'            => 'Sourced via Amazon for best pricing',
+			'fh_tier2_trust_3'            => 'Reef-keeper favorite for decades',
 			// Branding
 			'fh_tagline'                  => 'We quarantine. You reef.',
 			// Care Guide Defaults
@@ -246,7 +266,16 @@ class FisHotel_Admin_Settings {
 	/** Get a setting with its default fallback */
 	public static function get( $key ) {
 		$defaults = self::defaults();
-		return get_option( $key, $defaults[ $key ] ?? '' );
+		$default  = $defaults[ $key ] ?? '';
+		$value    = get_option( $key, $default );
+		// If a wipe (or any legacy state) left an empty string in the DB
+		// for a key that has a declared default, prefer the default so
+		// callers don't need their own ?: fallback ladder. Only applies
+		// to scalar string defaults — array/object types pass through.
+		if ( is_string( $value ) && trim( $value ) === '' && is_string( $default ) && $default !== '' ) {
+			return $default;
+		}
+		return $value;
 	}
 
 	/**
@@ -598,6 +627,15 @@ JS;
 					'fh_food_trust_3' => [ 'label' => 'Trust item 3', 'type' => 'text', 'placeholder' => 'Ships in 1-2 business days' ],
 				],
 			],
+			'tier2_trust' => [
+				'page'   => 'fishotel-product',
+				'title'  => 'Tier 2 / Amazon-Affiliate Trust Strip (below Buy on Amazon)',
+				'fields' => [
+					'fh_tier2_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => 'The same meds we use in QT' ],
+					'fh_tier2_trust_2' => [ 'label' => 'Trust item 2', 'type' => 'text', 'placeholder' => 'Sourced via Amazon for best pricing' ],
+					'fh_tier2_trust_3' => [ 'label' => 'Trust item 3', 'type' => 'text', 'placeholder' => 'Reef-keeper favorite for decades' ],
+				],
+			],
 			'care' => [
 				'page'   => 'fishotel-product',
 				'title'  => 'Care Guide Defaults',
@@ -699,6 +737,8 @@ JS;
 
 	public static function register_settings() {
 		foreach ( self::sections() as $section_id => $section ) {
+			$group = self::group_for_page( $section['page'] );
+
 			add_settings_section(
 				'fh_section_' . $section_id,
 				$section['title'],
@@ -708,7 +748,7 @@ JS;
 
 			foreach ( $section['fields'] as $key => $field ) {
 				if ( $field['type'] === 'multicheck' ) {
-					register_setting( self::OPTION_GROUP, $key, [
+					register_setting( $group, $key, [
 						'type'              => 'array',
 						'sanitize_callback' => function( $val ) {
 							if ( ! is_array( $val ) ) return [];
@@ -717,37 +757,37 @@ JS;
 						'default'           => [],
 					] );
 				} elseif ( $field['type'] === 'stages_fixed' ) {
-					register_setting( self::OPTION_GROUP, $key, [
+					register_setting( $group, $key, [
 						'type'              => 'array',
 						'sanitize_callback' => [ __CLASS__, 'sanitize_stages' ],
 						'default'           => self::default_quarantine_stages(),
 					] );
 				} elseif ( $field['type'] === 'repeater_wysiwyg' ) {
-					register_setting( self::OPTION_GROUP, $key, [
+					register_setting( $group, $key, [
 						'type'              => 'array',
 						'sanitize_callback' => [ __CLASS__, 'sanitize_faq_items' ],
 						'default'           => self::default_faq_items(),
 					] );
 				} elseif ( $field['type'] === 'testimonials_repeater' ) {
-					register_setting( self::OPTION_GROUP, $key, [
+					register_setting( $group, $key, [
 						'type'              => 'array',
 						'sanitize_callback' => [ __CLASS__, 'sanitize_home_testimonials' ],
 						'default'           => self::default_home_testimonials(),
 					] );
 				} elseif ( $field['type'] === 'wysiwyg' ) {
-					register_setting( self::OPTION_GROUP, $key, [
+					register_setting( $group, $key, [
 						'type'              => 'string',
 						'sanitize_callback' => 'wp_kses_post',
 						'default'           => self::defaults()[ $key ] ?? '',
 					] );
 				} elseif ( $field['type'] === 'image' ) {
-					register_setting( self::OPTION_GROUP, $key, [
+					register_setting( $group, $key, [
 						'type'              => 'integer',
 						'sanitize_callback' => 'absint',
 						'default'           => 0,
 					] );
 				} elseif ( $field['type'] === 'placeholder_library' ) {
-					register_setting( self::OPTION_GROUP, $key, [
+					register_setting( $group, $key, [
 						'type'              => 'array',
 						'sanitize_callback' => [ __CLASS__, 'sanitize_id_list' ],
 						'default'           => [],
@@ -755,7 +795,7 @@ JS;
 				} elseif ( $field['type'] === 'number' ) {
 					$min = isset( $field['min'] ) ? (int) $field['min'] : null;
 					$max = isset( $field['max'] ) ? (int) $field['max'] : null;
-					register_setting( self::OPTION_GROUP, $key, [
+					register_setting( $group, $key, [
 						'type'              => 'integer',
 						'sanitize_callback' => function ( $val ) use ( $min, $max, $key ) {
 							$n = (int) $val;
@@ -766,9 +806,30 @@ JS;
 						'default'           => self::defaults()[ $key ] ?? 0,
 					] );
 				} else {
-					register_setting( self::OPTION_GROUP, $key, [
+					// text | textarea | select | checkbox. Same string type,
+					// but text/textarea get a defensive preserve-on-empty
+					// sanitizer so an accidental empty POST (e.g. a future
+					// refactor that drops a field from the form HTML while
+					// the option is still registered) can no longer wipe
+					// stored copy. Select + checkbox pass empty through
+					// normally — unchecking a checkbox MUST persist.
+					$type        = $field['type'];
+					$is_textarea = ( $type === 'textarea' );
+					$preserve    = in_array( $type, [ 'text', 'textarea' ], true );
+					register_setting( $group, $key, [
 						'type'              => 'string',
-						'sanitize_callback' => $field['type'] === 'textarea' ? 'sanitize_textarea_field' : 'sanitize_text_field',
+						'sanitize_callback' => function ( $val ) use ( $key, $is_textarea, $preserve ) {
+							$sanitized = $is_textarea
+								? sanitize_textarea_field( (string) $val )
+								: sanitize_text_field( (string) $val );
+							if ( $preserve && trim( $sanitized ) === '' ) {
+								$existing = get_option( $key, null );
+								if ( is_string( $existing ) && trim( $existing ) !== '' ) {
+									return $existing;
+								}
+							}
+							return $sanitized;
+						},
 						'default'           => self::defaults()[ $key ] ?? '',
 					] );
 				}
@@ -1128,12 +1189,23 @@ JS;
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'fishotel' ) );
 		}
+		$group = self::group_for_page( $page_slug );
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( $title ); ?></h1>
+			<?php
+			// settings_errors() is auto-emitted on core Settings pages but
+			// not on custom add_submenu_page screens like ours, so without
+			// this call the "Settings Saved" notice never renders even
+			// when a save succeeded. (Phase 3.5.1 root cause #2.)
+			settings_errors();
+			?>
 			<form method="post" action="options.php">
 				<?php
-				settings_fields( self::OPTION_GROUP );
+				// Per-page group: saving this form only iterates the
+				// options registered to $group, so a Product Page save
+				// no longer touches Placeholders / Branding / etc.
+				settings_fields( $group );
 				do_settings_sections( $page_slug );
 				submit_button( 'Save Settings' );
 				?>

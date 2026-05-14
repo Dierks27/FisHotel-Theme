@@ -157,8 +157,14 @@ while ( have_posts() ) :
             // Amazon-mode medication — render the outbound CTA panel.
             // We still fire `before_single_product_summary` so the
             // medication eyebrow + any plugin badges render above it.
+            // The Tier 2 trust strip is rendered immediately after the
+            // Amazon CTA so affiliate products visually parallel the
+            // EA-fulfilled meds in layout (Phase 3.5.1).
             do_action( 'woocommerce_before_single_product_summary' );
             fishotel_med_render_amazon_panel( $product );
+            if ( function_exists( 'fishotel_get_trust_strip_items' ) && function_exists( 'fishotel_render_trust_strip' ) ) {
+                fishotel_render_trust_strip( fishotel_get_trust_strip_items( $product_id ) );
+            }
         } else {
             /**
              * Standard WC summary lifecycle hooks. Defaults (title, price,

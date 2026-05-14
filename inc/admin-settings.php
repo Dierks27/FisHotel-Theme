@@ -1057,16 +1057,25 @@ JS;
 		} elseif ( $type === 'placeholder_library' ) {
 			$ids = get_option( $key, [] );
 			if ( ! is_array( $ids ) ) $ids = [];
-			$csv = implode( ',', array_map( 'intval', $ids ) );
+
+			// Resolve URLs and drop any id without a renderable thumbnail BEFORE
+			// building the CSV. Otherwise unrenderable ids (e.g. attachments
+			// missing _wp_attached_file postmeta) stay in the hidden input
+			// forever — the render loop skips them, so the × button can't
+			// remove them and they re-submit on every save.
+			$items = [];
+			foreach ( $ids as $id ) {
+				$id  = (int) $id;
+				$url = $id ? wp_get_attachment_image_url( $id, 'thumbnail' ) : '';
+				if ( ! $url ) continue;
+				$items[ $id ] = $url;
+			}
+			$csv = implode( ',', array_keys( $items ) );
 			?>
 			<div class="fh-ph-library" data-name="<?php echo esc_attr( $key ); ?>">
 				<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $csv ); ?>" class="fh-ph-library__input">
 				<ul class="fh-ph-library__grid">
-					<?php foreach ( $ids as $id ) :
-						$id  = (int) $id;
-						$url = $id ? wp_get_attachment_image_url( $id, 'thumbnail' ) : '';
-						if ( ! $url ) continue;
-					?>
+					<?php foreach ( $items as $id => $url ) : ?>
 						<li class="fh-ph-library__item" data-id="<?php echo esc_attr( $id ); ?>">
 							<img src="<?php echo esc_url( $url ); ?>" alt="">
 							<button type="button" class="fh-ph-library__remove" aria-label="Remove">&times;</button>

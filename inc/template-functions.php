@@ -113,3 +113,114 @@ function fishotel_archive_noun( $singular = false ) {
     }
     return $singular ? 'product' : 'products';
 }
+
+/**
+ * True when the product is in the medications taxonomy bucket — either
+ * the parent term or any of the Phase 3.4 form/treats children. Used
+ * by the trust strip + future medication-specific PDP blocks.
+ *
+ * @param int|null $product_id Defaults to the current loop ID.
+ * @return bool
+ */
+function fishotel_is_medication_product( $product_id = null ) {
+    $product_id = $product_id ? (int) $product_id : (int) get_the_ID();
+    if ( ! $product_id ) {
+        return false;
+    }
+    $cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
+    if ( is_wp_error( $cats ) || empty( $cats ) ) {
+        return false;
+    }
+    $med_slugs = [ 'medications', 'flakes', 'pellets', 'powders', 'liquid', 'antibacterial', 'antiparasitic', 'dewormer' ];
+    return (bool) array_intersect( $med_slugs, (array) $cats );
+}
+
+/**
+ * True when the product is in any of the food taxonomy buckets.
+ *
+ * @param int|null $product_id Defaults to the current loop ID.
+ * @return bool
+ */
+function fishotel_is_food_product( $product_id = null ) {
+    $product_id = $product_id ? (int) $product_id : (int) get_the_ID();
+    if ( ! $product_id ) {
+        return false;
+    }
+    $cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
+    if ( is_wp_error( $cats ) || empty( $cats ) ) {
+        return false;
+    }
+    $food_slugs = [ 'freeze-dried-foods', 'fish-food', 'medicated-food' ];
+    return (bool) array_intersect( $food_slugs, (array) $cats );
+}
+
+/**
+ * Render the three-line trust strip below Add to Cart. Single markup
+ * pipeline for the fish / medication / food variants — content swaps,
+ * markup + classes stay identical so the visual layout matches across
+ * categories. Skips lines that resolve to an empty string after the
+ * admin override / default fallback.
+ *
+ * @param string[] $items 1-3 trust-strip lines, already resolved.
+ */
+function fishotel_render_trust_strip( $items ) {
+    $items = array_values( array_filter( array_map( 'strval', (array) $items ), function ( $line ) {
+        return trim( $line ) !== '';
+    } ) );
+    if ( empty( $items ) ) {
+        return;
+    }
+    echo '<div class="fh-trust-strip">';
+    foreach ( $items as $line ) {
+        echo '<span class="fh-trust-strip__item">&#10003; ' . esc_html( $line ) . '</span>';
+    }
+    echo '</div>';
+}
+
+/**
+ * Resolve the appropriate trust-strip lines for a product. Reads admin
+ * overrides via FisHotel_Admin_Settings (so non-developers can edit
+ * copy), falling back to the spec-supplied defaults when the stored
+ * value is empty. Returns an empty array for products outside the
+ * fish/medication/food buckets (gift cards, merchandise, etc.) so the
+ * caller can skip the trust-strip slot entirely.
+ *
+ * @param int|null $product_id Defaults to the current loop ID.
+ * @return string[]
+ */
+function fishotel_get_trust_strip_items( $product_id = null ) {
+    $product_id = $product_id ? (int) $product_id : (int) get_the_ID();
+    if ( ! $product_id ) {
+        return [];
+    }
+
+    $get = function ( $key, $fallback ) {
+        $v = class_exists( 'FisHotel_Admin_Settings' )
+            ? (string) FisHotel_Admin_Settings::get( $key )
+            : '';
+        return $v !== '' ? $v : $fallback;
+    };
+
+    if ( fishotel_is_quarantined_fish( $product_id ) ) {
+        return [
+            $get( 'fh_trust_1', '28-day QT protocol' ),
+            $get( 'fh_trust_2', 'Live arrival guarantee' ),
+            $get( 'fh_trust_3', 'Ships Mon–Tue' ),
+        ];
+    }
+    if ( fishotel_is_medication_product( $product_id ) ) {
+        return [
+            $get( 'fh_med_trust_1', 'The same meds we use in QT' ),
+            $get( 'fh_med_trust_2', 'Trusted partner fulfillment' ),
+            $get( 'fh_med_trust_3', 'Ships in 1-2 business days' ),
+        ];
+    }
+    if ( fishotel_is_food_product( $product_id ) ) {
+        return [
+            $get( 'fh_food_trust_1', 'The same foods we feed in-house' ),
+            $get( 'fh_food_trust_2', 'Trusted partner fulfillment' ),
+            $get( 'fh_food_trust_3', 'Ships in 1-2 business days' ),
+        ];
+    }
+    return [];
+}

@@ -52,9 +52,11 @@ FisHotel_Med_Packing_Slip::init();
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once FISHOTEL_MED_DIR . '/cli/class-importer-cli.php';
 	require_once FISHOTEL_MED_DIR . '/cli/class-bulk-cli.php';
+	require_once FISHOTEL_MED_DIR . '/cli/class-bulk-import-cli.php';
 	WP_CLI::add_command( 'fishotel-meds', 'FisHotel_Med_Importer_CLI' );
 	WP_CLI::add_command( 'fishotel-meds flatten-categories', array( 'FisHotel_Med_Bulk_CLI', 'flatten_categories' ) );
 	WP_CLI::add_command( 'fishotel-meds tags-init', array( 'FisHotel_Med_Bulk_CLI', 'tags_init' ) );
+	WP_CLI::add_command( 'fishotel-meds bulk-import', array( 'FisHotel_Med_Bulk_Import_CLI', 'bulk_import' ) );
 }
 
 /**

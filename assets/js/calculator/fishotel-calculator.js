@@ -1628,6 +1628,21 @@
     });
   }
 
+  // Resolve location.hash to a tab and activate it via the existing
+  // click handler (so hash changes flow through the same code path as
+  // a user click). Returns true if a matching tab was found.
+  function activateTabFromHash() {
+    var raw = (window.location.hash || '').replace(/^#/, '');
+    if (!raw || !$tabs) return false;
+    for (var i = 0; i < $tabs.length; i++) {
+      if ($tabs[i].getAttribute('data-cat') === raw) {
+        $tabs[i].click();
+        return true;
+      }
+    }
+    return false;
+  }
+
   // ============================================================================
   // PRINT + ICS EXPORT
   // ============================================================================
@@ -1818,7 +1833,15 @@
 
     [].forEach.call($tabs, function (t) {
       t.addEventListener('click', function () {
-        setActiveTab(t.getAttribute('data-cat'));
+        var cat = t.getAttribute('data-cat');
+        setActiveTab(cat);
+        // replaceState (not pushState) so the back button doesn't
+        // accumulate one entry per click, and doesn't fire hashchange
+        // which would re-enter activateTabFromHash.
+        if (cat && window.history && window.history.replaceState) {
+          try { window.history.replaceState({}, '', '#' + cat); }
+          catch (e) { /* noop */ }
+        }
       });
     });
 
@@ -1837,6 +1860,13 @@
     var params = new URLSearchParams(window.location.search);
     var initialMedId = params.get('med') || 'copper_power';
     selectMed(initialMedId);
+
+    // Hash deep-link runs AFTER selectMed so it overrides the category
+    // implied by the medication. Valid hashes are read live from the
+    // tabs' data-cat attributes — adding a new tab needs no JS change.
+    activateTabFromHash();
+
+    window.addEventListener('hashchange', activateTabFromHash);
   });
 
 })();

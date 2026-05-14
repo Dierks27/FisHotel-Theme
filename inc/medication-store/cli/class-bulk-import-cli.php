@@ -217,12 +217,12 @@ class FisHotel_Med_Bulk_Import_CLI {
 				'outcome'    => 'updated',
 				'variations' => count( $variations ),
 				'log'        => sprintf(
-					'%s (#%d): updated %d variations (%s → %s)',
+					'%s (#%d): updated %d variations ($%s → $%s)',
 					$title,
 					$existing_id,
 					count( $variations ),
-					wc_price( $range['min'] ),
-					wc_price( $range['max'] )
+					number_format( (float) $range['min'], 2 ),
+					number_format( (float) $range['max'], 2 )
 				),
 			];
 		}
@@ -338,6 +338,14 @@ class FisHotel_Med_Bulk_Import_CLI {
 			$this->create_variation( $parent_id, $i, $count, $v, $attr_map );
 		}
 
+		// Rebuild the parent's cached min/max variation price + stock
+		// status. WC does NOT do this implicitly on variation save, so
+		// the parent's _min_variation_price / _max_variation_price meta
+		// (which drives the frontend price-range HTML and the admin
+		// product list) stays stale or empty unless we explicitly resync.
+		if ( class_exists( 'WC_Product_Variable' ) ) {
+			WC_Product_Variable::sync( (int) $parent_id );
+		}
 		if ( function_exists( 'wc_delete_product_transients' ) ) {
 			wc_delete_product_transients( $parent_id );
 		}
@@ -568,12 +576,33 @@ class FisHotel_Med_Bulk_Import_CLI {
 			$variation->set_price( (string) $price );
 		}
 
+		// Set WC's standard _sku field so admin search, REST, and the
+		// variations table all show the EA SKU. Different field from
+		// the _fishotel_ea_sku meta written below — that one is our
+		// fulfillment-lookup tag, _sku is WC's canonical product code.
+		// WC throws WC_Data_Exception when another product already
+		// holds this SKU; we log + drop the SKU on that one variation
+		// rather than aborting the whole import.
+		$ea_sku = isset( $v['sku'] ) ? sanitize_text_field( (string) $v['sku'] ) : '';
+		if ( $ea_sku !== '' ) {
+			try {
+				$variation->set_sku( $ea_sku );
+			} catch ( WC_Data_Exception $e ) {
+				WP_CLI::warning( sprintf(
+					'SKU "%s" rejected by WC on parent #%d — %s. Variation saved without _sku.',
+					$ea_sku,
+					(int) $parent_id,
+					$e->getMessage()
+				) );
+			}
+		}
+
 		$variation->save();
 		$vid = $variation->get_id();
 
 		// Per-spec Phase 3 meta.
 		update_post_meta( $vid, '_fishotel_ea_variation_id', isset( $v['variation_id'] ) ? (int) $v['variation_id'] : 0 );
-		update_post_meta( $vid, '_fishotel_ea_sku',          isset( $v['sku'] ) ? sanitize_text_field( (string) $v['sku'] ) : '' );
+		update_post_meta( $vid, '_fishotel_ea_sku',          $ea_sku );
 		update_post_meta( $vid, '_fishotel_ea_wholesale',    $wholesale > 0 ? wc_format_decimal( $wholesale ) : '' );
 		update_post_meta( $vid, '_fishotel_ea_retail',       $retail    > 0 ? wc_format_decimal( $retail )    : '' );
 

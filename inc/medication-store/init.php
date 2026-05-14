@@ -56,6 +56,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'fishotel-meds', 'FisHotel_Med_Importer_CLI' );
 	WP_CLI::add_command( 'fishotel-meds flatten-categories', array( 'FisHotel_Med_Bulk_CLI', 'flatten_categories' ) );
 	WP_CLI::add_command( 'fishotel-meds tags-init', array( 'FisHotel_Med_Bulk_CLI', 'tags_init' ) );
+	WP_CLI::add_command( 'fishotel-meds backfill-skus', array( 'FisHotel_Med_Bulk_CLI', 'backfill_skus' ) );
 	WP_CLI::add_command( 'fishotel-meds bulk-import', array( 'FisHotel_Med_Bulk_Import_CLI', 'bulk_import' ) );
 }
 

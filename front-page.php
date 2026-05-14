@@ -53,24 +53,22 @@ $available_args = [
     'post_type'      => 'product',
     'posts_per_page' => $available_count,
     'post_status'    => 'publish',
-    'tax_query'      => [[
-        'taxonomy' => 'product_cat',
-        'field'    => 'slug',
-        'terms'    => 'quarantined-fish',
-    ]],
-    'meta_query'     => [[
-        'key'     => '_fishotel_qt_stage',
-        'value'   => 'souvenir-shop',
-        'compare' => '=',
-    ]],
+    'tax_query'      => [
+        'relation' => 'AND',
+        [
+            'taxonomy' => 'product_cat',
+            'field'    => 'slug',
+            'terms'    => 'quarantined-fish',
+        ],
+        [
+            'taxonomy' => 'product_visibility',
+            'field'    => 'name',
+            'terms'    => 'outofstock',
+            'operator' => 'NOT IN',
+        ],
+    ],
 ];
 $available_query = new WP_Query($available_args);
-
-// Fallback — just show recent quarantined fish if none flagged yet
-if (!$available_query->have_posts()) {
-    $available_args['meta_query'] = [];
-    $available_query = new WP_Query($available_args);
-}
 ?>
 <?php if ($available_query->have_posts()) : ?>
 <section class="fh-section" style="padding-top:72px; padding-bottom:72px;">

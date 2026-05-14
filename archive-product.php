@@ -106,26 +106,64 @@ get_header();
 </div>
 
 <?php /* ── FILTER BAR ── */ ?>
+<?php
+// Category-aware archive copy. Helpers come from inc/template-functions.php;
+// fall back to "fish" so the page still renders if the include hasn't
+// loaded for some reason.
+$archive_noun_plural   = function_exists( 'fishotel_archive_noun' ) ? fishotel_archive_noun( false ) : 'fish';
+$archive_noun_singular = function_exists( 'fishotel_archive_noun' ) ? fishotel_archive_noun( true )  : 'fish';
+
+// Legacy sub-category chip strip ("All Fish / Saltwater / Reef-Safe / ...")
+// is livestock-specific. Render it on the shop root and on the quarantined-
+// fish term + its descendants only — never on medications, foods, gift
+// cards, etc. The Medications archive gets its own dual-axis strip below.
+$is_qf_family = false;
+if ( is_shop() && ! is_product_category() ) {
+    $is_qf_family = true;
+} elseif ( is_product_category() ) {
+    $cur_term = get_queried_object();
+    if ( $cur_term && isset( $cur_term->slug ) ) {
+        $qf = get_term_by( 'slug', 'quarantined-fish', 'product_cat' );
+        if ( $qf && ! is_wp_error( $qf ) ) {
+            if ( (int) $cur_term->term_id === (int) $qf->term_id ) {
+                $is_qf_family = true;
+            } else {
+                $ancestors = get_ancestors( (int) $cur_term->term_id, 'product_cat', 'taxonomy' );
+                $is_qf_family = in_array( (int) $qf->term_id, array_map( 'intval', $ancestors ), true );
+            }
+        }
+    }
+}
+?>
 <div class="fh-shop-header">
     <div class="fh-shop-header__inner">
-        <span class="fh-shop-count">
+        <span class="fh-shop-count" data-fh-result-count>
             <?php
             global $wp_query;
             $total = $wp_query->found_posts;
+            $noun  = $total === 1 ? $archive_noun_singular : $archive_noun_plural;
             printf(
-                esc_html(_n('Showing %s fish', 'Showing %s fish', $total, 'fishotel')),
-                '<strong>' . number_format_i18n($total) . '</strong>'
+                /* translators: %1$s formatted count, %2$s noun (fish/medications/foods/products) */
+                esc_html__( 'Showing %1$s %2$s', 'fishotel' ),
+                '<strong>' . number_format_i18n( $total ) . '</strong>',
+                esc_html( $noun )
             );
             ?>
         </span>
 
+        <?php if ( $is_qf_family ) : ?>
         <div class="fh-shop-filters">
             <a href="<?php echo esc_url(get_permalink(wc_get_page_id('shop'))); ?>"
                class="fh-filter-btn <?php echo is_shop() && !is_product_category() ? 'active' : ''; ?>">
-                All Fish
+                All <?php echo esc_html( ucfirst( $archive_noun_plural ) ); ?>
             </a>
             <?php
-            $fish_cats = get_terms(['taxonomy' => 'product_cat', 'parent' => get_term_by('slug', 'quarantined-fish', 'product_cat')->term_id ?? 0, 'hide_empty' => true]);
+            $qf_parent = get_term_by('slug', 'quarantined-fish', 'product_cat');
+            $fish_cats = $qf_parent ? get_terms([
+                'taxonomy'   => 'product_cat',
+                'parent'     => (int) $qf_parent->term_id,
+                'hide_empty' => true,
+            ]) : [];
             if ($fish_cats && !is_wp_error($fish_cats)) :
                 foreach ($fish_cats as $fcat) : ?>
                 <a href="<?php echo esc_url(get_term_link($fcat)); ?>"
@@ -134,6 +172,7 @@ get_header();
                 </a>
             <?php endforeach; endif; ?>
         </div>
+        <?php endif; ?>
 
         <select class="fh-shop-sort" onchange="window.location=this.value">
             <?php
@@ -150,6 +189,46 @@ get_header();
         </select>
     </div>
 </div>
+
+<?php /* ── MEDICATIONS DUAL-AXIS FILTER STRIP ── */ ?>
+<?php if ( function_exists( 'fishotel_is_medications_archive' ) && fishotel_is_medications_archive() ) :
+    // Axes are hardcoded — slugs map 1:1 to the term IDs in the Phase 3.4
+    // data-model table. Labels intentionally reframe the taxonomy slugs
+    // ("antibacterial" → "Antibiotics", "antiparasitic" → "External") for
+    // the customer-facing chip copy.
+    $med_filter_axes = [
+        'form' => [
+            'label' => 'Form',
+            'chips' => [
+                [ 'slug' => 'flakes',  'label' => 'Flakes'  ],
+                [ 'slug' => 'pellets', 'label' => 'Pellets' ],
+                [ 'slug' => 'powders', 'label' => 'Powders' ],
+                [ 'slug' => 'liquid',  'label' => 'Liquid'  ],
+            ],
+        ],
+        'treats' => [
+            'label' => 'Treats',
+            'chips' => [
+                [ 'slug' => 'antibacterial', 'label' => 'Antibiotics' ],
+                [ 'slug' => 'dewormer',      'label' => 'Dewormers'   ],
+                [ 'slug' => 'antiparasitic', 'label' => 'External'    ],
+            ],
+        ],
+    ];
+?>
+<div class="fh-med-filters" data-fh-filter-strip>
+    <?php foreach ( $med_filter_axes as $axis_key => $axis ) : ?>
+    <div class="fh-med-filters__row" data-axis="<?php echo esc_attr( $axis_key ); ?>">
+        <span class="fh-med-filters__label"><?php echo esc_html( strtoupper( $axis['label'] ) ); ?></span>
+        <button type="button" class="fh-med-filters__chip is-active" data-slug="">All</button>
+        <?php foreach ( $axis['chips'] as $chip ) : ?>
+        <button type="button" class="fh-med-filters__chip" data-slug="<?php echo esc_attr( $chip['slug'] ); ?>"><?php echo esc_html( $chip['label'] ); ?></button>
+        <?php endforeach; ?>
+    </div>
+    <?php endforeach; ?>
+    <p class="fh-med-filters__empty" hidden>No medications match these filters. <a href="#" data-fh-clear-filters>Clear filters</a></p>
+</div>
+<?php endif; ?>
 
 <?php /* ── PRODUCT GRID ── */ ?>
 <?php if (have_posts()) : ?>
@@ -172,8 +251,15 @@ get_header();
         elseif ( $stage === 'observation' )  { $status_label = 'In QT'; }
         elseif ( $stage === 'checkin' )      { $status_label = 'Checked In'; }
         else                                 { $status_label = ''; }
+
+        // Comma-separated product_cat slug list — the Medications dual-axis
+        // filter JS reads this off each card to decide visibility.
+        $card_cat_slugs = wp_get_post_terms( $pid, 'product_cat', [ 'fields' => 'slugs' ] );
+        $card_cat_attr  = ( ! is_wp_error( $card_cat_slugs ) && ! empty( $card_cat_slugs ) )
+            ? esc_attr( implode( ',', $card_cat_slugs ) )
+            : '';
     ?>
-        <div class="fh-fish-card-wrap product">
+        <div class="fh-fish-card-wrap product" data-fh-cats="<?php echo $card_cat_attr; ?>">
             <?php do_action( 'woocommerce_before_shop_loop_item' ); ?>
             <a href="<?php the_permalink(); ?>" class="fh-fish-card">
                 <div class="fh-fish-card__image">

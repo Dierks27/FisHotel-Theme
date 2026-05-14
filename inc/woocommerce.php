@@ -123,3 +123,37 @@ add_action( 'init', function () {
     remove_action( 'woocommerce_after_shop_loop_item',        'woocommerce_template_loop_add_to_cart',        10 );
 }, 20 );
 
+/*
+ * Render the full medications catalog on a single page so the client-
+ * side dual-axis filter (assets/js/medications-filter.js) doesn't have
+ * to coordinate with WC pagination. 50 is a generous ceiling for the
+ * current 40-product set — server-side ajax can take over later if
+ * the catalog outgrows that.
+ */
+add_action( 'pre_get_posts', function ( $query ) {
+    if ( is_admin() || ! $query->is_main_query() ) {
+        return;
+    }
+    if ( function_exists( 'is_product_category' ) && is_product_category( 'medications' ) ) {
+        $query->set( 'posts_per_page', 50 );
+    }
+} );
+
+/*
+ * Conditional enqueue for the Medications archive filter strip. The
+ * CSS already ships in woocommerce.css (loaded site-wide), so only
+ * the JS needs the conditional load.
+ */
+add_action( 'wp_enqueue_scripts', function () {
+    if ( ! function_exists( 'fishotel_is_medications_archive' ) || ! fishotel_is_medications_archive() ) {
+        return;
+    }
+    wp_enqueue_script(
+        'fishotel-medications-filter',
+        FISHOTEL_THEME_URI . '/assets/js/medications-filter.js',
+        [],
+        fishotel_asset_version( 'assets/js/medications-filter.js' ),
+        true
+    );
+}, 20 );
+

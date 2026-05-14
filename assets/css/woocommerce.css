@@ -880,4 +880,75 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   display: none !important;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Medications archive — dual-axis filter chip strip (Phase 3.4)
+   Renders above the product grid on /product-category/medications/.
+   Visual pattern mirrors .fh-filter-btn but stacks two rows with a
+   leading axis label so customers can combine Form + Treats.
+   ───────────────────────────────────────────────────────────────── */
+.fh-med-filters {
+  max-width: 1200px;
+  margin: 0 auto 32px;
+  padding: 20px 24px;
+  background: var(--fh-bg-lt);
+  border: 1px solid var(--fh-border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fh-med-filters__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fh-med-filters__label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--fh-text-3);
+  min-width: 60px;
+}
+
+.fh-med-filters__chip {
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--fh-border-md);
+  color: var(--fh-text-2);
+  cursor: pointer;
+  transition: all var(--fh-transition);
+}
+
+.fh-med-filters__chip:hover {
+  border-color: var(--fh-border-gold);
+  color: var(--fh-gold);
+}
+
+.fh-med-filters__chip.is-active {
+  background: var(--fh-gold);
+  border-color: var(--fh-gold);
+  color: var(--fh-bg);
+}
+
+.fh-med-filters__empty {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--fh-border);
+  font-size: 11px;
+  color: var(--fh-text-3);
+}
+
+.fh-med-filters__empty a {
+  color: var(--fh-gold);
+  text-decoration: underline;
+}
+
 

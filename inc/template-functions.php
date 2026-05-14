@@ -66,3 +66,50 @@ function fishotel_is_quarantined_fish( $product_id = null ) {
     }
     return in_array( 'quarantined-fish', $cats, true );
 }
+
+/**
+ * True when the current request is the Medications parent category
+ * archive — `/product-category/medications/`. False on the shop root,
+ * on form/treats child archives (flakes, dewormer, etc.), and on every
+ * non-medication archive. Gates the dual-axis filter chip strip.
+ */
+function fishotel_is_medications_archive() {
+    if ( ! function_exists( 'is_product_category' ) || ! is_product_category() ) {
+        return false;
+    }
+    $term = get_queried_object();
+    return ( $term && isset( $term->slug ) && $term->slug === 'medications' );
+}
+
+/**
+ * Resolve the noun used in archive count + "ALL X" copy based on the
+ * current product_cat slug. Allowlist on the slugs we ship; everything
+ * else gets a generic "product(s)" fallback so future categories Jeff
+ * adds (gift cards, merchandise, test kits, etc.) don't inherit the
+ * fish copy.
+ *
+ * @param bool $singular Return the singular form ("fish", "medication",
+ *                       "food", "product") instead of the plural.
+ * @return string
+ */
+function fishotel_archive_noun( $singular = false ) {
+    $term = ( function_exists( 'is_product_category' ) && is_product_category() )
+        ? get_queried_object()
+        : null;
+    $slug = ( $term && isset( $term->slug ) ) ? (string) $term->slug : '';
+
+    $fish_slugs = [ 'quarantined-fish' ];
+    $med_slugs  = [ 'medications', 'flakes', 'pellets', 'powders', 'liquid', 'antibacterial', 'antiparasitic', 'dewormer' ];
+    $food_slugs = [ 'freeze-dried-foods', 'fish-food', 'medicated-food' ];
+
+    if ( in_array( $slug, $fish_slugs, true ) ) {
+        return 'fish'; // same in singular + plural
+    }
+    if ( in_array( $slug, $med_slugs, true ) ) {
+        return $singular ? 'medication' : 'medications';
+    }
+    if ( in_array( $slug, $food_slugs, true ) ) {
+        return $singular ? 'food' : 'foods';
+    }
+    return $singular ? 'product' : 'products';
+}

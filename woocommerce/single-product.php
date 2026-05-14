@@ -11,6 +11,17 @@ while ( have_posts() ) :
     the_post();
     global $product;
     $product_id  = $product->get_ID();
+
+    // The theme overrides the default `woocommerce_template_single_add_to_cart`
+    // action in inc/woocommerce.php, which is what normally enqueues
+    // `wc-add-to-cart-variation` (it ships with WC's variable.php template
+    // part). Enqueue it explicitly for variable products so wc_variation_form()
+    // auto-initialises and the hidden `variation_id` input gets populated when
+    // the user picks a combo.
+    if ( $product && $product->is_type( 'variable' ) ) {
+        wp_enqueue_script( 'wc-add-to-cart-variation' );
+    }
+
     $hotel       = function_exists('fishotel_get_hotel_data') ? fishotel_get_hotel_data($product_id) : [];
     $tags        = get_the_terms($product_id, 'product_tag') ?: [];
     $gallery_ids = $product->get_gallery_image_ids();
@@ -227,7 +238,13 @@ while ( have_posts() ) :
               data-product_variations="<?php echo esc_attr(htmlspecialchars(wp_json_encode($product->get_available_variations()))); ?>">
 
             <?php if ($product->is_type('variable')) : ?>
-            <div class="fh-variations">
+            <?php /* `variations` is the class WC's variation form binds to:
+                    wc_variation_form() listens for change events delegated
+                    against `.variations select` and reads chosen attributes
+                    from the same selector. The hidden selects below must be
+                    descendants of an element carrying that class or WC never
+                    matches a combo and `variation_id` stays empty. */ ?>
+            <div class="fh-variations variations">
                 <?php foreach ($product->get_variation_attributes() as $attr_name => $options) :
                     $label = wc_attribute_label($attr_name);
                     $selected = isset($_REQUEST['attribute_' . sanitize_title($attr_name)]) ? wc_clean(wp_unslash($_REQUEST['attribute_' . sanitize_title($attr_name)])) : $product->get_variation_default_attribute($attr_name);
@@ -289,7 +306,7 @@ while ( have_posts() ) :
                     <button type="button" class="fh-qty__down" aria-label="Decrease">&#9660;</button>
                     <input type="hidden" name="quantity" id="fh-qty-input" value="1" min="1">
                 </div>
-                <button type="submit" name="add-to-cart" value="<?php echo esc_attr($product->get_id()); ?>" class="fh-btn fh-btn--gold fh-btn--full">
+                <button type="submit" name="add-to-cart" value="<?php echo esc_attr($product->get_id()); ?>" class="fh-btn fh-btn--gold fh-btn--full single_add_to_cart_button">
                     <?php esc_html_e('Add to Cart', 'fishotel'); ?>
                 </button>
             </div>

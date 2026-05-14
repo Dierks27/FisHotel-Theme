@@ -40,3 +40,52 @@ function fishotel_get_hotel_data( $product_id = null ) {
     }
     return [];
 }
+
+/**
+ * Classify a product as `fish`, `medication`, or `food` for UI labeling
+ * (single-product description heading, QT cert visibility, etc.).
+ *
+ * Order matters: food check runs first because the Phase 3 bulk-importer
+ * may place freeze-dried products under the Medications parent when the
+ * --category-foods flag was omitted, so `fishotel_med_is_med_product()`
+ * would otherwise classify them as `medication`. Slug-based fallbacks
+ * mirror the importer's freeze-dried detection so a freshly-imported
+ * product is classified correctly without any manual category cleanup.
+ *
+ * @param int|WC_Product|null $product Product ID, product object, or null
+ *                                     to use the current loop ID.
+ * @return string `fish` | `medication` | `food`
+ */
+function fishotel_classify_product( $product = null ) {
+    if ( null === $product ) {
+        $product = get_the_ID();
+    }
+    $id = ( is_object( $product ) && method_exists( $product, 'get_id' ) )
+        ? $product->get_id()
+        : (int) $product;
+    if ( ! $id ) {
+        return 'fish';
+    }
+
+    $cat_slugs = wp_get_post_terms( $id, 'product_cat', [ 'fields' => 'slugs' ] );
+    if ( ! is_wp_error( $cat_slugs ) ) {
+        foreach ( (array) $cat_slugs as $slug ) {
+            if ( $slug === 'foods' || $slug === 'freeze-dried-foods' || stripos( $slug, 'food' ) !== false ) {
+                return 'food';
+            }
+        }
+    }
+
+    $post_slug = (string) get_post_field( 'post_name', $id );
+    foreach ( [ 'freeze-dried', 'blackworm', 'tubifex', 'copepod' ] as $hint ) {
+        if ( strpos( $post_slug, $hint ) !== false ) {
+            return 'food';
+        }
+    }
+
+    if ( function_exists( 'fishotel_med_is_med_product' ) && fishotel_med_is_med_product( $id ) ) {
+        return 'medication';
+    }
+
+    return 'fish';
+}

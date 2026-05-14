@@ -183,4 +183,74 @@ class FisHotel_Med_Bulk_CLI {
 
 		WP_CLI::success( sprintf( 'Created %d new tags. %d already existed.', $created, $existed ) );
 	}
+
+	/**
+	 * Copy `_fishotel_ea_sku` into WooCommerce's standard `_sku` field on
+	 * every product variation where `_sku` is empty. One-shot repair for
+	 * variations imported before the Phase 3.1 bulk-import fix that now
+	 * sets `_sku` directly via WC_Product_Variation::set_sku().
+	 *
+	 * Idempotent: re-running finds nothing to do once SKUs are filled.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dry-run]
+	 * : Log the variations that would be backfilled without writing meta.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp fishotel-meds backfill-skus
+	 *     wp fishotel-meds backfill-skus --dry-run
+	 *
+	 * @when after_wp_load
+	 */
+	public function backfill_skus( $args, $assoc_args ) {
+		$dry_run = ! empty( $assoc_args['dry-run'] );
+		$prefix  = $dry_run ? '[DRY RUN] ' : '';
+
+		$variation_ids = get_posts( array(
+			'post_type'      => 'product_variation',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		) );
+
+		$filled       = 0;
+		$already_set  = 0;
+		$no_ea_sku    = 0;
+
+		foreach ( $variation_ids as $vid ) {
+			$ea_sku = (string) get_post_meta( (int) $vid, '_fishotel_ea_sku', true );
+			$wc_sku = (string) get_post_meta( (int) $vid, '_sku', true );
+
+			if ( $wc_sku !== '' ) {
+				$already_set++;
+				continue;
+			}
+			if ( $ea_sku === '' ) {
+				$no_ea_sku++;
+				continue;
+			}
+
+			if ( ! $dry_run ) {
+				update_post_meta( (int) $vid, '_sku', $ea_sku );
+				$parent_id = wp_get_post_parent_id( (int) $vid );
+				if ( $parent_id && function_exists( 'wc_delete_product_transients' ) ) {
+					wc_delete_product_transients( $parent_id );
+				}
+			}
+			$filled++;
+		}
+
+		WP_CLI::log( sprintf(
+			'%sBackfilled: %d variations | Already had _sku: %d | No EA SKU to copy: %d | Scanned: %d',
+			$prefix,
+			$filled,
+			$already_set,
+			$no_ea_sku,
+			count( $variation_ids )
+		) );
+		WP_CLI::success( $dry_run ? 'Dry run complete — no changes persisted.' : 'Backfill complete.' );
+	}
 }

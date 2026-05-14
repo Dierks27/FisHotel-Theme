@@ -53,6 +53,14 @@ while ( have_posts() ) :
     $is_amazon_med = function_exists( 'fishotel_med_is_amazon_panel' )
         ? fishotel_med_is_amazon_panel( $product )
         : false;
+
+    // Product class drives the description heading copy + whether the
+    // QT cert renders. `fish` is the original livestock case; `medication`
+    // and `food` (freeze-dried) are Phase 3 additions where the QT cert
+    // is nonsense and the "About This Fish" label is wrong.
+    $product_class = function_exists( 'fishotel_classify_product' )
+        ? fishotel_classify_product( $product_id )
+        : 'fish';
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -164,7 +172,10 @@ while ( have_posts() ) :
 
         <?php if ( ! $is_coming_soon && ! $is_amazon_med ) : ?>
 
-        <?php /* QT Certificate Panel */ ?>
+        <?php /* QT Certificate Panel — livestock only. Medications + foods
+                never went through quarantine so the badge makes no sense
+                on those PDPs. */ ?>
+        <?php if ( $product_class === 'fish' ) : ?>
         <div class="fh-qt-cert">
             <div class="fh-qt-cert__header">
                 <span class="fh-qt-cert__check">&#10003;</span>
@@ -186,6 +197,7 @@ while ( have_posts() ) :
             <div class="fh-qt-cert__notes"><?php echo esc_html($hotel['notes']); ?></div>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
 
         <?php /* Price */ ?>
         <div class="fh-purchase__from"><?php echo $product->is_type('variable') ? esc_html__('Starting from', 'fishotel') : esc_html__('Price', 'fishotel'); ?></div>
@@ -376,9 +388,16 @@ if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
             $prose = preg_replace( '/Fun Facts?:?[\s\S]*/i', '', $prose );
             $prose = trim( preg_replace( '/\n{3,}/', "\n\n", $prose ) );
         ?>
-        <?php if ( $prose ) : ?>
+        <?php if ( $prose ) :
+            $prose_label_map = [
+                'medication' => 'About This Medication',
+                'food'       => 'About This Food',
+                'fish'       => 'About This Fish',
+            ];
+            $prose_label = $prose_label_map[ $product_class ] ?? $prose_label_map['fish'];
+        ?>
         <div class="fh-species__prose">
-            <h3 class="fh-species__prose-label">About This Fish</h3>
+            <h3 class="fh-species__prose-label"><?php echo esc_html( $prose_label ); ?></h3>
             <p><?php echo wp_kses_post( nl2br( esc_html( $prose ) ) ); ?></p>
         </div>
         <?php endif; ?>

@@ -57,6 +57,11 @@ class FisHotel_Med_Product_Display {
 		$pid = get_queried_object_id();
 		if ( ! fishotel_med_is_med_product( $pid ) ) return;
 		if ( fishotel_med_get_mode( $pid ) !== 'ea' ) return;
+		// Tier 2 (Amazon-affiliate) products are never EA-fulfilled, so the
+		// disclosure copy would mislead. Belt-and-suspenders on top of the
+		// mode check above — covers any future hybrid product that ends up
+		// with mode=ea while also carrying an `_fishotel_amazon_asin` value.
+		if ( function_exists( 'fishotel_is_amazon_affiliate_product' ) && fishotel_is_amazon_affiliate_product( $pid ) ) return;
 		?>
 		<p class="fishotel-med-ea-disclosure">
 			<?php esc_html_e( 'Fulfilled by EverythingAquatic, our trusted medication partner.', 'fishotel' ); ?>

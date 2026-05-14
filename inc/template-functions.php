@@ -42,6 +42,107 @@ function fishotel_get_hotel_data( $product_id = null ) {
 }
 
 /**
+ * Resolve a `fh-tag--<modifier>` class from a tag slug. Empty string when
+ * no rule matches (falls through to the muted gray default). Substring
+ * matching mirrors the legacy fish-only resolver so existing slugs like
+ * `aggressive-with-reef-fish` keep colorizing correctly. The med/food
+ * additions are exact-slug for precision (Phase 3.6).
+ *
+ * @param string $slug product_tag slug, e.g. `reef-safe` or `dewormer`.
+ * @return string `fh-tag--reef-safe` etc., or ''.
+ */
+function fishotel_tag_modifier_class( $slug ) {
+    $slug = (string) $slug;
+    if ( $slug === '' ) {
+        return '';
+    }
+
+    // Substring matches — fish tag groups (preserves legacy behavior).
+    $substring_map = [
+        'reef-safe'  => 'fh-tag--reef-safe',
+        'peaceful'   => 'fh-tag--peaceful',
+        'carnivore'  => 'fh-tag--carnivore',
+        'aggressive' => 'fh-tag--aggressive',
+    ];
+    foreach ( $substring_map as $needle => $class ) {
+        if ( strpos( $slug, $needle ) !== false ) {
+            return $class;
+        }
+    }
+
+    // Exact-slug matches — medication + food tag groups. Each modifier
+    // class also has a matching CSS rule in main.css; the modifier name
+    // just needs to be unique per group, not per slug.
+    $exact_map = [
+        // Treatment type
+        'dewormer'           => 'fh-tag--dewormer',
+        'antibiotic'         => 'fh-tag--antibiotic',
+        'antibacterial'      => 'fh-tag--antibacterial',
+        'antiparasitic'      => 'fh-tag--antiparasitic',
+        'external-parasites' => 'fh-tag--external-parasites',
+        'antifungal'         => 'fh-tag--antifungal',
+        'broad-spectrum'     => 'fh-tag--broad-spectrum',
+        'multi-purpose'      => 'fh-tag--multi-purpose',
+        // Pathogens / symptoms (muted coral)
+        'ich'                  => 'fh-tag--ich',
+        'velvet'               => 'fh-tag--velvet',
+        'brook'                => 'fh-tag--brook',
+        'brooklynella'         => 'fh-tag--brooklynella',
+        'cryptocaryon'         => 'fh-tag--cryptocaryon',
+        'amyloodinium'         => 'fh-tag--amyloodinium',
+        'uronema'              => 'fh-tag--uronema',
+        'bacterial-infection'  => 'fh-tag--bacterial-infection',
+        'fin-rot'              => 'fh-tag--fin-rot',
+        'fungus'               => 'fh-tag--fungus',
+        'fungal-infection'     => 'fh-tag--fungal-infection',
+        'saprolegnia'          => 'fh-tag--saprolegnia',
+        'cestodes'             => 'fh-tag--cestodes',
+        'monogeneans'          => 'fh-tag--monogeneans',
+        'digeneans'            => 'fh-tag--digeneans',
+        'flukes'               => 'fh-tag--flukes',
+        'nematodes'            => 'fh-tag--nematodes',
+        'worms'                => 'fh-tag--worms',
+        'internal-worms'       => 'fh-tag--internal-worms',
+        'internal-parasites'   => 'fh-tag--internal-parasites',
+        'hex'                  => 'fh-tag--hex',
+        'hexamita'             => 'fh-tag--hexamita',
+        'spironucleus'         => 'fh-tag--spironucleus',
+        'hydroids'             => 'fh-tag--hydroids',
+        'camallanus'           => 'fh-tag--camallanus',
+        'cnidaria'             => 'fh-tag--cnidaria',
+        'bloat'                => 'fh-tag--bloat',
+        // Drug-class (muted teal)
+        'gram-positive'  => 'fh-tag--gram-positive',
+        'gram-negative'  => 'fh-tag--gram-negative',
+        'phenothiazine'  => 'fh-tag--phenothiazine',
+        'benzimidazole'  => 'fh-tag--benzimidazole',
+        'imidazothiazole'=> 'fh-tag--imidazothiazole',
+        'aminoglycoside' => 'fh-tag--aminoglycoside',
+        'nitrofuran'     => 'fh-tag--nitrofuran',
+        'quinoline'      => 'fh-tag--quinoline',
+        'formalin'       => 'fh-tag--formalin',
+        'metronidazole'  => 'fh-tag--metronidazole',
+        'anthelmintic'   => 'fh-tag--anthelmintic',
+        'azole'          => 'fh-tag--azole',
+        // Food benefit (green)
+        'high-protein'  => 'fh-tag--high-protein',
+        'premium-food'  => 'fh-tag--premium-food',
+        'conditioning'  => 'fh-tag--conditioning',
+        'daily-staple'  => 'fh-tag--daily-staple',
+        'reef-food'     => 'fh-tag--reef-food',
+        // Food use-case (blue)
+        'lps-food'      => 'fh-tag--lps-food',
+        'sps-food'      => 'fh-tag--sps-food',
+        'planktivores'  => 'fh-tag--planktivores',
+    ];
+    if ( isset( $exact_map[ $slug ] ) ) {
+        return $exact_map[ $slug ];
+    }
+
+    return '';
+}
+
+/**
  * True when the product is in the `quarantined-fish` category — the
  * single allowlist gate for fish-specific PDP UI (QT badge, trust
  * strip, "About This Species" data table, "About This Fish" prose
@@ -171,6 +272,86 @@ function fishotel_is_amazon_affiliate_product( $product_id = null ) {
     }
     $asin = (string) get_post_meta( $product_id, '_fishotel_amazon_asin', true );
     return trim( $asin ) !== '';
+}
+
+/**
+ * Render the purchase-panel badge above the price. Branch by category:
+ *   - quarantined-fish → "Quarantine Complete" with the two QT protocol
+ *     lines, region, hotel notes (existing fish behavior).
+ *   - medications + Tier 2 affiliate → "From the Pharmacy" with the
+ *     admin-editable pharmacy subtitle.
+ *   - foods → "From the Pantry" with the admin-editable pantry subtitle.
+ *   - everything else → nothing.
+ *
+ * All three variants share the .fh-qt-cert markup so CSS doesn't need
+ * separate styling — only the copy swaps.
+ *
+ * @param int   $product_id Product ID.
+ * @param array $extras     Optional fish-specific extras (region, hotel_notes).
+ */
+function fishotel_render_purchase_badge( $product_id, $extras = [] ) {
+    $product_id = (int) $product_id;
+    if ( ! $product_id ) {
+        return;
+    }
+
+    $get = function ( $key ) {
+        return class_exists( 'FisHotel_Admin_Settings' )
+            ? (string) FisHotel_Admin_Settings::get( $key )
+            : '';
+    };
+
+    if ( fishotel_is_quarantined_fish( $product_id ) ) {
+        $title    = 'Quarantine Complete';
+        $line_one = $get( 'fh_qt_line_1' );
+        $line_two = $get( 'fh_qt_line_2' );
+        $extras_html  = '';
+        if ( ! empty( $extras['region'] ) ) {
+            $extras_html .= '<div class="fh-qt-cert__region">Region: ' . esc_html( $extras['region'] ) . '</div>';
+        }
+        if ( ! empty( $extras['hotel_notes'] ) ) {
+            $extras_html .= '<div class="fh-qt-cert__notes">' . esc_html( $extras['hotel_notes'] ) . '</div>';
+        }
+    } elseif (
+        ( function_exists( 'fishotel_is_amazon_affiliate_product' ) && fishotel_is_amazon_affiliate_product( $product_id ) )
+        || ( function_exists( 'fishotel_is_medication_product' )    && fishotel_is_medication_product( $product_id ) )
+    ) {
+        $title    = 'From the Pharmacy';
+        $line_one = $get( 'fh_pharmacy_badge_subtitle' );
+        $line_two = '';
+        $extras_html = '';
+    } elseif ( function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id ) ) {
+        $title    = 'From the Pantry';
+        $line_one = $get( 'fh_pantry_badge_subtitle' );
+        $line_two = '';
+        $extras_html = '';
+    } else {
+        return;
+    }
+    ?>
+    <div class="fh-qt-cert">
+        <div class="fh-qt-cert__header">
+            <span class="fh-qt-cert__check">&#10003;</span>
+            <span class="fh-qt-cert__title"><?php echo esc_html( $title ); ?></span>
+        </div>
+        <?php if ( $line_one !== '' || $line_two !== '' ) : ?>
+        <div class="fh-qt-cert__protocol">
+            <?php
+            if ( $line_one !== '' ) {
+                echo esc_html( $line_one );
+            }
+            if ( $line_two !== '' ) {
+                if ( $line_one !== '' ) {
+                    echo '<br>';
+                }
+                echo esc_html( $line_two );
+            }
+            ?>
+        </div>
+        <?php endif; ?>
+        <?php echo $extras_html; // already escaped above ?>
+    </div>
+    <?php
 }
 
 /**

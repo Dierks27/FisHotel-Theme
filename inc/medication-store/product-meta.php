@@ -127,6 +127,70 @@ class FisHotel_Med_Product_Meta {
 					<span class="description"><?php esc_html_e( '10-character ASIN. The affiliate URL is built as https://www.amazon.com/dp/{ASIN}?tag={your-tag}.', 'fishotel' ); ?></span>
 				</p>
 			</div>
+
+			<?php
+			// Phase 3.6 — per-product data fields that drive the italic
+			// subtitle line under the title + the "About This Medication"
+			// / "About This Food" data table on the PDP. Both sections
+			// render unconditionally so a single product can be both a
+			// medication and a food (medicated foods like Praziquantel
+			// Pellet); the frontend skips any field that's left empty.
+			$active_ingredient = (string) get_post_meta( $pid, '_fishotel_active_ingredient', true );
+			$treats_text       = (string) get_post_meta( $pid, '_fishotel_treats',             true );
+			$use_in_text       = (string) get_post_meta( $pid, '_fishotel_use_in',             true );
+			$reef_safe_val     = (string) get_post_meta( $pid, '_fishotel_reef_safe',          true );
+			$food_source       = (string) get_post_meta( $pid, '_fishotel_food_source',        true );
+			$food_best_for     = (string) get_post_meta( $pid, '_fishotel_best_for',           true );
+			$food_nutrition    = (string) get_post_meta( $pid, '_fishotel_nutrition',          true );
+			$food_additives    = (string) get_post_meta( $pid, '_fishotel_additives',          true );
+			?>
+
+			<div class="options_group">
+				<h4 style="margin:8px 12px 0;"><?php esc_html_e( 'Medication details (table + subtitle)', 'fishotel' ); ?></h4>
+				<p class="form-field">
+					<label for="_fishotel_active_ingredient"><?php esc_html_e( 'Active ingredient(s)', 'fishotel' ); ?></label>
+					<input type="text" id="_fishotel_active_ingredient" name="_fishotel_active_ingredient" value="<?php echo esc_attr( $active_ingredient ); ?>" placeholder="Praziquantel" style="width:100%;">
+					<span class="description"><?php esc_html_e( 'Comma-separated for combo products. Renders as the italic subtitle under the title and as the first row of the data table.', 'fishotel' ); ?></span>
+				</p>
+				<p class="form-field">
+					<label for="_fishotel_treats"><?php esc_html_e( 'Treats', 'fishotel' ); ?></label>
+					<input type="text" id="_fishotel_treats" name="_fishotel_treats" value="<?php echo esc_attr( $treats_text ); ?>" placeholder="Gill flukes, intestinal tapeworms" style="width:100%;">
+				</p>
+				<p class="form-field">
+					<label for="_fishotel_use_in"><?php esc_html_e( 'Use in', 'fishotel' ); ?></label>
+					<input type="text" id="_fishotel_use_in" name="_fishotel_use_in" value="<?php echo esc_attr( $use_in_text ); ?>" placeholder="QT tank, hospital tank" style="width:100%;">
+				</p>
+				<p class="form-field">
+					<label for="_fishotel_reef_safe"><?php esc_html_e( 'Reef safe', 'fishotel' ); ?></label>
+					<select id="_fishotel_reef_safe" name="_fishotel_reef_safe">
+						<option value=""        <?php selected( $reef_safe_val, '' ); ?>>— No selection —</option>
+						<option value="yes"     <?php selected( $reef_safe_val, 'yes' ); ?>>Yes</option>
+						<option value="no"      <?php selected( $reef_safe_val, 'no' ); ?>>No</option>
+						<option value="caution" <?php selected( $reef_safe_val, 'caution' ); ?>>With caution</option>
+					</select>
+				</p>
+			</div>
+
+			<div class="options_group">
+				<h4 style="margin:8px 12px 0;"><?php esc_html_e( 'Food details (table + subtitle)', 'fishotel' ); ?></h4>
+				<p class="form-field">
+					<label for="_fishotel_food_source"><?php esc_html_e( 'Food source', 'fishotel' ); ?></label>
+					<input type="text" id="_fishotel_food_source" name="_fishotel_food_source" value="<?php echo esc_attr( $food_source ); ?>" placeholder="Mysis relicta" style="width:100%;">
+					<span class="description"><?php esc_html_e( 'Source species. Renders as the italic subtitle on freeze-dried foods (medicated foods like Praziquantel Pellet keep their active ingredient as the subtitle).', 'fishotel' ); ?></span>
+				</p>
+				<p class="form-field">
+					<label for="_fishotel_best_for"><?php esc_html_e( 'Best for', 'fishotel' ); ?></label>
+					<input type="text" id="_fishotel_best_for" name="_fishotel_best_for" value="<?php echo esc_attr( $food_best_for ); ?>" placeholder="LPS corals, planktivores, finicky eaters" style="width:100%;">
+				</p>
+				<p class="form-field">
+					<label for="_fishotel_nutrition"><?php esc_html_e( 'Nutrition value', 'fishotel' ); ?></label>
+					<input type="text" id="_fishotel_nutrition" name="_fishotel_nutrition" value="<?php echo esc_attr( $food_nutrition ); ?>" placeholder="Protein 65% min · Fat 8% min · Fiber 2% max" style="width:100%;">
+				</p>
+				<p class="form-field">
+					<label for="_fishotel_additives"><?php esc_html_e( 'Additives &amp; enrichments', 'fishotel' ); ?></label>
+					<input type="text" id="_fishotel_additives" name="_fishotel_additives" value="<?php echo esc_attr( $food_additives ); ?>" placeholder="Garlic, spirulina, vitamin C" style="width:100%;">
+				</p>
+			</div>
 		</div>
 		<?php
 	}
@@ -150,6 +214,21 @@ class FisHotel_Med_Product_Meta {
 		$asin = substr( $asin, 0, 10 );
 		update_post_meta( $post_id, '_fishotel_amazon_asin',        $asin );
 		update_post_meta( $post_id, '_fishotel_dosing_anchor',      sanitize_text_field( wp_unslash( $_POST['_fishotel_dosing_anchor']      ?? '' ) ) );
+
+		// Phase 3.6 — medication + food data fields driving the subtitle
+		// and the "About This Medication / Food" data table on the PDP.
+		// Plain text fields; the Reef Safe select is constrained to its
+		// own allowlist.
+		update_post_meta( $post_id, '_fishotel_active_ingredient', sanitize_text_field( wp_unslash( $_POST['_fishotel_active_ingredient'] ?? '' ) ) );
+		update_post_meta( $post_id, '_fishotel_treats',            sanitize_text_field( wp_unslash( $_POST['_fishotel_treats']            ?? '' ) ) );
+		update_post_meta( $post_id, '_fishotel_use_in',            sanitize_text_field( wp_unslash( $_POST['_fishotel_use_in']            ?? '' ) ) );
+		$reef_safe_in = sanitize_text_field( wp_unslash( $_POST['_fishotel_reef_safe'] ?? '' ) );
+		$reef_safe    = in_array( $reef_safe_in, [ '', 'yes', 'no', 'caution' ], true ) ? $reef_safe_in : '';
+		update_post_meta( $post_id, '_fishotel_reef_safe',         $reef_safe );
+		update_post_meta( $post_id, '_fishotel_food_source',       sanitize_text_field( wp_unslash( $_POST['_fishotel_food_source']       ?? '' ) ) );
+		update_post_meta( $post_id, '_fishotel_best_for',          sanitize_text_field( wp_unslash( $_POST['_fishotel_best_for']          ?? '' ) ) );
+		update_post_meta( $post_id, '_fishotel_nutrition',         sanitize_text_field( wp_unslash( $_POST['_fishotel_nutrition']         ?? '' ) ) );
+		update_post_meta( $post_id, '_fishotel_additives',         sanitize_text_field( wp_unslash( $_POST['_fishotel_additives']         ?? '' ) ) );
 	}
 
 	/**

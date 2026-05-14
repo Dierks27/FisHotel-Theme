@@ -480,6 +480,73 @@ h1, h2, h3, h4, h5 {
 .fh-tag--aggressive { border-color: rgba(192,90,90,.3);  color: var(--fh-red); }
 .fh-tag--carnivore  { border-color: var(--fh-border-gold); color: var(--fh-gold); }
 
+/* Medication tag colors (Phase 3.6).
+   Treatment-type chips use distinctive bright colors; pathogens use a
+   muted coral threat color; drug-class metadata uses muted teal. */
+.fh-tag--dewormer          { border-color: rgba(90,170,120,.3); color: var(--fh-green); }
+.fh-tag--antibiotic        { border-color: rgba(224,124,90,.35); color: #e07c5a; }
+.fh-tag--antibacterial     { border-color: rgba(224,124,90,.35); color: #e07c5a; }
+.fh-tag--antiparasitic     { border-color: rgba(74,157,184,.3);  color: var(--fh-blue); }
+.fh-tag--external-parasites{ border-color: rgba(74,157,184,.3);  color: var(--fh-blue); }
+.fh-tag--antifungal        { border-color: rgba(139,111,184,.35); color: #8b6fb8; }
+.fh-tag--broad-spectrum    { border-color: var(--fh-border-gold); color: var(--fh-gold); }
+.fh-tag--multi-purpose     { border-color: var(--fh-border-gold); color: var(--fh-gold); }
+
+/* Pathogens / symptoms — muted coral threat color. */
+.fh-tag--ich,
+.fh-tag--velvet,
+.fh-tag--brook,
+.fh-tag--brooklynella,
+.fh-tag--cryptocaryon,
+.fh-tag--amyloodinium,
+.fh-tag--uronema,
+.fh-tag--bacterial-infection,
+.fh-tag--fin-rot,
+.fh-tag--fungus,
+.fh-tag--fungal-infection,
+.fh-tag--saprolegnia,
+.fh-tag--cestodes,
+.fh-tag--monogeneans,
+.fh-tag--digeneans,
+.fh-tag--flukes,
+.fh-tag--nematodes,
+.fh-tag--worms,
+.fh-tag--internal-worms,
+.fh-tag--internal-parasites,
+.fh-tag--hex,
+.fh-tag--hexamita,
+.fh-tag--spironucleus,
+.fh-tag--hydroids,
+.fh-tag--camallanus,
+.fh-tag--cnidaria,
+.fh-tag--bloat                    { border-color: rgba(168,90,74,.35); color: #c87862; }
+
+/* Drug-class metadata — muted teal, informational. */
+.fh-tag--gram-positive,
+.fh-tag--gram-negative,
+.fh-tag--phenothiazine,
+.fh-tag--benzimidazole,
+.fh-tag--imidazothiazole,
+.fh-tag--aminoglycoside,
+.fh-tag--nitrofuran,
+.fh-tag--quinoline,
+.fh-tag--formalin,
+.fh-tag--metronidazole,
+.fh-tag--anthelmintic,
+.fh-tag--azole                    { border-color: rgba(90,139,152,.35); color: #6a9ba8; }
+
+/* Food benefit / nutrition — green. */
+.fh-tag--high-protein,
+.fh-tag--premium-food,
+.fh-tag--conditioning,
+.fh-tag--daily-staple,
+.fh-tag--reef-food                { border-color: rgba(90,170,120,.3); color: var(--fh-green); }
+
+/* Food use-case — blue. */
+.fh-tag--lps-food,
+.fh-tag--sps-food,
+.fh-tag--planktivores             { border-color: rgba(74,157,184,.3); color: var(--fh-blue); }
+
 /* ─────────────────────────────────────────
    7. BUTTONS & FORMS
 ───────────────────────────────────────── */

@@ -89,20 +89,38 @@ while ( have_posts() ) :
         </h1>
 
         <div class="page-hero__meta">
-            <?php $short = $product->get_short_description();
-            if ($short) : ?>
-                <span class="page-hero__latin"><?php echo wp_kses_post($short); ?></span>
+            <?php
+            // Italic subtitle line. Fish products use the short description
+            // (scientific name lives there today). Medications + Tier 2
+            // surface their active ingredient(s); foods surface their
+            // source species. Short description acts as the fallback for
+            // every category so a product without the dedicated meta still
+            // renders something if Jeff set the short description.
+            $short    = (string) $product->get_short_description();
+            $subtitle = '';
+            if ( $is_fish ) {
+                $subtitle = $short;
+            } elseif ( function_exists( 'fishotel_is_amazon_affiliate_product' )
+                && ( fishotel_is_amazon_affiliate_product( $product_id )
+                    || ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) ) ) ) {
+                $subtitle = (string) get_post_meta( $product_id, '_fishotel_active_ingredient', true );
+                if ( $subtitle === '' ) { $subtitle = $short; }
+            } elseif ( function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id ) ) {
+                $subtitle = (string) get_post_meta( $product_id, '_fishotel_food_source', true );
+                if ( $subtitle === '' ) { $subtitle = $short; }
+            } else {
+                $subtitle = $short;
+            }
+            if ( $subtitle !== '' ) : ?>
+                <span class="page-hero__latin"><?php echo wp_kses_post( $subtitle ); ?></span>
             <?php endif; ?>
 
             <?php if ($tags) : ?>
             <div class="fh-tag-list">
                 <?php foreach ($tags as $tag) :
-                    $slug = $tag->slug;
-                    $mod = '';
-                    if ( strpos( $slug, 'reef-safe' ) !== false )   $mod = 'fh-tag--reef-safe';
-                    elseif ( strpos( $slug, 'peaceful' ) !== false ) $mod = 'fh-tag--peaceful';
-                    elseif ( strpos( $slug, 'carnivore' ) !== false ) $mod = 'fh-tag--carnivore';
-                    elseif ( strpos( $slug, 'aggressive' ) !== false ) $mod = 'fh-tag--aggressive';
+                    $mod = function_exists( 'fishotel_tag_modifier_class' )
+                        ? fishotel_tag_modifier_class( $tag->slug )
+                        : '';
                 ?>
                     <a href="<?php echo esc_url( get_term_link($tag) ); ?>" class="fh-tag <?php echo esc_attr($mod); ?>">
                         <?php echo esc_html($tag->name); ?>
@@ -157,11 +175,15 @@ while ( have_posts() ) :
             // Amazon-mode medication — render the outbound CTA panel.
             // We still fire `before_single_product_summary` so the
             // medication eyebrow + any plugin badges render above it.
-            // The Tier 2 trust strip is rendered immediately after the
-            // Amazon CTA so affiliate products visually parallel the
-            // EA-fulfilled meds in layout (Phase 3.5.1).
+            // The Tier 2 trust strip + the "From the Pharmacy" badge
+            // are rendered immediately after the Amazon CTA so affiliate
+            // products visually parallel the EA-fulfilled meds layout
+            // (Phase 3.5.1 + 3.6).
             do_action( 'woocommerce_before_single_product_summary' );
             fishotel_med_render_amazon_panel( $product );
+            if ( function_exists( 'fishotel_render_purchase_badge' ) ) {
+                fishotel_render_purchase_badge( $product_id );
+            }
             if ( function_exists( 'fishotel_get_trust_strip_items' ) && function_exists( 'fishotel_render_trust_strip' ) ) {
                 fishotel_render_trust_strip( fishotel_get_trust_strip_items( $product_id ) );
             }
@@ -178,32 +200,18 @@ while ( have_posts() ) :
 
         <?php if ( ! $is_coming_soon && ! $is_amazon_med ) : ?>
 
-        <?php /* QT Certificate Panel — quarantined-fish only. Anything
-                outside that category (meds, foods, gift cards, future
-                non-fish products) skips the badge entirely. */ ?>
-        <?php if ( $is_fish ) : ?>
-        <div class="fh-qt-cert">
-            <div class="fh-qt-cert__header">
-                <span class="fh-qt-cert__check">&#10003;</span>
-                <span class="fh-qt-cert__title">Quarantine Complete</span>
-            </div>
-            <div class="fh-qt-cert__protocol">
-                <?php
-                $qt1 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_qt_line_1') : '14 days observation';
-                $qt2 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_qt_line_2') : '+ 14 days treatment';
-                echo esc_html( $qt1 ); ?><br><?php echo esc_html( $qt2 );
-                ?>
-            </div>
-            <?php if ($region) : ?>
-            <div class="fh-qt-cert__region">
-                Region: <?php echo esc_html($region); ?>
-            </div>
-            <?php endif; ?>
-            <?php if (!empty($hotel['notes'])) : ?>
-            <div class="fh-qt-cert__notes"><?php echo esc_html($hotel['notes']); ?></div>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
+        <?php /* QT Certificate Panel — quarantined-fish gets the QT lines;
+                medications + Tier 2 get "FROM THE PHARMACY"; foods get
+                "FROM THE PANTRY". Gift cards / merch render nothing. Same
+                fh-qt-cert markup for all three so they share styling. */ ?>
+        <?php
+        if ( function_exists( 'fishotel_render_purchase_badge' ) ) {
+            fishotel_render_purchase_badge( $product_id, [
+                'region'      => $region,
+                'hotel_notes' => $hotel['notes'] ?? '',
+            ] );
+        }
+        ?>
 
         <?php /* Price */ ?>
         <div class="fh-purchase__from"><?php echo $product->is_type('variable') ? esc_html__('Starting from', 'fishotel') : esc_html__('Price', 'fishotel'); ?></div>
@@ -332,31 +340,81 @@ while ( have_posts() ) :
 
 <?php do_action( 'woocommerce_after_single_product_summary' ); ?>
 
-<?php /* ── ABOUT THIS SPECIES — Stat Grid from meta fields ── */ ?>
+<?php /* ── ABOUT THIS SPECIES / MEDICATION / FOOD — Stat Grid from meta fields ── */ ?>
 <?php
-$desc_raw    = $product->get_description();
-$sci_name    = get_post_meta( $product_id, '_fh_scientific_name', true );
-$common      = get_post_meta( $product_id, '_fh_common_names', true );
-$max_length  = get_post_meta( $product_id, '_fh_max_length', true );
-$tank_size   = get_post_meta( $product_id, '_fh_min_tank_size', true );
-$temperament = get_post_meta( $product_id, '_fh_temperament', true );
-$reef_safe   = get_post_meta( $product_id, '_fh_reef_safe', true );
+$desc_raw = $product->get_description();
 
-$spec_rows = [];
-if ( $sci_name )    $spec_rows[] = [ 'Scientific Name', esc_html( $sci_name ) ];
-if ( $common )      $spec_rows[] = [ 'Common Names',    esc_html( $common ) ];
-if ( $max_length )  $spec_rows[] = [ 'Max Length',      esc_html( $max_length ) ];
-if ( $tank_size )   $spec_rows[] = [ 'Min Tank Size',   esc_html( $tank_size ) ];
-if ( $temperament ) $spec_rows[] = [ 'Temperament',     esc_html( $temperament ) ];
-if ( $reef_safe ) {
-    $reef_labels = [
-        'yes'     => '<span class="fh-spec-badge fh-spec-badge--green">&#10003; Yes</span>',
-        'no'      => '<span class="fh-spec-badge fh-spec-badge--amber">&#10007; No</span>',
-        'caution' => '<span class="fh-spec-badge fh-spec-badge--amber">&#9888; With Caution</span>',
-    ];
-    $spec_rows[] = [ 'Reef Safe', $reef_labels[ $reef_safe ] ?? esc_html( $reef_safe ) ];
+// Build the row list per category. Empty fields skip so the table stays
+// clean. Medicated foods (a medication product that's also a flake or
+// pellet, e.g. Praziquantel Pellet) merge both sets — meds first, then
+// the food-specific rows. Phase 3.6.
+$spec_rows         = [];
+$is_amazon_aff     = function_exists( 'fishotel_is_amazon_affiliate_product' ) && fishotel_is_amazon_affiliate_product( $product_id );
+$is_med_or_aff     = $is_amazon_aff || ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) );
+$is_food           = function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id );
+$_card_cat_slugs   = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
+$_card_cat_slugs   = is_wp_error( $_card_cat_slugs ) ? [] : (array) $_card_cat_slugs;
+$is_medicated_food = $is_med_or_aff && (
+    in_array( 'flakes', $_card_cat_slugs, true ) || in_array( 'pellets', $_card_cat_slugs, true )
+);
+
+$reef_labels = [
+    'yes'     => '<span class="fh-spec-badge fh-spec-badge--green">&#10003; Yes</span>',
+    'no'      => '<span class="fh-spec-badge fh-spec-badge--amber">&#10007; No</span>',
+    'caution' => '<span class="fh-spec-badge fh-spec-badge--amber">&#9888; With Caution</span>',
+];
+
+if ( $is_fish ) {
+    $sci_name    = get_post_meta( $product_id, '_fh_scientific_name', true );
+    $common      = get_post_meta( $product_id, '_fh_common_names', true );
+    $max_length  = get_post_meta( $product_id, '_fh_max_length', true );
+    $tank_size   = get_post_meta( $product_id, '_fh_min_tank_size', true );
+    $temperament = get_post_meta( $product_id, '_fh_temperament', true );
+    $reef_safe   = get_post_meta( $product_id, '_fh_reef_safe', true );
+    if ( $sci_name )    $spec_rows[] = [ 'Scientific Name', esc_html( $sci_name ) ];
+    if ( $common )      $spec_rows[] = [ 'Common Names',    esc_html( $common ) ];
+    if ( $max_length )  $spec_rows[] = [ 'Max Length',      esc_html( $max_length ) ];
+    if ( $tank_size )   $spec_rows[] = [ 'Min Tank Size',   esc_html( $tank_size ) ];
+    if ( $temperament ) $spec_rows[] = [ 'Temperament',     esc_html( $temperament ) ];
+    if ( $reef_safe )   $spec_rows[] = [ 'Reef Safe', $reef_labels[ $reef_safe ] ?? esc_html( $reef_safe ) ];
+    if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
+} else {
+    if ( $is_med_or_aff ) {
+        $active_ing = get_post_meta( $product_id, '_fishotel_active_ingredient', true );
+        $treats     = get_post_meta( $product_id, '_fishotel_treats',             true );
+        $use_in     = get_post_meta( $product_id, '_fishotel_use_in',             true );
+        $reef_safe  = get_post_meta( $product_id, '_fishotel_reef_safe',          true );
+        if ( $active_ing ) $spec_rows[] = [ 'Active Ingredients', esc_html( $active_ing ) ];
+        if ( $treats )     $spec_rows[] = [ 'Treats',             esc_html( $treats ) ];
+        if ( $use_in )     $spec_rows[] = [ 'Use In',             esc_html( $use_in ) ];
+        if ( $reef_safe )  $spec_rows[] = [ 'Reef Safe', $reef_labels[ $reef_safe ] ?? esc_html( $reef_safe ) ];
+    }
+    if ( $is_food || $is_medicated_food ) {
+        $food_source = get_post_meta( $product_id, '_fishotel_food_source', true );
+        $best_for    = get_post_meta( $product_id, '_fishotel_best_for',    true );
+        $nutrition   = get_post_meta( $product_id, '_fishotel_nutrition',   true );
+        $additives   = get_post_meta( $product_id, '_fishotel_additives',   true );
+        if ( $is_food && $food_source ) $spec_rows[] = [ 'Food Source', esc_html( $food_source ) ];
+        if ( $best_for )                $spec_rows[] = [ 'Best For',    esc_html( $best_for ) ];
+        if ( $nutrition )               $spec_rows[] = [ 'Nutrition Value', esc_html( $nutrition ) ];
+        if ( $additives )               $spec_rows[] = [ 'Additives & Enrichments', esc_html( $additives ) ];
+    }
 }
-if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
+
+// Resolve the H2 copy by category. Phase 3.6 mirrors the prose-heading
+// logic from Phase 3.2 so the section header and the prose sub-heading
+// stay consistent on the same product.
+if ( $is_fish ) {
+    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">Species</em>';
+} elseif ( $is_med_or_aff && $is_medicated_food ) {
+    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">Medication</em>';
+} elseif ( $is_med_or_aff ) {
+    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">Medication</em>';
+} elseif ( $is_food ) {
+    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">Food</em>';
+} else {
+    $about_label = '';
+}
 ?>
 
 <?php if ( ! empty( $spec_rows ) || $desc_raw ) : ?>
@@ -365,12 +423,15 @@ if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
         <span class="fh-eyebrow">Description</span>
         <span class="fh-rule"></span>
 
-        <?php /* "About This Species" H2 + structured spec table are
-                quarantined-fish-only — the rows are populated from
-                _fh_scientific_name / _fh_max_length / etc., none of
-                which apply to meds or foods. */ ?>
-        <?php if ( $is_fish ) : ?>
-        <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">About This <em style="font-style:normal; color:var(--fh-gold);">Species</em></h2>
+        <?php /* "About This …" H2 + structured spec table — fish gets the
+                species rows, meds/affiliate get medication rows, foods get
+                food rows, medicated foods (meds in flakes/pellets) get
+                both sets merged. Anything outside those buckets renders
+                neither H2 nor table; the prose body below still renders. */ ?>
+        <?php if ( $about_label !== '' ) : ?>
+        <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">
+            <?php echo wp_kses( $about_label, [ 'em' => [ 'style' => true ] ] ); ?>
+        </h2>
 
         <?php if ( ! empty( $spec_rows ) ) : ?>
         <table class="fh-species-grid">

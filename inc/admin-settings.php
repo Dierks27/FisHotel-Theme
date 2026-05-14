@@ -152,6 +152,10 @@ class FisHotel_Admin_Settings {
 			'fh_tier2_trust_1'            => 'The same meds we use in QT',
 			'fh_tier2_trust_2'            => 'Sourced via Amazon for best pricing',
 			'fh_tier2_trust_3'            => 'Reef-keeper favorite for decades',
+			// Pharmacy / Pantry badge subtitles (Phase 3.6) — mirror the QT
+			// certificate panel for med + food products.
+			'fh_pharmacy_badge_subtitle'  => 'Sourced direct · Therapeutic-grade',
+			'fh_pantry_badge_subtitle'    => 'Sourced direct · Premium grade',
 			// Branding
 			'fh_tagline'                  => 'We quarantine. You reef.',
 			// Care Guide Defaults
@@ -634,6 +638,14 @@ JS;
 					'fh_tier2_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => 'The same meds we use in QT' ],
 					'fh_tier2_trust_2' => [ 'label' => 'Trust item 2', 'type' => 'text', 'placeholder' => 'Sourced via Amazon for best pricing' ],
 					'fh_tier2_trust_3' => [ 'label' => 'Trust item 3', 'type' => 'text', 'placeholder' => 'Reef-keeper favorite for decades' ],
+				],
+			],
+			'pharmacy_pantry_badge' => [
+				'page'   => 'fishotel-product',
+				'title'  => 'Pharmacy / Pantry Badge (above Price)',
+				'fields' => [
+					'fh_pharmacy_badge_subtitle' => [ 'label' => 'Pharmacy badge subtitle', 'type' => 'text', 'placeholder' => 'Sourced direct · Therapeutic-grade', 'description' => 'Shown beneath "FROM THE PHARMACY" on medication + Amazon-affiliate product pages.' ],
+					'fh_pantry_badge_subtitle'   => [ 'label' => 'Pantry badge subtitle',   'type' => 'text', 'placeholder' => 'Sourced direct · Premium grade',     'description' => 'Shown beneath "FROM THE PANTRY" on food product pages.' ],
 				],
 			],
 			'care' => [

@@ -280,21 +280,18 @@ while ( have_posts() ) :
                 </button>
             </div>
 
-            <?php /* Trust strip — quarantined-fish only. The three default
-                    badges (28-day QT, Live arrival, Mon–Wed shipping) are
-                    all livestock-specific; replacements for meds/foods
-                    will be designed separately. */ ?>
-            <?php if ( $is_fish ) :
-                $t1 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_1') : '28-day QT protocol';
-                $t2 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_2') : 'Live arrival guarantee';
-                $t3 = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_trust_3') : 'Ships Mon–Tue';
+            <?php /* Trust strip — content swaps by product category:
+                    quarantined-fish gets the QT/live-arrival/Mon-Wed lines,
+                    medications get "the same meds we use in QT"-style copy,
+                    foods get "the same foods we feed in-house"-style copy,
+                    everything else (gift cards, merch) gets no strip. The
+                    helper resolves the lines + the renderer emits the
+                    same markup for all three so visual layout matches. */ ?>
+            <?php
+            if ( function_exists( 'fishotel_get_trust_strip_items' ) && function_exists( 'fishotel_render_trust_strip' ) ) {
+                fishotel_render_trust_strip( fishotel_get_trust_strip_items( $product_id ) );
+            }
             ?>
-            <div class="fh-trust-strip">
-                <?php if ( $t1 ) : ?><span class="fh-trust-strip__item">&#10003; <?php echo esc_html( $t1 ); ?></span><?php endif; ?>
-                <?php if ( $t2 ) : ?><span class="fh-trust-strip__item">&#10003; <?php echo esc_html( $t2 ); ?></span><?php endif; ?>
-                <?php if ( $t3 ) : ?><span class="fh-trust-strip__item">&#10003; <?php echo esc_html( $t3 ); ?></span><?php endif; ?>
-            </div>
-            <?php endif; ?>
 
             <?php do_action('woocommerce_after_add_to_cart_button'); ?>
         </form>

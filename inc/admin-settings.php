@@ -120,10 +120,18 @@ class FisHotel_Admin_Settings {
 			// QT Certificate
 			'fh_qt_line_1'                => '14 days observation',
 			'fh_qt_line_2'                => '+ 14 days treatment',
-			// Trust Strip
+			// Trust Strip — fish (quarantined-fish PDP)
 			'fh_trust_1'                  => '28-day QT protocol',
 			'fh_trust_2'                  => 'Live arrival guarantee',
 			'fh_trust_3'                  => 'Ships Mon–Tue',
+			// Trust Strip — medications (Phase 3.5)
+			'fh_med_trust_1'              => 'The same meds we use in QT',
+			'fh_med_trust_2'              => 'Trusted partner fulfillment',
+			'fh_med_trust_3'              => 'Ships in 1-2 business days',
+			// Trust Strip — foods (Phase 3.5)
+			'fh_food_trust_1'             => 'The same foods we feed in-house',
+			'fh_food_trust_2'             => 'Trusted partner fulfillment',
+			'fh_food_trust_3'             => 'Ships in 1-2 business days',
 			// Branding
 			'fh_tagline'                  => 'We quarantine. You reef.',
 			// Care Guide Defaults
@@ -565,11 +573,29 @@ JS;
 			],
 			'trust' => [
 				'page'   => 'fishotel-product',
-				'title'  => 'Trust Strip (below Add to Cart)',
+				'title'  => 'Fish Trust Strip (below Add to Cart)',
 				'fields' => [
 					'fh_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => '28-day QT protocol' ],
 					'fh_trust_2' => [ 'label' => 'Trust item 2', 'type' => 'text', 'placeholder' => 'Live arrival guarantee' ],
 					'fh_trust_3' => [ 'label' => 'Trust item 3', 'type' => 'text', 'placeholder' => 'Ships Mon–Tue' ],
+				],
+			],
+			'med_trust' => [
+				'page'   => 'fishotel-product',
+				'title'  => 'Medication Trust Strip (below Add to Cart)',
+				'fields' => [
+					'fh_med_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => 'The same meds we use in QT' ],
+					'fh_med_trust_2' => [ 'label' => 'Trust item 2', 'type' => 'text', 'placeholder' => 'Trusted partner fulfillment' ],
+					'fh_med_trust_3' => [ 'label' => 'Trust item 3', 'type' => 'text', 'placeholder' => 'Ships in 1-2 business days' ],
+				],
+			],
+			'food_trust' => [
+				'page'   => 'fishotel-product',
+				'title'  => 'Food Trust Strip (below Add to Cart)',
+				'fields' => [
+					'fh_food_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => 'The same foods we feed in-house' ],
+					'fh_food_trust_2' => [ 'label' => 'Trust item 2', 'type' => 'text', 'placeholder' => 'Trusted partner fulfillment' ],
+					'fh_food_trust_3' => [ 'label' => 'Trust item 3', 'type' => 'text', 'placeholder' => 'Ships in 1-2 business days' ],
 				],
 			],
 			'care' => [

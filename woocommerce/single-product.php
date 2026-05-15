@@ -101,16 +101,16 @@ while ( have_posts() ) :
 
         <div class="page-hero__meta">
             <?php
-            // Italic subtitle line. Fish products use the short description
-            // (scientific name lives there today). Medications + Tier 2
-            // surface their active ingredient(s); foods surface their
-            // source species. Short description acts as the fallback for
-            // every category so a product without the dedicated meta still
-            // renders something if Jeff set the short description.
+            // Subtitle under the H1. Fish products no longer surface the
+            // scientific name (it's redundant with the tag pills + Quick
+            // Facts table). Medications + Tier 2 surface their active
+            // ingredient(s); foods surface their source species. Short
+            // description acts as the fallback for everything else (gift
+            // cards, merch, future categories Jeff adds).
             $short    = (string) $product->get_short_description();
             $subtitle = '';
             if ( $is_fish ) {
-                $subtitle = $short;
+                $subtitle = '';
             } elseif ( function_exists( 'fishotel_is_amazon_affiliate_product' )
                 && ( fishotel_is_amazon_affiliate_product( $product_id )
                     || ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) ) ) ) {
@@ -128,7 +128,7 @@ while ( have_posts() ) :
 
             <?php
             $display_tags = function_exists( 'fishotel_pdp_display_tags' )
-                ? fishotel_pdp_display_tags( $tags, $product_id )
+                ? fishotel_pdp_display_tags( $tags )
                 : $tags;
             if ( $display_tags ) : ?>
             <div class="fh-tag-list">
@@ -235,16 +235,42 @@ while ( have_posts() ) :
         // layout never shifts as the user picks a combo.
         $is_variable     = $product->is_type( 'variable' );
         $variations_data = $is_variable ? $product->get_available_variations() : [];
+
+        // Drop OOS variations entirely. The size row never renders an
+        // unpurchaseable button, the data-product_variations JSON only
+        // exposes valid combos to WC's variation form, and when filtering
+        // leaves exactly one variation the single-variation auto-select
+        // (JS) kicks in so the customer doesn't have to pick.
+        $variations_data = array_values( array_filter( $variations_data, function ( $v ) {
+            return ! empty( $v['is_in_stock'] );
+        } ) );
+
+        // Per-attribute set of in-stock values, used to filter the buttons
+        // + hidden <select> options below. sanitize_title() on both sides
+        // so taxonomy-slug values match display-name option strings.
+        $attr_in_stock    = []; // attr_key => [ sanitized_value => true ]
+        $attr_any_stocked = []; // attr_key => true (variation with "any" value)
+        foreach ( $variations_data as $v ) {
+            if ( empty( $v['attributes'] ) ) continue;
+            foreach ( $v['attributes'] as $attr_key => $val ) {
+                if ( $val === '' ) {
+                    $attr_any_stocked[ $attr_key ] = true;
+                } else {
+                    $attr_in_stock[ $attr_key ][ sanitize_title( $val ) ] = true;
+                }
+            }
+        }
+
         $variation_count = count( $variations_data );
         $is_multi_var    = $variation_count > 1;
         $is_single_var   = $variation_count === 1;
 
-        if ( $is_multi_var ) {
-            $eyebrow_initial = __( 'Starting from', 'fishotel' );
-            $price_initial   = wc_price( $product->get_variation_price( 'min', true ) );
-        } elseif ( $is_single_var ) {
-            $eyebrow_initial = '';
-            $price_initial   = wc_price( $product->get_variation_price( 'min', true ) );
+        if ( $is_multi_var || $is_single_var ) {
+            // Min price across in-stock variations only — never advertise a
+            // "Starting from $X" price for an OOS option.
+            $prices          = array_map( function ( $v ) { return (float) $v['display_price']; }, $variations_data );
+            $price_initial   = wc_price( min( $prices ) );
+            $eyebrow_initial = $is_multi_var ? __( 'Starting from', 'fishotel' ) : '';
         } else {
             $eyebrow_initial = '';
             $price_initial   = $product->get_price_html();
@@ -293,6 +319,13 @@ while ( have_posts() ) :
                     matches a combo and `variation_id` stays empty. */ ?>
             <div class="fh-variations variations">
                 <?php foreach ($product->get_variation_attributes() as $attr_name => $options) :
+                    $attr_key = 'attribute_' . sanitize_title($attr_name);
+                    $has_any  = ! empty( $attr_any_stocked[ $attr_key ] );
+                    $has_some = ! empty( $attr_in_stock[ $attr_key ] );
+                    // Every option for this attribute is OOS — skip the group
+                    // entirely. The outer .fh-variations wrapper still reserves
+                    // the slot, so an all-OOS product renders an empty size row.
+                    if ( ! $has_any && ! $has_some ) continue;
                     $label = wc_attribute_label($attr_name);
                     $selected = isset($_REQUEST['attribute_' . sanitize_title($attr_name)]) ? wc_clean(wp_unslash($_REQUEST['attribute_' . sanitize_title($attr_name)])) : $product->get_variation_default_attribute($attr_name);
                 ?>
@@ -303,25 +336,28 @@ while ( have_posts() ) :
                             <?php echo $selected ? '— ' . esc_html($selected) . ' selected' : ''; ?>
                         </span>
                     </div>
-                    <div class="fh-var-buttons" data-attribute="attribute_<?php echo esc_attr(sanitize_title($attr_name)); ?>">
+                    <div class="fh-var-buttons" data-attribute="<?php echo esc_attr( $attr_key ); ?>">
                         <?php foreach ($options as $option) :
+                            if ( ! $has_any && ! isset( $attr_in_stock[ $attr_key ][ sanitize_title( $option ) ] ) ) continue;
                             $is_sel = sanitize_title($option) === sanitize_title($selected);
                         ?>
                             <button type="button"
                                     class="fh-var-btn <?php echo $is_sel ? 'selected' : ''; ?>"
                                     data-value="<?php echo esc_attr($option); ?>"
-                                    data-attribute="attribute_<?php echo esc_attr(sanitize_title($attr_name)); ?>">
+                                    data-attribute="<?php echo esc_attr( $attr_key ); ?>">
                                 <?php echo esc_html($option); ?>
                             </button>
                         <?php endforeach; ?>
                     </div>
-                    <select name="attribute_<?php echo esc_attr(sanitize_title($attr_name)); ?>"
-                            id="attribute_<?php echo esc_attr(sanitize_title($attr_name)); ?>"
+                    <select name="<?php echo esc_attr( $attr_key ); ?>"
+                            id="<?php echo esc_attr( $attr_key ); ?>"
                             class="fh-var-select-hidden"
                             style="display:none"
-                            data-attribute_name="attribute_<?php echo esc_attr(sanitize_title($attr_name)); ?>">
+                            data-attribute_name="<?php echo esc_attr( $attr_key ); ?>">
                         <option value=""><?php esc_html_e('Choose an option', 'fishotel'); ?></option>
-                        <?php foreach ($options as $option) : ?>
+                        <?php foreach ($options as $option) :
+                            if ( ! $has_any && ! isset( $attr_in_stock[ $attr_key ][ sanitize_title( $option ) ] ) ) continue;
+                        ?>
                             <option value="<?php echo esc_attr($option); ?>" <?php selected($selected, $option); ?>>
                                 <?php echo esc_html($option); ?>
                             </option>

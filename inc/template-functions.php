@@ -169,30 +169,17 @@ function fishotel_is_quarantined_fish( $product_id = null ) {
 }
 
 /**
- * Filter the PDP top-of-page tag list. Drops:
- *   1. "Fish" (redundant on a fish product).
- *   2. Any tag whose name matches the genus (first word) of the product's
- *      scientific name — that information is already on the page in the
- *      subtitle, so a duplicate pill adds noise.
+ * Filter the PDP top-of-page tag list. Drops "Fish" (redundant on a fish
+ * product). Deny-list is applied centrally; do not edit tags per-product.
  *
- * Deny-list is applied centrally; do not edit tags per-product.
- *
- * @param WP_Term[] $tags        product_tag terms as returned by get_the_terms().
- * @param int       $product_id  Product post ID — used to look up scientific name.
+ * @param WP_Term[] $tags product_tag terms as returned by get_the_terms().
  * @return WP_Term[]
  */
-function fishotel_pdp_display_tags( $tags, $product_id ) {
+function fishotel_pdp_display_tags( $tags ) {
     if ( ! is_array( $tags ) || empty( $tags ) ) {
         return [];
     }
     $deny = [ 'fish' ];
-    $sci  = (string) get_post_meta( (int) $product_id, '_fh_scientific_name', true );
-    if ( $sci !== '' ) {
-        $parts = preg_split( '/\s+/', trim( $sci ) );
-        if ( ! empty( $parts[0] ) ) {
-            $deny[] = strtolower( $parts[0] );
-        }
-    }
     return array_values( array_filter( $tags, function ( $t ) use ( $deny ) {
         return ! in_array( strtolower( $t->name ), $deny, true );
     } ) );

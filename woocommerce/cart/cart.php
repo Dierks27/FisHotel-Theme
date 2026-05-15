@@ -17,18 +17,14 @@ do_action( 'woocommerce_before_cart' );
 $kses_inline = [ 'em' => [], 'strong' => [], 'i' => [], 'b' => [] ];
 
 $cart_count = (int) WC()->cart->get_cart_contents_count();
+// Cart-content-aware preset (default / fish / meds / food / merch).
+// Drives the subtitle, shipping line, trust strip, and the Subtotal
+// row's noun word.
+$preset     = fishotel_cart_resolve_preset();
 $eyebrow    = (string) FisHotel_Admin_Settings::get( 'fh_cart_hero_eyebrow' );
 $title_html = (string) FisHotel_Admin_Settings::get( 'fh_cart_hero_title_html' );
-$sub_tpl    = (string) FisHotel_Admin_Settings::get( 'fh_cart_hero_subtitle_template' );
-// Singular and plural for "fish" both happen to be "fish" — keep the
-// resolver path in place so the template still works if Jeff later edits
-// the setting to use a different noun.
-$fish_word  = $cart_count === 1 ? __( 'fish', 'fishotel' ) : __( 'fish', 'fishotel' );
-$subtitle   = str_replace(
-	[ '{count}', '{fish_or_fishes}' ],
-	[ number_format_i18n( $cart_count ), $fish_word ],
-	$sub_tpl
-);
+$sub_tpl    = fishotel_cart_preset_get( $preset, 'subtitle_template' );
+$subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 ?>
 <div class="page-hero fh-cart-hero">
 	<div class="page-hero__inner">
@@ -182,15 +178,15 @@ $subtitle   = str_replace(
 
 				<?php
 				$billing_state    = WC()->customer ? WC()->customer->get_billing_state() : '';
-				$shipping_label   = (string) FisHotel_Admin_Settings::get( 'fh_cart_shipping_label' );
-				$shipping_subtext = (string) FisHotel_Admin_Settings::get( 'fh_cart_shipping_subtext' );
+				$shipping_label   = fishotel_cart_preset_get( $preset, 'shipping_label' );
+				$shipping_subtext = fishotel_cart_preset_get( $preset, 'shipping_subtext' );
 				$shipping_total   = WC()->cart->get_shipping_total();
 				?>
 				<ul class="fh-cart-ledger">
 					<li class="fh-cart-ledger__row">
 						<span class="fh-cart-ledger__label">
-							<?php /* translators: %d = number of items in cart */ ?>
-							<?php printf( esc_html( _n( 'Subtotal · %d fish', 'Subtotal · %d fish', $cart_count, 'fishotel' ) ), $cart_count ); ?>
+							<?php /* translators: %1$d = number of items in cart, %2$s = noun (fish / medications / items) per preset */ ?>
+							<?php printf( esc_html__( 'Subtotal · %1$d %2$s', 'fishotel' ), $cart_count, esc_html( fishotel_cart_preset_noun( $preset, $cart_count ) ) ); ?>
 						</span>
 						<span class="fh-cart-ledger__value"><?php echo wc_price( WC()->cart->get_subtotal() ); ?></span>
 					</li>
@@ -284,8 +280,8 @@ $subtitle   = str_replace(
 	/* ── FULL-WIDTH TRUST STRIP ── */
 	$trust_cols = [];
 	for ( $i = 1; $i <= 4; $i++ ) {
-		$label = (string) FisHotel_Admin_Settings::get( "fh_cart_trust_{$i}_label" );
-		$body  = (string) FisHotel_Admin_Settings::get( "fh_cart_trust_{$i}_body" );
+		$label = fishotel_cart_preset_get( $preset, "trust_{$i}_label" );
+		$body  = fishotel_cart_preset_get( $preset, "trust_{$i}_body" );
 		if ( $label === '' && $body === '' ) {
 			continue;
 		}

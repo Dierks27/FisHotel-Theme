@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.8.2' );
+define( 'FISHOTEL_THEME_VERSION', '1.8.3' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -146,6 +146,7 @@ $includes = [
 	'/inc/widgets.php',
 	'/inc/admin-settings.php',   // FisHotel admin settings page
 	'/inc/placeholder-library.php', // Product image placeholder library
+	'/inc/cart-presets.php',     // Category-aware cart copy presets
 	'/inc/coming-soon.php',      // Coming Soon (Arriving Soon) UI helpers
 	'/inc/contact-form.php',     // Native /contacts/ form handler
 	'/inc/compatibility-guide-bootstrap.php',    // /compatibility-guide/ template assignment

@@ -971,6 +971,7 @@ h1, h2, h3, h4, h5 {
   text-transform: uppercase;
   color: var(--fh-text-3);
   margin-bottom: 4px;
+  min-height: 1em;
 }
 
 .fh-purchase__price {
@@ -989,6 +990,54 @@ h1, h2, h3, h4, h5 {
   padding-bottom: 22px;
   margin-bottom: 22px;
   border-bottom: 1px solid var(--fh-border);
+}
+
+/* Stock badge — small pill above Quantity. Slot is always rendered so the
+   layout never shifts when variation selection changes the stock copy.
+   Color encoding: green = in-stock, amber = low (2–4), red = last one,
+   muted = sold out. JS updates [data-state] + .fh-stock-badge__text. */
+.fh-stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--fh-bg-dk);
+  border: 1px solid var(--fh-border);
+  border-left: 3px solid var(--fh-green);
+  padding: 7px 14px;
+  margin: 0 0 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fh-text-1);
+  white-space: nowrap;
+}
+
+.fh-stock-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fh-green);
+  flex: 0 0 auto;
+}
+
+.fh-stock-badge[data-state="low"]      { border-left-color: var(--fh-amber); }
+.fh-stock-badge[data-state="low"]      .fh-stock-badge__dot { background: var(--fh-amber); }
+
+.fh-stock-badge[data-state="last"]     { border-left-color: var(--fh-red); }
+.fh-stock-badge[data-state="last"]     .fh-stock-badge__dot { background: var(--fh-red); }
+
+.fh-stock-badge[data-state="soldout"]  {
+  border-left-color: var(--fh-text-3);
+  color: var(--fh-text-3);
+}
+.fh-stock-badge[data-state="soldout"]  .fh-stock-badge__dot { background: var(--fh-text-3); }
+
+/* "Notify Me" variant of the buy CTA — visual only, button is disabled. */
+.fh-btn--notify,
+.fh-btn--notify:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 /* ─────────────────────────────────────────

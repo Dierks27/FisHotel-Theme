@@ -126,9 +126,13 @@ while ( have_posts() ) :
                 <span class="page-hero__latin"><?php echo wp_kses_post( $subtitle ); ?></span>
             <?php endif; ?>
 
-            <?php if ($tags) : ?>
+            <?php
+            $display_tags = function_exists( 'fishotel_pdp_display_tags' )
+                ? fishotel_pdp_display_tags( $tags, $product_id )
+                : $tags;
+            if ( $display_tags ) : ?>
             <div class="fh-tag-list">
-                <?php foreach ($tags as $tag) :
+                <?php foreach ($display_tags as $tag) :
                     $mod = function_exists( 'fishotel_tag_modifier_class' )
                         ? fishotel_tag_modifier_class( $tag->slug )
                         : '';
@@ -224,9 +228,51 @@ while ( have_posts() ) :
         }
         ?>
 
-        <?php /* Price */ ?>
-        <div class="fh-purchase__from"><?php echo $product->is_type('variable') ? esc_html__('Starting from', 'fishotel') : esc_html__('Price', 'fishotel'); ?></div>
-        <div class="fh-purchase__price"><?php echo $product->get_price_html(); ?></div>
+        <?php
+        // Resolve buy-box state once: drives the initial price/eyebrow,
+        // the stock badge, and the auto-select hint on the variations form.
+        // JS (main.js) updates these slots on found_variation/reset_data so
+        // layout never shifts as the user picks a combo.
+        $is_variable     = $product->is_type( 'variable' );
+        $variations_data = $is_variable ? $product->get_available_variations() : [];
+        $variation_count = count( $variations_data );
+        $is_multi_var    = $variation_count > 1;
+        $is_single_var   = $variation_count === 1;
+
+        if ( $is_multi_var ) {
+            $eyebrow_initial = __( 'Starting from', 'fishotel' );
+            $price_initial   = wc_price( $product->get_variation_price( 'min', true ) );
+        } elseif ( $is_single_var ) {
+            $eyebrow_initial = '';
+            $price_initial   = wc_price( $product->get_variation_price( 'min', true ) );
+        } else {
+            $eyebrow_initial = '';
+            $price_initial   = $product->get_price_html();
+        }
+
+        // Initial stock badge. Single-variation reads the lone variation so
+        // the badge already shows the per-size detail before JS auto-selects.
+        if ( $is_single_var ) {
+            $v = $variations_data[0];
+            $stock_badge = fishotel_stock_badge_label(
+                ! empty( $v['is_in_stock'] ),
+                isset( $v['max_qty'] ) ? (int) $v['max_qty'] : -1
+            );
+        } else {
+            $stock_badge = fishotel_stock_badge_label(
+                $product->is_in_stock(),
+                (int) $product->get_max_purchase_quantity()
+            );
+        }
+        $is_sold_out = ( $stock_badge['state'] === 'soldout' );
+        ?>
+
+        <?php /* Price — eyebrow slot is always rendered so layout doesn't
+                shift between simple/single-variation (empty) and multi-
+                variation (STARTING FROM / SELECTED) cases. CSS reserves the
+                min-height; the &nbsp; here keeps initial render exact. */ ?>
+        <div class="fh-purchase__from"><?php echo $eyebrow_initial !== '' ? esc_html( $eyebrow_initial ) : '&nbsp;'; ?></div>
+        <div class="fh-purchase__price"><?php echo wp_kses_post( $price_initial ); ?></div>
 
         <?php /* Variation selectors + Add to Cart form */ ?>
         <?php do_action('woocommerce_before_add_to_cart_form'); ?>
@@ -235,7 +281,8 @@ while ( have_posts() ) :
               method="post"
               enctype='multipart/form-data'
               data-product_id="<?php echo absint($product->get_id()); ?>"
-              data-product_variations="<?php echo esc_attr(htmlspecialchars(wp_json_encode($product->get_available_variations()))); ?>">
+              data-fh-multi-variations="<?php echo $is_multi_var ? '1' : '0'; ?>"
+              data-product_variations="<?php echo esc_attr(htmlspecialchars(wp_json_encode($variations_data))); ?>">
 
             <?php if ($product->is_type('variable')) : ?>
             <?php /* `variations` is the class WC's variation form binds to:
@@ -298,6 +345,16 @@ while ( have_posts() ) :
             <input type="hidden" name="variation_id" id="variation_id" value="">
             <?php endif; ?>
 
+            <?php /* Stock badge — slot always rendered. JS updates state +
+                    label on found_variation; this initial render covers
+                    simple products, multi-variation aggregates, and the
+                    single-variation case (so there's no flicker before
+                    auto-select fires). */ ?>
+            <div class="fh-stock-badge" data-state="<?php echo esc_attr( $stock_badge['state'] ); ?>" data-fh-stock-slot>
+                <span class="fh-stock-badge__dot" aria-hidden="true"></span>
+                <span class="fh-stock-badge__text"><?php echo esc_html( $stock_badge['text'] ); ?></span>
+            </div>
+
             <?php /* Add to cart row */ ?>
             <div class="fh-add-to-cart">
                 <div class="fh-qty">
@@ -306,8 +363,14 @@ while ( have_posts() ) :
                     <button type="button" class="fh-qty__down" aria-label="Decrease">&#9660;</button>
                     <input type="hidden" name="quantity" id="fh-qty-input" value="1" min="1">
                 </div>
-                <button type="submit" name="add-to-cart" value="<?php echo esc_attr($product->get_id()); ?>" class="fh-btn fh-btn--gold fh-btn--full single_add_to_cart_button">
-                    <?php esc_html_e('Add to Cart', 'fishotel'); ?>
+                <button type="submit"
+                        name="add-to-cart"
+                        value="<?php echo esc_attr($product->get_id()); ?>"
+                        class="fh-btn fh-btn--gold fh-btn--full single_add_to_cart_button<?php echo $is_sold_out ? ' fh-btn--notify' : ''; ?>"
+                        data-fh-label-add="<?php echo esc_attr__( 'Add to Cart', 'fishotel' ); ?>"
+                        data-fh-label-notify="<?php echo esc_attr__( 'Notify Me', 'fishotel' ); ?>"
+                        <?php disabled( $is_sold_out, true ); ?>>
+                    <?php echo $is_sold_out ? esc_html__( 'Notify Me', 'fishotel' ) : esc_html__( 'Add to Cart', 'fishotel' ); ?>
                 </button>
             </div>
 
@@ -343,12 +406,6 @@ while ( have_posts() ) :
                 <span class="fh-product-meta__label">Category</span>
                 <span><?php echo wc_get_product_category_list($product_id, ', '); ?></span>
             </div>
-            <?php if ($tags) : ?>
-            <div class="fh-product-meta__row">
-                <span class="fh-product-meta__label">Tags</span>
-                <span><?php echo wc_get_product_tag_list($product_id, ', '); ?></span>
-            </div>
-            <?php endif; ?>
             <?php do_action( 'woocommerce_product_meta_end' ); ?>
         </div>
 
@@ -557,8 +614,8 @@ if (!empty($related_ids)) :
 ?>
 <div class="fh-related">
     <div class="fh-related__inner">
-        <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:6px;">Also in <em style="font-style:normal; color:var(--fh-gold);">Quarantine</em></h2>
-        <p style="font-size:11px; color:var(--fh-text-3); margin-bottom:36px;">Currently checking in at The FisHotel</p>
+        <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:6px;">More Available <em style="font-style:normal; color:var(--fh-gold);">Now</em></h2>
+        <p style="font-size:11px; color:var(--fh-text-3); margin-bottom:36px;">Ready to Check Out Today</p>
         <div class="fh-product-grid">
             <?php foreach ($related_products as $rel) :
                 $rel_id = $rel->get_ID();

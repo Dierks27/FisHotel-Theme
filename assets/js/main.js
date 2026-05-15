@@ -21,6 +21,114 @@
         });
     }
 
+    // PHP `fishotel_stock_badge_label()` mirror — keep thresholds + copy in sync.
+    function computeStockBadge(inStock, maxQty) {
+        var q = parseInt(maxQty, 10);
+        if (!inStock || q === 0) return { state: 'soldout', text: 'Sold Out' };
+        if (!isNaN(q) && q > 0) {
+            if (q === 1) return { state: 'last', text: 'Last one — Just 1 left' };
+            if (q < 5)   return { state: 'low',  text: 'Only ' + q + ' left in stock' };
+        }
+        return { state: 'in-stock', text: 'In Stock — Ready to Ship' };
+    }
+
+    function applyStockState($panel, badge, $cta) {
+        $panel.find('.fh-stock-badge')
+            .attr('data-state', badge.state)
+            .find('.fh-stock-badge__text').text(badge.text);
+        var soldout = badge.state === 'soldout';
+        var addLabel    = $cta.attr('data-fh-label-add')    || 'Add to Cart';
+        var notifyLabel = $cta.attr('data-fh-label-notify') || 'Notify Me';
+        $cta.toggleClass('fh-btn--notify', soldout)
+            .text(soldout ? notifyLabel : addLabel)
+            .prop('disabled', soldout);
+    }
+
+    // WC variation events are bound at IIFE time (NOT inside $(document).ready)
+    // so we catch the first `found_variation` WC fires when the form initializes
+    // with admin-set default attributes. If we deferred to ready, that initial
+    // event could fire from WC's own ready callback before ours and the headline
+    // price would never update to the default variation's specific price.
+    $(document).on('found_variation.wc-variation-form', '.fh-purchase__form', function(event, variation) {
+        var $form   = $(this);
+        var $panel  = $form.closest('.fh-purchase');
+        var $cta    = $form.find('.single_add_to_cart_button');
+        var isMulti = $form.attr('data-fh-multi-variations') === '1';
+        // Eyebrow: multi shows "Selected" once a combo lands; single/simple
+        // keep the slot reserved with a non-breaking space so layout doesn't
+        // shift between modes.
+        $panel.find('.fh-purchase__from').html(isMulti ? 'Selected' : '&nbsp;');
+        if (variation && variation.price_html) {
+            $panel.find('.fh-purchase__price').html(variation.price_html);
+        }
+        var maxQty = (variation && (variation.max_qty !== undefined && variation.max_qty !== ''))
+            ? variation.max_qty : -1;
+        applyStockState($panel, computeStockBadge(!!(variation && variation.is_in_stock), maxQty), $cta);
+    });
+
+    $(document).on('reset_data.wc-variation-form', '.fh-purchase__form', function() {
+        var $form  = $(this);
+        var $panel = $form.closest('.fh-purchase');
+        var $cta   = $form.find('.single_add_to_cart_button');
+        var initial = $panel.data('fh-initial');
+        if (!initial) return; // snapshot not taken yet (pre-ready); skip
+        $panel.find('.fh-purchase__from').html(initial.eyebrow || '&nbsp;');
+        $panel.find('.fh-purchase__price').html(initial.price || '');
+        $panel.find('.fh-stock-badge')
+            .attr('data-state', initial.stockState)
+            .find('.fh-stock-badge__text').text(initial.stockText);
+        var soldout = initial.stockState === 'soldout';
+        var addLabel    = $cta.attr('data-fh-label-add')    || 'Add to Cart';
+        var notifyLabel = $cta.attr('data-fh-label-notify') || 'Notify Me';
+        $cta.toggleClass('fh-btn--notify', soldout)
+            .text(soldout ? notifyLabel : addLabel)
+            .prop('disabled', soldout);
+    });
+
+    // Snapshot each purchase panel's server-rendered state so reset_data
+    // can restore the initial eyebrow / price / badge without a flicker.
+    function snapshotInitialPurchaseState() {
+        $('.fh-purchase').each(function() {
+            var $panel = $(this);
+            var $badge = $panel.find('.fh-stock-badge');
+            $panel.data('fh-initial', {
+                eyebrow:    $panel.find('.fh-purchase__from').html(),
+                price:      $panel.find('.fh-purchase__price').html(),
+                stockState: $badge.attr('data-state') || 'in-stock',
+                stockText:  $badge.find('.fh-stock-badge__text').text() || ''
+            });
+        });
+    }
+
+    // For variable products with exactly one variation, click the matching
+    // variation button on load so variation_id is populated and Add-to-Cart
+    // is immediately functional. Multi-variation products are left alone —
+    // the customer must pick a combo.
+    function initVariationAutoSelect() {
+        $('.fh-purchase__form').each(function() {
+            var $form = $(this);
+            if ($form.attr('data-fh-multi-variations') !== '0') return;
+            var raw = $form.attr('data-product_variations');
+            if (!raw) return;
+            var variations;
+            try { variations = JSON.parse(raw); } catch (e) { return; }
+            if (!variations || variations.length !== 1) return;
+            var attrs = variations[0].attributes || {};
+            Object.keys(attrs).forEach(function(attrKey) {
+                var val = attrs[attrKey];
+                if (val === '' || val == null) return;
+                var $btn = $form.find('.fh-var-buttons[data-attribute="' + attrKey + '"] .fh-var-btn[data-value="' + val + '"]');
+                if ($btn.length) {
+                    $btn.trigger('click');
+                } else {
+                    // Fallback: set the hidden select directly so WC's
+                    // variation form still resolves a match.
+                    $form.find('[name="' + attrKey + '"]').val(val).trigger('change');
+                }
+            });
+        });
+    }
+
     // Gallery thumb switcher
     function initGallery() {
         $(document).on('click', '.fh-gallery__thumb', function() {
@@ -188,7 +296,12 @@
     }
 
     $(document).ready(function() {
+        // Snapshot purchase state before initVariationButtons binds, and
+        // before initVariationAutoSelect dispatches the auto-click so
+        // reset_data restores the true server-rendered values.
+        snapshotInitialPurchaseState();
         initVariationButtons();
+        initVariationAutoSelect();
         initGallery();
         initMobileNav();
         initNavDropdowns();

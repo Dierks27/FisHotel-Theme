@@ -132,18 +132,26 @@ class FisHotel_Placeholder_Library {
 FisHotel_Placeholder_Library::init();
 
 /**
- * Render a product thumbnail, falling back to the placeholder library.
- *
- * Mirrors the_post_thumbnail() but echoes a library image (or the WC
- * default placeholder) when no featured image is set.
+ * Return a product thumbnail HTML string, falling back to the placeholder
+ * library when the product has no featured image. Use in any context that
+ * needs the markup as a string (cart line items, filters, etc.).
  */
-function fishotel_product_thumbnail( $product_id = null, $size = 'fishotel-product-card', $attrs = [] ) {
+function fishotel_get_product_thumb_html( $product_id = null, $size = 'fishotel-product-card', $attrs = [] ) {
 	if ( ! $product_id ) {
 		$product_id = get_the_ID();
 	}
 	if ( has_post_thumbnail( $product_id ) ) {
-		echo get_the_post_thumbnail( $product_id, $size, $attrs );
-		return;
+		return get_the_post_thumbnail( $product_id, $size, $attrs );
 	}
-	echo FisHotel_Placeholder_Library::render( $product_id, $size, $attrs );
+	return FisHotel_Placeholder_Library::render( $product_id, $size, $attrs );
+}
+
+/**
+ * Echo a product thumbnail, falling back to the placeholder library.
+ *
+ * Mirrors the_post_thumbnail() but emits a library image (or the WC
+ * default placeholder) when no featured image is set.
+ */
+function fishotel_product_thumbnail( $product_id = null, $size = 'fishotel-product-card', $attrs = [] ) {
+	echo fishotel_get_product_thumb_html( $product_id, $size, $attrs );
 }

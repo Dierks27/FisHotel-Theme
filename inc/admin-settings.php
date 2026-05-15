@@ -200,6 +200,30 @@ class FisHotel_Admin_Settings {
 			'contacts_email_label'          => 'Write us',
 			'contacts_forum_url'            => 'https://humble.fish/community/forums/fishotel.41/',
 			'contacts_forum_label'          => 'Visit our Humble.Fish forum',
+			// Cart Page — hero
+			'fh_cart_hero_eyebrow'             => 'GUEST SERVICES',
+			'fh_cart_hero_title_html'          => 'Your <em>Reservations</em>',
+			'fh_cart_hero_subtitle_template'   => '{count} {fish_or_fishes} currently held at the desk.',
+			// Cart Page — order total card
+			'fh_cart_shipping_label'           => 'Live Arrival Service',
+			'fh_cart_shipping_subtext'         => 'Overnight · arrival guaranteed',
+			// Cart Page — trust strip
+			'fh_cart_trust_1_label'            => 'LIVE ARRIVAL',
+			'fh_cart_trust_1_body'             => 'Every fish guaranteed alive on arrival',
+			'fh_cart_trust_2_label'            => '30-DAY QT',
+			'fh_cart_trust_2_body'             => 'Minimum quarantine before check-out',
+			'fh_cart_trust_3_label'            => 'OVERNIGHT COURIER',
+			'fh_cart_trust_3_body'             => 'Ships Mon–Wed for next-day arrival',
+			'fh_cart_trust_4_label'            => '100% TRANSPARENCY',
+			'fh_cart_trust_4_body'             => 'Full QT history available for every fish',
+			// Empty cart state
+			'fh_empty_cart_image_id'                 => 0,
+			'fh_empty_cart_headline_html'            => 'Your room is <em>empty</em>.',
+			'fh_empty_cart_subline'                  => 'No fish checked in yet. Wander the lobby — the gallery is full of healthy guests ready to come home with you.',
+			'fh_empty_cart_cta_label'                => 'VIEW AVAILABLE FISH',
+			'fh_empty_cart_cta_url'                  => '',
+			'fh_empty_cart_secondary_link_label'     => 'OR BROWSE THE FOODS · MEDS · MERCH',
+			'fh_empty_cart_secondary_link_url'       => '',
 		];
 	}
 
@@ -302,6 +326,7 @@ class FisHotel_Admin_Settings {
 			'fishotel-homepage'      => [ 'page_title' => 'Homepage',      'menu_title' => 'Homepage' ],
 			'fishotel-shop'          => [ 'page_title' => 'Shop Page',     'menu_title' => 'Shop Page' ],
 			'fishotel-product'       => [ 'page_title' => 'Product Page',  'menu_title' => 'Product Page' ],
+			'fishotel-cart'          => [ 'page_title' => 'Cart Page',     'menu_title' => 'Cart Page' ],
 			'fishotel-faq'           => [ 'page_title' => 'FAQ Page',      'menu_title' => 'FAQ Page' ],
 			'fishotel-about'         => [ 'page_title' => 'About Page',    'menu_title' => 'About Page' ],
 			'fishotel-contacts'      => [ 'page_title' => 'Contacts Page', 'menu_title' => 'Contacts Page' ],
@@ -656,6 +681,54 @@ JS;
 					'fh_default_habitat' => [ 'label' => 'Default Habitat & Behavior text', 'type' => 'textarea', 'description' => 'Shown when a product has no Habitat & Behavior custom field.' ],
 				],
 			],
+			// Cart page — hero
+			'cart_hero' => [
+				'page'   => 'fishotel-cart',
+				'title'  => 'Cart Hero',
+				'fields' => [
+					'fh_cart_hero_eyebrow'           => [ 'label' => 'Eyebrow',          'type' => 'text',      'placeholder' => 'GUEST SERVICES' ],
+					'fh_cart_hero_title_html'        => [ 'label' => 'Title (HTML)',     'type' => 'text_html', 'placeholder' => 'Your <em>Reservations</em>', 'description' => 'Allows &lt;em&gt;, &lt;strong&gt;, &lt;i&gt;, &lt;b&gt;. Wrap the italic-gold portion in &lt;em&gt;…&lt;/em&gt;.' ],
+					'fh_cart_hero_subtitle_template' => [ 'label' => 'Subtitle template', 'type' => 'text',      'placeholder' => '{count} {fish_or_fishes} currently held at the desk.', 'description' => 'Placeholders: <code>{count}</code> = item count, <code>{fish_or_fishes}</code> = singular/plural form.' ],
+				],
+			],
+			// Cart page — order total card
+			'cart_order' => [
+				'page'   => 'fishotel-cart',
+				'title'  => 'Order Total Card',
+				'fields' => [
+					'fh_cart_shipping_label'   => [ 'label' => 'Shipping line label',   'type' => 'text', 'placeholder' => 'Live Arrival Service' ],
+					'fh_cart_shipping_subtext' => [ 'label' => 'Shipping line subtext', 'type' => 'text', 'placeholder' => 'Overnight · arrival guaranteed' ],
+				],
+			],
+			// Cart page — trust strip
+			'cart_trust' => [
+				'page'   => 'fishotel-cart',
+				'title'  => 'Trust Strip (4 Columns)',
+				'fields' => [
+					'fh_cart_trust_1_label' => [ 'label' => 'Column 1 — label', 'type' => 'text', 'placeholder' => 'LIVE ARRIVAL' ],
+					'fh_cart_trust_1_body'  => [ 'label' => 'Column 1 — body',  'type' => 'text', 'placeholder' => 'Every fish guaranteed alive on arrival' ],
+					'fh_cart_trust_2_label' => [ 'label' => 'Column 2 — label', 'type' => 'text', 'placeholder' => '30-DAY QT' ],
+					'fh_cart_trust_2_body'  => [ 'label' => 'Column 2 — body',  'type' => 'text', 'placeholder' => 'Minimum quarantine before check-out' ],
+					'fh_cart_trust_3_label' => [ 'label' => 'Column 3 — label', 'type' => 'text', 'placeholder' => 'OVERNIGHT COURIER' ],
+					'fh_cart_trust_3_body'  => [ 'label' => 'Column 3 — body',  'type' => 'text', 'placeholder' => 'Ships Mon–Wed for next-day arrival' ],
+					'fh_cart_trust_4_label' => [ 'label' => 'Column 4 — label', 'type' => 'text', 'placeholder' => '100% TRANSPARENCY' ],
+					'fh_cart_trust_4_body'  => [ 'label' => 'Column 4 — body',  'type' => 'text', 'placeholder' => 'Full QT history available for every fish' ],
+				],
+			],
+			// Cart page — empty state
+			'cart_empty' => [
+				'page'   => 'fishotel-cart',
+				'title'  => 'Empty Cart',
+				'fields' => [
+					'fh_empty_cart_image_id'             => [ 'label' => 'Card image',          'type' => 'image',     'description' => 'Decorative art shown at the top of the empty-cart card. Hidden when empty.' ],
+					'fh_empty_cart_headline_html'        => [ 'label' => 'Headline (HTML)',     'type' => 'text_html', 'placeholder' => 'Your room is <em>empty</em>.', 'description' => 'Allows &lt;em&gt;, &lt;strong&gt;, &lt;i&gt;, &lt;b&gt;.' ],
+					'fh_empty_cart_subline'              => [ 'label' => 'Body text',           'type' => 'textarea',  'placeholder' => 'No fish checked in yet…' ],
+					'fh_empty_cart_cta_label'            => [ 'label' => 'Primary CTA — label', 'type' => 'text',      'placeholder' => 'VIEW AVAILABLE FISH' ],
+					'fh_empty_cart_cta_url'              => [ 'label' => 'Primary CTA — URL',   'type' => 'text',      'placeholder' => 'https://… (defaults to the WooCommerce shop page)' ],
+					'fh_empty_cart_secondary_link_label' => [ 'label' => 'Secondary — label',   'type' => 'text',      'placeholder' => 'OR BROWSE THE FOODS · MEDS · MERCH' ],
+					'fh_empty_cart_secondary_link_url'   => [ 'label' => 'Secondary — URL',     'type' => 'text',      'placeholder' => 'https://… (defaults to the WooCommerce shop page)' ],
+				],
+			],
 			// FAQ page
 			'faq' => [
 				'page'   => 'fishotel-faq',
@@ -804,6 +877,24 @@ JS;
 						'sanitize_callback' => [ __CLASS__, 'sanitize_id_list' ],
 						'default'           => [],
 					] );
+				} elseif ( $field['type'] === 'text_html' ) {
+					register_setting( $group, $key, [
+						'type'              => 'string',
+						'sanitize_callback' => function ( $val ) use ( $key ) {
+							$allowed   = [ 'em' => [], 'strong' => [], 'i' => [], 'b' => [] ];
+							$sanitized = trim( wp_kses( (string) $val, $allowed ) );
+							// Same preserve-on-empty defense as text/textarea — an
+							// accidental empty POST mustn't wipe stored copy.
+							if ( $sanitized === '' ) {
+								$existing = get_option( $key, null );
+								if ( is_string( $existing ) && trim( $existing ) !== '' ) {
+									return $existing;
+								}
+							}
+							return $sanitized;
+						},
+						'default'           => self::defaults()[ $key ] ?? '',
+					] );
 				} elseif ( $field['type'] === 'number' ) {
 					$min = isset( $field['min'] ) ? (int) $field['min'] : null;
 					$max = isset( $field['max'] ) ? (int) $field['max'] : null;
@@ -930,7 +1021,10 @@ JS;
 		$type  = $args['type'];
 		$value = self::get( $key );
 
-		if ( $type === 'text' ) {
+		if ( $type === 'text' || $type === 'text_html' ) {
+			// text_html stores limited inline HTML (em / strong / i / b).
+			// Browsers render the input's value as plain text, so the
+			// editor sees literal `<em>` markup which is what we want.
 			printf(
 				'<input type="text" name="%s" value="%s" class="regular-text" placeholder="%s">',
 				esc_attr( $key ),

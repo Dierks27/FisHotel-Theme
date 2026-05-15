@@ -169,17 +169,54 @@ function fishotel_is_quarantined_fish( $product_id = null ) {
 }
 
 /**
- * Filter the PDP top-of-page tag list. Drops "Fish" (redundant on a fish
- * product). Deny-list is applied centrally; do not edit tags per-product.
+ * Filter the PDP top-of-page tag list. Drops:
+ *   1. "Fish" (redundant on a fish product).
+ *   2. Any tag whose name matches the genus of the product's scientific
+ *      name. The genus is resolved from `_fh_scientific_name` meta first,
+ *      then from the first word of the first line of the product's short
+ *      description (which is the italicized subtitle on the PDP). Strips
+ *      the matching tag case-insensitively.
  *
- * @param WP_Term[] $tags product_tag terms as returned by get_the_terms().
+ * Deny-list is applied centrally; do not edit tags per-product.
+ *
+ * @param WP_Term[] $tags        product_tag terms as returned by get_the_terms().
+ * @param int       $product_id  Product post ID — used to source the genus.
  * @return WP_Term[]
  */
-function fishotel_pdp_display_tags( $tags ) {
+function fishotel_pdp_display_tags( $tags, $product_id ) {
     if ( ! is_array( $tags ) || empty( $tags ) ) {
         return [];
     }
-    $deny = [ 'fish' ];
+    $deny       = [ 'fish' ];
+    $product_id = (int) $product_id;
+    $genus      = '';
+
+    if ( $product_id ) {
+        $sci = (string) get_post_meta( $product_id, '_fh_scientific_name', true );
+        if ( $sci !== '' ) {
+            $parts = preg_split( '/\s+/', trim( wp_strip_all_tags( $sci ) ) );
+            if ( ! empty( $parts[0] ) ) {
+                $genus = $parts[0];
+            }
+        }
+        if ( $genus === '' ) {
+            $short = (string) get_post_field( 'post_excerpt', $product_id );
+            if ( $short !== '' ) {
+                $first_line = strtok( wp_strip_all_tags( $short ), "\n" );
+                if ( $first_line ) {
+                    $parts = preg_split( '/\s+/', trim( $first_line ) );
+                    if ( ! empty( $parts[0] ) ) {
+                        $genus = $parts[0];
+                    }
+                }
+            }
+        }
+    }
+
+    if ( $genus !== '' ) {
+        $deny[] = strtolower( $genus );
+    }
+
     return array_values( array_filter( $tags, function ( $t ) use ( $deny ) {
         return ! in_array( strtolower( $t->name ), $deny, true );
     } ) );

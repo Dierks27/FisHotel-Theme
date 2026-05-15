@@ -101,16 +101,19 @@ while ( have_posts() ) :
 
         <div class="page-hero__meta">
             <?php
-            // Subtitle under the H1. Fish products no longer surface the
-            // scientific name (it's redundant with the tag pills + Quick
-            // Facts table). Medications + Tier 2 surface their active
-            // ingredient(s); foods surface their source species. Short
-            // description acts as the fallback for everything else (gift
-            // cards, merch, future categories Jeff adds).
+            // Subtitle under the H1. Fish products surface the short
+            // description (where the italicized scientific name lives).
+            // Medications + Tier 2 surface their active ingredient(s);
+            // foods surface their source species. Short description acts
+            // as the fallback for everything else (gift cards, merch,
+            // future categories Jeff adds). The tag pill row's genus
+            // deny-list (fishotel_pdp_display_tags) drops any pill that
+            // duplicates the first word of this subtitle so the same
+            // word never appears in both places.
             $short    = (string) $product->get_short_description();
             $subtitle = '';
             if ( $is_fish ) {
-                $subtitle = '';
+                $subtitle = $short;
             } elseif ( function_exists( 'fishotel_is_amazon_affiliate_product' )
                 && ( fishotel_is_amazon_affiliate_product( $product_id )
                     || ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) ) ) ) {
@@ -128,7 +131,7 @@ while ( have_posts() ) :
 
             <?php
             $display_tags = function_exists( 'fishotel_pdp_display_tags' )
-                ? fishotel_pdp_display_tags( $tags )
+                ? fishotel_pdp_display_tags( $tags, $product_id )
                 : $tags;
             if ( $display_tags ) : ?>
             <div class="fh-tag-list">

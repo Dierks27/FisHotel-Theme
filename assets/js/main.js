@@ -295,6 +295,49 @@
         start();
     }
 
+    // Cart page — quantity stepper. The visible − / + buttons drive the
+    // numeric input next to them; change events bubble up to the auto-
+    // submit handler below so the cart syncs without an explicit Update
+    // Cart click.
+    function initCartQtyStepper() {
+        $(document).on('click', '.fh-cart-qty__btn', function(e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var $input = $btn.parent().find('.fh-cart-qty__input');
+            if (!$input.length) return;
+            var cur = parseInt($input.val(), 10);
+            if (isNaN(cur)) cur = 0;
+            var max = parseInt($input.attr('max'), 10);
+            if (isNaN(max) || max < 0) max = 99;
+            var min = parseInt($input.attr('min'), 10);
+            if (isNaN(min)) min = 0;
+            cur = $btn.data('action') === 'inc'
+                ? Math.min(cur + 1, max)
+                : Math.max(cur - 1, min);
+            $input.val(cur).trigger('change');
+        });
+    }
+
+    // Cart page — debounced auto-submit on qty change. The Update Cart
+    // button is hidden in CSS; clicking it triggers WC's standard update
+    // flow with the nonce already in the form.
+    function initCartQtyAutoSubmit() {
+        var timer = null;
+        $(document).on('change input', '.fh-cart-qty__input', function() {
+            if (timer) clearTimeout(timer);
+            var $form = $(this).closest('.fh-cart-form');
+            if (!$form.length) return;
+            timer = setTimeout(function() {
+                var $update = $form.find('.fh-cart-update-button');
+                if ($update.length) {
+                    $update.prop('disabled', false).trigger('click');
+                } else {
+                    $form.trigger('submit');
+                }
+            }, 600);
+        });
+    }
+
     $(document).ready(function() {
         // Snapshot purchase state before initVariationButtons binds, and
         // before initVariationAutoSelect dispatches the auto-click so
@@ -306,6 +349,8 @@
         initMobileNav();
         initNavDropdowns();
         initQty();
+        initCartQtyStepper();
+        initCartQtyAutoSubmit();
         initHeaderScroll();
         initTestimonialRotator();
         initArrivalCountdown();

@@ -110,6 +110,12 @@ add_action( 'init', function () {
     remove_action( 'woocommerce_after_single_product_summary',  'woocommerce_upsell_display',           15 );
     remove_action( 'woocommerce_after_single_product_summary',  'woocommerce_output_related_products',  20 );
 
+    // Cart page — our custom cart.php renders its own "Proceed to
+    // Checkout" CTA, then fires woocommerce_proceed_to_checkout so the
+    // PayPal Payments plugin's PayPal + Venmo buttons still render below.
+    // Removing the default WC callback prevents a duplicate button.
+    remove_action( 'woocommerce_proceed_to_checkout', 'woocommerce_button_proceed_to_checkout', 20 );
+
     // Loop card defaults — anchor open/close, sale flash, thumbnail,
     // title, rating, price, add-to-cart link. Our card builds all of
     // this manually inside its own anchor.

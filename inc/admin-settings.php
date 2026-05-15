@@ -212,6 +212,21 @@ class FisHotel_Admin_Settings {
 			'fh_empty_cart_cta_url'                  => '',
 			'fh_empty_cart_secondary_link_label'     => 'OR BROWSE THE FOODS · MEDS · MERCH',
 			'fh_empty_cart_secondary_link_url'       => '',
+			// Checkout Page — hero
+			'fh_checkout_hero_eyebrow'               => 'FRONT DESK',
+			'fh_checkout_hero_title_html'            => 'Your <em>Folio</em>',
+			'fh_checkout_hero_subtitle'              => "Confirm your details and we'll prepare your departure.",
+			// Checkout Page — section titles
+			'fh_checkout_section_returning'          => 'RETURNING CUSTOMER?',
+			'fh_checkout_section_coupon'             => 'HAVE A COUPON CODE?',
+			'fh_checkout_section_guest_details'      => 'GUEST DETAILS',
+			'fh_checkout_section_delivery_details'   => 'DELIVERY DETAILS',
+			'fh_checkout_section_payment'            => 'PAYMENT METHOD',
+			'fh_checkout_section_statement'          => 'ITEMIZED STATEMENT',
+			// Checkout Page — CTAs and labels
+			'fh_checkout_cta_label'                  => 'COMPLETE CHECK-OUT',
+			'fh_checkout_password_help'              => "We'll create your account so you can track this stay.",
+			'fh_checkout_express_divider'            => 'OR PAY EXPRESS',
 		];
 
 		// Cart preset seeds — each preset bundles the subtitle template,
@@ -236,7 +251,7 @@ class FisHotel_Admin_Settings {
 			'default' => [
 				'subtitle_template' => '{count} {items_or_items} currently in your cart.',
 				'shipping_label'    => 'Shipping',
-				'shipping_subtext'  => 'Calculated at checkout',
+				'shipping_subtext'  => '',
 				'trust_1_label'     => 'EXPERT-CURATED',
 				'trust_1_body'      => 'Hand-selected for reef aquariums',
 				'trust_2_label'     => 'TRUSTED PARTNERS',
@@ -401,6 +416,7 @@ class FisHotel_Admin_Settings {
 			'fishotel-shop'          => [ 'page_title' => 'Shop Page',     'menu_title' => 'Shop Page' ],
 			'fishotel-product'       => [ 'page_title' => 'Product Page',  'menu_title' => 'Product Page' ],
 			'fishotel-cart'          => [ 'page_title' => 'Cart Page',     'menu_title' => 'Cart Page' ],
+			'fishotel-checkout'      => [ 'page_title' => 'Checkout Page', 'menu_title' => 'Checkout Page' ],
 			'fishotel-faq'           => [ 'page_title' => 'FAQ Page',      'menu_title' => 'FAQ Page' ],
 			'fishotel-about'         => [ 'page_title' => 'About Page',    'menu_title' => 'About Page' ],
 			'fishotel-contacts'      => [ 'page_title' => 'Contacts Page', 'menu_title' => 'Contacts Page' ],
@@ -776,6 +792,39 @@ JS;
 					'fh_empty_cart_cta_url'              => [ 'label' => 'Primary CTA — URL',   'type' => 'text',      'placeholder' => 'https://… (defaults to the WooCommerce shop page)' ],
 					'fh_empty_cart_secondary_link_label' => [ 'label' => 'Secondary — label',   'type' => 'text',      'placeholder' => 'OR BROWSE THE FOODS · MEDS · MERCH' ],
 					'fh_empty_cart_secondary_link_url'   => [ 'label' => 'Secondary — URL',     'type' => 'text',      'placeholder' => 'https://… (defaults to the WooCommerce shop page)' ],
+				],
+			],
+			// Checkout page — hero
+			'checkout_hero' => [
+				'page'   => 'fishotel-checkout',
+				'title'  => 'Checkout Hero',
+				'fields' => [
+					'fh_checkout_hero_eyebrow'    => [ 'label' => 'Eyebrow',      'type' => 'text',      'placeholder' => 'FRONT DESK' ],
+					'fh_checkout_hero_title_html' => [ 'label' => 'Title (HTML)', 'type' => 'text_html', 'placeholder' => 'Your <em>Folio</em>', 'description' => 'Allows &lt;em&gt;, &lt;strong&gt;, &lt;i&gt;, &lt;b&gt;.' ],
+					'fh_checkout_hero_subtitle'   => [ 'label' => 'Subtitle',     'type' => 'text',      'placeholder' => "Confirm your details and we'll prepare your departure." ],
+				],
+			],
+			// Checkout page — section titles
+			'checkout_sections' => [
+				'page'   => 'fishotel-checkout',
+				'title'  => 'Section Titles',
+				'fields' => [
+					'fh_checkout_section_returning'        => [ 'label' => 'Returning customer prompt', 'type' => 'text', 'placeholder' => 'RETURNING CUSTOMER?' ],
+					'fh_checkout_section_coupon'           => [ 'label' => 'Coupon prompt',             'type' => 'text', 'placeholder' => 'HAVE A COUPON CODE?' ],
+					'fh_checkout_section_guest_details'    => [ 'label' => 'Guest details card',        'type' => 'text', 'placeholder' => 'GUEST DETAILS' ],
+					'fh_checkout_section_delivery_details' => [ 'label' => 'Delivery details card',     'type' => 'text', 'placeholder' => 'DELIVERY DETAILS' ],
+					'fh_checkout_section_payment'          => [ 'label' => 'Payment method card',       'type' => 'text', 'placeholder' => 'PAYMENT METHOD' ],
+					'fh_checkout_section_statement'        => [ 'label' => 'Itemized statement card',   'type' => 'text', 'placeholder' => 'ITEMIZED STATEMENT' ],
+				],
+			],
+			// Checkout page — CTAs and labels
+			'checkout_ctas' => [
+				'page'   => 'fishotel-checkout',
+				'title'  => 'CTAs &amp; Labels',
+				'fields' => [
+					'fh_checkout_cta_label'        => [ 'label' => 'Place Order button label', 'type' => 'text', 'placeholder' => 'COMPLETE CHECK-OUT', 'description' => 'Trailing arrow is added automatically.' ],
+					'fh_checkout_password_help'    => [ 'label' => 'Account password helper text', 'type' => 'text', 'placeholder' => "We'll create your account so you can track this stay." ],
+					'fh_checkout_express_divider'  => [ 'label' => 'Express payment divider', 'type' => 'text', 'placeholder' => 'OR PAY EXPRESS' ],
 				],
 			],
 			// FAQ page

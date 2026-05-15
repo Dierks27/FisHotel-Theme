@@ -1453,3 +1453,589 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   }
   .fh-cart-item__total { font-size: 20px; }
 }
+
+/* ─────────────────────────────────────────
+   CHECKOUT PAGE (1.8.4)
+   Two-column "Folio" layout. Reuses the cart's hero + wrap + card chrome
+   and trust strip; adds form input system, payment radios, statement
+   table, and validation states.
+───────────────────────────────────────── */
+
+.fh-checkout-wrap { padding-top: 16px; }
+
+.fh-checkout-layout {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.fh-checkout-left  { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+.fh-checkout-right { min-width: 0; position: sticky; top: 20px; }
+
+/* Card chrome — same surface as cart cards */
+.fh-checkout-card {
+  background: var(--fh-bg-dk);
+  border: 1px solid var(--fh-border-md);
+  border-radius: 8px;
+  padding: 26px;
+}
+
+.fh-checkout-card__header {
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--fh-border);
+}
+.fh-checkout-card__eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--fh-gold);
+}
+
+/* Accordion prompts (returning customer + coupon) — same look as cart */
+.fh-checkout-prompts { display: flex; flex-direction: column; gap: 6px; }
+.fh-checkout-accordion {
+  background: var(--fh-bg-dk);
+  border: 1px solid var(--fh-border-md);
+  border-radius: 6px;
+  padding: 4px 18px;
+}
+.fh-checkout-accordion > summary {
+  padding: 14px 0;
+  border-top: 0;
+}
+
+/* ── Form input system — applied to every WC field on this page ── */
+.fh-checkout-form input[type="text"],
+.fh-checkout-form input[type="email"],
+.fh-checkout-form input[type="tel"],
+.fh-checkout-form input[type="number"],
+.fh-checkout-form input[type="password"],
+.fh-checkout-form input[type="search"],
+.fh-checkout-form input[type="url"],
+.fh-checkout-form select,
+.fh-checkout-form textarea,
+.fh-checkout-form .select2-container .select2-selection--single {
+  width: 100%;
+  background: var(--fh-bg-dkr);
+  border: 1px solid var(--fh-border-md);
+  color: var(--fh-text-1);
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  font-family: var(--fh-font);
+  border-radius: 3px;
+  transition: border-color 0.15s ease;
+}
+.fh-checkout-form textarea { min-height: 90px; resize: vertical; }
+
+.fh-checkout-form input::placeholder,
+.fh-checkout-form textarea::placeholder { color: var(--fh-text-3); opacity: 1; }
+
+.fh-checkout-form input:focus,
+.fh-checkout-form select:focus,
+.fh-checkout-form textarea:focus,
+.fh-checkout-form .select2-container--open .select2-selection--single {
+  outline: 0;
+  border-color: var(--fh-gold);
+  box-shadow: 0 0 0 1px rgba(201, 150, 58, 0.25);
+}
+
+/* Field label */
+.fh-checkout-form .form-row > label,
+.fh-checkout-form label[for] {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--fh-gold);
+  margin-bottom: 6px;
+}
+.fh-checkout-form .required {
+  color: var(--fh-text-3);
+  text-decoration: none;
+  border: 0;
+}
+.fh-checkout-form .optional {
+  color: var(--fh-text-3);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+}
+
+/* WC form row grid — billing form fields. Country + Address line 1 +
+   Address line 2 + Phone + Email get full width; first/last name pair,
+   city/state/zip triple use a row grid. WC adds `form-row-first`,
+   `form-row-last`, `form-row-wide` classes that we honor here. */
+.fh-checkout-form .form-row {
+  margin: 0 0 14px;
+  width: 100%;
+}
+.fh-checkout-form .woocommerce-billing-fields__field-wrapper,
+.fh-checkout-form .woocommerce-shipping-fields__field-wrapper,
+.fh-checkout-form .woocommerce-additional-fields__field-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 16px;
+}
+.fh-checkout-form .form-row-first  { grid-column: 1 / 2; }
+.fh-checkout-form .form-row-last   { grid-column: 2 / 3; }
+.fh-checkout-form .form-row-wide,
+.fh-checkout-form .form-row.notes,
+.fh-checkout-form .form-row-full   { grid-column: 1 / -1; }
+
+/* Validation states */
+.fh-checkout-form .woocommerce-invalid input,
+.fh-checkout-form .woocommerce-invalid select,
+.fh-checkout-form .woocommerce-invalid textarea {
+  border-color: #c87968;
+}
+.fh-checkout-form .woocommerce-invalid input:focus,
+.fh-checkout-form .woocommerce-invalid select:focus,
+.fh-checkout-form .woocommerce-invalid textarea:focus {
+  box-shadow: 0 0 0 1px rgba(200, 121, 104, 0.30);
+}
+.fh-checkout-form .woocommerce-error,
+.fh-checkout-form .woocommerce-message {
+  background: rgba(200, 121, 104, 0.08);
+  border-left: 3px solid #c87968;
+  color: var(--fh-text-1);
+  padding: 12px 16px;
+  list-style: none;
+  margin: 0 0 16px;
+  font-size: 13px;
+  border-radius: 3px;
+}
+.fh-checkout-form .woocommerce-message {
+  border-left-color: var(--fh-gold);
+  background: var(--fh-gold-dim);
+}
+.fh-checkout-form .woocommerce-NoticeGroup {
+  margin-bottom: 16px;
+}
+
+/* Select2 (country/state dropdown) — match the field chrome */
+.fh-checkout-form .select2-container--default .select2-selection--single {
+  height: auto;
+  padding: 6px 0;
+}
+.fh-checkout-form .select2-container--default .select2-selection--single .select2-selection__rendered {
+  padding: 0 14px;
+  color: var(--fh-text-1);
+  line-height: 1.4;
+}
+.fh-checkout-form .select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 100%;
+  right: 8px;
+}
+.fh-checkout-form .select2-container--default .select2-selection--single .select2-selection__arrow b {
+  border-color: var(--fh-gold) transparent transparent;
+}
+.select2-container--default .select2-dropdown {
+  background: var(--fh-bg-dkr);
+  border: 1px solid var(--fh-border-md);
+  color: var(--fh-text-1);
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+  background: var(--fh-bg-dk);
+  border: 1px solid var(--fh-border-md);
+  color: var(--fh-text-1);
+  padding: 8px 10px;
+  border-radius: 3px;
+}
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+  background: var(--fh-gold);
+  color: var(--fh-bg);
+}
+
+/* Custom checkboxes — ship-to-different-address, terms, newsletter */
+.fh-checkout-form input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--fh-bg-dkr);
+  border: 1px solid var(--fh-border-md);
+  border-radius: 3px;
+  cursor: pointer;
+  vertical-align: middle;
+  margin-right: 8px;
+  position: relative;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.fh-checkout-form input[type="checkbox"]:checked {
+  background: var(--fh-bg-dkr);
+  border-color: var(--fh-gold);
+}
+.fh-checkout-form input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 5px;
+  height: 10px;
+  border: solid var(--fh-gold);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.fh-checkout-form input[type="checkbox"]:focus { outline: 0; box-shadow: 0 0 0 2px rgba(201, 150, 58, 0.25); }
+
+/* "Ship to a different address?" checkbox row */
+.fh-checkout-form #ship-to-different-address label {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--fh-text-2);
+  cursor: pointer;
+  margin: 0;
+}
+.fh-checkout-form #ship-to-different-address-checkbox + span {
+  /* legacy WC sometimes uses span with the label */
+  color: var(--fh-text-2);
+}
+.fh-checkout-form #ship-to-different-address { margin: 8px 0 0; }
+
+/* Hide the "Delivery Details" card chrome entirely when the shipping
+   fields are collapsed (Ship to different address unchecked). Reserves
+   the slot via the layout grid still — we just don't paint the card. */
+.fh-checkout-shipping:has(.shipping_address[style*="display: none"]),
+.fh-checkout-shipping:has(.shipping_address[style*="display:none"]) {
+  display: none;
+}
+
+/* Password help text on account-creation flow */
+.fh-checkout-form .fh-checkout-password-help {
+  font-size: 12px;
+  color: var(--fh-text-3);
+  font-style: italic;
+  margin-top: 6px;
+}
+
+/* ── Payment Method ── */
+.fh-checkout-payment-card #payment {
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+}
+.fh-checkout-payment-card .wc_payment_methods {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fh-checkout-payment-card .wc_payment_method {
+  background: var(--fh-bg-dkr);
+  border: 1px solid var(--fh-border-md);
+  border-radius: 4px;
+  padding: 14px 16px;
+  transition: border-color 0.15s ease;
+}
+.fh-checkout-payment-card .wc_payment_method:has(input[type="radio"]:checked) {
+  border-color: var(--fh-gold);
+}
+.fh-checkout-payment-card .wc_payment_method > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--fh-text-1);
+}
+.fh-checkout-payment-card .wc_payment_method > label img {
+  max-height: 22px;
+  width: auto;
+  margin-left: auto;
+}
+.fh-checkout-payment-card .payment_box {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  background: var(--fh-bg);
+  border-radius: 3px;
+  font-size: 13px;
+  color: var(--fh-text-2);
+}
+.fh-checkout-payment-card .payment_box::before { display: none; }
+
+/* Custom radio for payment options */
+.fh-checkout-payment-card input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--fh-border-md);
+  border-radius: 50%;
+  background: var(--fh-bg-dk);
+  position: relative;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.fh-checkout-payment-card input[type="radio"]:checked {
+  border-color: var(--fh-gold);
+}
+.fh-checkout-payment-card input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--fh-gold);
+}
+
+/* Place Order button — match the cart's full-width gold CTA */
+.fh-checkout-payment-card .place-order {
+  margin-top: 18px;
+  padding-top: 0;
+  border: 0;
+}
+.fh-checkout-payment-card #place_order,
+.fh-checkout-payment-card .place-order .button {
+  display: block;
+  width: 100%;
+  background: var(--fh-gold);
+  color: var(--fh-bg);
+  border: 0;
+  border-radius: 3px;
+  font-family: var(--fh-font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.fh-checkout-payment-card #place_order:hover,
+.fh-checkout-payment-card .place-order .button:hover { background: var(--fh-gold-lt); }
+.fh-checkout-payment-card #place_order:disabled { opacity: 0.7; cursor: not-allowed; }
+
+/* Privacy / terms text */
+.fh-checkout-payment-card .woocommerce-terms-and-conditions-wrapper,
+.fh-checkout-payment-card .woocommerce-privacy-policy-text {
+  font-size: 12px;
+  color: var(--fh-text-3);
+  line-height: 1.6;
+  margin-top: 12px;
+}
+.fh-checkout-payment-card .woocommerce-privacy-policy-text p { margin: 0 0 6px; font-style: italic; }
+.fh-checkout-payment-card .woocommerce-terms-and-conditions-wrapper label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--fh-text-2);
+}
+
+/* PayPal Payments "currently unavailable" notice — same suppression
+   the cart got. Plugin sometimes emits stale text alongside live buttons. */
+.fh-checkout-payment-card .ppcp-messages-error,
+.fh-checkout-payment-card .ppcp-unavailable-message {
+  display: none;
+}
+
+/* ── Itemized Statement (right column) ── */
+.fh-checkout-statement .woocommerce-checkout-review-order-table,
+.fh-statement-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+}
+.fh-statement-table td {
+  border: 0;
+  padding: 0;
+  vertical-align: top;
+}
+
+.fh-statement-item {
+  border-bottom: 1px solid var(--fh-border);
+}
+.fh-statement-item td {
+  padding: 14px 0;
+}
+.fh-statement-item__thumb {
+  width: 56px;
+  padding-right: 12px !important;
+}
+.fh-statement-item__thumb img {
+  width: 56px;
+  height: 56px;
+  border-radius: 3px;
+  border: 1px solid var(--fh-border);
+  background: var(--fh-bg-dkr);
+  object-fit: cover;
+  display: block;
+}
+.fh-statement-item__body { min-width: 0; }
+.fh-statement-item__title {
+  font-family: var(--fh-serif);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fh-text-1);
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+.fh-statement-item__meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.fh-statement-item__qty {
+  font-size: 11px;
+  color: var(--fh-text-3);
+  letter-spacing: 0.5px;
+}
+.fh-statement-item__price {
+  text-align: right;
+  font-family: var(--fh-serif);
+  font-size: 16px;
+  color: var(--fh-gold);
+  white-space: nowrap;
+  padding: 14px 0 14px 12px !important;
+}
+
+/* Ledger rows (subtotal / shipping / tax / total) inside the same table */
+.fh-statement-ledger__row td {
+  padding: 8px 0;
+  font-size: 13px;
+}
+.fh-statement-ledger__row:first-child td { padding-top: 18px; }
+.fh-statement-ledger__label {
+  color: var(--fh-text-2);
+}
+.fh-statement-ledger__label-main { display: block; }
+.fh-statement-ledger__label-sub {
+  display: block;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--fh-text-3);
+  margin-top: 2px;
+}
+.fh-statement-ledger__value {
+  text-align: right;
+  color: var(--fh-text-1);
+  white-space: nowrap;
+}
+
+.fh-statement-ledger__total td {
+  padding-top: 18px;
+  border-top: 1px solid var(--fh-border);
+}
+.fh-statement-ledger__total .fh-statement-ledger__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--fh-gold);
+}
+.fh-statement-ledger__total .fh-statement-ledger__value {
+  font-family: var(--fh-serif);
+  font-size: 30px;
+  color: var(--fh-gold);
+  line-height: 1;
+}
+.fh-statement-ledger__total .fh-statement-ledger__value .amount,
+.fh-statement-ledger__total .fh-statement-ledger__value strong {
+  font-weight: 500;
+}
+
+/* ── Mobile ── */
+@media (max-width: 900px) {
+  .fh-checkout-layout { grid-template-columns: 1fr; }
+  .fh-checkout-right  { position: static; }
+}
+@media (max-width: 600px) {
+  .fh-checkout-form .woocommerce-billing-fields__field-wrapper,
+  .fh-checkout-form .woocommerce-shipping-fields__field-wrapper,
+  .fh-checkout-form .woocommerce-additional-fields__field-wrapper {
+    grid-template-columns: 1fr;
+  }
+  .fh-checkout-form .form-row-first,
+  .fh-checkout-form .form-row-last { grid-column: 1 / -1; }
+  .fh-checkout-card { padding: 20px; }
+}
+
+/* Coupon form embedded inside our accordion. WC's form-coupon.php
+   ships with a "Have a coupon?" toggle div + a hidden form (inline
+   style="display:none"). The <details>/<summary> on our accordion is
+   already the disclosure mechanism — hide WC's toggle and unhide the
+   form when the accordion is open. */
+.fh-checkout-coupon-body .woocommerce-form-coupon-toggle { display: none !important; }
+.fh-checkout-accordion[open] .checkout_coupon            { display: block !important; }
+
+/* Coupon form fields inside the accordion */
+.fh-checkout-coupon-body .checkout_coupon p { margin: 0 0 8px; }
+.fh-checkout-coupon-body .checkout_coupon .form-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin: 0;
+  width: 100%;
+}
+.fh-checkout-coupon-body .checkout_coupon input.input-text {
+  flex: 1;
+  width: 100%;
+  background: var(--fh-bg-dkr);
+  border: 1px solid var(--fh-border-md);
+  color: var(--fh-text-1);
+  padding: 9px 12px;
+  font-size: 13px;
+  border-radius: 3px;
+}
+.fh-checkout-coupon-body .checkout_coupon button[name="apply_coupon"] {
+  background: transparent;
+  border: 1px solid var(--fh-border-gold);
+  color: var(--fh-gold);
+  padding: 9px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.fh-checkout-coupon-body .checkout_coupon button[name="apply_coupon"]:hover {
+  background: var(--fh-gold-dim);
+}
+
+/* Returning Customer login form — woocommerce_login_form() emits a
+   `.woocommerce-form-login` block. Strip its visual chrome and reuse
+   our input system. */
+.fh-checkout-login-body .woocommerce-form-login {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.fh-checkout-login-body .woocommerce-form-login p { margin: 0 0 12px; }
+.fh-checkout-login-body .woocommerce-form-login__submit {
+  background: transparent;
+  border: 1px solid var(--fh-border-gold);
+  color: var(--fh-gold);
+  padding: 10px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-right: 12px;
+}
+.fh-checkout-login-body .woocommerce-form-login__rememberme {
+  font-size: 12px;
+  color: var(--fh-text-3);
+}
+.fh-checkout-login-body .lost_password { font-size: 12px; margin-top: 8px; }
+.fh-checkout-login-body .lost_password a { color: var(--fh-text-3); text-decoration: underline; }
+.fh-checkout-login-body .lost_password a:hover { color: var(--fh-gold); }

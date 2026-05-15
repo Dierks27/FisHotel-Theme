@@ -84,6 +84,92 @@ add_action( 'init', function () {
 }, 20 );
 
 /*
+ * Checkout — "Ship to a different address" defaults to UNCHECKED. The
+ * WC default is on, which forces the shipping form open even when the
+ * customer just wants delivery to the billing address. Most carts have
+ * the same delivery + billing address, so off is the saner default.
+ */
+add_filter( 'woocommerce_ship_to_different_address_checked', '__return_false' );
+
+/*
+ * Checkout — defensive gift-card / voucher unhook on the checkout's
+ * order review action chain. Mirrors the cart-page protection from PR
+ * #23 so a plugin can't duplicate the coupon/gift-card UI inside the
+ * itemized statement card.
+ */
+add_action( 'template_redirect', function () {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+		return;
+	}
+	$hooks_to_clean = [
+		'woocommerce_review_order_before_payment',
+		'woocommerce_review_order_after_payment',
+		'woocommerce_checkout_before_order_review',
+		'woocommerce_checkout_after_order_review',
+	];
+	foreach ( $hooks_to_clean as $hook_name ) {
+		if ( empty( $GLOBALS['wp_filter'][ $hook_name ] ) ) {
+			continue;
+		}
+		$hook = $GLOBALS['wp_filter'][ $hook_name ];
+		if ( ! is_object( $hook ) || empty( $hook->callbacks ) ) {
+			continue;
+		}
+		foreach ( $hook->callbacks as $priority => $cbs ) {
+			foreach ( $cbs as $key => $cb ) {
+				$fn     = isset( $cb['function'] ) ? $cb['function'] : null;
+				$class  = '';
+				$method = '';
+				if ( is_array( $fn ) ) {
+					$class  = is_object( $fn[0] ) ? get_class( $fn[0] ) : (string) $fn[0];
+					$method = isset( $fn[1] ) ? (string) $fn[1] : '';
+				} elseif ( is_string( $fn ) ) {
+					$method = $fn;
+				}
+				$is_gift_or_voucher = (
+					stripos( $class, 'gift' ) !== false ||
+					stripos( $class, 'voucher' ) !== false ||
+					stripos( $method, 'gift_card' ) !== false ||
+					stripos( $method, 'giftcard' ) !== false ||
+					stripos( $method, 'voucher' ) !== false
+				);
+				if ( $is_gift_or_voucher ) {
+					unset( $hook->callbacks[ $priority ][ $key ] );
+				}
+			}
+		}
+	}
+}, 1 );
+
+/*
+ * Checkout — strip WC's default "Returning customer? Click here to
+ * login." and "Have a coupon? Click here to enter your code." notices.
+ * Our form-checkout.php template renders both as collapsed accordions
+ * (matching the cart's pattern), so the default top-of-page notices
+ * would duplicate.
+ */
+add_action( 'init', function () {
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		return;
+	}
+	remove_action( 'woocommerce_before_checkout_form', 'woocommerce_checkout_login_form', 10 );
+	remove_action( 'woocommerce_before_checkout_form', 'woocommerce_checkout_coupon_form', 10 );
+}, 20 );
+
+/*
+ * Checkout — Place Order button label comes from FisHotel Settings
+ * (Checkout Page → CTAs & Labels → fh_checkout_cta_label). Trailing
+ * arrow appended automatically.
+ */
+add_filter( 'woocommerce_order_button_text', function ( $default ) {
+	if ( ! class_exists( 'FisHotel_Admin_Settings' ) ) {
+		return $default;
+	}
+	$label = (string) FisHotel_Admin_Settings::get( 'fh_checkout_cta_label' );
+	return $label !== '' ? $label . ' →' : $default;
+} );
+
+/*
  * ─────────────────────────────────────────
  * STANDARD WC HOOK COMPATIBILITY
  *

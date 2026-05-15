@@ -230,17 +230,13 @@ $subtitle   = str_replace(
 					</a>
 				</div>
 
-				<div class="fh-cart-or-divider"><span><?php esc_html_e( 'Or pay with', 'fishotel' ); ?></span></div>
-
-				<div class="fh-cart-paypal-row">
-					<?php
-					/* PayPal / Venmo button slot. WC PayPal Payments plugin hooks
-					   here at priority 20+. The default proceed-to-checkout
-					   callback is removed in inc/woocommerce.php so it doesn't
-					   render a duplicate of the CTA above. */
-					do_action( 'woocommerce_proceed_to_checkout' );
-					?>
-				</div>
+				<?php
+				/* No "Or pay with" express-payment block on the cart. PayPal +
+				   Venmo render on the checkout page where customers land after
+				   Proceed to Checkout — keeping them off the cart sidesteps the
+				   plugin-injected duplicate gift-card form and the asymmetric
+				   look when only one of the two methods is configured. */
+				?>
 
 				<div class="fh-cart-discounts">
 					<details class="fh-cart-discount-row">

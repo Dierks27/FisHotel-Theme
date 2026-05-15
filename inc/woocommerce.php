@@ -70,54 +70,18 @@ add_action( 'template_redirect', function () {
 }, 1 );
 
 /*
- * Strip gift-card / voucher form renders from the cart's checkout-button
- * action. The Cart page reserves a dedicated accordion for gift card
- * entry (cart.php → .fh-cart-discounts). Plugins (PW Gift Cards, YITH
- * Gift Cards, the official WooCommerce Gift Cards extension) commonly
- * hook into `woocommerce_proceed_to_checkout` to also render their own
- * inline form right after the Proceed-to-Checkout CTA. Without this
- * strip, that form renders inside `.fh-cart-paypal-row` next to the
- * PayPal / Venmo buttons, producing a duplicate of the accordion below.
- *
- * Filters callbacks whose class or method name contains "gift" or
- * "voucher" (case-insensitive). PayPal-namespaced callbacks pass
- * through untouched.
+ * Suppress the WC default "Your cart is currently empty." notice. WC
+ * (7.0+) renders it via `wc_empty_cart_message` hooked to the
+ * `woocommerce_cart_is_empty` action. Our cart-empty.php template
+ * provides its own headline + body + CTA, and the default line was
+ * stacking under that card with a stray gold accent bar.
  */
-add_action( 'template_redirect', function () {
-	if ( ! function_exists( 'is_cart' ) || ! is_cart() ) {
+add_action( 'init', function () {
+	if ( ! class_exists( 'WooCommerce' ) ) {
 		return;
 	}
-	if ( empty( $GLOBALS['wp_filter']['woocommerce_proceed_to_checkout'] ) ) {
-		return;
-	}
-	$hook = $GLOBALS['wp_filter']['woocommerce_proceed_to_checkout'];
-	if ( ! is_object( $hook ) || empty( $hook->callbacks ) ) {
-		return;
-	}
-	foreach ( $hook->callbacks as $priority => $cbs ) {
-		foreach ( $cbs as $key => $cb ) {
-			$fn     = isset( $cb['function'] ) ? $cb['function'] : null;
-			$class  = '';
-			$method = '';
-			if ( is_array( $fn ) ) {
-				$class  = is_object( $fn[0] ) ? get_class( $fn[0] ) : (string) $fn[0];
-				$method = isset( $fn[1] ) ? (string) $fn[1] : '';
-			} elseif ( is_string( $fn ) ) {
-				$method = $fn;
-			}
-			$is_gift_or_voucher = (
-				stripos( $class, 'gift' ) !== false ||
-				stripos( $class, 'voucher' ) !== false ||
-				stripos( $method, 'gift_card' ) !== false ||
-				stripos( $method, 'giftcard' ) !== false ||
-				stripos( $method, 'voucher' ) !== false
-			);
-			if ( $is_gift_or_voucher ) {
-				unset( $hook->callbacks[ $priority ][ $key ] );
-			}
-		}
-	}
-}, 1 );
+	remove_action( 'woocommerce_cart_is_empty', 'wc_empty_cart_message', 10 );
+}, 20 );
 
 /*
  * ─────────────────────────────────────────
@@ -159,12 +123,6 @@ add_action( 'init', function () {
     remove_action( 'woocommerce_after_single_product_summary',  'woocommerce_output_product_data_tabs', 10 );
     remove_action( 'woocommerce_after_single_product_summary',  'woocommerce_upsell_display',           15 );
     remove_action( 'woocommerce_after_single_product_summary',  'woocommerce_output_related_products',  20 );
-
-    // Cart page — our custom cart.php renders its own "Proceed to
-    // Checkout" CTA, then fires woocommerce_proceed_to_checkout so the
-    // PayPal Payments plugin's PayPal + Venmo buttons still render below.
-    // Removing the default WC callback prevents a duplicate button.
-    remove_action( 'woocommerce_proceed_to_checkout', 'woocommerce_button_proceed_to_checkout', 20 );
 
     // Loop card defaults — anchor open/close, sale flash, thumbnail,
     // title, rating, price, add-to-cart link. Our card builds all of

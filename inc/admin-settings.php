@@ -122,7 +122,7 @@ class FisHotel_Admin_Settings {
 
 	/** All settings with defaults */
 	public static function defaults() {
-		return [
+		$defaults = [
 			// Shop
 			'fh_shop_display'             => 'categories',
 			'fh_shop_hide_empty'          => '1',
@@ -200,23 +200,11 @@ class FisHotel_Admin_Settings {
 			'contacts_email_label'          => 'Write us',
 			'contacts_forum_url'            => 'https://humble.fish/community/forums/fishotel.41/',
 			'contacts_forum_label'          => 'Visit our Humble.Fish forum',
-			// Cart Page — hero
+			// Cart Page — hero (global; per-cart subtitle copy lives in
+			// the preset seeds below)
 			'fh_cart_hero_eyebrow'             => 'GUEST SERVICES',
 			'fh_cart_hero_title_html'          => 'Your <em>Reservations</em>',
-			'fh_cart_hero_subtitle_template'   => '{count} {fish_or_fishes} currently held at the desk.',
-			// Cart Page — order total card
-			'fh_cart_shipping_label'           => 'Live Arrival Service',
-			'fh_cart_shipping_subtext'         => 'Overnight · arrival guaranteed',
-			// Cart Page — trust strip
-			'fh_cart_trust_1_label'            => 'LIVE ARRIVAL',
-			'fh_cart_trust_1_body'             => 'Every fish guaranteed alive on arrival',
-			'fh_cart_trust_2_label'            => '30-DAY QT',
-			'fh_cart_trust_2_body'             => 'Minimum quarantine before check-out',
-			'fh_cart_trust_3_label'            => 'OVERNIGHT COURIER',
-			'fh_cart_trust_3_body'             => 'Ships Mon–Wed for next-day arrival',
-			'fh_cart_trust_4_label'            => '100% TRANSPARENCY',
-			'fh_cart_trust_4_body'             => 'Full QT history available for every fish',
-			// Empty cart state
+			// Empty cart state (global)
 			'fh_empty_cart_image_id'                 => 0,
 			'fh_empty_cart_headline_html'            => 'Your room is <em>empty</em>.',
 			'fh_empty_cart_subline'                  => 'No fish checked in yet. Wander the lobby — the gallery is full of healthy guests ready to come home with you.',
@@ -224,6 +212,92 @@ class FisHotel_Admin_Settings {
 			'fh_empty_cart_cta_url'                  => '',
 			'fh_empty_cart_secondary_link_label'     => 'OR BROWSE THE FOODS · MEDS · MERCH',
 			'fh_empty_cart_secondary_link_url'       => '',
+		];
+
+		// Cart preset seeds — each preset bundles the subtitle template,
+		// shipping line, and 4-column trust strip copy. Five presets:
+		// default / fish / meds / food / merch.
+		foreach ( self::cart_preset_seeds() as $preset => $values ) {
+			foreach ( $values as $field => $value ) {
+				$defaults[ "fh_cart_{$preset}_{$field}" ] = $value;
+			}
+		}
+
+		return $defaults;
+	}
+
+	/**
+	 * Cart preset seed values. Used both to populate `defaults()` and to
+	 * drive the admin sections() loop so the field set stays in sync with
+	 * the underlying option keys.
+	 */
+	public static function cart_preset_seeds() {
+		return [
+			'default' => [
+				'subtitle_template' => '{count} {items_or_items} currently in your cart.',
+				'shipping_label'    => 'Shipping',
+				'shipping_subtext'  => 'Calculated at checkout',
+				'trust_1_label'     => 'EXPERT-CURATED',
+				'trust_1_body'      => 'Hand-selected for reef aquariums',
+				'trust_2_label'     => 'TRUSTED PARTNERS',
+				'trust_2_body'      => 'Sourced direct, never gray market',
+				'trust_3_label'     => 'FAST SHIPPING',
+				'trust_3_body'      => 'Ships within 1–2 business days',
+				'trust_4_label'     => '100% TRANSPARENCY',
+				'trust_4_body'      => 'Full sourcing details on every product',
+			],
+			'fish' => [
+				'subtitle_template' => '{count} {fish_or_fishes} currently held at the desk.',
+				'shipping_label'    => 'UPS Delivery',
+				'shipping_subtext'  => 'Overnight · arrival guaranteed',
+				'trust_1_label'     => 'LIVE ARRIVAL',
+				'trust_1_body'      => 'Every fish guaranteed alive on arrival',
+				'trust_2_label'     => '30-DAY QT',
+				'trust_2_body'      => 'Minimum quarantine before check-out',
+				'trust_3_label'     => 'UPS OVERNIGHT',
+				'trust_3_body'      => 'Ships Mon–Wed for next-day arrival',
+				'trust_4_label'     => '100% TRANSPARENCY',
+				'trust_4_body'      => 'Full QT history available for every fish',
+			],
+			'meds' => [
+				'subtitle_template' => '{count} {medications_or_medications} in your cart.',
+				'shipping_label'    => 'Standard Shipping',
+				'shipping_subtext'  => 'Ships within 1–2 business days',
+				'trust_1_label'     => 'FROM THE PHARMACY',
+				'trust_1_body'      => 'The same meds we use in-house',
+				'trust_2_label'     => 'SOURCED DIRECT',
+				'trust_2_body'      => 'Authentic product, never gray market',
+				'trust_3_label'     => 'EXPERT-CURATED',
+				'trust_3_body'      => 'Hand-picked for reef and quarantine use',
+				'trust_4_label'     => 'DOSING CALCULATOR',
+				'trust_4_body'      => 'Free FisHotel calculator for every medication',
+			],
+			'food' => [
+				'subtitle_template' => '{count} {items_or_items} from the pantry.',
+				'shipping_label'    => 'Standard Shipping',
+				'shipping_subtext'  => 'Ships within 1–2 business days',
+				'trust_1_label'     => 'FROM THE PANTRY',
+				'trust_1_body'      => 'The same foods we feed in-house',
+				'trust_2_label'     => 'PREMIUM GRADE',
+				'trust_2_body'      => 'Quality saltwater nutrition',
+				'trust_3_label'     => 'FRESH ROTATION',
+				'trust_3_body'      => 'Stock rotated regularly for freshness',
+				'trust_4_label'     => 'FAST SHIPPING',
+				'trust_4_body'      => 'Ships within 1–2 business days',
+			],
+			'merch' => [
+				'subtitle_template' => '{count} {items_or_items} in your cart.',
+				'shipping_label'    => 'Standard Shipping',
+				'shipping_subtext'  => 'Ships within 1–2 business days',
+				'trust_1_label'     => 'OFFICIAL FISHOTEL',
+				'trust_1_body'      => 'Designed in-house, made for reefers',
+				'trust_2_label'     => 'QUALITY PRINTED',
+				'trust_2_body'      => 'Soft cotton, durable inks',
+				'trust_3_label'     => 'FAST SHIPPING',
+				'trust_3_body'      => 'Ships within 1–2 business days',
+				'trust_4_label'     => 'WEAR THE LOBBY',
+				'trust_4_body'      => 'Repping the reef from check-in to check-out',
+			],
 		];
 	}
 
@@ -583,7 +657,7 @@ JS;
 	 * renderer share this map so adding a field only touches one place.
 	 */
 	public static function sections() {
-		return [
+		$sections = [
 			// Homepage page
 			'home' => [
 				'page'   => 'fishotel-homepage',
@@ -684,35 +758,10 @@ JS;
 			// Cart page — hero
 			'cart_hero' => [
 				'page'   => 'fishotel-cart',
-				'title'  => 'Cart Hero',
+				'title'  => 'Cart Hero (global)',
 				'fields' => [
-					'fh_cart_hero_eyebrow'           => [ 'label' => 'Eyebrow',          'type' => 'text',      'placeholder' => 'GUEST SERVICES' ],
-					'fh_cart_hero_title_html'        => [ 'label' => 'Title (HTML)',     'type' => 'text_html', 'placeholder' => 'Your <em>Reservations</em>', 'description' => 'Allows &lt;em&gt;, &lt;strong&gt;, &lt;i&gt;, &lt;b&gt;. Wrap the italic-gold portion in &lt;em&gt;…&lt;/em&gt;.' ],
-					'fh_cart_hero_subtitle_template' => [ 'label' => 'Subtitle template', 'type' => 'text',      'placeholder' => '{count} {fish_or_fishes} currently held at the desk.', 'description' => 'Placeholders: <code>{count}</code> = item count, <code>{fish_or_fishes}</code> = singular/plural form.' ],
-				],
-			],
-			// Cart page — order total card
-			'cart_order' => [
-				'page'   => 'fishotel-cart',
-				'title'  => 'Order Total Card',
-				'fields' => [
-					'fh_cart_shipping_label'   => [ 'label' => 'Shipping line label',   'type' => 'text', 'placeholder' => 'Live Arrival Service' ],
-					'fh_cart_shipping_subtext' => [ 'label' => 'Shipping line subtext', 'type' => 'text', 'placeholder' => 'Overnight · arrival guaranteed' ],
-				],
-			],
-			// Cart page — trust strip
-			'cart_trust' => [
-				'page'   => 'fishotel-cart',
-				'title'  => 'Trust Strip (4 Columns)',
-				'fields' => [
-					'fh_cart_trust_1_label' => [ 'label' => 'Column 1 — label', 'type' => 'text', 'placeholder' => 'LIVE ARRIVAL' ],
-					'fh_cart_trust_1_body'  => [ 'label' => 'Column 1 — body',  'type' => 'text', 'placeholder' => 'Every fish guaranteed alive on arrival' ],
-					'fh_cart_trust_2_label' => [ 'label' => 'Column 2 — label', 'type' => 'text', 'placeholder' => '30-DAY QT' ],
-					'fh_cart_trust_2_body'  => [ 'label' => 'Column 2 — body',  'type' => 'text', 'placeholder' => 'Minimum quarantine before check-out' ],
-					'fh_cart_trust_3_label' => [ 'label' => 'Column 3 — label', 'type' => 'text', 'placeholder' => 'OVERNIGHT COURIER' ],
-					'fh_cart_trust_3_body'  => [ 'label' => 'Column 3 — body',  'type' => 'text', 'placeholder' => 'Ships Mon–Wed for next-day arrival' ],
-					'fh_cart_trust_4_label' => [ 'label' => 'Column 4 — label', 'type' => 'text', 'placeholder' => '100% TRANSPARENCY' ],
-					'fh_cart_trust_4_body'  => [ 'label' => 'Column 4 — body',  'type' => 'text', 'placeholder' => 'Full QT history available for every fish' ],
+					'fh_cart_hero_eyebrow'    => [ 'label' => 'Eyebrow',      'type' => 'text',      'placeholder' => 'GUEST SERVICES' ],
+					'fh_cart_hero_title_html' => [ 'label' => 'Title (HTML)', 'type' => 'text_html', 'placeholder' => 'Your <em>Reservations</em>', 'description' => 'Allows &lt;em&gt;, &lt;strong&gt;, &lt;i&gt;, &lt;b&gt;. Wrap the italic-gold portion in &lt;em&gt;…&lt;/em&gt;. Subtitle is set per preset below.' ],
 				],
 			],
 			// Cart page — empty state
@@ -818,6 +867,41 @@ JS;
 				],
 			],
 		];
+
+		// Append the 5 cart preset sections — same field shape per preset,
+		// driven by cart_preset_seeds() so placeholders match defaults.
+		$preset_titles = [
+			'default' => 'Preset: Default (Mixed / Unknown)',
+			'fish'    => 'Preset: Fish',
+			'meds'    => 'Preset: Meds',
+			'food'    => 'Preset: Food',
+			'merch'   => 'Preset: Merch',
+		];
+		$placeholder_tip = 'Placeholders: <code>{count}</code>, <code>{items_or_items}</code>, <code>{fish_or_fishes}</code>, <code>{medications_or_medications}</code>.';
+		$seeds = self::cart_preset_seeds();
+		foreach ( $preset_titles as $preset => $title ) {
+			$prefix = "fh_cart_{$preset}_";
+			$ph     = $seeds[ $preset ] ?? [];
+			$sections[ "cart_preset_{$preset}" ] = [
+				'page'   => 'fishotel-cart',
+				'title'  => $title,
+				'fields' => [
+					$prefix . 'subtitle_template' => [ 'label' => 'Hero subtitle template', 'type' => 'text', 'placeholder' => $ph['subtitle_template'] ?? '', 'description' => $placeholder_tip ],
+					$prefix . 'shipping_label'    => [ 'label' => 'Shipping line label',    'type' => 'text', 'placeholder' => $ph['shipping_label']    ?? '' ],
+					$prefix . 'shipping_subtext'  => [ 'label' => 'Shipping line subtext',  'type' => 'text', 'placeholder' => $ph['shipping_subtext']  ?? '' ],
+					$prefix . 'trust_1_label'     => [ 'label' => 'Trust strip · 1 · label', 'type' => 'text', 'placeholder' => $ph['trust_1_label'] ?? '' ],
+					$prefix . 'trust_1_body'      => [ 'label' => 'Trust strip · 1 · body',  'type' => 'text', 'placeholder' => $ph['trust_1_body']  ?? '' ],
+					$prefix . 'trust_2_label'     => [ 'label' => 'Trust strip · 2 · label', 'type' => 'text', 'placeholder' => $ph['trust_2_label'] ?? '' ],
+					$prefix . 'trust_2_body'      => [ 'label' => 'Trust strip · 2 · body',  'type' => 'text', 'placeholder' => $ph['trust_2_body']  ?? '' ],
+					$prefix . 'trust_3_label'     => [ 'label' => 'Trust strip · 3 · label', 'type' => 'text', 'placeholder' => $ph['trust_3_label'] ?? '' ],
+					$prefix . 'trust_3_body'      => [ 'label' => 'Trust strip · 3 · body',  'type' => 'text', 'placeholder' => $ph['trust_3_body']  ?? '' ],
+					$prefix . 'trust_4_label'     => [ 'label' => 'Trust strip · 4 · label', 'type' => 'text', 'placeholder' => $ph['trust_4_label'] ?? '' ],
+					$prefix . 'trust_4_body'      => [ 'label' => 'Trust strip · 4 · body',  'type' => 'text', 'placeholder' => $ph['trust_4_body']  ?? '' ],
+				],
+			];
+		}
+
+		return $sections;
 	}
 
 	public static function register_settings() {

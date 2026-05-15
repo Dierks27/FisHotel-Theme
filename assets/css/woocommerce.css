@@ -1302,53 +1302,6 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   padding: 16px;
 }
 
-.fh-cart-or-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 8px 0 14px;
-  color: var(--fh-text-3);
-}
-.fh-cart-or-divider::before,
-.fh-cart-or-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--fh-border);
-}
-.fh-cart-or-divider span {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-/* PayPal / Venmo row — plugin renders buttons here. auto-fit means
-   2 buttons split 50/50 and a single button (e.g. when Venmo isn't
-   enabled in plugin settings) takes the full row instead of hugging
-   one side with an empty cell next to it. */
-.fh-cart-paypal-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 20px;
-  min-height: 44px; /* reserve the slot even if the plugin isn't loaded */
-}
-.fh-cart-paypal-row > * { min-width: 0; }
-.fh-cart-paypal-row iframe { max-width: 100%; }
-
-/* PayPal Payments "currently unavailable" notice — the plugin sometimes
-   emits this even when the buttons are active. Tone it down so it isn't
-   contradicting an enabled CTA. Plugin can be re-checked server-side. */
-.fh-cart-paypal-row .ppcp-messages-error,
-.fh-cart-paypal-row .ppcp-unavailable-message,
-.fh-cart-paypal-row .woocommerce-info,
-.fh-cart-paypal-row .ppc-button-wrapper-disabled,
-.fh-cart-paypal-row p:has(> a[href*="paypal.com"]) {
-  display: none;
-}
-
 /* Coupon / gift card accordions */
 .fh-cart-discounts { display: flex; flex-direction: column; gap: 6px; }
 .fh-cart-discount-row {

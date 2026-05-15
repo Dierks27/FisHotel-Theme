@@ -169,6 +169,60 @@ function fishotel_is_quarantined_fish( $product_id = null ) {
 }
 
 /**
+ * Filter the PDP top-of-page tag list. Drops:
+ *   1. "Fish" (redundant on a fish product).
+ *   2. Any tag whose name matches the genus (first word) of the product's
+ *      scientific name — that information is already on the page in the
+ *      subtitle, so a duplicate pill adds noise.
+ *
+ * Deny-list is applied centrally; do not edit tags per-product.
+ *
+ * @param WP_Term[] $tags        product_tag terms as returned by get_the_terms().
+ * @param int       $product_id  Product post ID — used to look up scientific name.
+ * @return WP_Term[]
+ */
+function fishotel_pdp_display_tags( $tags, $product_id ) {
+    if ( ! is_array( $tags ) || empty( $tags ) ) {
+        return [];
+    }
+    $deny = [ 'fish' ];
+    $sci  = (string) get_post_meta( (int) $product_id, '_fh_scientific_name', true );
+    if ( $sci !== '' ) {
+        $parts = preg_split( '/\s+/', trim( $sci ) );
+        if ( ! empty( $parts[0] ) ) {
+            $deny[] = strtolower( $parts[0] );
+        }
+    }
+    return array_values( array_filter( $tags, function ( $t ) use ( $deny ) {
+        return ! in_array( strtolower( $t->name ), $deny, true );
+    } ) );
+}
+
+/**
+ * Compute the PDP stock-badge state + label from WC's max_purchase_quantity
+ * convention: 0 = sold out, -1 = unmanaged (or backorders allowed), n>0 =
+ * managed with n in stock. JS in main.js mirrors this exactly — keep them
+ * in sync when copy or thresholds change.
+ *
+ * @param bool $in_stock  Whether the product/variation is purchasable now.
+ * @param int  $max_qty   WC max purchase quantity (see above).
+ * @return array{state:string,text:string}
+ */
+function fishotel_stock_badge_label( $in_stock, $max_qty ) {
+    $max_qty = (int) $max_qty;
+    if ( ! $in_stock || $max_qty === 0 ) {
+        return [ 'state' => 'soldout', 'text' => 'Sold Out' ];
+    }
+    if ( $max_qty === 1 ) {
+        return [ 'state' => 'last', 'text' => 'Last one — Just 1 left' ];
+    }
+    if ( $max_qty >= 2 && $max_qty < 5 ) {
+        return [ 'state' => 'low', 'text' => 'Only ' . $max_qty . ' left in stock' ];
+    }
+    return [ 'state' => 'in-stock', 'text' => 'In Stock — Ready to Ship' ];
+}
+
+/**
  * True when the current request is the Medications parent category
  * archive — `/product-category/medications/`. False on the shop root,
  * on form/treats child archives (flakes, dewormer, etc.), and on every

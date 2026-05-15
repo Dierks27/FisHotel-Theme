@@ -960,7 +960,17 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
    layout never shifts on qty change / coupon apply / variation pick.
 ───────────────────────────────────────── */
 
-.fh-cart-hero { padding-top: 36px; padding-bottom: 32px; }
+/* Free-floating centered hero. The base .page-hero adds a dark card
+   background + bottom border + radial-gradient pseudo — strip all of
+   that on the cart so the hero sits on the bare page background. */
+.fh-cart-hero {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  padding: 48px var(--fh-page-pad) 28px;
+}
+.fh-cart-hero::before { display: none; }
 .fh-cart-hero .page-hero__breadcrumb { justify-content: center; }
 .fh-cart-hero__center {
   max-width: 720px;
@@ -1314,11 +1324,13 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   white-space: nowrap;
 }
 
-/* PayPal / Venmo row — plugin renders buttons here. Grid the direct
-   children so PayPal + Venmo land 50/50. */
+/* PayPal / Venmo row — plugin renders buttons here. auto-fit means
+   2 buttons split 50/50 and a single button (e.g. when Venmo isn't
+   enabled in plugin settings) takes the full row instead of hugging
+   one side with an empty cell next to it. */
 .fh-cart-paypal-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 20px;
   min-height: 44px; /* reserve the slot even if the plugin isn't loaded */

@@ -70,6 +70,56 @@ add_action( 'template_redirect', function () {
 }, 1 );
 
 /*
+ * Strip gift-card / voucher form renders from the cart's checkout-button
+ * action. The Cart page reserves a dedicated accordion for gift card
+ * entry (cart.php → .fh-cart-discounts). Plugins (PW Gift Cards, YITH
+ * Gift Cards, the official WooCommerce Gift Cards extension) commonly
+ * hook into `woocommerce_proceed_to_checkout` to also render their own
+ * inline form right after the Proceed-to-Checkout CTA. Without this
+ * strip, that form renders inside `.fh-cart-paypal-row` next to the
+ * PayPal / Venmo buttons, producing a duplicate of the accordion below.
+ *
+ * Filters callbacks whose class or method name contains "gift" or
+ * "voucher" (case-insensitive). PayPal-namespaced callbacks pass
+ * through untouched.
+ */
+add_action( 'template_redirect', function () {
+	if ( ! function_exists( 'is_cart' ) || ! is_cart() ) {
+		return;
+	}
+	if ( empty( $GLOBALS['wp_filter']['woocommerce_proceed_to_checkout'] ) ) {
+		return;
+	}
+	$hook = $GLOBALS['wp_filter']['woocommerce_proceed_to_checkout'];
+	if ( ! is_object( $hook ) || empty( $hook->callbacks ) ) {
+		return;
+	}
+	foreach ( $hook->callbacks as $priority => $cbs ) {
+		foreach ( $cbs as $key => $cb ) {
+			$fn     = isset( $cb['function'] ) ? $cb['function'] : null;
+			$class  = '';
+			$method = '';
+			if ( is_array( $fn ) ) {
+				$class  = is_object( $fn[0] ) ? get_class( $fn[0] ) : (string) $fn[0];
+				$method = isset( $fn[1] ) ? (string) $fn[1] : '';
+			} elseif ( is_string( $fn ) ) {
+				$method = $fn;
+			}
+			$is_gift_or_voucher = (
+				stripos( $class, 'gift' ) !== false ||
+				stripos( $class, 'voucher' ) !== false ||
+				stripos( $method, 'gift_card' ) !== false ||
+				stripos( $method, 'giftcard' ) !== false ||
+				stripos( $method, 'voucher' ) !== false
+			);
+			if ( $is_gift_or_voucher ) {
+				unset( $hook->callbacks[ $priority ][ $key ] );
+			}
+		}
+	}
+}, 1 );
+
+/*
  * ─────────────────────────────────────────
  * STANDARD WC HOOK COMPATIBILITY
  *

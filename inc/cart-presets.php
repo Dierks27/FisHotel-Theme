@@ -190,3 +190,27 @@ add_action( 'init', function () {
 	}
 	update_option( 'fh_cart_preset_migration_v1', 'done' );
 }, 30 );
+
+/**
+ * One-shot migration v2: clear the default preset's `shipping_subtext`
+ * when it still holds the obsolete "Calculated at checkout" seed value
+ * (which is what `defaults()` returned from 1.8.0 through 1.8.3).
+ *
+ * That value is now a regression: the cart/checkout ledger already
+ * renders "Calculated at checkout" inside the shipping VALUE column
+ * when no method has been calculated, so the subtext line below the
+ * label duplicates the string on mixed-cart preset = `default` carts.
+ *
+ * Sites whose owner intentionally customized the subtext (anything
+ * other than the literal seed) are left alone.
+ */
+add_action( 'init', function () {
+	if ( get_option( 'fh_cart_preset_migration_v2' ) === 'done' ) {
+		return;
+	}
+	$stored = get_option( 'fh_cart_default_shipping_subtext', null );
+	if ( 'Calculated at checkout' === $stored ) {
+		update_option( 'fh_cart_default_shipping_subtext', '' );
+	}
+	update_option( 'fh_cart_preset_migration_v2', 'done' );
+}, 30 );

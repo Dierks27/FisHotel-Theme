@@ -1816,13 +1816,10 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   background: var(--fh-gold);
 }
 
-/* Place Order button — match the cart's full-width gold CTA.
-   `!important` on the visibility rule beats inline `style="display:none"`
-   that the WC PayPal Payments plugin's JS sets on `#place_order` when
-   PayPal is the first-loaded gateway. Without it, customers who switch
-   to Stripe / Debit & Credit Cards have no visible submit. The PayPal
-   override below re-hides the button when PayPal IS the chosen gateway,
-   since PayPal's own Smart Buttons take over at that point. */
+/* Place Order button — match the cart's full-width gold CTA. Each
+   gateway owns its own submit button visibility; the PayPal Payments
+   plugin renders its own Smart Buttons and hides #place_order when its
+   gateways are selected. That's correct behaviour — don't override it. */
 .fh-checkout-payment-card .place-order {
   margin-top: 18px;
   padding-top: 0;
@@ -1830,7 +1827,7 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 .fh-checkout-payment-card #place_order,
 .fh-checkout-payment-card .place-order .button {
-  display: block !important;
+  display: block;
   width: 100%;
   background: var(--fh-gold);
   color: var(--fh-bg);
@@ -1848,16 +1845,6 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 .fh-checkout-payment-card #place_order:hover,
 .fh-checkout-payment-card .place-order .button:hover { background: var(--fh-gold-lt); }
 .fh-checkout-payment-card #place_order:disabled { opacity: 0.7; cursor: not-allowed; }
-
-/* When a PayPal-family gateway is the chosen radio (WC PayPal Payments
-   ships `ppcp-gateway`, `ppcp-card-button-gateway`, `ppcp-credit-card-gateway`;
-   legacy plugins use a `paypal*` prefix) the gateway renders its own
-   Smart Buttons, so the WC Place Order submit should not appear. */
-.fh-checkout-payment-card:has(input[name="payment_method"][value*="ppcp"]:checked) .place-order #place_order,
-.fh-checkout-payment-card:has(input[name="payment_method"][value^="paypal"]:checked) .place-order #place_order,
-.fh-checkout-payment-card:has(input[name="payment_method"][value*="venmo"]:checked) .place-order #place_order {
-  display: none !important;
-}
 
 /* Privacy / terms text */
 .fh-checkout-payment-card .woocommerce-terms-and-conditions-wrapper,

@@ -96,17 +96,65 @@ add_filter( 'woocommerce_ship_to_different_address_checked', '__return_false' );
  * order review action chain. Mirrors the cart-page protection from PR
  * #23 so a plugin can't duplicate the coupon/gift-card UI inside the
  * itemized statement card.
+ *
+ * Mode of operation: scan every checkout hook that a gift-card plugin
+ * is known to render into, identify callbacks whose class/method/file
+ * suggest gift-card or voucher rendering, and keep AT MOST ONE — the
+ * first one we encounter on `woocommerce_review_order_before_payment`
+ * (the cleanest position, immediately above the gateway radios). Every
+ * subsequent match across the hook list gets unhooked. This handles
+ * the WC Gift Cards 2.x behavior of registering the same render
+ * callback on both `_before_payment` AND `_after_payment`, plus the
+ * older plugins that hook the cart-content edges instead.
  */
 add_action( 'template_redirect', function () {
 	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
 		return;
 	}
+
+	// Order matters: the FIRST hook in this list with a matching callback
+	// keeps that callback. Every other match (including same-hook
+	// duplicates) gets unset. `_before_payment` first so the gift-card
+	// form lands ABOVE the gateway radios in the payment card.
 	$hooks_to_clean = [
 		'woocommerce_review_order_before_payment',
 		'woocommerce_review_order_after_payment',
+		'woocommerce_review_order_before_submit',
+		'woocommerce_review_order_after_submit',
 		'woocommerce_checkout_before_order_review',
 		'woocommerce_checkout_after_order_review',
+		'woocommerce_review_order_before_cart_contents',
+		'woocommerce_review_order_after_cart_contents',
+		'woocommerce_review_order_before_order_total',
+		'woocommerce_review_order_after_order_total',
 	];
+
+	// Plugin class / method / closure-file fragments. Case-insensitive
+	// substring match — broad on purpose so unknown gift-card plugins
+	// still get caught. Covers:
+	//   - WooCommerce Gift Cards (Automattic, class prefix WC_GC_*)
+	//   - YITH WooCommerce Gift Cards (yith_wcgc_*)
+	//   - Pimwick Gift Cards (PW_Gift_Cards_* / pwgc_*)
+	//   - WooCommerce Smart Coupons (WC_SC_*, gift card subsystem)
+	//   - Generic vouchers, store-credit, redemption plugins.
+	$needles = [
+		'gift',
+		'voucher',
+		'wc_gc',
+		'wcgc',
+		'_gc_',
+		'pwgc',
+		'pimwick_gift',
+		'yith_wcgc',
+		'yith_woocommerce_gift',
+		'smart_coupons',
+		'storecredit',
+		'store_credit',
+		'redeem',
+	];
+
+	$kept_one = false;
+
 	foreach ( $hooks_to_clean as $hook_name ) {
 		if ( empty( $GLOBALS['wp_filter'][ $hook_name ] ) ) {
 			continue;
@@ -125,17 +173,44 @@ add_action( 'template_redirect', function () {
 					$method = isset( $fn[1] ) ? (string) $fn[1] : '';
 				} elseif ( is_string( $fn ) ) {
 					$method = $fn;
+				} elseif ( $fn instanceof Closure ) {
+					// Closures don't expose a callable name. We can still
+					// pull their file path via Reflection — gift-card
+					// plugins typically live in a folder whose path
+					// contains "gift" / "voucher" / "wc-gc". Bail
+					// silently if reflection can't read it.
+					try {
+						$refl   = new ReflectionFunction( $fn );
+						$method = (string) $refl->getFileName();
+					} catch ( \Throwable $e ) {
+						$method = '';
+					}
 				}
-				$is_gift_or_voucher = (
-					stripos( $class, 'gift' ) !== false ||
-					stripos( $class, 'voucher' ) !== false ||
-					stripos( $method, 'gift_card' ) !== false ||
-					stripos( $method, 'giftcard' ) !== false ||
-					stripos( $method, 'voucher' ) !== false
-				);
-				if ( $is_gift_or_voucher ) {
-					unset( $hook->callbacks[ $priority ][ $key ] );
+
+				$haystack = strtolower( $class . '|' . $method );
+				$is_match = false;
+				foreach ( $needles as $needle ) {
+					if ( strpos( $haystack, $needle ) !== false ) {
+						$is_match = true;
+						break;
+					}
 				}
+				if ( ! $is_match ) {
+					continue;
+				}
+
+				// First gift-card-matching callback we find — preserve it
+				// so the customer still has a single redemption form. The
+				// hook list above is ordered with `_before_payment` first,
+				// so when the plugin hooks there at all that's the one we
+				// keep; otherwise we fall back to whichever hook the
+				// plugin DID use.
+				if ( ! $kept_one ) {
+					$kept_one = true;
+					continue;
+				}
+
+				unset( $hook->callbacks[ $priority ][ $key ] );
 			}
 		}
 	}

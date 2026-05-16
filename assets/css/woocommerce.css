@@ -1718,6 +1718,28 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   margin-top: 6px;
 }
 
+/* WC's password-reveal eye icon uses `content: "\e010"` from the
+   WooCommerce icon font — which our theme doesn't load (we unset
+   `woocommerce-general` in functions.php). With the icon font missing,
+   browsers render the private-use codepoint as a literal "•" /
+   replacement glyph that sits on its own line under the Create Account
+   Password input. Hide the toggle entirely (browser-native password
+   inputs already show a reveal control on most modern browsers). */
+.fh-checkout-form .show-password-input,
+.fh-checkout-form .password-input .show-password-input {
+  display: none;
+}
+/* Same reasoning for any wrap span that adds its own list-item
+   styling onto the password block — defensive reset so a plugin can't
+   re-introduce the orphaned bullet. */
+.fh-checkout-form .password-input,
+.fh-checkout-form .woocommerce-password-strength,
+.fh-checkout-form .woocommerce-password-hint {
+  list-style: none;
+}
+.fh-checkout-form .password-input::before,
+.fh-checkout-form .password-input::after { content: none; }
+
 /* ── Payment Method ── */
 .fh-checkout-payment-card #payment {
   background: transparent;
@@ -1794,7 +1816,13 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   background: var(--fh-gold);
 }
 
-/* Place Order button — match the cart's full-width gold CTA */
+/* Place Order button — match the cart's full-width gold CTA.
+   `!important` on the visibility rule beats inline `style="display:none"`
+   that the WC PayPal Payments plugin's JS sets on `#place_order` when
+   PayPal is the first-loaded gateway. Without it, customers who switch
+   to Stripe / Debit & Credit Cards have no visible submit. The PayPal
+   override below re-hides the button when PayPal IS the chosen gateway,
+   since PayPal's own Smart Buttons take over at that point. */
 .fh-checkout-payment-card .place-order {
   margin-top: 18px;
   padding-top: 0;
@@ -1802,7 +1830,7 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 .fh-checkout-payment-card #place_order,
 .fh-checkout-payment-card .place-order .button {
-  display: block;
+  display: block !important;
   width: 100%;
   background: var(--fh-gold);
   color: var(--fh-bg);
@@ -1820,6 +1848,16 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 .fh-checkout-payment-card #place_order:hover,
 .fh-checkout-payment-card .place-order .button:hover { background: var(--fh-gold-lt); }
 .fh-checkout-payment-card #place_order:disabled { opacity: 0.7; cursor: not-allowed; }
+
+/* When a PayPal-family gateway is the chosen radio (WC PayPal Payments
+   ships `ppcp-gateway`, `ppcp-card-button-gateway`, `ppcp-credit-card-gateway`;
+   legacy plugins use a `paypal*` prefix) the gateway renders its own
+   Smart Buttons, so the WC Place Order submit should not appear. */
+.fh-checkout-payment-card:has(input[name="payment_method"][value*="ppcp"]:checked) .place-order #place_order,
+.fh-checkout-payment-card:has(input[name="payment_method"][value^="paypal"]:checked) .place-order #place_order,
+.fh-checkout-payment-card:has(input[name="payment_method"][value*="venmo"]:checked) .place-order #place_order {
+  display: none !important;
+}
 
 /* Privacy / terms text */
 .fh-checkout-payment-card .woocommerce-terms-and-conditions-wrapper,

@@ -331,24 +331,33 @@ while ( have_posts() ) :
                     if ( ! $has_any && ! $has_some ) continue;
                     $label = wc_attribute_label($attr_name);
                     $selected = isset($_REQUEST['attribute_' . sanitize_title($attr_name)]) ? wc_clean(wp_unslash($_REQUEST['attribute_' . sanitize_title($attr_name)])) : $product->get_variation_default_attribute($attr_name);
+                    // Sort numerically when labels carry an extractable number
+                    // (e.g. 0.25oz / 0.5oz / 1oz / 2oz) — WC's default
+                    // alphabetic order on slugs produces the wrong sequence.
+                    $options = fishotel_sort_variation_options( $options, $attr_name );
+                    $selected_label = $selected !== '' ? fishotel_variation_option_label( $attr_name, $selected ) : '';
                 ?>
                 <div class="fh-variation-group">
                     <div class="fh-variation-label">
                         <?php echo esc_html($label); ?>
                         <span class="fh-variation-selected">
-                            <?php echo $selected ? '— ' . esc_html($selected) . ' selected' : ''; ?>
+                            <?php echo $selected_label !== '' ? '— ' . esc_html($selected_label) . ' selected' : ''; ?>
                         </span>
                     </div>
                     <div class="fh-var-buttons" data-attribute="<?php echo esc_attr( $attr_key ); ?>">
                         <?php foreach ($options as $option) :
                             if ( ! $has_any && ! isset( $attr_in_stock[ $attr_key ][ sanitize_title( $option ) ] ) ) continue;
-                            $is_sel = sanitize_title($option) === sanitize_title($selected);
+                            $is_sel  = sanitize_title($option) === sanitize_title($selected);
+                            // Display label uses the term name; data-value
+                            // keeps the slug so WC's variation matcher and
+                            // our availability tracker can still resolve it.
+                            $display = fishotel_variation_option_label( $attr_name, $option );
                         ?>
                             <button type="button"
                                     class="fh-var-btn <?php echo $is_sel ? 'selected' : ''; ?>"
                                     data-value="<?php echo esc_attr($option); ?>"
                                     data-attribute="<?php echo esc_attr( $attr_key ); ?>">
-                                <?php echo esc_html($option); ?>
+                                <?php echo esc_html($display); ?>
                             </button>
                         <?php endforeach; ?>
                     </div>
@@ -360,9 +369,10 @@ while ( have_posts() ) :
                         <option value=""><?php esc_html_e('Choose an option', 'fishotel'); ?></option>
                         <?php foreach ($options as $option) :
                             if ( ! $has_any && ! isset( $attr_in_stock[ $attr_key ][ sanitize_title( $option ) ] ) ) continue;
+                            $display = fishotel_variation_option_label( $attr_name, $option );
                         ?>
                             <option value="<?php echo esc_attr($option); ?>" <?php selected($selected, $option); ?>>
-                                <?php echo esc_html($option); ?>
+                                <?php echo esc_html($display); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

@@ -127,22 +127,22 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 					<?php do_action( 'woocommerce_checkout_shipping' ); ?>
 				</div>
 
-				<?php /* Payment Method card. wc_checkout_payment() renders
-				        WC's payment box — options, terms, Place Order
-				        button, and the nonce — inside #payment. That
-				        element must stay in the DOM so WC's AJAX fragments
-				        keep the payment HTML in sync on cart/address
-				        changes. The _before / _after_payment actions
-				        normally fire inside review-order.php; since we
-				        moved payment out of the order-review card we fire
-				        them here so plugins still see the canonical
-				        injection points. */ ?>
+				<?php /* Payment Method card. woocommerce_checkout_payment()
+				        renders WC's payment box — options, terms, Place
+				        Order button, and the nonce — inside #payment.
+				        That element must stay in the DOM so WC's AJAX
+				        fragments keep the payment HTML in sync on cart /
+				        address changes. The _before / _after_payment
+				        actions normally fire inside review-order.php;
+				        since we moved payment out of the order-review
+				        card we fire them here so plugins still see the
+				        canonical injection points. */ ?>
 				<div class="fh-checkout-card fh-checkout-payment fh-checkout-payment-card">
 					<header class="fh-checkout-card__header">
 						<span class="fh-checkout-card__eyebrow"><?php echo esc_html( $section_payment ); ?></span>
 					</header>
 					<?php do_action( 'woocommerce_review_order_before_payment' ); ?>
-					<?php wc_checkout_payment(); ?>
+					<?php woocommerce_checkout_payment(); ?>
 					<?php do_action( 'woocommerce_review_order_after_payment' ); ?>
 				</div>
 

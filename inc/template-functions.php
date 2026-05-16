@@ -247,6 +247,65 @@ function fishotel_stock_badge_label( $in_stock, $max_qty ) {
 }
 
 /**
+ * Display label for a single variation-attribute option. For taxonomy
+ * attributes WC's `get_variation_attributes()` returns SLUGS, which
+ * WordPress sanitizes by replacing periods with hyphens — so the term
+ * named "0.5oz" stores a slug of "0-5oz" and the customer would see
+ * "0-5OZ" if we rendered the slug directly. Look up the term and prefer
+ * its name; fall back to the raw value for custom (non-taxonomy) attrs.
+ *
+ * @param string $attr_name Attribute taxonomy / name (e.g. `pa_bag-size`).
+ * @param string $option    Raw option value as returned by WC.
+ * @return string
+ */
+function fishotel_variation_option_label( $attr_name, $option ) {
+    $attr_name = (string) $attr_name;
+    $option    = (string) $option;
+    if ( $attr_name !== '' && taxonomy_exists( $attr_name ) ) {
+        $term = get_term_by( 'slug', $option, $attr_name );
+        if ( $term && ! is_wp_error( $term ) && $term->name !== '' ) {
+            return $term->name;
+        }
+    }
+    return $option;
+}
+
+/**
+ * Sort variation-attribute options by the first numeric value found in
+ * their human-readable label. Fixes the WC default that alphabetizes
+ * `pa_bag-size` slugs and produces 0.25OZ / 0.5OZ / 1OZ / 2OZ in the
+ * wrong order ("0-25-ounce" < "0-5oz" lexically even though 0.25 < 0.5
+ * numerically). Options without an extractable number sort last in
+ * their original order (stable).
+ *
+ * @param array  $options   Raw option values (slugs for taxonomy attrs).
+ * @param string $attr_name Attribute taxonomy / name; used to resolve
+ *                          display labels for numeric extraction.
+ * @return array
+ */
+function fishotel_sort_variation_options( $options, $attr_name = '' ) {
+    if ( ! is_array( $options ) || count( $options ) < 2 ) {
+        return $options;
+    }
+    $indexed = [];
+    foreach ( $options as $i => $slug ) {
+        $label = fishotel_variation_option_label( $attr_name, $slug );
+        $num   = PHP_INT_MAX;
+        if ( preg_match( '/(\d+(?:\.\d+)?)/', $label, $m ) ) {
+            $num = (float) $m[1];
+        }
+        $indexed[] = [ 'slug' => $slug, 'num' => $num, 'idx' => $i ];
+    }
+    usort( $indexed, function ( $a, $b ) {
+        if ( $a['num'] !== $b['num'] ) {
+            return $a['num'] <=> $b['num'];
+        }
+        return $a['idx'] <=> $b['idx'];
+    } );
+    return array_column( $indexed, 'slug' );
+}
+
+/**
  * True when the current request is the Medications parent category
  * archive — `/product-category/medications/`. False on the shop root,
  * on form/treats child archives (flakes, dewormer, etc.), and on every

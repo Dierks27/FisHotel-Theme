@@ -6,7 +6,10 @@
 (function($) {
     'use strict';
 
-    // Variation button selectors — sync visual buttons with WooCommerce hidden selects
+    // Variation button selectors — sync visual buttons with WooCommerce
+    // hidden selects. The visible "— X selected" label uses the button's
+    // text content (term display name) rather than data-value (slug) so
+    // taxonomy attributes like "0.5oz" don't surface as "0-5OZ".
     function initVariationButtons() {
         $(document).on('click', '.fh-var-btn:not(.unavailable)', function() {
             var $btn = $(this);
@@ -17,7 +20,7 @@
             $btn.addClass('selected');
             $('[name="' + attribute + '"]').val(value).trigger('change');
             var $label = $btn.closest('.fh-variation-group').find('.fh-variation-selected');
-            if ($label.length) $label.text('— ' + value + ' selected');
+            if ($label.length) $label.text('— ' + $.trim($btn.text()) + ' selected');
         });
     }
 
@@ -100,33 +103,111 @@
         });
     }
 
-    // For variable products with exactly one variation, click the matching
-    // variation button on load so variation_id is populated and Add-to-Cart
-    // is immediately functional. Multi-variation products are left alone —
-    // the customer must pick a combo.
+    // Auto-select any variation attribute that only has ONE distinct
+    // in-stock value across the product's variation matrix. Covers two
+    // cases:
+    //   1. Single-variation products (1 total variation × N attributes,
+    //      each with 1 value) — every attribute auto-resolves.
+    //   2. Multi-variation products where one attribute is degenerate
+    //      (e.g. Bloodworms: Type="Worms" × Bag Size={0.25oz,0.5oz,1oz}).
+    //      The Type attribute auto-selects so the customer only sees
+    //      Bag Size as something to choose.
     function initVariationAutoSelect() {
         $('.fh-purchase__form').each(function() {
             var $form = $(this);
-            if ($form.attr('data-fh-multi-variations') !== '0') return;
             var raw = $form.attr('data-product_variations');
             if (!raw) return;
             var variations;
             try { variations = JSON.parse(raw); } catch (e) { return; }
-            if (!variations || variations.length !== 1) return;
-            var attrs = variations[0].attributes || {};
-            Object.keys(attrs).forEach(function(attrKey) {
-                var val = attrs[attrKey];
-                if (val === '' || val == null) return;
+            if (!variations || !variations.length) return;
+            // Distinct in-stock values per attribute.
+            var valuesByAttr = {};
+            variations.forEach(function(v) {
+                if (!v || !v.is_in_stock || !v.attributes) return;
+                Object.keys(v.attributes).forEach(function(attrKey) {
+                    var val = v.attributes[attrKey];
+                    if (val === '' || val == null) return;
+                    if (!valuesByAttr[attrKey]) valuesByAttr[attrKey] = {};
+                    valuesByAttr[attrKey][val] = true;
+                });
+            });
+            Object.keys(valuesByAttr).forEach(function(attrKey) {
+                var values = Object.keys(valuesByAttr[attrKey]);
+                if (values.length !== 1) return;
+                var val = values[0];
                 var $btn = $form.find('.fh-var-buttons[data-attribute="' + attrKey + '"] .fh-var-btn[data-value="' + val + '"]');
-                if ($btn.length) {
+                if ($btn.length && !$btn.hasClass('selected')) {
                     $btn.trigger('click');
-                } else {
+                } else if (!$btn.length) {
                     // Fallback: set the hidden select directly so WC's
                     // variation form still resolves a match.
                     $form.find('[name="' + attrKey + '"]').val(val).trigger('change');
                 }
             });
         });
+    }
+
+    // Dim attribute values that have no valid in-stock variation given
+    // the customer's current selections. Recomputes on every change to
+    // the form's hidden selects (WC fires `change` on those whenever a
+    // visible button is clicked, when a default attribute resolves on
+    // init, and when the customer clears their selection).
+    function initVariationAvailability() {
+        function recompute($form) {
+            var raw = $form.attr('data-product_variations');
+            if (!raw) return;
+            var variations;
+            try { variations = JSON.parse(raw); } catch (e) { return; }
+            if (!variations) return;
+
+            // Snapshot current selections from the hidden selects.
+            var selections = {};
+            $form.find('select[data-attribute_name]').each(function() {
+                selections[$(this).attr('data-attribute_name')] = $(this).val() || '';
+            });
+
+            $form.find('.fh-var-buttons').each(function() {
+                var $group  = $(this);
+                var attrKey = $group.data('attribute');
+                $group.find('.fh-var-btn').each(function() {
+                    var $btn  = $(this);
+                    var value = String($btn.data('value'));
+                    // Hypothetical: customer just clicked this button on
+                    // top of the current selections. If any in-stock
+                    // variation matches the resulting combo, the value
+                    // stays available.
+                    var hypothetical = $.extend({}, selections);
+                    hypothetical[attrKey] = value;
+                    var available = false;
+                    for (var i = 0; i < variations.length; i++) {
+                        var v = variations[i];
+                        if (!v || !v.is_in_stock || !v.attributes) continue;
+                        var match = true;
+                        for (var k in hypothetical) {
+                            var sel = hypothetical[k];
+                            if (!sel) continue;
+                            var vv = v.attributes[k];
+                            if (vv === undefined) continue;
+                            if (vv === '' || vv === null) continue; // "any" matches anything
+                            if (vv !== sel) { match = false; break; }
+                        }
+                        if (match) { available = true; break; }
+                    }
+                    $btn.toggleClass('unavailable', !available);
+                    // Mirror to the hidden <option> so keyboard / a11y
+                    // users can't pick it either.
+                    $group.closest('.fh-variation-group')
+                        .find('select option')
+                        .filter(function() { return $(this).val() === value; })
+                        .prop('disabled', !available);
+                });
+            });
+        }
+
+        $(document).on('change', '.fh-purchase__form select[data-attribute_name]', function() {
+            recompute($(this).closest('.fh-purchase__form'));
+        });
+        $('.fh-purchase__form').each(function() { recompute($(this)); });
     }
 
     // Gallery thumb switcher
@@ -342,8 +423,11 @@
         // Snapshot purchase state before initVariationButtons binds, and
         // before initVariationAutoSelect dispatches the auto-click so
         // reset_data restores the true server-rendered values.
+        // Availability binds its change listener BEFORE the auto-click
+        // so the first auto-select recompute already runs through it.
         snapshotInitialPurchaseState();
         initVariationButtons();
+        initVariationAvailability();
         initVariationAutoSelect();
         initGallery();
         initMobileNav();

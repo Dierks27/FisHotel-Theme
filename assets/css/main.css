@@ -1199,9 +1199,15 @@ h1, h2, h3, h4, h5 {
   color: var(--fh-gold-lt);
 }
 
+/* Dimmed when the current selection in another attribute eliminates
+   every variation that would include this value. Buttons stay visible
+   (so the customer can see what exists) but pointer-events is killed
+   so the click handler can't fire and accidentally "select" a combo
+   the matrix doesn't actually support. */
 .fh-var-btn.unavailable {
   opacity: 0.3;
   cursor: not-allowed;
+  pointer-events: none;
   text-decoration: line-through;
 }
 

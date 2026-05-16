@@ -170,6 +170,49 @@ add_filter( 'woocommerce_order_button_text', function ( $default ) {
 } );
 
 /*
+ * Checkout — kill WC core's duplicate `wc_checkout_payment()` invocation.
+ *
+ * WC core wires the payment box (#payment + Place Order + nonce) to the
+ * `woocommerce_checkout_order_review` action at priority 20:
+ *
+ *   add_action( 'woocommerce_checkout_order_review', 'woocommerce_checkout_payment', 20 );
+ *
+ * Our Folio layout (PR #26) splits payment out of the right-column order
+ * review into its own card in the LEFT column. form-checkout.php calls
+ * `wc_checkout_payment()` directly inside the payment card AND still
+ * fires `do_action( 'woocommerce_checkout_order_review' )` in the right
+ * column so plugins hooked to that canonical injection point (gift
+ * cards, store credit, etc.) still see it. Without this remove_action,
+ * `wc_checkout_payment()` runs TWICE per request — once in the left
+ * column, once via the priority-20 hook in the right column.
+ *
+ * Two consecutive invocations re-run every gateway's `payment_fields()`
+ * and duplicate `<button id="place_order">` / the
+ * `woocommerce-process-checkout-nonce` hidden field. PayPal Payments,
+ * gift card gateways, and other payment plugins that set up per-render
+ * state (cart token, fraud session id, button SDK init) assume a single
+ * call per request and fatal on the second pass — which is the root
+ * cause of the "There has been a critical error" the checkout has been
+ * throwing since 1.8.4. Visually it presents as the page rendering
+ * cleanly through the first gateway's payment box / gift card form,
+ * then dying before the Place Order button (which lives inside the
+ * second, fatal-time invocation).
+ *
+ * Removing the priority-20 hook lets review-order.php (the priority-10
+ * hook) still fire so the itemized statement renders, while the payment
+ * box only renders once — in the left-column card where we want it.
+ *
+ * Restricted to `is_checkout()` so the unhook doesn't leak to any other
+ * caller of the `woocommerce_checkout_order_review` action.
+ */
+add_action( 'template_redirect', function () {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+		return;
+	}
+	remove_action( 'woocommerce_checkout_order_review', 'woocommerce_checkout_payment', 20 );
+}, 1 );
+
+/*
  * ─────────────────────────────────────────
  * STANDARD WC HOOK COMPATIBILITY
  *

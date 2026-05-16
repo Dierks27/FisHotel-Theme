@@ -106,8 +106,12 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 
 .fh-cat-card__image {
-  height: 200px;
-  background-size: 80%;
+  /* 1:1 slot so the 768×768 placard illustrations land uncropped. The
+     fixed 200px height was forcing landscape and clipping the bottom of
+     every placard. background-size: contain prevents up-scaling on
+     viewports wider than 768px. */
+  aspect-ratio: 1 / 1;
+  background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
   background-color: var(--fh-bg-dkr);

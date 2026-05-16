@@ -247,12 +247,45 @@ function fishotel_stock_badge_label( $in_stock, $max_qty ) {
 }
 
 /**
+ * Clean up a variation label for display. Handles three slug-style
+ * patterns the customer would otherwise see uppercased verbatim:
+ *   - Hyphen-as-decimal between digits ("0-5oz" → "0.5oz")
+ *   - Missing space between number and unit ("1oz" → "1 oz", "3lb" → "3 lb")
+ *   - Slug-style multi-word names ("omnivore-flake" → "omnivore flake")
+ * CSS `text-transform: uppercase` does the rest at render time, so
+ * downstream output looks like "0.5 OZ" / "1 OZ" / "OMNIVORE FLAKE".
+ *
+ * @param string $label Raw term name or option string.
+ * @return string
+ */
+function fishotel_format_variation_label( $label ) {
+    $label = (string) $label;
+    if ( $label === '' ) {
+        return $label;
+    }
+    // Hyphen between two digits is the WP slug-sanitizer's stand-in for
+    // a decimal point. Restore the period first so the "0-5oz" case
+    // becomes "0.5oz" before any other transform runs.
+    $label = preg_replace( '/(\d)-(\d)/', '$1.$2', $label );
+    // Add a space between a number (optionally decimal) and a trailing
+    // alpha unit ("1oz" → "1 oz", "0.5oz" → "0.5 oz", "3lb" → "3 lb").
+    $label = preg_replace( '/(\d(?:\.\d+)?)([a-zA-Z]+)/', '$1 $2', $label );
+    // Any remaining hyphens are word separators in slug-style names.
+    $label = str_replace( '-', ' ', $label );
+    // Collapse runs of whitespace so we don't double-space anything.
+    $label = preg_replace( '/\s+/', ' ', trim( $label ) );
+    return $label;
+}
+
+/**
  * Display label for a single variation-attribute option. For taxonomy
  * attributes WC's `get_variation_attributes()` returns SLUGS, which
  * WordPress sanitizes by replacing periods with hyphens — so the term
  * named "0.5oz" stores a slug of "0-5oz" and the customer would see
- * "0-5OZ" if we rendered the slug directly. Look up the term and prefer
- * its name; fall back to the raw value for custom (non-taxonomy) attrs.
+ * "0-5OZ" if we rendered the slug directly. Look up the term, prefer
+ * its name, fall back to the raw value for custom (non-taxonomy)
+ * attrs, then run the lot through `fishotel_format_variation_label()`
+ * so slug-style stored names get normalised to readable form.
  *
  * @param string $attr_name Attribute taxonomy / name (e.g. `pa_bag-size`).
  * @param string $option    Raw option value as returned by WC.
@@ -261,42 +294,63 @@ function fishotel_stock_badge_label( $in_stock, $max_qty ) {
 function fishotel_variation_option_label( $attr_name, $option ) {
     $attr_name = (string) $attr_name;
     $option    = (string) $option;
+    $raw       = $option;
     if ( $attr_name !== '' && taxonomy_exists( $attr_name ) ) {
         $term = get_term_by( 'slug', $option, $attr_name );
         if ( $term && ! is_wp_error( $term ) && $term->name !== '' ) {
-            return $term->name;
+            $raw = $term->name;
         }
     }
-    return $option;
+    return fishotel_format_variation_label( $raw );
 }
 
 /**
- * Sort variation-attribute options by the first numeric value found in
- * their human-readable label. Fixes the WC default that alphabetizes
- * `pa_bag-size` slugs and produces 0.25OZ / 0.5OZ / 1OZ / 2OZ in the
- * wrong order ("0-25-ounce" < "0-5oz" lexically even though 0.25 < 0.5
- * numerically). Options without an extractable number sort last in
- * their original order (stable).
+ * Sort variation-attribute options by unit group first (oz before lb
+ * before other) then ascending numeric value. Fixes two problems with
+ * the WC default alphabetic-on-slug order:
+ *   - "0-25-ounce" sorts before "0-5oz" because "25" < "5" lexically.
+ *   - "1lb" sorts between "1oz" and "2oz" because the leading number
+ *     wins when units are ignored, scrambling oz / lb pairs.
+ * Options without an extractable number sort last in their original
+ * order (stable).
  *
  * @param array  $options   Raw option values (slugs for taxonomy attrs).
  * @param string $attr_name Attribute taxonomy / name; used to resolve
- *                          display labels for numeric extraction.
+ *                          display labels for unit + number extraction.
  * @return array
  */
 function fishotel_sort_variation_options( $options, $attr_name = '' ) {
     if ( ! is_array( $options ) || count( $options ) < 2 ) {
         return $options;
     }
+
+    $unit_priority = [ 'oz' => 0, 'lb' => 1 ];
+
     $indexed = [];
     foreach ( $options as $i => $slug ) {
         $label = fishotel_variation_option_label( $attr_name, $slug );
         $num   = PHP_INT_MAX;
-        if ( preg_match( '/(\d+(?:\.\d+)?)/', $label, $m ) ) {
-            $num = (float) $m[1];
+        $unit  = '';
+        if ( preg_match( '/(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?/', $label, $m ) ) {
+            $num  = (float) $m[1];
+            $unit = isset( $m[2] ) ? strtolower( $m[2] ) : '';
         }
-        $indexed[] = [ 'slug' => $slug, 'num' => $num, 'idx' => $i ];
+        // No number found → sort last; with a number but an unknown
+        // unit → sort after the known units (oz, lb).
+        if ( $num === PHP_INT_MAX ) {
+            $priority = 99;
+        } elseif ( isset( $unit_priority[ $unit ] ) ) {
+            $priority = $unit_priority[ $unit ];
+        } else {
+            $priority = 2;
+        }
+        $indexed[] = [ 'slug' => $slug, 'priority' => $priority, 'num' => $num, 'idx' => $i ];
     }
+
     usort( $indexed, function ( $a, $b ) {
+        if ( $a['priority'] !== $b['priority'] ) {
+            return $a['priority'] <=> $b['priority'];
+        }
         if ( $a['num'] !== $b['num'] ) {
             return $a['num'] <=> $b['num'];
         }

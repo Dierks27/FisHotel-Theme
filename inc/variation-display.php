@@ -30,6 +30,18 @@ add_filter( 'woocommerce_dropdown_variation_attribute_options_html', function( $
 
     if ( empty( $options ) ) return $html;
 
+    // Sort options (oz first, lb second, ascending within) and resolve
+    // term names for display so the customer sees "0.5 OZ" / "1 OZ"
+    // rather than the WP-sanitized slug forms "0-5OZ" / "1OZ".
+    if ( function_exists( 'fishotel_sort_variation_options' ) ) {
+        $options = fishotel_sort_variation_options( $options, $attribute );
+    }
+    $label_of = function ( $option ) use ( $attribute ) {
+        return function_exists( 'fishotel_variation_option_label' )
+            ? fishotel_variation_option_label( $attribute, $option )
+            : (string) $option;
+    };
+
     $buttons = '';
     foreach ( $options as $option ) {
         $is_selected = sanitize_title( $option ) === sanitize_title( $selected );
@@ -39,7 +51,7 @@ add_filter( 'woocommerce_dropdown_variation_attribute_options_html', function( $
             esc_attr( $classes ),
             esc_attr( $option ),
             esc_attr( $name ),
-            esc_html( $option )
+            esc_html( $label_of( $option ) )
         );
     }
 
@@ -56,7 +68,7 @@ add_filter( 'woocommerce_dropdown_variation_attribute_options_html', function( $
             '<option value="%s" %s>%s</option>',
             esc_attr( $option ),
             selected( $selected, $option, false ),
-            esc_html( $option )
+            esc_html( $label_of( $option ) )
         );
     }
     $select .= '</select>';

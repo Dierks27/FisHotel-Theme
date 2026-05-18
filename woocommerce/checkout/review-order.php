@@ -70,14 +70,20 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 			// that report is_type('variation') via filter but don't actually
 			// expose get_variation_attributes(), and against an attribute
 			// list that comes back non-array from a misbehaving plugin.
+			// Resolve slug values to term names so attributes whose names
+			// contain characters WP strips from slugs (`"`, `.`, `<`, `>`,
+			// `+`) render as entered in admin.
 			$variation_pills = [];
 			if ( $_product->is_type( 'variation' ) && method_exists( $_product, 'get_variation_attributes' ) ) {
 				$variation_attrs = $_product->get_variation_attributes();
 				if ( is_array( $variation_attrs ) ) {
-					foreach ( $variation_attrs as $attr_value ) {
-						if ( is_scalar( $attr_value ) && (string) $attr_value !== '' ) {
-							$variation_pills[] = (string) $attr_value;
-						}
+					foreach ( $variation_attrs as $attr_key => $attr_value ) {
+						if ( ! is_scalar( $attr_value ) || (string) $attr_value === '' ) continue;
+						$taxonomy = preg_replace( '/^attribute_/', '', (string) $attr_key );
+						$label    = function_exists( 'fishotel_variation_option_label' )
+							? fishotel_variation_option_label( $taxonomy, (string) $attr_value )
+							: (string) $attr_value;
+						$variation_pills[] = $label;
 					}
 				}
 			}

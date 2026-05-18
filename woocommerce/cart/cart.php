@@ -83,12 +83,20 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 					$sci_name = wp_strip_all_tags( (string) get_post_field( 'post_excerpt', $product_id ) );
 
 					// Variation pills — one pill per chosen attribute value.
+					// `get_variation_attributes()` returns slugs keyed by
+					// `attribute_<taxonomy>` (e.g. `attribute_pa_size => 2-3-5`).
+					// Resolve each slug to its term name so pills preserve the
+					// admin-entered label, including characters WP strips from
+					// slugs (`"`, `.`, `<`, `>`, `+`).
 					$variation_pills = [];
 					if ( $_product->is_type( 'variation' ) ) {
-						foreach ( $_product->get_variation_attributes() as $attr_value ) {
-							if ( $attr_value !== '' ) {
-								$variation_pills[] = $attr_value;
-							}
+						foreach ( $_product->get_variation_attributes() as $attr_key => $attr_value ) {
+							if ( $attr_value === '' ) continue;
+							$taxonomy = preg_replace( '/^attribute_/', '', (string) $attr_key );
+							$label    = function_exists( 'fishotel_variation_option_label' )
+								? fishotel_variation_option_label( $taxonomy, $attr_value )
+								: $attr_value;
+							$variation_pills[] = $label;
 						}
 					}
 

@@ -188,23 +188,36 @@ function fishotel_cs_size_options( $product ) {
 	}
 	// Prefer an attribute key matching /size/ (handles pa_size, size,
 	// attribute_pa_size, etc.). Otherwise use the first attribute.
-	$picked = null;
+	$picked_key = null;
+	$picked     = null;
 	foreach ( $attrs as $key => $values ) {
 		if ( stripos( $key, 'size' ) !== false ) {
-			$picked = $values;
+			$picked_key = (string) $key;
+			$picked     = $values;
 			break;
 		}
 	}
 	if ( $picked === null ) {
-		$picked = reset( $attrs );
+		$picked_key = (string) key( $attrs );
+		$picked     = reset( $attrs );
 	}
-	$out = [];
+	// `get_variation_attributes()` returns slugs for taxonomy attrs, so
+	// resolve each to its term name before display — otherwise terms
+	// with non-URL-safe characters (`"`, `.`, `<`, `>`, `+`) surface as
+	// stripped slugs like "1" / "2-3-5" instead of "<1\"" / "2-3.5\"".
+	$out  = [];
+	$seen = [];
 	foreach ( (array) $picked as $val ) {
 		$val = trim( (string) $val );
 		if ( $val === '' ) continue;
-		$out[] = $val;
+		$label = function_exists( 'fishotel_variation_option_label' )
+			? fishotel_variation_option_label( $picked_key, $val )
+			: $val;
+		if ( $label === '' || isset( $seen[ $label ] ) ) continue;
+		$seen[ $label ] = true;
+		$out[]          = $label;
 	}
-	return array_values( array_unique( $out ) );
+	return $out;
 }
 
 /**

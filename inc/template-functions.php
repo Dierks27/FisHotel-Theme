@@ -280,12 +280,17 @@ function fishotel_format_variation_label( $label ) {
 /**
  * Display label for a single variation-attribute option. For taxonomy
  * attributes WC's `get_variation_attributes()` returns SLUGS, which
- * WordPress sanitizes by replacing periods with hyphens — so the term
- * named "0.5oz" stores a slug of "0-5oz" and the customer would see
- * "0-5OZ" if we rendered the slug directly. Look up the term, prefer
- * its name, fall back to the raw value for custom (non-taxonomy)
- * attrs, then run the lot through `fishotel_format_variation_label()`
- * so slug-style stored names get normalised to readable form.
+ * WordPress sanitizes — periods become hyphens, and characters like
+ * `"`, `<`, `>`, `+` are stripped entirely. Rendering the slug
+ * directly would show "0-5OZ" / "2-3-5" / "1" for terms admin
+ * actually named "0.5oz" / "2-3.5\"" / "<1\"". Look up the term and
+ * return its name verbatim so display preserves whatever admin
+ * entered, including non-URL-safe characters.
+ *
+ * Only when no term resolves (rare — orphaned slug or non-taxonomy
+ * attribute whose option still looks slug-style) do we run the raw
+ * value through `fishotel_format_variation_label()` to recover
+ * decimals + spaces.
  *
  * @param string $attr_name Attribute taxonomy / name (e.g. `pa_bag-size`).
  * @param string $option    Raw option value as returned by WC.
@@ -294,14 +299,13 @@ function fishotel_format_variation_label( $label ) {
 function fishotel_variation_option_label( $attr_name, $option ) {
     $attr_name = (string) $attr_name;
     $option    = (string) $option;
-    $raw       = $option;
     if ( $attr_name !== '' && taxonomy_exists( $attr_name ) ) {
         $term = get_term_by( 'slug', $option, $attr_name );
         if ( $term && ! is_wp_error( $term ) && $term->name !== '' ) {
-            $raw = $term->name;
+            return $term->name;
         }
     }
-    return fishotel_format_variation_label( $raw );
+    return fishotel_format_variation_label( $option );
 }
 
 /**

@@ -138,6 +138,8 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 		</tr>
 		<?php endforeach; ?>
 
+		<?php do_action( 'woocommerce_review_order_before_shipping' ); ?>
+
 		<?php if ( $cart->needs_shipping() && $cart->show_shipping() ) : ?>
 		<tr class="fh-statement-ledger__row fh-statement-ledger__shipping">
 			<td colspan="2" class="fh-statement-ledger__label">
@@ -155,6 +157,8 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 			</td>
 		</tr>
 		<?php endif; ?>
+
+		<?php do_action( 'woocommerce_review_order_after_shipping' ); ?>
 
 		<?php foreach ( $cart->get_fees() as $fee ) : ?>
 		<tr class="fh-statement-ledger__row fh-statement-ledger__fee">

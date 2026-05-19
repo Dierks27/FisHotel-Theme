@@ -1986,6 +1986,155 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   font-weight: 500;
 }
 
+/* ── WC Gift Cards account-balance checkbox ──
+   Plugin emits a raw <label><input type="checkbox">…</label> row inside
+   the ledger via `WC_GC_Cart::print_gift_cards` on
+   `woocommerce_review_order_before_order_total`. Restyle it in place so
+   the row reads as a native ledger entry (subtotal-row body weight, gold
+   accent on the price) rather than the default browser checkbox + small
+   caps row. */
+.fh-statement-table label[for="use_gift_card_balance"],
+.fh-statement-table label[for^="apply_gift_card_balance"] {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-family: var(--fh-font);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--fh-text-1);
+  line-height: 1.4;
+  cursor: pointer;
+  margin: 0;
+}
+.fh-statement-table label[for="use_gift_card_balance"] strong,
+.fh-statement-table label[for^="apply_gift_card_balance"] strong,
+.fh-statement-table label[for="use_gift_card_balance"] .woocommerce-Price-amount,
+.fh-statement-table label[for^="apply_gift_card_balance"] .woocommerce-Price-amount {
+  color: var(--fh-gold);
+  font-weight: 600;
+}
+.fh-statement-table input[type="checkbox"]#use_gift_card_balance,
+.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 2px solid var(--fh-gold);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  vertical-align: top;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.fh-statement-table input[type="checkbox"]#use_gift_card_balance:hover,
+.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"]:hover {
+  border-color: var(--fh-gold-lt);
+}
+.fh-statement-table input[type="checkbox"]#use_gift_card_balance:checked,
+.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"]:checked {
+  background: var(--fh-gold);
+  border-color: var(--fh-gold);
+}
+.fh-statement-table input[type="checkbox"]#use_gift_card_balance:checked::after,
+.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: -1px;
+  width: 5px;
+  height: 10px;
+  border: solid #1c1c1c;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.fh-statement-table input[type="checkbox"]#use_gift_card_balance:focus-visible,
+.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"]:focus-visible {
+  outline: 2px solid var(--fh-gold-lt);
+  outline-offset: 2px;
+}
+/* The plugin's wrapper row — give it the same vertical rhythm as other
+   ledger rows so it doesn't sit visually crammed next to Tax / Total. */
+.fh-statement-table tr.wc_gc_apply_gift_card_balance_row td,
+.fh-statement-table tr.wc-gc-balance-row td,
+.fh-statement-table tr:has(> td > label[for="use_gift_card_balance"]) td,
+.fh-statement-table tr:has(> td > label[for^="apply_gift_card_balance"]) td {
+  padding: 10px 0;
+  font-size: 12px;
+  border-top: 1px dashed var(--fh-gold-rule);
+}
+
+/* ── FisHotel Batch Manager delivery-date field ──
+   Plugin injects `<div id="fishotel-shipping-date-field">` containing a
+   WC `woocommerce_form_field()` <select> on `woocommerce_after_order_notes`.
+   Render it as a highlighted gold-accent card so customers see it as the
+   "when does it ship?" picker rather than a generic dropdown that blends
+   into the address form. Cart must contain fish for the plugin to render
+   this — when absent the wrapper isn't emitted at all, so no empty
+   chrome leaks. */
+#fishotel-shipping-date-field {
+  background: rgba(201, 150, 58, 0.04);
+  border-left: 3px solid var(--fh-gold);
+  border-radius: 2px;
+  padding: 14px 16px 16px;
+  margin-top: 18px;
+}
+#fishotel-shipping-date-field label {
+  display: block;
+  font-family: var(--fh-font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--fh-gold);
+  margin-bottom: 8px;
+}
+#fishotel-shipping-date-field select,
+#fishotel-shipping-date-field .woocommerce-input-wrapper select {
+  width: 100%;
+  background: var(--fh-bg-lt);
+  border: 1px solid var(--fh-border);
+  color: var(--fh-text-1);
+  padding: 11px 14px;
+  font-family: var(--fh-font);
+  font-size: 13px;
+  border-radius: 2px;
+}
+#fishotel-shipping-date-field select:focus,
+#fishotel-shipping-date-field .woocommerce-input-wrapper select:focus {
+  border-color: var(--fh-border-gold, var(--fh-gold));
+  outline: none;
+}
+#fishotel-shipping-date-field select option {
+  background: var(--fh-bg-lt);
+  color: var(--fh-text-1);
+}
+#fishotel-shipping-date-field .description {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--fh-text-3);
+  line-height: 1.4;
+}
+
+/* ── Suppress orphaned WP Calendar block ──
+   The "The calendar block is hidden because there are no published posts."
+   notice leaks onto the frontend when a widget area or page block has a
+   `wp-block-calendar` with no posts to back it. The site doesn't use the
+   calendar anywhere intentionally, so hide it site-wide. */
+.wp-block-calendar:has(.wp-block-calendar__no-results),
+.wp-block-calendar:empty,
+.widget_calendar:empty,
+.wp-block-latest-posts__placeholder,
+.wp-block-calendar__no-results {
+  display: none !important;
+}
+
 /* ── Mobile ── */
 @media (max-width: 900px) {
   .fh-checkout-layout { grid-template-columns: 1fr; }

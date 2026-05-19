@@ -106,6 +106,11 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 				</div>
 				<?php endif; ?>
 
+				<?php /* Standard WC injection point — must fire BEFORE the
+				        billing card so plugins that prepend content to the
+				        customer details section land in the right place. */ ?>
+				<?php do_action( 'woocommerce_checkout_before_customer_details' ); ?>
+
 				<?php /* Guest Details card (billing form) */ ?>
 				<div class="fh-checkout-card fh-checkout-billing">
 					<header class="fh-checkout-card__header">
@@ -125,7 +130,23 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 						<span class="fh-checkout-card__eyebrow"><?php echo esc_html( $section_delivery ); ?></span>
 					</header>
 					<?php do_action( 'woocommerce_checkout_shipping' ); ?>
+
+					<?php /* Order notes injection point. We don't render WC's
+					        order-notes textarea ourselves, but the FisHotel
+					        Batch Manager (and any other plugin on these hooks)
+					        injects fields like the delivery-date dropdown into
+					        `_after_order_notes`. Firing the pair keeps that
+					        plugin contract intact. */ ?>
+					<?php do_action( 'woocommerce_before_order_notes', $checkout ); ?>
+					<?php do_action( 'woocommerce_after_order_notes', $checkout ); ?>
 				</div>
+
+				<?php /* Customer details section close — fires after billing,
+				        shipping, and order-notes injection are all done.
+				        Payment is logically part of "order review" so it sits
+				        below this marker even though we render it in the same
+				        left column. */ ?>
+				<?php do_action( 'woocommerce_checkout_after_customer_details' ); ?>
 
 				<?php /* Payment Method card. woocommerce_checkout_payment()
 				        loads WC's standard checkout/payment.php template,
@@ -146,6 +167,7 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 			<?php /* ── RIGHT COLUMN — Itemized Statement (sticky) ── */ ?>
 			<aside class="fh-checkout-right">
 				<div class="fh-checkout-card fh-checkout-statement">
+					<?php do_action( 'woocommerce_checkout_before_order_review_heading' ); ?>
 					<header class="fh-checkout-card__header">
 						<span class="fh-checkout-card__eyebrow"><?php echo esc_html( $section_statement ); ?></span>
 					</header>

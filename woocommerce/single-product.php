@@ -412,6 +412,12 @@ while ( have_posts() ) :
                     <button type="button" class="fh-qty__down" aria-label="Decrease">&#9660;</button>
                     <input type="hidden" name="quantity" id="fh-qty-input" value="1" min="1">
                 </div>
+                <?php /* Standard WC injection point for plugins that add fields
+                        to the add-to-cart form (WC Gift Cards' recipient email /
+                        sender name / message, custom-fields plugins, etc.).
+                        Required: WC Gift Cards refuses cart submissions when
+                        its fields aren't rendered ("required data is missing"). */ ?>
+                <?php do_action( 'woocommerce_before_add_to_cart_button' ); ?>
                 <button type="submit"
                         name="add-to-cart"
                         value="<?php echo esc_attr($product->get_id()); ?>"

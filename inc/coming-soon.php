@@ -129,7 +129,7 @@ function fishotel_cs_render_arrival_panel( $product, $release_ts ) {
 			<span class="fh-arrival-panel__sizes-label">Sizes</span>
 			<?php foreach ( $sizes as $size ) : ?>
 				<span class="fh-arrival-panel__bullet" aria-hidden="true">·</span>
-				<span class="fh-arrival-panel__seg"><?php echo esc_html( $size ); ?></span>
+				<span class="fh-arrival-panel__seg<?php echo empty( $size['available'] ) ? ' unavailable' : ''; ?>"><?php echo esc_html( $size['label'] ); ?></span>
 			<?php endforeach; ?>
 		</div>
 		<?php endif; ?>
@@ -169,14 +169,17 @@ function fishotel_cs_total_stock( $product ) {
 }
 
 /**
- * Available size options for a variable product. Returns the unique
- * set of values for whichever variation attribute reads as "size-like"
- * — falls back to the first variation attribute if no size is found.
+ * Available size options for a variable product. Returns one tuple per
+ * unique size term with the display label and whether at least one
+ * variation carrying that size is currently in stock — mirrors the
+ * post-release PDP button dimming so customers see the same
+ * available / unavailable signal before and after release.
+ *
  * Empty array for simple products or variables with no published
  * variations.
  *
  * @param WC_Product $product
- * @return string[]
+ * @return array<int, array{label:string, available:bool}>
  */
 function fishotel_cs_size_options( $product ) {
 	if ( ! $product instanceof WC_Product || ! $product->is_type( 'variable' ) ) {
@@ -201,6 +204,24 @@ function fishotel_cs_size_options( $product ) {
 		$picked_key = (string) key( $attrs );
 		$picked     = reset( $attrs );
 	}
+
+	// Map slug => in-stock? for the picked attribute. Variations matching
+	// the "any" value of an attribute (empty string) cover every size, so
+	// track that as a separate flag and short-circuit the per-size check.
+	$attr_key     = 'attribute_' . sanitize_title( $picked_key );
+	$in_stock     = [];
+	$any_in_stock = false;
+	foreach ( $product->get_available_variations() as $v ) {
+		if ( empty( $v['is_in_stock'] ) || empty( $v['attributes'] ) ) continue;
+		if ( ! array_key_exists( $attr_key, $v['attributes'] ) ) continue;
+		$val = (string) $v['attributes'][ $attr_key ];
+		if ( $val === '' ) {
+			$any_in_stock = true;
+		} else {
+			$in_stock[ sanitize_title( $val ) ] = true;
+		}
+	}
+
 	// `get_variation_attributes()` returns slugs for taxonomy attrs, so
 	// resolve each to its term name before display — otherwise terms
 	// with non-URL-safe characters (`"`, `.`, `<`, `>`, `+`) surface as
@@ -215,7 +236,10 @@ function fishotel_cs_size_options( $product ) {
 			: $val;
 		if ( $label === '' || isset( $seen[ $label ] ) ) continue;
 		$seen[ $label ] = true;
-		$out[]          = $label;
+		$out[]          = [
+			'label'     => $label,
+			'available' => $any_in_stock || isset( $in_stock[ sanitize_title( $val ) ] ),
+		];
 	}
 	return $out;
 }

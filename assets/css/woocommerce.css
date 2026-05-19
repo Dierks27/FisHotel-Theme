@@ -849,6 +849,13 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   /* Slightly muted to read as a label distinct from the values. */
   opacity: 0.75;
 }
+.fh-arrival-panel__sizes .fh-arrival-panel__seg.unavailable {
+  /* Sizes whose variations are all OOS in the incoming batch — same
+     dim treatment as `.fh-var-btn.unavailable` on the post-release
+     PDP buttons. Scoped to the sizes row so the countdown segments
+     stay full opacity. */
+  opacity: 0.3;
+}
 .fh-arrival-panel__btn {
   /* Reuses .fh-btn .fh-btn--ghost .fh-btn--full from main.css for
      shape, typography, and dimensions. Tinted turquoise here only —

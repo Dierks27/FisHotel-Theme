@@ -190,6 +190,13 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 			<?php endif; ?>
 		<?php endif; ?>
 
+		<?php /* Canonical WC hook plugins use to inject lines above the
+		        Total row — WC Gift Cards' `WC_GC_Cart::print_gift_cards`
+		        runs here at priority 10, rendering both applied-card line
+		        items and the "Use $XX.XX from your Gift Cards balance"
+		        checkbox. Must fire BEFORE the total `<tr>` so the markup
+		        lands above it. */ ?>
+		<?php do_action( 'woocommerce_review_order_before_order_total' ); ?>
 		<tr class="fh-statement-ledger__row fh-statement-ledger__total">
 			<td colspan="2" class="fh-statement-ledger__label"><?php esc_html_e( 'Total', 'fishotel' ); ?></td>
 			<td class="fh-statement-ledger__value"><?php wc_cart_totals_order_total_html(); ?></td>

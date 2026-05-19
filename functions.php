@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.9.5' );
+define( 'FISHOTEL_THEME_VERSION', '1.9.6' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -131,6 +131,31 @@ function fishotel_enqueue_assets() {
 	}
 }
 add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_assets' );
+
+/**
+ * Re-add a cache-bust param to theme asset URLs after the security
+ * plugin strips `?ver=`. Really Simple Security's "Hide your WordPress
+ * version" hardening removes every `?ver=` query string from enqueued
+ * CSS/JS — which also kills the cache-bust timestamps `fishotel_asset_version()`
+ * generates, leaving customers on stale CSS/JS after deploys.
+ *
+ * Uses a different query key (`fhv`) so the security plugin's `?ver=`
+ * filter doesn't strip it again, and only touches URLs containing
+ * `/fishotel-theme/` so WP core + plugin assets stay unversioned.
+ * Priority 999 runs last, after any stripping filters.
+ */
+function fishotel_cachebust_src( $src ) {
+	if ( ! is_string( $src ) || strpos( $src, '/fishotel-theme/' ) === false ) {
+		return $src;
+	}
+	$relative = str_replace( FISHOTEL_THEME_URI . '/', '', strtok( $src, '?' ) );
+	$file     = FISHOTEL_THEME_DIR . '/' . $relative;
+	$stamp    = file_exists( $file ) ? filemtime( $file ) : FISHOTEL_THEME_VERSION;
+	$sep      = ( strpos( $src, '?' ) !== false ) ? '&' : '?';
+	return $src . $sep . 'fhv=' . $stamp;
+}
+add_filter( 'style_loader_src',  'fishotel_cachebust_src', 999 );
+add_filter( 'script_loader_src', 'fishotel_cachebust_src', 999 );
 
 // ─────────────────────────────────────────
 // INCLUDE MODULES

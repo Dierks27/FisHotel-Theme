@@ -1,14 +1,14 @@
 <?php get_header(); ?>
 <?php
 /**
- * The cart + checkout pages render their own hero + full-width layout
- * via woocommerce/cart/cart.php / cart-empty.php / checkout/form-checkout.php.
- * Skip the generic page wrapper here so we don't get a duplicate
- * <h1>CART</h1> / <h1>CHECKOUT</h1> heading AND the 800px content cap
- * stomping on the WC pages' 1300px grids.
+ * The cart + checkout + My Account pages render their own hero + full-width
+ * layout (woocommerce/cart/*, woocommerce/checkout/*, woocommerce/myaccount/*).
+ * Skip the generic page wrapper here so we don't get a duplicate page hero
+ * heading AND the 800px content cap stomping on those WC pages' wider grids.
  */
 $is_full_bleed_wc = ( function_exists( 'is_cart' ) && is_cart() )
-	|| ( function_exists( 'is_checkout' ) && is_checkout() );
+	|| ( function_exists( 'is_checkout' ) && is_checkout() )
+	|| ( function_exists( 'is_account_page' ) && is_account_page() );
 if ( $is_full_bleed_wc ) :
 	while ( have_posts() ) :
 		the_post();

@@ -26,10 +26,9 @@ defined( 'ABSPATH' ) || exit;
  */
 function fishotel_account_normalize_slug( $slug ) {
 	$aliases = [
-		'my-wallet'        => 'wallet',
-		'house-account'    => 'wallet',
-		'gift_cards'       => 'gift-cards',
-		'special-requests' => 'custom-orders',
+		'my-wallet'     => 'wallet',
+		'house-account' => 'wallet',
+		'gift_cards'    => 'gift-cards',
 	];
 	return $aliases[ $slug ] ?? $slug;
 }
@@ -53,7 +52,6 @@ function fishotel_account_labels() {
 		// Plugin endpoints (aliases handled in the filter below).
 		'gift-cards'      => __( 'Gift Cards', 'fishotel' ),
 		'wallet'          => __( 'House Account', 'fishotel' ),
-		'custom-orders'   => __( 'Special Requests', 'fishotel' ),
 	];
 }
 
@@ -122,7 +120,6 @@ function fishotel_account_titles() {
 		'payment-methods' => __( 'BILLING', 'fishotel' ),
 		'gift-cards'      => __( 'GIFT CARDS', 'fishotel' ),
 		'wallet'          => __( 'HOUSE ACCOUNT', 'fishotel' ),
-		'custom-orders'   => __( 'SPECIAL REQUESTS', 'fishotel' ),
 	];
 }
 
@@ -141,7 +138,6 @@ function fishotel_account_subtitle_keys() {
 		'payment-methods' => 'fh_account_subtitle_payment_methods',
 		'gift-cards'      => 'fh_account_subtitle_gift_cards',
 		'wallet'          => 'fh_account_subtitle_house_account',
-		'custom-orders'   => 'fh_account_subtitle_special_requests',
 	];
 }
 
@@ -161,7 +157,9 @@ function fishotel_account_text_defaults() {
 		'fh_account_subtitle_payment_methods' => 'Manage how you settle the bill.',
 		'fh_account_subtitle_gift_cards'      => 'Manage gift cards and check balances.',
 		'fh_account_subtitle_house_account'   => 'Your running tab at The FisHotel.',
-		'fh_account_subtitle_special_requests'=> 'Concierge service for fish not currently in residence.',
+		// Gift Cards sidebar link (manual, non-endpoint). Empty default → the
+		// helper falls back to the gift-card product permalink at runtime.
+		'fishotel_account_gift_cards_url'     => '',
 		// Greeting
 		'fh_account_greeting_prefix'          => 'Welcome back,',
 		// Empty states
@@ -202,6 +200,20 @@ function fishotel_account_text( $key ) {
 }
 
 /**
+ * URL the Gift Cards sidebar link points to. Editable via FisHotel Settings →
+ * My Account; falls back to the gift-card product permalink when unset.
+ *
+ * @return string
+ */
+function fishotel_account_gift_cards_url() {
+	$url = fishotel_account_text( 'fishotel_account_gift_cards_url' );
+	if ( trim( (string) $url ) === '' ) {
+		$url = home_url( '/my-account/gift-cards/' );
+	}
+	return $url;
+}
+
+/**
  * Resolve the current account endpoint slug, normalizing the empty
  * (dashboard) case and a couple of plugin aliases.
  *
@@ -219,9 +231,9 @@ function fishotel_account_current_endpoint() {
 }
 
 /**
- * Wrap plugin-driven endpoints (Gift Cards, House Account, Special Requests,
- * or any non-core endpoint) in a styled card so they inherit the section's
- * panel treatment. Core endpoints render their own cards, so they're skipped.
+ * Wrap plugin-driven endpoints (e.g. House Account, or any non-core endpoint)
+ * in a styled card so they inherit the section's panel treatment. Core
+ * endpoints render their own cards, so they're skipped.
  */
 function fishotel_account_is_core_endpoint( $endpoint ) {
 	$core = [

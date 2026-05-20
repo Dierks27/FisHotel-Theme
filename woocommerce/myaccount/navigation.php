@@ -3,11 +3,9 @@
  * FisHotel — Concierge directory (account sidebar navigation).
  *
  * Rebuilds the WooCommerce account nav as grouped sections plus a standalone
- * Check Out, each item carrying an inline-SVG icon. Endpoint items come from
+ * Check Out, each item carrying an inline-SVG icon. Items come from
  * wc_get_account_menu_items() (already relabeled by inc/account-relabels.php),
- * so plugin endpoints appear only when registered. Gift Cards is a manual link
- * to the gift-card product page (not a WC account endpoint), so it's rendered
- * directly rather than through the endpoint loop.
+ * so plugin endpoints (Gift Cards, House Account) appear only when registered.
  *
  * @package FisHotel
  */
@@ -26,16 +24,17 @@ $icons = [
 	'edit-account'    => 'fishotel_icon_guest_profile',
 	'edit-address'    => 'fishotel_icon_forwarding_addresses',
 	'payment-methods' => 'fishotel_icon_billing',
+	'giftcards'       => 'fishotel_icon_gift_cards',
 	'wallet'          => 'fishotel_icon_house_account',
 	'customer-logout' => 'fishotel_icon_check_out',
 ];
 
-// Grouped layout. `slugs` are WC endpoints (rendered via the endpoint loop);
-// `manual` are static links (e.g. Gift Cards → a product page) rendered first.
+// Grouped layout. Each group lists canonical endpoint slugs in display order;
+// items render only when their endpoint is registered.
 $groups = [
 	[ 'label' => __( 'YOUR STAYS', 'fishotel' ),   'slugs' => [ 'dashboard', 'orders' ] ],
 	[ 'label' => __( 'YOUR PROFILE', 'fishotel' ), 'slugs' => [ 'edit-account', 'edit-address', 'payment-methods' ] ],
-	[ 'label' => __( 'PERKS', 'fishotel' ),        'slugs' => [ 'wallet' ], 'manual' => [ 'gift-cards' ] ],
+	[ 'label' => __( 'PERKS', 'fishotel' ),        'slugs' => [ 'giftcards', 'wallet' ] ],
 ];
 
 // Index registered items by canonical slug, retaining the raw slug for URLs.
@@ -67,23 +66,6 @@ $render_item = function ( $canonical, $entry ) use ( $icons, $current ) {
 	</a>
 	<?php
 };
-
-/**
- * Render a manual (non-endpoint) nav item. Never shows an active state because
- * the link leaves the account layout entirely.
- */
-$render_manual = function ( $key ) {
-	if ( $key !== 'gift-cards' ) {
-		return;
-	}
-	$url = function_exists( 'fishotel_account_gift_cards_url' ) ? fishotel_account_gift_cards_url() : home_url( '/my-account/gift-cards/' );
-	?>
-	<a href="<?php echo esc_url( $url ); ?>" class="fh-nav-item">
-		<?php echo fishotel_icon_gift_cards(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted inline SVG. ?>
-		<span><?php esc_html_e( 'Gift Cards', 'fishotel' ); ?></span>
-	</a>
-	<?php
-};
 ?>
 <nav class="fh-account-nav woocommerce-MyAccount-navigation" aria-label="<?php esc_attr_e( 'Account', 'fishotel' ); ?>">
 
@@ -110,13 +92,11 @@ $render_manual = function ( $key ) {
 		<?php $first_group = true; ?>
 		<?php foreach ( $groups as $group ) :
 			$slugs   = $group['slugs'] ?? [];
-			$manual  = $group['manual'] ?? [];
 			$present = array_filter( $slugs, function ( $s ) use ( $by_canonical ) {
 				return isset( $by_canonical[ $s ] );
 			} );
-			// Skip a group only when it has neither a present endpoint nor a
-			// manual link.
-			if ( empty( $present ) && empty( $manual ) ) {
+			// Skip a group entirely if none of its endpoints are registered.
+			if ( empty( $present ) ) {
 				continue;
 			}
 			?>
@@ -126,10 +106,6 @@ $render_manual = function ( $key ) {
 			<?php $first_group = false; ?>
 
 			<div class="fh-account-nav__group-label"><?php echo esc_html( $group['label'] ); ?></div>
-
-			<?php foreach ( $manual as $key ) {
-				$render_manual( $key );
-			} ?>
 
 			<?php foreach ( $slugs as $canonical ) :
 				if ( ! isset( $by_canonical[ $canonical ] ) ) {

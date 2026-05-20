@@ -12,13 +12,21 @@ while ( have_posts() ) :
     global $product;
     $product_id  = $product->get_ID();
 
+    // WC Gift Cards does NOT register a custom product type — gift-card
+    // products stay `simple`/`variable` and are flagged only by the
+    // `_gift_card` meta. Detect that here so the add-to-cart path can defer
+    // to the plugin's native denomination + gift form rather than building
+    // our own variation UI over the top of it.
+    $is_gift_card = ( $product instanceof WC_Product ) && 'yes' === $product->get_meta( '_gift_card' );
+
     // The theme overrides the default `woocommerce_template_single_add_to_cart`
     // action in inc/woocommerce.php, which is what normally enqueues
     // `wc-add-to-cart-variation` (it ships with WC's variable.php template
     // part). Enqueue it explicitly for variable products so wc_variation_form()
     // auto-initialises and the hidden `variation_id` input gets populated when
-    // the user picks a combo.
-    if ( $product && 'variable' === $product->get_type() ) {
+    // the user picks a combo. Skipped for gift cards — the GC plugin runs
+    // its own denomination JS.
+    if ( $product && 'variable' === $product->get_type() && ! $is_gift_card ) {
         wp_enqueue_script( 'wc-add-to-cart-variation' );
     }
 
@@ -236,7 +244,7 @@ while ( have_posts() ) :
         // the stock badge, and the auto-select hint on the variations form.
         // JS (main.js) updates these slots on found_variation/reset_data so
         // layout never shifts as the user picks a combo.
-        $is_variable     = ( 'variable' === $product->get_type() );
+        $is_variable     = ( 'variable' === $product->get_type() ) && ! $is_gift_card;
         $variations_data = $is_variable ? $product->get_available_variations() : [];
 
         // Drop OOS variations entirely. The size row never renders an
@@ -303,11 +311,16 @@ while ( have_posts() ) :
         <div class="fh-purchase__from"><?php echo $eyebrow_initial !== '' ? esc_html( $eyebrow_initial ) : '&nbsp;'; ?></div>
         <div class="fh-purchase__price"><?php echo wp_kses_post( $price_initial ); ?></div>
 
-        <?php /* Variation selectors + Add to Cart form. Only `simple` and
-                `variable` products use our custom form; non-standard types
-                (e.g. WC Gift Cards' `gift-card`) fall through to the plugin's
-                own native form in the else branch below. */ ?>
-        <?php if ( in_array( $product->get_type(), array( 'simple', 'variable' ), true ) ) : ?>
+        <?php /* Variation selectors + Add to Cart form. Gift cards (any
+                product type, flagged by `_gift_card` meta) defer to the WC
+                Gift Cards native form — denomination picker, "Send as gift?"
+                toggle, recipient/sender/message, and its own Add to Cart
+                button. `simple`/`variable` non-gift-card products use our
+                custom form; any other type also falls through to its own
+                product-type template. */ ?>
+        <?php if ( $is_gift_card ) : ?>
+        <?php do_action( 'woocommerce_' . $product->get_type() . '_add_to_cart' ); ?>
+        <?php elseif ( in_array( $product->get_type(), array( 'simple', 'variable' ), true ) ) : ?>
         <?php do_action('woocommerce_before_add_to_cart_form'); ?>
         <form class="fh-purchase__form variations_form cart"
               action="<?php echo esc_url(apply_filters('woocommerce_add_to_cart_form_action', $product->get_permalink())); ?>"
@@ -450,17 +463,12 @@ while ( have_posts() ) :
         </form>
         <?php do_action('woocommerce_after_add_to_cart_form'); ?>
         <?php else : ?>
-        <?php /* Non-standard product types build their own complete
-                add-to-cart form via the product-type-specific hook. WC
-                Gift Cards renders its recipient / sender / message /
-                amount fields AND its own submit button through
-                `woocommerce_gift-card_add_to_cart`. Rendering our custom
-                form for these omits the plugin's required fields (the
-                "Some required data is missing" cart error), so defer to
-                the plugin exactly as WC core's content-single-product.php
-                does. The type hook fires `woocommerce_before_add_to_cart_form`
-                / `_after_add_to_cart_form` itself, so we don't fire them
-                here. */ ?>
+        <?php /* Any other (non-simple/variable, non-gift-card) product type
+                builds its own complete add-to-cart form via the
+                product-type-specific hook, exactly as WC core's
+                content-single-product.php does. The type hook fires
+                `woocommerce_before_add_to_cart_form` / `_after_add_to_cart_form`
+                itself, so we don't fire them here. */ ?>
         <?php do_action( 'woocommerce_' . $product->get_type() . '_add_to_cart' ); ?>
         <?php endif; ?>
 

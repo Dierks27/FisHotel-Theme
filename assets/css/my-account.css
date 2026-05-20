@@ -777,3 +777,144 @@ body.woocommerce-account { background: var(--fha-bg); }
 	.fh-orders-table td::before { content: attr(data-title); color: var(--fha-gold); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; }
 	.fh-orders-table td.col-actions { justify-content: flex-end; }
 }
+
+/* ─────────────────────────────────────────
+   GIFT CARDS ENDPOINT (WooCommerce Gift Cards plugin)
+   Content is wrapped in .fh-account-plugin-wrap (a .fh-card) by the
+   plugin-endpoint wrapper in inc/account-relabels.php. Selectors target the
+   plugin's wc_gc_* output where its class names are known, with generic
+   element fallbacks inside the wrapper so the skin holds even if the markup
+   differs slightly across plugin versions.
+───────────────────────────────────────── */
+
+/* Section blocks: even spacing + thin divider between the four areas. */
+.fh-account-plugin-wrap > div + div,
+.fh-account-plugin-wrap > section + section {
+	margin-top: 32px;
+	padding-top: 32px;
+	border-top: 1px solid var(--fha-border-soft);
+}
+
+/* Section headings → gold caps eyebrow. */
+.fh-account-plugin-wrap h2,
+.fh-account-plugin-wrap h3 {
+	font-family: var(--fha-font-ui);
+	font-size: 11px;
+	letter-spacing: 0.3em;
+	text-transform: uppercase;
+	color: var(--fha-gold);
+	font-weight: 500;
+	margin: 0 0 16px;
+}
+
+/* YOUR BALANCE → big confident gold Playfair amount. */
+.fh-account-plugin-wrap .wc_gc_account_balance,
+.fh-account-plugin-wrap .wc-gc-account-balance,
+.fh-account-plugin-wrap .gift-card-balance,
+.fh-account-plugin-wrap .balance {
+	font-family: var(--fha-font-display);
+	font-size: 48px;
+	font-weight: 500;
+	line-height: 1;
+	color: var(--fha-gold);
+}
+.fh-account-plugin-wrap .wc_gc_account_balance .woocommerce-Price-amount,
+.fh-account-plugin-wrap .balance .woocommerce-Price-amount {
+	font-family: var(--fha-font-display);
+	color: var(--fha-gold);
+}
+
+/* ADD A GIFT CARD? → themed redemption form. */
+.fh-account-plugin-wrap form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	align-items: stretch;
+}
+.fh-account-plugin-wrap input[type="text"],
+.fh-account-plugin-wrap input.input-text {
+	flex: 1 1 240px;
+	background: var(--fha-input);
+	border: 1px solid var(--fha-border);
+	border-bottom: 1px solid var(--fha-border-gold);
+	padding: 14px 16px;
+	font-family: var(--fha-font-ui);
+	font-size: 15px;
+	font-weight: 300;
+	color: var(--fha-cream);
+	border-radius: 0;
+	outline: none;
+	transition: all 0.2s ease;
+}
+.fh-account-plugin-wrap input[type="text"]::placeholder { color: var(--fha-cream-faded); }
+.fh-account-plugin-wrap input[type="text"]:focus,
+.fh-account-plugin-wrap input.input-text:focus {
+	border-color: var(--fha-gold);
+	border-bottom-color: var(--fha-gold-bright);
+	background: var(--fha-card-elevated);
+}
+.fh-account-plugin-wrap button,
+.fh-account-plugin-wrap .button,
+.fh-account-plugin-wrap input[type="submit"] {
+	font-family: var(--fha-font-ui);
+	font-size: 11px;
+	letter-spacing: 0.25em;
+	text-transform: uppercase;
+	font-weight: 500;
+	background: var(--fha-gold);
+	color: #1a1208;
+	border: 1px solid var(--fha-gold);
+	border-radius: 1px;
+	padding: 14px 32px;
+	cursor: pointer;
+	transition: all 0.25s ease;
+}
+.fh-account-plugin-wrap button:hover,
+.fh-account-plugin-wrap .button:hover,
+.fh-account-plugin-wrap input[type="submit"]:hover {
+	background: var(--fha-gold-bright);
+	border-color: var(--fha-gold-bright);
+}
+
+/* ACTIVE GIFT CARDS + ACTIVITY → Past Stays table treatment. */
+.fh-account-plugin-wrap table { width: 100%; border-collapse: collapse; }
+.fh-account-plugin-wrap thead tr {
+	border-top: 1px solid var(--fha-border);
+	border-bottom: 1px solid var(--fha-border);
+}
+.fh-account-plugin-wrap th {
+	font-size: 10px;
+	letter-spacing: 0.25em;
+	text-transform: uppercase;
+	color: var(--fha-gold);
+	font-weight: 500;
+	padding: 16px 12px;
+	text-align: left;
+}
+.fh-account-plugin-wrap td {
+	padding: 18px 12px;
+	border-bottom: 1px solid var(--fha-border-soft);
+	color: var(--fha-cream);
+	font-size: 14px;
+}
+/* Card codes + amounts → gold Playfair, like a typeset receipt line. */
+.fh-account-plugin-wrap td.wc_gc_code,
+.fh-account-plugin-wrap td.gift-card-code,
+.fh-account-plugin-wrap td.code,
+.fh-account-plugin-wrap td.amount {
+	font-family: var(--fha-font-display);
+	font-size: 17px;
+	color: var(--fha-gold);
+}
+.fh-account-plugin-wrap td.balance,
+.fh-account-plugin-wrap td.available-balance {
+	font-family: var(--fha-font-display);
+	font-size: 16px;
+	color: var(--fha-cream);
+}
+
+@media (max-width: 768px) {
+	.fh-account-plugin-wrap .wc_gc_account_balance,
+	.fh-account-plugin-wrap .balance { font-size: 38px; }
+	.fh-account-plugin-wrap table { display: block; overflow-x: auto; }
+}

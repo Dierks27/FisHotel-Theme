@@ -202,15 +202,12 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 		<?php do_action( 'woocommerce_review_order_after_order_total' ); ?>
 	</tfoot>
 </table>
-
-<?php /* WC Gift Cards' balance checkbox + applied-card lines render on
-        `woocommerce_review_order_before_order_total`. We fire it HERE —
-        after the </table> but still inside #order_review / the statement
-        card — rather than before the Total row inside the <tfoot>. The
-        plugin injects a raw <tr>; inside the table that <tr> styled to
-        full width collapsed the statement's column layout (clipped names
-        / prices). Outside the table the stray tr/td tags are dropped by
-        the parser and the label renders as block-level flow content at
-        full card width. Hook name unchanged — only its position moved,
-        which the plugin doesn't care about. */ ?>
-<?php do_action( 'woocommerce_review_order_before_order_total' ); ?>
+<?php /* NOTE: `woocommerce_review_order_before_order_total` (WC Gift Cards'
+        balance checkbox) is intentionally NOT fired here. WC's AJAX
+        update_order_review re-renders this template into the
+        `.woocommerce-checkout-review-order-table` fragment and replaces the
+        <table> element with it — but the fragment is this whole template's
+        output, so anything echoed after </table> got duplicated (one copy
+        from the initial PHP render that stays put, plus a new copy folded
+        into the replaced table). The hook now fires once in
+        form-checkout.php, OUTSIDE #order_review, so AJAX can't clone it. */ ?>

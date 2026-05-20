@@ -192,6 +192,18 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 						<?php do_action( 'woocommerce_checkout_order_review' ); ?>
 					</div>
 					<?php do_action( 'woocommerce_checkout_after_order_review' ); ?>
+
+					<?php /* WC Gift Cards' balance checkbox renders on
+					        `woocommerce_review_order_before_order_total`. We fire it
+					        HERE — inside the statement card + the checkout <form>,
+					        but OUTSIDE #order_review — rather than from
+					        review-order.php. WC's update_order_review AJAX only
+					        re-renders #order_review's table fragment, so firing the
+					        hook there duplicated the checkbox (initial copy persists +
+					        AJAX copy folded into the replaced table). Outside that
+					        fragment it renders exactly once, full card width, and
+					        still submits with the form. */ ?>
+					<?php do_action( 'woocommerce_review_order_before_order_total' ); ?>
 				</div>
 			</aside>
 

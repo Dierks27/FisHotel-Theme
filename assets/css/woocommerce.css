@@ -2040,12 +2040,12 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   align-items: flex-start;
   gap: 8px;
   font-family: var(--fh-font);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
   color: var(--fh-text-1);
-  line-height: 1.4;
+  line-height: 1.3;
   cursor: pointer;
   margin: 0;
 }
@@ -2250,6 +2250,113 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   background: var(--fh-gold-lt);
 }
 
+/* ── Gift card form polish (refines the PR #42 base) ── */
+/* More visible gold-tinted field borders + a subtle focus glow. */
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper input[type="text"],
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper input[type="email"],
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper input[type="number"],
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper input[type="date"],
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper input.input-text,
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper select,
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper textarea,
+.fh-purchase .wc-gc-giftcard-form input.input-text,
+.fh-purchase .wc-gc-giftcard-form input[type="text"],
+.fh-purchase .wc-gc-giftcard-form input[type="email"],
+.fh-purchase .wc-gc-giftcard-form textarea {
+  border: 1px solid rgba(201, 150, 58, 0.3);
+  border-radius: 4px;
+}
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper input:focus,
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper select:focus,
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper textarea:focus,
+.fh-purchase .wc-gc-giftcard-form input:focus,
+.fh-purchase .wc-gc-giftcard-form textarea:focus {
+  border-color: var(--fh-gold);
+  box-shadow: 0 0 0 1px rgba(201, 150, 58, 0.2);
+}
+/* Helper / description text under fields. */
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper .description,
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper small,
+.fh-purchase .wc-gc-giftcard-form .description {
+  color: rgba(232, 228, 220, 0.5);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+/* Keep the "Send as gift?" box square — never let the inline-flex label
+   shrink it when the text is long. */
+.fh-purchase input[type="checkbox"]#wc_gc_send_as_gift_checkbox,
+.fh-purchase .wc-gc-send-as-gift input[type="checkbox"] {
+  flex: 0 0 auto;
+  min-width: 16px;
+}
+
+/* Space between the FisHotel price block and the plugin's native form so
+   the denomination "Price" row doesn't crowd the $XX.XX above it.
+   `table.variations` only appears in WC's native variable form — our
+   custom variable form uses `.fh-variations`, so regular fish/med
+   products are untouched. */
+.fh-purchase table.variations,
+.fh-purchase .single_variation_wrap,
+.fh-purchase .woocommerce_gc_giftcard_form_wrapper {
+  margin-top: 22px;
+}
+.fh-purchase .woocommerce-variation-price,
+.fh-purchase .single_variation {
+  margin: 14px 0;
+}
+
+/* Denomination selector — WC's native variable form renders a <select>;
+   some GC setups render buttons. Style both to match the dark theme. */
+.fh-purchase table.variations select,
+.fh-purchase .variations select {
+  width: 100%;
+  background: var(--fh-bg-lt);
+  border: 1px solid rgba(201, 150, 58, 0.3);
+  color: var(--fh-text-1);
+  padding: 11px 14px;
+  font-family: var(--fh-font);
+  font-size: 13px;
+  border-radius: 4px;
+}
+.fh-purchase table.variations select:focus,
+.fh-purchase .variations select:focus {
+  border-color: var(--fh-gold);
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(201, 150, 58, 0.2);
+}
+.fh-purchase .variations td.value button,
+.fh-purchase table.variations td.value button {
+  background: transparent;
+  border: 1px solid rgba(201, 150, 58, 0.4);
+  color: var(--fh-text-1);
+  padding: 8px 18px;
+  margin: 0 6px 6px 0;
+  font-family: var(--fh-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.fh-purchase .variations td.value button.selected,
+.fh-purchase .variations td.value button:hover,
+.fh-purchase table.variations td.value button.selected,
+.fh-purchase table.variations td.value button:hover {
+  background: var(--fh-gold);
+  color: var(--fh-bg-dkr);
+  border-color: var(--fh-gold);
+}
+
+/* Keep statement prices on one line so they don't clip ("$79.0" instead
+   of "$79.00") when the column narrows at medium viewports. */
+.fh-statement-table .woocommerce-Price-amount,
+.fh-statement-table .amount,
+.fh-checkout-right .woocommerce-Price-amount {
+  white-space: nowrap;
+}
+
 /* ── FisHotel Batch Manager delivery-date field ──
    Plugin injects `<div id="fishotel-shipping-date-field">` containing a
    WC `woocommerce_form_field()` <select> on `woocommerce_after_order_notes`.
@@ -2317,9 +2424,17 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 
 /* ── Mobile ── */
-@media (max-width: 900px) {
+/* Tighten the column gap in the cramped two-column band before stacking,
+   so the statement column keeps enough room for prices. */
+@media (min-width: 1025px) and (max-width: 1200px) {
+  .fh-checkout-layout { gap: 16px; }
+}
+/* Stack to a single column at ≤1024px — below that the two-column split
+   squeezes the statement column enough to clip prices. Surface the
+   itemized statement above the billing form once stacked. */
+@media (max-width: 1024px) {
   .fh-checkout-layout { grid-template-columns: 1fr; }
-  .fh-checkout-right  { position: static; }
+  .fh-checkout-right  { position: static; order: -1; }
 }
 @media (max-width: 600px) {
   .fh-checkout-form .woocommerce-billing-fields__field-wrapper,

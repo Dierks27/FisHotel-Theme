@@ -846,7 +846,19 @@ JS;
 					'fh_account_subtitle_payment_methods'  => [ 'label' => 'Payment Methods (Billing)',  'type' => 'text' ],
 					'fh_account_subtitle_gift_cards'       => [ 'label' => 'Gift Cards',                 'type' => 'text' ],
 					'fh_account_subtitle_house_account'    => [ 'label' => 'House Account',              'type' => 'text' ],
-					'fh_account_subtitle_special_requests' => [ 'label' => 'Special Requests',           'type' => 'text' ],
+				],
+			],
+			// My Account page — sidebar links
+			'account_links' => [
+				'page'   => 'fishotel-account',
+				'title'  => 'Sidebar Links',
+				'fields' => [
+					'fishotel_account_gift_cards_url' => [
+						'label'       => 'Gift Cards Link URL',
+						'type'        => 'text',
+						'placeholder' => home_url( '/my-account/gift-cards/' ),
+						'description' => 'URL the Gift Cards item in the Concierge sidebar links to. Default is the Gift Cards product page.',
+					],
 				],
 			],
 			// My Account page — greeting + empty states

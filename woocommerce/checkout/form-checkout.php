@@ -119,27 +119,38 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 					<?php do_action( 'woocommerce_checkout_billing' ); ?>
 				</div>
 
+				<?php /* "Ship to a different address?" toggle — lives OUTSIDE
+				        the shipping card so it stays visible even though the
+				        card itself is hidden by default (see the `:has()`
+				        rule in woocommerce.css). Clicking it drives WC's own
+				        `#ship-to-different-address-checkbox` (main.js), which
+				        reveals the shipping fields and, in turn, the card. */ ?>
+				<button type="button" class="fh-checkout-shipping-toggle" aria-expanded="false">
+					<span class="fh-checkout-shipping-toggle__text"><?php esc_html_e( 'Ship to a different address?', 'fishotel' ); ?></span>
+					<span class="fh-checkout-shipping-toggle__icon" aria-hidden="true">+</span>
+				</button>
+
 				<?php /* Delivery Details card. WC toggles the inner fields'
 				        visibility via the "Ship to different address"
-				        checkbox; our CSS hides the card header when no
-				        fields are visible so the empty card chrome doesn't
-				        sit there. The checkbox itself lives inside the
-				        shipping form WC renders here. */ ?>
+				        checkbox; our CSS hides the whole card when those
+				        fields are collapsed so the empty card chrome doesn't
+				        sit there. The external toggle above is the customer's
+				        way back in. */ ?>
 				<div class="fh-checkout-card fh-checkout-shipping">
 					<header class="fh-checkout-card__header">
 						<span class="fh-checkout-card__eyebrow"><?php echo esc_html( $section_delivery ); ?></span>
 					</header>
 					<?php do_action( 'woocommerce_checkout_shipping' ); ?>
-
-					<?php /* Order notes injection point. We don't render WC's
-					        order-notes textarea ourselves, but the FisHotel
-					        Batch Manager (and any other plugin on these hooks)
-					        injects fields like the delivery-date dropdown into
-					        `_after_order_notes`. Firing the pair keeps that
-					        plugin contract intact. */ ?>
-					<?php do_action( 'woocommerce_before_order_notes', $checkout ); ?>
-					<?php do_action( 'woocommerce_after_order_notes', $checkout ); ?>
 				</div>
+
+				<?php /* Order notes injection point — MUST stay outside the
+				        shipping card, which is `display:none` on most
+				        checkouts. The FisHotel Batch Manager injects its
+				        delivery-date dropdown into `_after_order_notes`; if
+				        these hooks fired inside the hidden card the dropdown
+				        would render but never be visible. */ ?>
+				<?php do_action( 'woocommerce_before_order_notes', $checkout ); ?>
+				<?php do_action( 'woocommerce_after_order_notes', $checkout ); ?>
 
 				<?php /* Customer details section close — fires after billing,
 				        shipping, and order-notes injection are all done.

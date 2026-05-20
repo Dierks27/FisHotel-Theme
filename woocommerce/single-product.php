@@ -18,7 +18,7 @@ while ( have_posts() ) :
     // part). Enqueue it explicitly for variable products so wc_variation_form()
     // auto-initialises and the hidden `variation_id` input gets populated when
     // the user picks a combo.
-    if ( $product && $product->is_type( 'variable' ) ) {
+    if ( $product && 'variable' === $product->get_type() ) {
         wp_enqueue_script( 'wc-add-to-cart-variation' );
     }
 
@@ -236,7 +236,7 @@ while ( have_posts() ) :
         // the stock badge, and the auto-select hint on the variations form.
         // JS (main.js) updates these slots on found_variation/reset_data so
         // layout never shifts as the user picks a combo.
-        $is_variable     = $product->is_type( 'variable' );
+        $is_variable     = ( 'variable' === $product->get_type() );
         $variations_data = $is_variable ? $product->get_available_variations() : [];
 
         // Drop OOS variations entirely. The size row never renders an
@@ -307,7 +307,7 @@ while ( have_posts() ) :
                 `variable` products use our custom form; non-standard types
                 (e.g. WC Gift Cards' `gift-card`) fall through to the plugin's
                 own native form in the else branch below. */ ?>
-        <?php if ( $product->is_type( 'simple' ) || $product->is_type( 'variable' ) ) : ?>
+        <?php if ( in_array( $product->get_type(), array( 'simple', 'variable' ), true ) ) : ?>
         <?php do_action('woocommerce_before_add_to_cart_form'); ?>
         <form class="fh-purchase__form variations_form cart"
               action="<?php echo esc_url(apply_filters('woocommerce_add_to_cart_form_action', $product->get_permalink())); ?>"
@@ -317,7 +317,7 @@ while ( have_posts() ) :
               data-fh-multi-variations="<?php echo $is_multi_var ? '1' : '0'; ?>"
               data-product_variations="<?php echo esc_attr(htmlspecialchars(wp_json_encode($variations_data))); ?>">
 
-            <?php if ($product->is_type('variable')) : ?>
+            <?php if ( 'variable' === $product->get_type() ) : ?>
             <?php /* `variations` is the class WC's variation form binds to:
                     wc_variation_form() listens for change events delegated
                     against `.variations select` and reads chosen attributes

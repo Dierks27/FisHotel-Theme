@@ -303,7 +303,11 @@ while ( have_posts() ) :
         <div class="fh-purchase__from"><?php echo $eyebrow_initial !== '' ? esc_html( $eyebrow_initial ) : '&nbsp;'; ?></div>
         <div class="fh-purchase__price"><?php echo wp_kses_post( $price_initial ); ?></div>
 
-        <?php /* Variation selectors + Add to Cart form */ ?>
+        <?php /* Variation selectors + Add to Cart form. Only `simple` and
+                `variable` products use our custom form; non-standard types
+                (e.g. WC Gift Cards' `gift-card`) fall through to the plugin's
+                own native form in the else branch below. */ ?>
+        <?php if ( $product->is_type( 'simple' ) || $product->is_type( 'variable' ) ) : ?>
         <?php do_action('woocommerce_before_add_to_cart_form'); ?>
         <form class="fh-purchase__form variations_form cart"
               action="<?php echo esc_url(apply_filters('woocommerce_add_to_cart_form_action', $product->get_permalink())); ?>"
@@ -445,6 +449,20 @@ while ( have_posts() ) :
             <?php do_action('woocommerce_after_add_to_cart_button'); ?>
         </form>
         <?php do_action('woocommerce_after_add_to_cart_form'); ?>
+        <?php else : ?>
+        <?php /* Non-standard product types build their own complete
+                add-to-cart form via the product-type-specific hook. WC
+                Gift Cards renders its recipient / sender / message /
+                amount fields AND its own submit button through
+                `woocommerce_gift-card_add_to_cart`. Rendering our custom
+                form for these omits the plugin's required fields (the
+                "Some required data is missing" cart error), so defer to
+                the plugin exactly as WC core's content-single-product.php
+                does. The type hook fires `woocommerce_before_add_to_cart_form`
+                / `_after_add_to_cart_form` itself, so we don't fire them
+                here. */ ?>
+        <?php do_action( 'woocommerce_' . $product->get_type() . '_add_to_cart' ); ?>
+        <?php endif; ?>
 
         <?php endif; /* ! $is_coming_soon && ! $is_amazon_med */ ?>
 

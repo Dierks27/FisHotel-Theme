@@ -2028,18 +2028,24 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 
 /* ── WC Gift Cards account-balance checkbox ──
-   Plugin emits a raw <label><input type="checkbox">…</label> row inside
-   the ledger via `WC_GC_Cart::print_gift_cards` on
-   `woocommerce_review_order_before_order_total`. Restyle it in place so
-   the row reads as a native ledger entry (subtotal-row body weight, gold
-   accent on the price) rather than the default browser checkbox + small
-   caps row. */
-.fh-statement-table label[for="use_gift_card_balance"],
-.fh-statement-table label[for^="apply_gift_card_balance"] {
-  display: inline-flex;
+   The GC plugin (`WC_GC_Cart::print_gift_cards`) renders the balance
+   checkbox as a raw `<tr>` on `woocommerce_review_order_before_order_total`.
+   We fire that hook AFTER the statement `</table>` (see review-order.php),
+   so the stray tr/td tags are dropped by the parser and the label lands as
+   block-level flow content inside the statement card — full card width, no
+   table column to collapse. Scoped under .fh-checkout-statement so it
+   matches the checkbox in that position (it's no longer inside
+   .fh-statement-table). */
+.fh-checkout-statement label[for="use_gift_card_balance"],
+.fh-checkout-statement label[for^="apply_gift_card_balance"] {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   white-space: nowrap;
+  margin: 0;
+  padding: 12px 16px 0;
+  border-top: 1px dashed var(--fh-gold-rule);
   font-family: var(--fh-font);
   font-size: 11px;
   font-weight: 500;
@@ -2048,81 +2054,56 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   color: var(--fh-text-1);
   line-height: 1.3;
   cursor: pointer;
-  margin: 0;
 }
-.fh-statement-table label[for="use_gift_card_balance"] strong,
-.fh-statement-table label[for^="apply_gift_card_balance"] strong,
-.fh-statement-table label[for="use_gift_card_balance"] .woocommerce-Price-amount,
-.fh-statement-table label[for^="apply_gift_card_balance"] .woocommerce-Price-amount {
+.fh-checkout-statement label[for="use_gift_card_balance"] strong,
+.fh-checkout-statement label[for^="apply_gift_card_balance"] strong,
+.fh-checkout-statement label[for="use_gift_card_balance"] .woocommerce-Price-amount,
+.fh-checkout-statement label[for^="apply_gift_card_balance"] .woocommerce-Price-amount {
   color: var(--fh-gold);
   font-weight: 600;
 }
-.fh-statement-table input[type="checkbox"]#use_gift_card_balance,
-.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"] {
+.fh-checkout-statement input[type="checkbox"]#use_gift_card_balance,
+.fh-checkout-statement input[type="checkbox"][id^="apply_gift_card_balance"] {
   appearance: none;
   -webkit-appearance: none;
   flex: 0 0 16px;
   width: 16px;
   height: 16px;
-  margin: 2px 0 0;
+  margin: 0;
   padding: 0;
   border: 2px solid var(--fh-gold);
   border-radius: 2px;
   background: transparent;
   cursor: pointer;
   position: relative;
-  vertical-align: top;
+  vertical-align: middle;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
-.fh-statement-table input[type="checkbox"]#use_gift_card_balance:hover,
-.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"]:hover {
+.fh-checkout-statement input[type="checkbox"]#use_gift_card_balance:hover,
+.fh-checkout-statement input[type="checkbox"][id^="apply_gift_card_balance"]:hover {
   border-color: var(--fh-gold-lt);
 }
-.fh-statement-table input[type="checkbox"]#use_gift_card_balance:checked,
-.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"]:checked {
+.fh-checkout-statement input[type="checkbox"]#use_gift_card_balance:checked,
+.fh-checkout-statement input[type="checkbox"][id^="apply_gift_card_balance"]:checked {
   background: var(--fh-gold);
   border-color: var(--fh-gold);
 }
-.fh-statement-table input[type="checkbox"]#use_gift_card_balance:checked::after,
-.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"]:checked::after {
+.fh-checkout-statement input[type="checkbox"]#use_gift_card_balance:checked::after,
+.fh-checkout-statement input[type="checkbox"][id^="apply_gift_card_balance"]:checked::after {
   content: "";
   position: absolute;
   left: 3px;
-  top: -1px;
+  top: 1px;
   width: 5px;
   height: 10px;
   border: solid #1c1c1c;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
-.fh-statement-table input[type="checkbox"]#use_gift_card_balance:focus-visible,
-.fh-statement-table input[type="checkbox"][id^="apply_gift_card_balance"]:focus-visible {
+.fh-checkout-statement input[type="checkbox"]#use_gift_card_balance:focus-visible,
+.fh-checkout-statement input[type="checkbox"][id^="apply_gift_card_balance"]:focus-visible {
   outline: 2px solid var(--fh-gold-lt);
   outline-offset: 2px;
-}
-/* Break the balance row out of the table's narrow value column so the
-   label gets the full card width — with that room, the `white-space:
-   nowrap` above keeps "Use $25.00 from your gift cards balance." on one
-   clean line instead of wrapping 3-4 deep. The row + cell go block-level
-   and full width; content is centered. Keeps the dashed gold rule so it
-   still reads as part of the ledger. */
-.fh-statement-table tr.wc_gc_apply_gift_card_balance_row,
-.fh-statement-table tr.wc-gc-balance-row,
-.fh-statement-table tr:has(> td > label[for="use_gift_card_balance"]),
-.fh-statement-table tr:has(> td > label[for^="apply_gift_card_balance"]) {
-  display: block;
-  width: 100%;
-}
-.fh-statement-table tr.wc_gc_apply_gift_card_balance_row td,
-.fh-statement-table tr.wc-gc-balance-row td,
-.fh-statement-table tr:has(> td > label[for="use_gift_card_balance"]) td,
-.fh-statement-table tr:has(> td > label[for^="apply_gift_card_balance"]) td {
-  display: block;
-  width: 100%;
-  text-align: center;
-  padding: 12px 0;
-  font-size: 11px;
-  border-top: 1px dashed var(--fh-gold-rule);
 }
 
 /* ── WC Gift Cards single-product form ──

@@ -194,13 +194,6 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 			<?php endif; ?>
 		<?php endif; ?>
 
-		<?php /* Canonical WC hook plugins use to inject lines above the
-		        Total row — WC Gift Cards' `WC_GC_Cart::print_gift_cards`
-		        runs here at priority 10, rendering both applied-card line
-		        items and the "Use $XX.XX from your Gift Cards balance"
-		        checkbox. Must fire BEFORE the total `<tr>` so the markup
-		        lands above it. */ ?>
-		<?php do_action( 'woocommerce_review_order_before_order_total' ); ?>
 		<tr class="fh-statement-ledger__row fh-statement-ledger__total">
 			<td colspan="2" class="fh-statement-ledger__label"><?php esc_html_e( 'Total', 'fishotel' ); ?></td>
 			<td class="fh-statement-ledger__value"><?php wc_cart_totals_order_total_html(); ?></td>
@@ -209,3 +202,15 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 		<?php do_action( 'woocommerce_review_order_after_order_total' ); ?>
 	</tfoot>
 </table>
+
+<?php /* WC Gift Cards' balance checkbox + applied-card lines render on
+        `woocommerce_review_order_before_order_total`. We fire it HERE —
+        after the </table> but still inside #order_review / the statement
+        card — rather than before the Total row inside the <tfoot>. The
+        plugin injects a raw <tr>; inside the table that <tr> styled to
+        full width collapsed the statement's column layout (clipped names
+        / prices). Outside the table the stray tr/td tags are dropped by
+        the parser and the label renders as block-level flow content at
+        full card width. Hook name unchanged — only its position moved,
+        which the plugin doesn't care about. */ ?>
+<?php do_action( 'woocommerce_review_order_before_order_total' ); ?>

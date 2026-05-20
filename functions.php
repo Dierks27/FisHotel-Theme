@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.9.15' );
+define( 'FISHOTEL_THEME_VERSION', '1.9.16' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -156,6 +156,22 @@ function fishotel_cachebust_src( $src ) {
 }
 add_filter( 'style_loader_src',  'fishotel_cachebust_src', 999 );
 add_filter( 'script_loader_src', 'fishotel_cachebust_src', 999 );
+
+/**
+ * Always show the WC Gift Cards balance checkbox at checkout, even when
+ * the cart contains gift card products. The plugin's WC_GC_Cart bails out
+ * of its balance calculation when `cart_contains_gift_card()` is true,
+ * which zeroes `available_total` and hides the "Use $X from your balance"
+ * checkbox — blocking customers from spending balance on the fish/med
+ * portion of a mixed cart. Forcing the contains-check to false keeps the
+ * balance calc (and the checkbox) alive for every cart.
+ *
+ * Trade-off: balance then applies to the whole cart total (the plugin has
+ * no per-line exclusion), so it can also pay toward gift-card items. That
+ * edge case is acceptable. "Block gift card discounts" (WC → Settings →
+ * Gift Cards) still governs coupon discounts separately.
+ */
+add_filter( 'woocommerce_gc_cart_contains_gift_card', '__return_false' );
 
 // ─────────────────────────────────────────
 // INCLUDE MODULES

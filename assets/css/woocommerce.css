@@ -2036,9 +2036,10 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
    caps row. */
 .fh-statement-table label[for="use_gift_card_balance"],
 .fh-statement-table label[for^="apply_gift_card_balance"] {
-  display: flex;
-  align-items: flex-start;
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
+  white-space: nowrap;
   font-family: var(--fh-font);
   font-size: 11px;
   font-weight: 500;
@@ -2099,14 +2100,28 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   outline: 2px solid var(--fh-gold-lt);
   outline-offset: 2px;
 }
-/* The plugin's wrapper row — give it the same vertical rhythm as other
-   ledger rows so it doesn't sit visually crammed next to Tax / Total. */
+/* Break the balance row out of the table's narrow value column so the
+   label gets the full card width — with that room, the `white-space:
+   nowrap` above keeps "Use $25.00 from your gift cards balance." on one
+   clean line instead of wrapping 3-4 deep. The row + cell go block-level
+   and full width; content is centered. Keeps the dashed gold rule so it
+   still reads as part of the ledger. */
+.fh-statement-table tr.wc_gc_apply_gift_card_balance_row,
+.fh-statement-table tr.wc-gc-balance-row,
+.fh-statement-table tr:has(> td > label[for="use_gift_card_balance"]),
+.fh-statement-table tr:has(> td > label[for^="apply_gift_card_balance"]) {
+  display: block;
+  width: 100%;
+}
 .fh-statement-table tr.wc_gc_apply_gift_card_balance_row td,
 .fh-statement-table tr.wc-gc-balance-row td,
 .fh-statement-table tr:has(> td > label[for="use_gift_card_balance"]) td,
 .fh-statement-table tr:has(> td > label[for^="apply_gift_card_balance"]) td {
-  padding: 10px 0;
-  font-size: 12px;
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 12px 0;
+  font-size: 11px;
   border-top: 1px dashed var(--fh-gold-rule);
 }
 

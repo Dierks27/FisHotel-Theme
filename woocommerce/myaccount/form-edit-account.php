@@ -71,7 +71,18 @@ $hf_username = get_user_meta( $user->ID, 'humble_fish_username', true );
 		</p>
 	</fieldset>
 
-	<?php do_action( 'woocommerce_edit_account_form' ); ?>
+	<?php
+	/**
+	 * NOTE: WooCommerce's `woocommerce_edit_account_form` action is deliberately
+	 * NOT fired here. A pre-v1.10 site customization hooks a second (unstyled)
+	 * "Humble.Fish Username" field onto it, which rendered below the password
+	 * block and duplicated the themed field above (the one this template adds
+	 * after Email Address, saved via inc/account-relabels.php). Suppressing the
+	 * action removes that duplicate at the source. The earlier
+	 * `woocommerce_edit_account_form_fields` / `_start` / `_end` injection
+	 * points are still fired above for legitimate plugin compatibility.
+	 */
+	?>
 
 	<div class="fh-form-actions">
 		<?php wp_nonce_field( 'save_account_details', 'save-account-details-nonce' ); ?>

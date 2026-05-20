@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.9.13' );
+define( 'FISHOTEL_THEME_VERSION', '1.9.14' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 

@@ -238,6 +238,12 @@ class FisHotel_Admin_Settings {
 			}
 		}
 
+		// My Account copy — canonical defaults live in inc/account-relabels.php
+		// (single source of truth, also read by the templates).
+		if ( function_exists( 'fishotel_account_text_defaults' ) ) {
+			$defaults = array_merge( $defaults, fishotel_account_text_defaults() );
+		}
+
 		return $defaults;
 	}
 
@@ -417,6 +423,7 @@ class FisHotel_Admin_Settings {
 			'fishotel-product'       => [ 'page_title' => 'Product Page',  'menu_title' => 'Product Page' ],
 			'fishotel-cart'          => [ 'page_title' => 'Cart Page',     'menu_title' => 'Cart Page' ],
 			'fishotel-checkout'      => [ 'page_title' => 'Checkout Page', 'menu_title' => 'Checkout Page' ],
+			'fishotel-account'       => [ 'page_title' => 'My Account',    'menu_title' => 'My Account' ],
 			'fishotel-faq'           => [ 'page_title' => 'FAQ Page',      'menu_title' => 'FAQ Page' ],
 			'fishotel-about'         => [ 'page_title' => 'About Page',    'menu_title' => 'About Page' ],
 			'fishotel-contacts'      => [ 'page_title' => 'Contacts Page', 'menu_title' => 'Contacts Page' ],
@@ -825,6 +832,54 @@ JS;
 					'fh_checkout_cta_label'        => [ 'label' => 'Place Order button label', 'type' => 'text', 'placeholder' => 'COMPLETE CHECK-OUT', 'description' => 'Trailing arrow is added automatically.' ],
 					'fh_checkout_password_help'    => [ 'label' => 'Account password helper text', 'type' => 'text', 'placeholder' => "We'll create your account so you can track this stay." ],
 					'fh_checkout_express_divider'  => [ 'label' => 'Express payment divider', 'type' => 'text', 'placeholder' => 'OR PAY EXPRESS' ],
+				],
+			],
+			// My Account page — page subtitles
+			'account_subtitles' => [
+				'page'   => 'fishotel-account',
+				'title'  => 'Page Subtitles',
+				'fields' => [
+					'fh_account_subtitle_dashboard'        => [ 'label' => 'Dashboard (The Lobby)',     'type' => 'text' ],
+					'fh_account_subtitle_orders'           => [ 'label' => 'Orders (Past Stays)',        'type' => 'text' ],
+					'fh_account_subtitle_edit_account'     => [ 'label' => 'Account Details (Guest Profile)', 'type' => 'text' ],
+					'fh_account_subtitle_edit_address'     => [ 'label' => 'Addresses (Forwarding Addresses)', 'type' => 'text' ],
+					'fh_account_subtitle_payment_methods'  => [ 'label' => 'Payment Methods (Billing)',  'type' => 'text' ],
+					'fh_account_subtitle_gift_cards'       => [ 'label' => 'Gift Cards',                 'type' => 'text' ],
+					'fh_account_subtitle_house_account'    => [ 'label' => 'House Account',              'type' => 'text' ],
+					'fh_account_subtitle_special_requests' => [ 'label' => 'Special Requests',           'type' => 'text' ],
+				],
+			],
+			// My Account page — greeting + empty states
+			'account_copy' => [
+				'page'   => 'fishotel-account',
+				'title'  => 'Greeting &amp; Empty States',
+				'fields' => [
+					'fh_account_greeting_prefix'       => [ 'label' => 'Welcome greeting prefix',     'type' => 'text', 'placeholder' => 'Welcome back,' ],
+					'fh_account_empty_orders_title'    => [ 'label' => 'Orders empty — title',        'type' => 'text', 'placeholder' => 'No reservations yet.' ],
+					'fh_account_empty_orders_subtitle' => [ 'label' => 'Orders empty — subtitle',     'type' => 'text', 'placeholder' => 'Your first stay is one click away.' ],
+					'fh_account_empty_lobby_subtitle'  => [ 'label' => 'Lobby empty — subtitle',      'type' => 'text', 'placeholder' => 'No reservations yet — your reef awaits.' ],
+					'fh_account_empty_payment_line'    => [ 'label' => 'Payment methods empty — line', 'type' => 'text', 'placeholder' => 'No payment methods saved.' ],
+				],
+			],
+			// My Account page — login / register cards
+			'account_auth' => [
+				'page'   => 'fishotel-account',
+				'title'  => 'Login &amp; Register Cards',
+				'fields' => [
+					'fh_account_login_eyebrow'    => [ 'label' => 'Login card eyebrow',    'type' => 'text', 'placeholder' => 'EXISTING GUEST' ],
+					'fh_account_login_title'      => [ 'label' => 'Login card title',      'type' => 'text', 'placeholder' => 'Check In' ],
+					'fh_account_register_eyebrow' => [ 'label' => 'Register card eyebrow', 'type' => 'text', 'placeholder' => 'NEW GUEST' ],
+					'fh_account_register_title'   => [ 'label' => 'Register card title',   'type' => 'text', 'placeholder' => 'Reserve a Room' ],
+				],
+			],
+			// My Account page — quick action descriptions
+			'account_quick_actions' => [
+				'page'   => 'fishotel-account',
+				'title'  => 'Quick Action Descriptions',
+				'fields' => [
+					'fh_account_qa_1_desc' => [ 'label' => 'Past Stays description',           'type' => 'text', 'placeholder' => 'Your full reservation history.' ],
+					'fh_account_qa_2_desc' => [ 'label' => 'Guest Profile description',         'type' => 'text', 'placeholder' => 'Update your details on file.' ],
+					'fh_account_qa_3_desc' => [ 'label' => 'Forwarding Addresses description',  'type' => 'text', 'placeholder' => 'Manage your shipping suites.' ],
 				],
 			],
 			// FAQ page
@@ -1474,6 +1529,7 @@ JS;
 			'fishotel-homepage'     => [ 'title' => 'Homepage',      'desc' => 'Available Now count and homepage testimonials.' ],
 			'fishotel-shop'         => [ 'title' => 'Shop Page',     'desc' => 'Display mode and which categories to hide.' ],
 			'fishotel-product'      => [ 'title' => 'Product Page',  'desc' => 'QT certificate, trust strip, care guide defaults.' ],
+			'fishotel-account'      => [ 'title' => 'My Account',    'desc' => 'Page subtitles, greeting, empty states, login/register copy.' ],
 			'fishotel-faq'          => [ 'title' => 'FAQ Page',      'desc' => 'Concierge intro, quarantine stages, FAQ items.' ],
 			'fishotel-about'        => [ 'title' => 'About Page',    'desc' => "Founder's Edition masthead, headline, byline, body." ],
 			'fishotel-contacts'     => [ 'title' => 'Contacts Page', 'desc' => 'Email, forum, location text and map image.' ],

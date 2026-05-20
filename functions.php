@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.9.18' );
+define( 'FISHOTEL_THEME_VERSION', '1.10.0' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -177,6 +177,8 @@ add_filter( 'woocommerce_gc_cart_contains_gift_card', '__return_false' );
 // INCLUDE MODULES
 // ─────────────────────────────────────────
 $includes = [
+	'/inc/account-icons.php',     // My Account inline-SVG icon set
+	'/inc/account-relabels.php',  // My Account labels, copy, page-header lookup
 	'/inc/template-functions.php',
 	'/inc/template-tags.php',
 	'/inc/customizer.php',
@@ -250,6 +252,33 @@ function fishotel_enqueue_home_assets() {
     }
 }
 add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_home_assets' );
+
+// Enqueue My Account styles + display fonts only on the WooCommerce account area
+function fishotel_enqueue_account_assets() {
+	if ( ! function_exists( 'is_account_page' ) || ! is_account_page() ) {
+		return;
+	}
+	wp_enqueue_style(
+		'fishotel-account-fonts',
+		'https://fonts.googleapis.com/css2?family=EB+Garamond:ital@0;1&family=Josefin+Sans:wght@300;400;500&family=Playfair+Display:ital,wght@0,500;0,700;1,500&display=swap',
+		[],
+		null
+	);
+	wp_enqueue_style(
+		'fishotel-my-account',
+		FISHOTEL_THEME_URI . '/assets/css/my-account.css',
+		[ 'fishotel-style', 'fishotel-account-fonts' ],
+		fishotel_asset_version( 'assets/css/my-account.css' )
+	);
+	wp_enqueue_script(
+		'fishotel-my-account',
+		FISHOTEL_THEME_URI . '/assets/js/my-account.js',
+		[],
+		fishotel_asset_version( 'assets/js/my-account.js' ),
+		true
+	);
+}
+add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_account_assets' );
 
 // Enqueue FAQ page styles only on pages using the FAQ template
 function fishotel_enqueue_faq_assets() {

@@ -1721,6 +1721,47 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   display: none;
 }
 
+/* External "Ship to a different address?" toggle — styled like the
+   "Have a coupon code?" accordion summary. Lives outside the shipping
+   card (which is hidden by default), so it's the customer's way to
+   reveal the delivery-address fields. main.js drives WC's own checkbox
+   on click. */
+.fh-checkout-shipping-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--fh-border);
+  padding: 14px 0 12px;
+  margin: 0;
+  cursor: pointer;
+  font-family: var(--fh-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--fh-text-2);
+  text-align: left;
+}
+.fh-checkout-shipping-toggle:hover,
+.fh-checkout-shipping-toggle.is-open {
+  color: var(--fh-gold);
+}
+.fh-checkout-shipping-toggle__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+/* When the toggle drives the card open, hide WC's own in-card
+   "Ship to a different address?" checkbox row — the external toggle
+   already serves that purpose, so showing both is redundant. The
+   checkbox stays in the DOM (display:none, still scriptable) so WC
+   reads its state on submit. */
+.fh-checkout-shipping #ship-to-different-address {
+  display: none;
+}
+
 /* Password help text on account-creation flow */
 .fh-checkout-form .fh-checkout-password-help {
   font-size: 12px;

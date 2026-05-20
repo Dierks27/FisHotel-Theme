@@ -419,6 +419,45 @@
         });
     }
 
+    // Checkout — "Ship to a different address?" toggle. The shipping card
+    // is hidden by default (CSS `:has()` rule keys off WC collapsing the
+    // .shipping_address fields). This external toggle, rendered outside the
+    // hidden card, drives WC's own #ship-to-different-address-checkbox: a
+    // programmatic .click() toggles the box AND fires the change event
+    // WC's checkout.js listens for to slide the fields open/closed. When
+    // the fields un-collapse, the `:has()` rule stops matching and the card
+    // becomes visible — no separate "force open" class needed.
+    function initShippingToggle() {
+        var $toggle = $('.fh-checkout-shipping-toggle');
+        if (!$toggle.length) return;
+
+        function checkbox() {
+            return document.getElementById('ship-to-different-address-checkbox');
+        }
+        function sync() {
+            var cb = checkbox();
+            var open = !!(cb && cb.checked);
+            $toggle.attr('aria-expanded', open ? 'true' : 'false')
+                   .toggleClass('is-open', open)
+                   .find('.fh-checkout-shipping-toggle__icon').text(open ? '−' : '+');
+        }
+
+        $toggle.on('click', function(e) {
+            e.preventDefault();
+            var cb = checkbox();
+            if (!cb) return;
+            cb.click(); // toggles checked + fires the change WC binds to
+            sync();
+        });
+
+        // WC re-renders the checkout fragment on AJAX update_checkout; if the
+        // box state changes underneath us (or it's pre-checked on a
+        // validation reload), keep the toggle label honest.
+        $(document.body).on('change', '#ship-to-different-address input', sync);
+        $(document.body).on('updated_checkout', sync);
+        sync();
+    }
+
     $(document).ready(function() {
         // Snapshot purchase state before initVariationButtons binds, and
         // before initVariationAutoSelect dispatches the auto-click so
@@ -438,6 +477,7 @@
         initHeaderScroll();
         initTestimonialRotator();
         initArrivalCountdown();
+        initShippingToggle();
     });
 
 })(jQuery);

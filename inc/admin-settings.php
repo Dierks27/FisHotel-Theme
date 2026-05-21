@@ -127,7 +127,7 @@ class FisHotel_Admin_Settings {
 			'fh_shop_display'             => 'categories',
 			'fh_shop_hide_empty'          => '1',
 			'fh_shop_hidden_cats'         => [],
-			'fh_load_more_text'           => 'Show More Rooms',
+			'fh_load_more_text'           => 'Show More Fish',
 			'fh_load_more_end_text'       => "You've Toured the Whole Hotel",
 			// Homepage
 			'fh_home_available_count'     => 8,
@@ -717,7 +717,7 @@ JS;
 					'fh_shop_display'        => [ 'label' => 'Shop page display',    'type' => 'select', 'options' => [ 'categories' => 'Categories', 'products' => 'Products', 'both' => 'Both' ] ],
 					'fh_shop_hide_empty'     => [ 'label' => 'Hide empty categories', 'type' => 'checkbox' ],
 					'fh_shop_hidden_cats'    => [ 'label' => 'Hidden categories',     'type' => 'multicheck', 'description' => 'Checked categories will never appear on the shop page.' ],
-					'fh_load_more_text'      => [ 'label' => 'Load More button text', 'type' => 'text', 'placeholder' => 'Show More Rooms', 'description' => 'Label on the "load more products" button at the bottom of product archives.' ],
+					'fh_load_more_text'      => [ 'label' => 'Load More button text', 'type' => 'text', 'placeholder' => 'Show More Fish', 'description' => 'Label on the "load more products" button at the bottom of product archives.' ],
 					'fh_load_more_end_text'  => [ 'label' => 'End-of-results text',   'type' => 'text', 'placeholder' => "You've Toured the Whole Hotel", 'description' => 'Shown on the button once every product has loaded.' ],
 				],
 			],

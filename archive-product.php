@@ -261,7 +261,7 @@ if ( is_shop() && ! is_product_category() ) {
 <?php global $wp_query; if ( $wp_query->max_num_pages > 1 ) :
     $lm_button_text = class_exists( 'FisHotel_Admin_Settings' )
         ? (string) FisHotel_Admin_Settings::get( 'fh_load_more_text' )
-        : 'Show More Rooms';
+        : 'Show More Fish';
     $lm_end_text = class_exists( 'FisHotel_Admin_Settings' )
         ? (string) FisHotel_Admin_Settings::get( 'fh_load_more_end_text' )
         : "You've Toured the Whole Hotel";

@@ -92,9 +92,13 @@ function fishotel_load_more_products() {
     // result set is byte-for-byte the set the main archive query produces
     // (catalog-visibility, hide-out-of-stock, etc.). A standalone WP_Query
     // never triggers WC_Query::product_query, so we replicate it explicitly.
-    if ( class_exists( 'WC_Query' ) ) {
-        $meta_query = WC_Query::get_meta_query();
-        $tax_query  = WC_Query::get_tax_query();
+    // get_meta_query()/get_tax_query() are INSTANCE methods on the WC_Query
+    // singleton (WC()->query) — calling them statically fatals on PHP 8
+    // (the v1.11.1 regression). Fall back to a hand-rolled visibility query
+    // only if the singleton isn't available.
+    if ( isset( WC()->query ) && is_callable( [ WC()->query, 'get_meta_query' ] ) ) {
+        $meta_query = WC()->query->get_meta_query();
+        $tax_query  = WC()->query->get_tax_query();
     } else {
         $meta_query = [];
         $tax_query  = fishotel_load_more_visibility_tax_query();

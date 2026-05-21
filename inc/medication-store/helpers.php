@@ -50,6 +50,46 @@ function fishotel_med_get_mode( $product_id ) {
 	return $mode;
 }
 
+/**
+ * True when a product is explicitly opted into EA fulfillment.
+ *
+ * Source-of-truth for "should this end up on Dena's packing slip."
+ * Replaces the category-based fishotel_med_is_med_product() check
+ * for fulfillment decisions so that any product Jeff flips to EA
+ * mode in the FisHotel Medication metabox is honored — Medications,
+ * Freeze Dried Foods, and anything added in the future.
+ *
+ * Two conditions, both required:
+ *  1. Raw _fishotel_fulfillment meta is literally 'ea'. We check
+ *     the raw meta (NOT fishotel_med_get_mode) because the helper
+ *     defaults missing/empty values to 'ea', which would let any
+ *     never-touched product through.
+ *  2. An EA SKU is set on the parent product OR on a specific
+ *     variation. The SKU is what Dena uses to fulfill — no SKU,
+ *     no slip.
+ *
+ * @param int $product_id   Parent product ID (variable product) or
+ *                          simple product ID.
+ * @param int $variation_id Optional. The variation ID from the
+ *                          order line. Used so the variation-level
+ *                          EA SKU counts even if the parent has none.
+ * @return bool
+ */
+function fishotel_is_ea_fulfilled_product( $product_id, $variation_id = 0 ) {
+	$product_id = (int) $product_id;
+	if ( ! $product_id ) return false;
+
+	$raw_mode = get_post_meta( $product_id, '_fishotel_fulfillment', true );
+	if ( $raw_mode !== 'ea' ) return false;
+
+	$parent_sku = (string) get_post_meta( $product_id, '_fishotel_ea_sku', true );
+	$var_sku    = $variation_id
+		? (string) get_post_meta( (int) $variation_id, '_fishotel_ea_sku', true )
+		: '';
+
+	return ( $parent_sku !== '' || $var_sku !== '' );
+}
+
 /** True when the current view is a medication category archive (top or child). */
 function fishotel_med_is_med_archive() {
 	if ( ! function_exists( 'is_product_category' ) || ! is_product_category() ) {

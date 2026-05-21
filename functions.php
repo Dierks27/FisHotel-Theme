@@ -12,6 +12,12 @@ define( 'FISHOTEL_THEME_VERSION', '1.11.3' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
+// Composer autoloader — bundles dompdf for the EA packing-slip PDF. Guarded
+// so the theme still boots if vendor/ hasn't been deployed to the server yet.
+if ( file_exists( FISHOTEL_THEME_DIR . '/vendor/autoload.php' ) ) {
+	require_once FISHOTEL_THEME_DIR . '/vendor/autoload.php';
+}
+
 /**
  * Cache-bust helper — returns filemtime() for a theme-relative asset path,
  * falling back to FISHOTEL_THEME_VERSION if the file is missing. Pass to

@@ -47,7 +47,7 @@ $card_cat_attr  = ( ! is_wp_error( $card_cat_slugs ) && ! empty( $card_cat_slugs
 
 $cs_release_ts = function_exists( 'fishotel_cs_release_ts' ) ? fishotel_cs_release_ts( $pid ) : 0;
 ?>
-<div class="fh-fish-card-wrap product" data-fh-cats="<?php echo $card_cat_attr; ?>">
+<div class="fh-fish-card-wrap product" data-product-id="<?php echo esc_attr( $pid ); ?>" data-fh-cats="<?php echo $card_cat_attr; ?>">
     <?php do_action( 'woocommerce_before_shop_loop_item' ); ?>
     <a href="<?php the_permalink(); ?>" class="fh-fish-card">
         <div class="fh-fish-card__image">

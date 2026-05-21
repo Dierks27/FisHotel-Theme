@@ -22,11 +22,9 @@
         return;
     }
 
-    var maxPages      = parseInt(wrap.dataset.maxPages, 10) || 1;
     var orderby       = wrap.dataset.orderby || '';
     var endText       = wrap.dataset.endText || '';
     var originalLabel = label.textContent;
-    var currentPage   = 1;
     var loading       = false;
 
     // JS is active — reveal the button and hide the pagination fallback.
@@ -34,6 +32,16 @@
     var fallback = document.querySelector('.fishotel-pagination-fallback');
     if (fallback) {
         fallback.style.display = 'none';
+    }
+
+    // IDs of every product currently in the grid. Sent with each request so
+    // the handler excludes them and returns the next batch — guaranteeing no
+    // duplicates and no skipped products regardless of sort.
+    function loadedIds() {
+        return Array.prototype.slice
+            .call(grid.querySelectorAll('.fh-fish-card-wrap[data-product-id]'))
+            .map(function (el) { return el.dataset.productId; })
+            .filter(Boolean);
     }
 
     function setIdle() {
@@ -50,22 +58,23 @@
     }
 
     btn.addEventListener('click', function () {
-        if (loading || btn.classList.contains('is-exhausted') || currentPage >= maxPages) {
+        if (loading || btn.classList.contains('is-exhausted')) {
             return;
         }
         loading = true;
         btn.classList.add('is-loading');
         btn.disabled = true;
 
-        var nextPage = currentPage + 1;
         var formData = new FormData();
         formData.append('action', 'fishotel_load_more_products');
         formData.append('nonce', FishotelLoadMore.nonce);
-        formData.append('paged', nextPage);
         formData.append('orderby', orderby);
         formData.append('taxonomy', FishotelLoadMore.taxonomy);
         formData.append('term', FishotelLoadMore.term);
         formData.append('per_page', FishotelLoadMore.per_page);
+        loadedIds().forEach(function (id) {
+            formData.append('loaded_ids[]', id);
+        });
 
         fetch(FishotelLoadMore.ajax_url, { method: 'POST', body: formData, credentials: 'same-origin' })
             .then(function (res) { return res.json(); })
@@ -78,13 +87,10 @@
                         grid.appendChild(node);
                     });
                 }
-                currentPage = nextPage;
                 loading = false;
-                // Last page reached → lock into the exhausted end state.
-                // Otherwise return to the idle clickable state so the next
-                // page is reachable (the stuck-button bug was a missing
-                // re-enable on this branch). PR follow-up to #54.
-                if (!data.has_more || currentPage >= maxPages) {
+                // No more remaining → exhausted end state; otherwise return to
+                // idle/clickable so the next batch is reachable.
+                if (!data.has_more) {
                     setExhausted();
                 } else {
                     setIdle();

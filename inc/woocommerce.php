@@ -33,6 +33,24 @@ add_filter( 'loop_shop_per_page', function() { return 16; } );
 // "Newest"/price remain selectable in the sort dropdown.
 add_filter( 'woocommerce_default_catalog_orderby', function() { return 'title'; } );
 
+// Append a unique secondary sort (post ID) to the string-based catalog
+// orders so ties produce a deterministic, reproducible total order. Without
+// it, sorts with many tied rows (e.g. price-desc when most "Arriving Soon"
+// fish have no price) come back in arbitrary order, which differs between
+// the initial render and the Load More AJAX query. Runs for both queries
+// since both pass through get_catalog_ordering_args(). Price sorts already
+// carry a product_id tiebreaker in their own posts_clauses, and have an
+// empty 'orderby' here, so they're left untouched.
+add_filter( 'woocommerce_get_catalog_ordering_args', function( $args ) {
+    if ( ! empty( $args['orderby'] )
+        && is_string( $args['orderby'] )
+        && false === strpos( $args['orderby'], 'rand' )
+        && ! preg_match( '/\bID\b/', $args['orderby'] ) ) {
+        $args['orderby'] .= ' ID';
+    }
+    return $args;
+} );
+
 /*
  * Strip PayPal Pay Later / Pay-in-4 messaging from the PDP summary hook.
  * The WooCommerce PayPal Payments plugin registers a message-renderer

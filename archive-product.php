@@ -151,40 +151,55 @@ if ( is_shop() && ! is_product_category() ) {
             ?>
         </span>
 
-        <?php if ( $is_qf_family ) : ?>
-        <div class="fh-shop-filters">
-            <a href="<?php echo esc_url(get_permalink(wc_get_page_id('shop'))); ?>"
-               class="fh-filter-btn <?php echo is_shop() && !is_product_category() ? 'active' : ''; ?>">
-                All <?php echo esc_html( ucfirst( $archive_noun_plural ) ); ?>
-            </a>
-            <?php
-            $qf_parent = get_term_by('slug', 'quarantined-fish', 'product_cat');
+        <?php
+        // Sub-category chip strip (Saltwater / Reef-Safe / …). The legacy
+        // "All Fish" reset button was removed — the breadcrumb + heading
+        // already establish category context. Only render the container when
+        // the quarantined-fish parent actually has child categories with
+        // products, so we never leave an empty chip row behind.
+        $fish_cats = [];
+        if ( $is_qf_family ) {
+            $qf_parent = get_term_by( 'slug', 'quarantined-fish', 'product_cat' );
             $fish_cats = $qf_parent ? get_terms([
                 'taxonomy'   => 'product_cat',
                 'parent'     => (int) $qf_parent->term_id,
                 'hide_empty' => true,
             ]) : [];
-            if ($fish_cats && !is_wp_error($fish_cats)) :
-                foreach ($fish_cats as $fcat) : ?>
+            if ( is_wp_error( $fish_cats ) ) {
+                $fish_cats = [];
+            }
+        }
+        ?>
+        <?php if ( ! empty( $fish_cats ) ) : ?>
+        <div class="fh-shop-filters">
+            <?php foreach ( $fish_cats as $fcat ) : ?>
                 <a href="<?php echo esc_url(get_term_link($fcat)); ?>"
                    class="fh-filter-btn <?php echo is_product_category($fcat->slug) ? 'active' : ''; ?>">
                     <?php echo esc_html($fcat->name); ?>
                 </a>
-            <?php endforeach; endif; ?>
+            <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
         <select class="fh-shop-sort" onchange="window.location=this.value">
             <?php
+            // Alphabetical is the default (no orderby param → title A→Z), so
+            // it's the selected option on a fresh visit. Build option URLs
+            // with add_query_arg so an existing query string (e.g. ?utm=…)
+            // stays valid — the old `base . '?orderby='` concat produced a
+            // malformed double-`?` URL.
             $sort_opts = [
-                '?orderby=date'       => 'Newest',
-                '?orderby=price'      => 'Price: Low to High',
-                '?orderby=price-desc' => 'Price: High to Low',
-                '?orderby=title'      => 'Name: A–Z',
+                'title'      => 'Alphabetical',
+                'date'       => 'Newest',
+                'price'      => 'Price: Low to High',
+                'price-desc' => 'Price: High to Low',
             ];
-            $current = add_query_arg('orderby', get_query_var('orderby'), get_pagenum_link());
-            foreach ($sort_opts as $url => $label) : ?>
-                <option value="<?php echo esc_url(get_pagenum_link() . $url); ?>"><?php echo esc_html($label); ?></option>
+            $current_orderby = isset( $_GET['orderby'] ) ? sanitize_text_field( wp_unslash( $_GET['orderby'] ) ) : 'title';
+            $sort_base       = remove_query_arg( [ 'orderby', 'paged' ] );
+            foreach ( $sort_opts as $key => $label ) :
+                $opt_url = add_query_arg( 'orderby', $key, $sort_base );
+            ?>
+                <option value="<?php echo esc_url( $opt_url ); ?>" <?php selected( $current_orderby, $key ); ?>><?php echo esc_html( $label ); ?></option>
             <?php endforeach; ?>
         </select>
     </div>

@@ -76,13 +76,30 @@ function fishotel_load_more_products() {
         'ignore_sticky_posts' => true,
     ];
 
-    // Reuse WC's ordering parser so we honor the same options the dropdown
-    // offers — and so any orderby falls back identically to the main query.
-    if ( $orderby && isset( WC()->query ) && is_callable( [ WC()->query, 'get_catalog_ordering_args' ] ) ) {
+    // Reuse WC's catalog ordering parser for EVERY request — including when
+    // no orderby is sent. With an empty orderby it resolves the same default
+    // the main archive query uses (the woocommerce_default_catalog_orderby
+    // option/filter, e.g. title), and applies the same secondary tiebreakers
+    // (date+ID, the price meta-lookup with product_id, etc.). Skipping it on
+    // the default view was the bug: WP_Query then fell back to date DESC while
+    // page 1 was menu_order/title-ordered, so later AJAX pages overlapped
+    // page 1 — the duplicate products QA saw. (PR follow-up to #54.)
+    if ( isset( WC()->query ) && is_callable( [ WC()->query, 'get_catalog_ordering_args' ] ) ) {
         $args = array_merge( $args, WC()->query->get_catalog_ordering_args( $orderby ) );
     }
 
-    $tax_query = fishotel_load_more_visibility_tax_query();
+    // Build the visibility/stock query through WC's own helpers so the AJAX
+    // result set is byte-for-byte the set the main archive query produces
+    // (catalog-visibility, hide-out-of-stock, etc.). A standalone WP_Query
+    // never triggers WC_Query::product_query, so we replicate it explicitly.
+    if ( class_exists( 'WC_Query' ) ) {
+        $meta_query = WC_Query::get_meta_query();
+        $tax_query  = WC_Query::get_tax_query();
+    } else {
+        $meta_query = [];
+        $tax_query  = fishotel_load_more_visibility_tax_query();
+    }
+
     if ( $taxonomy && $term ) {
         $tax_query[] = [
             'taxonomy'         => $taxonomy,
@@ -90,6 +107,9 @@ function fishotel_load_more_products() {
             'terms'            => $term,
             'include_children' => true,
         ];
+    }
+    if ( ! empty( $meta_query ) ) {
+        $args['meta_query'] = $meta_query;
     }
     if ( ! empty( $tax_query ) ) {
         $args['tax_query'] = $tax_query;

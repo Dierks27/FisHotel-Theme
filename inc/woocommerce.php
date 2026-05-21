@@ -26,6 +26,13 @@ add_filter( 'loop_shop_columns', function() { return 4; } );
 // Products per page
 add_filter( 'loop_shop_per_page', function() { return 16; } );
 
+// Default catalog sort = alphabetical (title A→Z). Applies to the main
+// archive query AND the Load More AJAX query (both resolve their default
+// through this filter via WC_Query::get_catalog_ordering_args), so a fresh
+// category visit lands on A→Z and stays consistent across paged loads.
+// "Newest"/price remain selectable in the sort dropdown.
+add_filter( 'woocommerce_default_catalog_orderby', function() { return 'title'; } );
+
 /*
  * Strip PayPal Pay Later / Pay-in-4 messaging from the PDP summary hook.
  * The WooCommerce PayPal Payments plugin registers a message-renderer

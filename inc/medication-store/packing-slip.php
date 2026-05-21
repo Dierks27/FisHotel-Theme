@@ -2,14 +2,16 @@
 /**
  * Medication store — EA packing slip generator.
  *
- * Phase 1 ships a print-ready HTML view (browser handles Save-as-PDF
- * via the OS print dialog) plus a "Email to Dena" button that sends
- * the same HTML as a styled message to the EA fulfillment email.
- * Real PDF attachment requires a dependency (dompdf/TCPDF) that
- * isn't bundled in this theme — Phase 2 swaps in a real attachment
- * once Composer is wired up. The acceptance flow is the same
- * either way: button on the order screen, FisHotel-branded layout,
- * only EA-mode line items.
+ * The "Generate Slip" button opens a print-ready HTML view (browser
+ * handles Save-as-PDF via the OS print dialog). The "Email to Dena"
+ * button — and the auto-email-on-processing flow — render that same
+ * branded slip to a real PDF via dompdf (bundled through Composer in
+ * vendor/) and send it as an attachment, with a short cover note in
+ * the body. If dompdf can't load (vendor/ not deployed yet, render
+ * throws, etc.) the email gracefully falls back to the HTML-in-body
+ * behavior so an order status transition never fatals. Either way:
+ * button on the order screen, FisHotel-branded layout, only EA-mode
+ * line items.
  *
  * Slip layout per spec §7:
  *   - FisHotel logo + tagline header (dark band, gold rule).
@@ -167,8 +169,7 @@ class FisHotel_Med_Packing_Slip {
 			$variation_id = (int) $item->get_variation_id();
 			$lookup_id    = $product_id;
 			if ( ! $lookup_id ) continue;
-			if ( ! fishotel_med_is_med_product( $lookup_id ) ) continue;
-			if ( fishotel_med_get_mode( $lookup_id ) !== 'ea' ) continue;
+			if ( ! fishotel_is_ea_fulfilled_product( $lookup_id, $variation_id ) ) continue;
 
 			$size  = '';
 			$sku   = '';
@@ -240,8 +241,14 @@ class FisHotel_Med_Packing_Slip {
 	}
 
 	/**
-	 * Email the slip. Returns true on success, false on failure
-	 * (missing email or wp_mail() refused).
+	 * Email the slip. Sends a real PDF attachment (rendered from the
+	 * branded slip HTML via dompdf) with a short cover note in the body.
+	 * Falls back to the slip HTML in the body when dompdf is unavailable
+	 * or the PDF can't be staged, so an order status transition never
+	 * fatals on a missing dependency.
+	 *
+	 * Returns true on success, false on failure (missing email or
+	 * wp_mail() refused).
 	 */
 	public static function send_email( WC_Order $order ) {
 		$to = (string) FisHotel_Med_Settings::get( 'fishotel_ea_fulfillment_email' );
@@ -255,20 +262,137 @@ class FisHotel_Med_Packing_Slip {
 			__( 'FisHotel EA packing slip — Order #%s', 'fishotel' ),
 			$order->get_order_number()
 		);
-		$body    = self::build_slip_html( $order, /*for_email=*/ true );
 		$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
 
+		$pdf = self::build_slip_pdf( $order );
+
+		if ( $pdf !== null ) {
+			$uploads  = wp_upload_dir();
+			$tmp_dir  = trailingslashit( $uploads['basedir'] ) . 'fishotel-tmp';
+			$tmp_path = '';
+			try {
+				wp_mkdir_p( $tmp_dir );
+
+				// Lock the temp dir down so staged slips aren't publicly
+				// fetchable. Apache honors this; nginx ignores .htaccess and
+				// needs a server-level deny (flagged for Jeff in the PR).
+				$htaccess = trailingslashit( $tmp_dir ) . '.htaccess';
+				if ( ! file_exists( $htaccess ) ) {
+					file_put_contents( $htaccess, "Deny from all\n" );
+				}
+
+				// Attachment name = basename of the temp file, so the temp
+				// file must be named exactly per spec: fishotel-ea-{n}.pdf.
+				$safe_number = preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $order->get_order_number() );
+				if ( $safe_number === '' ) {
+					$safe_number = (string) $order->get_id();
+				}
+				$tmp_path = trailingslashit( $tmp_dir ) . 'fishotel-ea-' . $safe_number . '.pdf';
+
+				if ( file_put_contents( $tmp_path, $pdf ) === false ) {
+					$tmp_path = '';
+					throw new \RuntimeException( 'Failed to stage temp PDF.' );
+				}
+
+				$sent = wp_mail( $to, $subject, self::build_cover_note( $order ), $headers, [ $tmp_path ] );
+				if ( $sent ) {
+					$order->add_order_note( sprintf(
+						/* translators: %s = email address */
+						__( 'EA packing slip emailed to %s with PDF attachment.', 'fishotel' ),
+						$to
+					) );
+				} else {
+					$order->add_order_note( __( 'EA packing slip email failed (wp_mail returned false).', 'fishotel' ) );
+				}
+				return $sent;
+			} catch ( \Throwable $e ) {
+				// Staging/sending the PDF threw — drop to the HTML fallback.
+			} finally {
+				if ( $tmp_path !== '' && file_exists( $tmp_path ) ) {
+					@unlink( $tmp_path );
+				}
+			}
+		}
+
+		// Fallback: dompdf unavailable or PDF staging failed — send the
+		// slip as HTML in the body.
+		$order->add_order_note( __( 'EA packing slip emailed as HTML — PDF generation unavailable (see dompdf status).', 'fishotel' ) );
+		$body = self::build_slip_html( $order, /*for_email=*/ true );
 		$sent = wp_mail( $to, $subject, $body, $headers );
 		if ( $sent ) {
 			$order->add_order_note( sprintf(
 				/* translators: %s = email address */
-				__( 'EA packing slip emailed to %s.', 'fishotel' ),
+				__( 'EA packing slip emailed to %s as HTML (PDF unavailable).', 'fishotel' ),
 				$to
 			) );
 		} else {
 			$order->add_order_note( __( 'EA packing slip email failed (wp_mail returned false).', 'fishotel' ) );
 		}
 		return $sent;
+	}
+
+	/**
+	 * Render the slip HTML to a PDF binary string via dompdf.
+	 *
+	 * Returns null on failure (autoloader missing, dompdf throws, etc.)
+	 * so callers can fall back to HTML-only emails without crashing the
+	 * order status transition.
+	 *
+	 * @param WC_Order $order
+	 * @return string|null Binary PDF, or null on failure.
+	 */
+	public static function build_slip_pdf( WC_Order $order ) {
+		if ( ! class_exists( '\\Dompdf\\Dompdf' ) ) {
+			return null;
+		}
+		try {
+			$html   = self::build_slip_html( $order, /*for_email=*/ true );
+			$dompdf = new \Dompdf\Dompdf( [
+				'isRemoteEnabled'      => false, // No remote assets in the slip HTML.
+				'defaultFont'          => 'Helvetica',
+				'isHtml5ParserEnabled' => true,
+				// Render with the slip's @media print rules (white page, no
+				// card fill/shadow) — this is a slip meant for Dena's printer.
+				'defaultMediaType'     => 'print',
+			] );
+			$dompdf->loadHtml( $html, 'UTF-8' );
+			$dompdf->setPaper( 'letter', 'portrait' );
+			$dompdf->render();
+			return $dompdf->output();
+		} catch ( \Throwable $e ) {
+			return null;
+		}
+	}
+
+	/**
+	 * Short HTML cover note for the PDF email body. Order #, customer
+	 * name, and ship-by date mirror what build_slip_html() shows; the
+	 * full itemized slip lives in the attached PDF, not inline.
+	 *
+	 * @param WC_Order $order
+	 * @return string
+	 */
+	public static function build_cover_note( WC_Order $order ) {
+		$order_number = $order->get_order_number();
+
+		$name = trim( $order->get_formatted_shipping_full_name() );
+		if ( $name === '' ) {
+			$name = trim( $order->get_formatted_billing_full_name() );
+		}
+
+		$order_date = $order->get_date_created();
+		$ship_by    = $order_date ? $order_date->date_i18n( 'M j, Y' ) : '';
+
+		ob_start();
+		?>
+<p>Hi Dena,</p>
+<p>Attached is the FisHotel packing slip for <strong>Order #<?php echo esc_html( $order_number ); ?></strong>
+(<?php echo esc_html( $name ); ?>, ship by <?php echo esc_html( $ship_by ); ?>).</p>
+<p>Thank you!</p>
+<p style="color:#777;font-size:12px;">Order placed via fishotel.com — non-EA items
+on this order are fulfilled separately and are intentionally not on the attached slip.</p>
+		<?php
+		return ob_get_clean();
 	}
 
 	/** Auto-email hook — runs on order → processing if toggle is on. */
@@ -323,16 +447,19 @@ class FisHotel_Med_Packing_Slip {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>FisHotel EA Packing Slip — Order #<?php echo esc_html( $order_id ); ?></title>
+<title>FisHotel Packing Slip — Order #<?php echo esc_html( $order_id ); ?></title>
 <style>
 	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; color: #1a1a1a; background: #f6f5f1; }
 	.slip { max-width: 760px; margin: 24px auto; background: #fff; box-shadow: 0 1px 0 #e2dccc, 0 8px 24px rgba(0,0,0,.04); }
-	.slip__header { background: #0f0f0f; color: #e8e4dc; padding: 20px 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #d4a574; }
-	.slip__brand { font-family: "Roboto Slab", Georgia, serif; font-size: 22px; letter-spacing: 1px; }
-	.slip__brand small { display: block; font-size: 11px; color: #d4a574; letter-spacing: 2px; margin-top: 2px; }
-	.slip__doc { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #d4a574; text-align: right; }
-	.slip__doc strong { display: block; font-size: 16px; color: #fff; margin-top: 4px; letter-spacing: 1px; }
-	.slip__meta { padding: 18px 28px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; font-size: 13px; border-bottom: 1px solid #ece6d6; }
+	/* Ink-light header: no solid fill (saves Dena's toner). Dark text on
+	   white with the gold accent rule preserved for FisHotel branding. */
+	.slip__header { padding: 20px 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #d4a574; }
+	.slip__brand { font-family: "Roboto Slab", Georgia, serif; font-size: 22px; letter-spacing: 1px; color: #0f0f0f; }
+	.slip__brand small { display: block; font-size: 11px; color: #b07d3c; letter-spacing: 2px; margin-top: 2px; }
+	.slip__doc { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #b07d3c; text-align: right; }
+	.slip__doc strong { display: block; font-size: 16px; color: #0f0f0f; margin-top: 4px; letter-spacing: 1px; }
+	.slip__meta { padding: 18px 28px; font-size: 13px; border-bottom: 1px solid #ece6d6; }
+	.slip__meta > div { display: inline-block; width: 32%; vertical-align: top; box-sizing: border-box; }
 	.slip__meta dt { text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px; color: #847d6c; margin-bottom: 2px; }
 	.slip__meta dd { margin: 0; font-size: 14px; color: #1a1a1a; }
 	.slip__recipient { padding: 18px 28px; border-bottom: 1px solid #ece6d6; }
@@ -372,7 +499,7 @@ class FisHotel_Med_Packing_Slip {
 				<small><?php echo esc_html( $tagline ); ?></small>
 			</div>
 			<div class="slip__doc">
-				EA Packing Slip
+				Packing Slip
 				<strong>#<?php echo esc_html( $order_id ); ?></strong>
 			</div>
 		</header>
@@ -401,7 +528,7 @@ class FisHotel_Med_Packing_Slip {
 							<th>Qty</th>
 							<th>Product</th>
 							<th>Size</th>
-							<th>EA SKU</th>
+							<th>SKU</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -419,8 +546,8 @@ class FisHotel_Med_Packing_Slip {
 		</section>
 
 		<footer class="slip__footer">
-			<p><strong>Thank you — please pack and ship per the EA fulfillment agreement.</strong></p>
-			<p class="note">Order placed via fishotel.com — non-EA items in this order are fulfilled separately and are intentionally excluded from this slip.</p>
+			<p><strong>Thank you for your order!</strong></p>
+			<p class="note">Items not shown on this slip may ship separately.</p>
 		</footer>
 	</div>
 </body>

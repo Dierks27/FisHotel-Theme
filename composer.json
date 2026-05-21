@@ -1,0 +1,16 @@
+{
+    "name": "fishotel/fishotel-theme",
+    "description": "FisHotel custom WordPress theme",
+    "type": "wordpress-theme",
+    "require": {
+        "php": ">=7.4",
+        "dompdf/dompdf": "^3.0"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "platform": {
+            "php": "7.4"
+        }
+    }
+}

@@ -2062,3 +2062,95 @@ h1, h2, h3, h4, h5 {
 }
 .site-header__drawer-menu .sub-menu a:hover { color: #d4a574; }
 
+
+/* ─────────────────────────────────────────
+   PRODUCT GALLERY LIGHTBOX
+   Custom fullscreen viewer (initLightbox in main.js). Replaces the
+   PhotoSwipe lightbox WC would enable via wc-product-gallery-lightbox —
+   this theme renders a custom gallery, so PhotoSwipe never initialises.
+   Styled with FisHotel tokens to match the dark/gold PDP.
+   ───────────────────────────────────────── */
+.fh-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fh-bg-dkr);
+  background: rgba(21, 21, 21, 0.97);
+  padding: 32px;
+  cursor: zoom-out;
+  animation: fh-lightbox-in 0.18s ease;
+}
+
+@keyframes fh-lightbox-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.fh-lightbox__img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  cursor: default;
+  border: 1px solid var(--fh-border);
+}
+
+.fh-lightbox__close,
+.fh-lightbox__nav {
+  position: absolute;
+  background: transparent;
+  border: none;
+  color: var(--fh-text-1);
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity var(--fh-transition), color var(--fh-transition);
+  line-height: 1;
+  padding: 8px;
+}
+
+.fh-lightbox__close:hover,
+.fh-lightbox__close:focus,
+.fh-lightbox__nav:hover,
+.fh-lightbox__nav:focus {
+  opacity: 1;
+  color: var(--fh-gold-lt);
+  outline: none;
+}
+
+.fh-lightbox__close {
+  top: 20px;
+  right: 24px;
+  font-size: 34px;
+}
+
+.fh-lightbox__nav {
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 52px;
+  font-family: var(--fh-serif);
+}
+
+.fh-lightbox__nav--prev { left: 16px; }
+.fh-lightbox__nav--next { right: 16px; }
+
+.fh-lightbox__counter {
+  position: absolute;
+  bottom: 22px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--fh-font);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fh-gold-pale);
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .fh-lightbox { padding: 16px; }
+  .fh-lightbox__nav { font-size: 40px; }
+  .fh-lightbox__close { font-size: 30px; top: 14px; right: 16px; }
+}

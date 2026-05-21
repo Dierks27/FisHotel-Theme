@@ -165,7 +165,7 @@ while ( have_posts() ) :
     <div class="fh-gallery">
         <div class="fh-gallery__main">
             <?php if ($main_img_id) : ?>
-                <?php echo wp_get_attachment_image($main_img_id, 'fishotel-product-hero', false, ['class' => '', 'id' => 'fh-main-img', 'alt' => get_the_title()]); ?>
+                <?php echo wp_get_attachment_image($main_img_id, 'fishotel-product-hero', false, ['class' => '', 'id' => 'fh-main-img', 'alt' => get_the_title(), 'data-full' => esc_url(wp_get_attachment_url($main_img_id))]); ?>
             <?php else : ?>
                 <?php echo FisHotel_Placeholder_Library::render( $product_id, 'fishotel-product-hero', ['id' => 'fh-main-img', 'alt' => get_the_title()] ); ?>
             <?php endif; ?>

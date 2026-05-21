@@ -210,14 +210,112 @@
         $('.fh-purchase__form').each(function() { recompute($(this)); });
     }
 
-    // Gallery thumb switcher
+    // Gallery thumb switcher + lightbox
     function initGallery() {
+        var $main = $('.fh-gallery__main');
+        if (!$main.length) return;
+        var $mainImg = $main.find('img');
+
+        // Full-resolution URL for a thumb. Thumbs carry the full image in
+        // data-full; the rendered <img> is only the 120px crop, so reading
+        // its src would swap in a blurry low-res image.
+        function fullSrc($thumb) {
+            return $thumb.attr('data-full') || $thumb.find('img').attr('src');
+        }
+
+        // Swap the hero image. wp_get_attachment_image() emits srcset/sizes,
+        // so the browser keeps painting a srcset candidate even after src
+        // changes — clearing them is what makes the swap actually visible.
+        function showImage(src) {
+            if (!src) return;
+            $mainImg.attr('src', src).removeAttr('srcset').removeAttr('sizes');
+        }
+
         $(document).on('click', '.fh-gallery__thumb', function() {
-            var imgSrc = $(this).find('img').attr('src');
+            var $thumb = $(this);
             $('.fh-gallery__thumb').removeClass('active');
-            $(this).addClass('active');
-            if (imgSrc) $('.fh-gallery__main img').attr('src', imgSrc);
+            $thumb.addClass('active');
+            showImage(fullSrc($thumb));
         });
+
+        // Ordered list of full-size URLs for the lightbox. Mirrors the thumb
+        // order; falls back to the hero image's own data-full when a product
+        // has a single image (no thumbs rendered).
+        function gallerySrcs() {
+            var $thumbs = $('.fh-gallery__thumb');
+            if ($thumbs.length) {
+                return $thumbs.map(function() { return fullSrc($(this)); }).get();
+            }
+            return [$mainImg.attr('data-full') || $mainImg.attr('src')];
+        }
+
+        function currentIndex() {
+            var i = $('.fh-gallery__thumb').index($('.fh-gallery__thumb.active'));
+            return i < 0 ? 0 : i;
+        }
+
+        $main.on('click', function() { initLightbox(gallerySrcs(), currentIndex()); });
+    }
+
+    // Lightweight fullscreen lightbox — no PhotoSwipe dependency. Styled in
+    // main.css (.fh-lightbox*) with FisHotel tokens. Supports prev/next,
+    // keyboard arrows + ESC, click-out to close, and touch swipe on mobile.
+    function initLightbox(srcs, startIndex) {
+        if (!srcs || !srcs.length) return;
+        var idx = startIndex || 0;
+
+        var $box = $(
+            '<div class="fh-lightbox" role="dialog" aria-modal="true" aria-label="Product image viewer">' +
+                '<button type="button" class="fh-lightbox__close" aria-label="Close">&times;</button>' +
+                '<button type="button" class="fh-lightbox__nav fh-lightbox__nav--prev" aria-label="Previous image">&#8249;</button>' +
+                '<img class="fh-lightbox__img" alt="">' +
+                '<button type="button" class="fh-lightbox__nav fh-lightbox__nav--next" aria-label="Next image">&#8250;</button>' +
+                '<div class="fh-lightbox__counter"></div>' +
+            '</div>'
+        );
+
+        var multiple = srcs.length > 1;
+        if (!multiple) $box.find('.fh-lightbox__nav, .fh-lightbox__counter').remove();
+
+        function render() {
+            $box.find('.fh-lightbox__img').attr('src', srcs[idx]);
+            if (multiple) $box.find('.fh-lightbox__counter').text((idx + 1) + ' / ' + srcs.length);
+        }
+        function go(step) {
+            idx = (idx + step + srcs.length) % srcs.length;
+            render();
+        }
+        function close() {
+            $box.remove();
+            $(document).off('keydown.fhlightbox');
+            $('body').css('overflow', '');
+        }
+
+        $box.on('click', '.fh-lightbox__close', close);
+        $box.on('click', '.fh-lightbox__nav--prev', function(e) { e.stopPropagation(); go(-1); });
+        $box.on('click', '.fh-lightbox__nav--next', function(e) { e.stopPropagation(); go(1); });
+        $box.find('.fh-lightbox__img').on('click', function(e) { e.stopPropagation(); });
+        // Click anywhere outside the image (the backdrop) closes.
+        $box.on('click', close);
+
+        $(document).on('keydown.fhlightbox', function(e) {
+            if (e.key === 'Escape') close();
+            else if (multiple && e.key === 'ArrowLeft') go(-1);
+            else if (multiple && e.key === 'ArrowRight') go(1);
+        });
+
+        // Touch swipe — horizontal drag past threshold flips images.
+        var touchX = null;
+        $box.on('touchstart', function(e) { touchX = e.originalEvent.touches[0].clientX; });
+        $box.on('touchend', function(e) {
+            if (touchX === null || !multiple) return;
+            var dx = e.originalEvent.changedTouches[0].clientX - touchX;
+            if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+            touchX = null;
+        });
+
+        render();
+        $('body').css('overflow', 'hidden').append($box);
     }
 
     // Mobile nav — toggle drawer and manage ARIA

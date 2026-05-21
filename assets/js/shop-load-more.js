@@ -36,14 +36,21 @@
         fallback.style.display = 'none';
     }
 
-    function exhaust() {
-        label.textContent = endText;
+    function setIdle() {
+        btn.classList.remove('is-loading');
+        btn.disabled = false;
+        label.textContent = originalLabel;
+    }
+
+    function setExhausted() {
+        btn.classList.remove('is-loading');
         btn.classList.add('is-exhausted');
         btn.disabled = true;
+        label.textContent = endText;
     }
 
     btn.addEventListener('click', function () {
-        if (loading || currentPage >= maxPages) {
+        if (loading || btn.classList.contains('is-exhausted') || currentPage >= maxPages) {
             return;
         }
         loading = true;
@@ -72,20 +79,22 @@
                     });
                 }
                 currentPage = nextPage;
+                loading = false;
+                // Last page reached → lock into the exhausted end state.
+                // Otherwise return to the idle clickable state so the next
+                // page is reachable (the stuck-button bug was a missing
+                // re-enable on this branch). PR follow-up to #54.
                 if (!data.has_more || currentPage >= maxPages) {
-                    exhaust();
+                    setExhausted();
+                } else {
+                    setIdle();
                 }
             })
             .catch(function () {
-                label.textContent = "Couldn't load more — try again";
-                btn.disabled = false;
-            })
-            .finally(function () {
                 loading = false;
                 btn.classList.remove('is-loading');
-                if (!btn.classList.contains('is-exhausted') && !btn.disabled) {
-                    label.textContent = originalLabel;
-                }
+                btn.disabled = false;
+                label.textContent = "Couldn't load more — try again";
             });
     });
 })();

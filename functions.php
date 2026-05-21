@@ -183,6 +183,7 @@ $includes = [
 	'/inc/template-tags.php',
 	'/inc/customizer.php',
 	'/inc/woocommerce.php',
+	'/inc/shop-load-more.php', // Shop archive Load More (AJAX) + enqueue
 	'/inc/hotel-data.php',       // FisHotel quarantine meta
 	'/inc/hotel-journal.php',    // Quarantine journal entries
 	'/inc/variation-display.php', // Visual variation buttons

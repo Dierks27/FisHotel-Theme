@@ -2516,3 +2516,71 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 .fh-checkout-login-body .lost_password { font-size: 12px; margin-top: 8px; }
 .fh-checkout-login-body .lost_password a { color: var(--fh-text-3); text-decoration: underline; }
 .fh-checkout-login-body .lost_password a:hover { color: var(--fh-gold); }
+
+/* ─────────────────────────────────────────
+   SHOP ARCHIVE — LOAD MORE BUTTON
+   Replaces pagination on /shop/, category, and tag archives. The
+   pagination markup still renders server-side as a no-JS fallback;
+   shop-load-more.js hides it and drives this button instead.
+   ───────────────────────────────────────── */
+.fishotel-load-more-wrap {
+  display: none; /* revealed by shop-load-more.js; no-JS users get the pagination fallback */
+  justify-content: center;
+  padding: 48px 0 64px;
+  border-top: 1px solid var(--fh-border);
+}
+.fishotel-load-more-wrap.is-ready { display: flex; }
+.fishotel-load-more-btn {
+  position: relative;
+  font-family: var(--fh-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fh-text-1);
+  background: transparent;
+  border: 1px solid var(--fh-border-gold);
+  padding: 16px 40px;
+  min-width: 260px;
+  cursor: pointer;
+  transition: background var(--fh-transition), color var(--fh-transition), border-color var(--fh-transition), opacity var(--fh-transition);
+}
+.fishotel-load-more-btn:hover:not(:disabled) {
+  background: var(--fh-gold);
+  border-color: var(--fh-gold);
+  color: var(--fh-bg-dkr);
+}
+.fishotel-load-more-btn:disabled { cursor: default; }
+.fishotel-load-more-btn.is-loading .fishotel-load-more-label { opacity: 0.5; }
+.fishotel-load-more-btn.is-loading .fishotel-load-more-spinner { display: inline-block; }
+.fishotel-load-more-spinner {
+  display: none;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border: 2px solid var(--fh-gold);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: fishotel-load-more-spin 0.8s linear infinite;
+}
+.fishotel-load-more-btn.is-exhausted {
+  border-color: var(--fh-border);
+  color: var(--fh-text-3);
+}
+@keyframes fishotel-load-more-spin {
+  to { transform: rotate(360deg); }
+}
+/* Fade-in for AJAX-appended cards */
+.fishotel-fade-in {
+  animation: fishotel-fade-in 0.4s ease forwards;
+  opacity: 0;
+}
+@keyframes fishotel-fade-in {
+  to { opacity: 1; }
+}
+@media (max-width: 600px) {
+  .fishotel-load-more-btn { width: 100%; min-width: 0; padding: 18px 24px; }
+}

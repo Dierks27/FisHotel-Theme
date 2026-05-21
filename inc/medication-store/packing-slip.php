@@ -267,27 +267,21 @@ class FisHotel_Med_Packing_Slip {
 		$pdf = self::build_slip_pdf( $order );
 
 		if ( $pdf !== null ) {
-			$uploads  = wp_upload_dir();
-			$tmp_dir  = trailingslashit( $uploads['basedir'] ) . 'fishotel-tmp';
+			// Stage the PDF in the OS temp dir (outside the web root) so it
+			// can never be served over HTTP. nginx ignores .htaccess, so a
+			// file under uploads/ could otherwise be fetched in the brief
+			// window before cleanup; sys_get_temp_dir() sidesteps that and
+			// works the same on Cloudways/staging/local. The finally block
+			// removes it regardless of how we exit.
 			$tmp_path = '';
 			try {
-				wp_mkdir_p( $tmp_dir );
-
-				// Lock the temp dir down so staged slips aren't publicly
-				// fetchable. Apache honors this; nginx ignores .htaccess and
-				// needs a server-level deny (flagged for Jeff in the PR).
-				$htaccess = trailingslashit( $tmp_dir ) . '.htaccess';
-				if ( ! file_exists( $htaccess ) ) {
-					file_put_contents( $htaccess, "Deny from all\n" );
-				}
-
 				// Attachment name = basename of the temp file, so the temp
 				// file must be named exactly per spec: fishotel-ea-{n}.pdf.
 				$safe_number = preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $order->get_order_number() );
 				if ( $safe_number === '' ) {
 					$safe_number = (string) $order->get_id();
 				}
-				$tmp_path = trailingslashit( $tmp_dir ) . 'fishotel-ea-' . $safe_number . '.pdf';
+				$tmp_path = trailingslashit( sys_get_temp_dir() ) . 'fishotel-ea-' . $safe_number . '.pdf';
 
 				if ( file_put_contents( $tmp_path, $pdf ) === false ) {
 					$tmp_path = '';

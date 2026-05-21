@@ -47,16 +47,19 @@ function fishotel_load_more_visibility_tax_query() {
 function fishotel_load_more_products() {
     check_ajax_referer( 'fishotel_load_more', 'nonce' );
 
-    $paged    = isset( $_POST['paged'] )    ? max( 2, absint( $_POST['paged'] ) ) : 2;
     $orderby  = isset( $_POST['orderby'] )  ? sanitize_text_field( wp_unslash( $_POST['orderby'] ) ) : '';
     $taxonomy = isset( $_POST['taxonomy'] ) ? sanitize_key( $_POST['taxonomy'] ) : '';
     $term     = isset( $_POST['term'] )     ? sanitize_text_field( wp_unslash( $_POST['term'] ) ) : '';
 
-    // per_page must match the archive's main query exactly or pagination
-    // math drifts (skipped/duplicated products). The theme forces 16 via
-    // loop_shop_per_page, and the medications archive forces 50 via
-    // pre_get_posts — both flow through here from the client, which read
-    // the live query value. Cap to a sane ceiling against tampering.
+    // Products already rendered on the page (server batch + any prior AJAX
+    // batches). We exclude these instead of paginating by offset — see the
+    // post__not_in note below.
+    $loaded_ids = isset( $_POST['loaded_ids'] ) ? array_map( 'absint', (array) $_POST['loaded_ids'] ) : [];
+    $loaded_ids = array_values( array_filter( array_unique( $loaded_ids ) ) );
+
+    // per_page = how many to append per click. Mirrors the archive's main
+    // query value (theme forces 16, meds force 50), passed from the client
+    // which reads the live query var. Cap against tampering.
     $default_per_page = (int) apply_filters( 'loop_shop_per_page', wc_get_default_products_per_row() * wc_get_default_product_rows_per_page() );
     $per_page         = isset( $_POST['per_page'] ) ? absint( $_POST['per_page'] ) : $default_per_page;
     $per_page         = min( max( 1, $per_page ), 100 );
@@ -68,24 +71,39 @@ function fishotel_load_more_products() {
         $term     = '';
     }
 
+    // Exclusion-based pagination. Rather than fetch "page N" by offset and
+    // hope the AJAX query's ordering lines up byte-for-byte with the main
+    // archive query (it didn't — QA on v1.11.2 saw boundary + tie-driven
+    // duplicates), we exclude every product already on the page and return
+    // the next batch from the front of the remaining set. Duplicates are then
+    // impossible by construction and no product can be skipped, regardless of
+    // any residual ordering drift between the two queries.
     $args = [
         'post_type'           => 'product',
         'post_status'         => 'publish',
         'posts_per_page'      => $per_page,
-        'paged'               => $paged,
+        'post__not_in'        => $loaded_ids,
         'ignore_sticky_posts' => true,
     ];
 
-    // Reuse WC's catalog ordering parser for EVERY request — including when
-    // no orderby is sent. With an empty orderby it resolves the same default
-    // the main archive query uses (the woocommerce_default_catalog_orderby
-    // option/filter, e.g. title), and applies the same secondary tiebreakers
-    // (date+ID, the price meta-lookup with product_id, etc.). Skipping it on
-    // the default view was the bug: WP_Query then fell back to date DESC while
-    // page 1 was menu_order/title-ordered, so later AJAX pages overlapped
-    // page 1 — the duplicate products QA saw. (PR follow-up to #54.)
+    // Resolve ordering through WC's parser so the appended batch follows the
+    // same order as the initial render. Split a combined value like
+    // "price-desc" into orderby + order BEFORE calling — passing it whole
+    // skips get_catalog_ordering_args()'s own split (that only runs when its
+    // $orderby arg is empty), so "price-desc" fell through to the menu_order
+    // default and produced a completely different order than the main query
+    // (the scattered price-desc duplicates QA saw). An empty orderby resolves
+    // the same default the main query uses (woocommerce_default_catalog_orderby).
     if ( isset( WC()->query ) && is_callable( [ WC()->query, 'get_catalog_ordering_args' ] ) ) {
-        $args = array_merge( $args, WC()->query->get_catalog_ordering_args( $orderby ) );
+        if ( $orderby !== '' ) {
+            $parts         = explode( '-', $orderby );
+            $ob            = $parts[0];
+            $ord           = ! empty( $parts[1] ) ? strtoupper( $parts[1] ) : '';
+            $ordering_args = WC()->query->get_catalog_ordering_args( $ob, $ord );
+        } else {
+            $ordering_args = WC()->query->get_catalog_ordering_args();
+        }
+        $args = array_merge( $args, $ordering_args );
     }
 
     // Build the visibility/stock query through WC's own helpers so the AJAX
@@ -135,7 +153,10 @@ function fishotel_load_more_products() {
 
     wp_send_json( [
         'html'     => $html,
-        'has_more' => $paged < $query->max_num_pages,
+        // With exclusion-based paging the query's found_posts is the size of
+        // the remaining (not-yet-loaded) set. More remain only if it exceeds
+        // what we just returned.
+        'has_more' => $query->found_posts > $query->post_count,
     ] );
 }
 add_action( 'wp_ajax_fishotel_load_more_products',        'fishotel_load_more_products' );

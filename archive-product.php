@@ -189,7 +189,7 @@ if ( is_shop() && ! is_product_category() ) {
             // stays valid — the old `base . '?orderby='` concat produced a
             // malformed double-`?` URL.
             $sort_opts = [
-                'title'      => 'Alphabetical',
+                'title'      => 'A → Z',
                 'date'       => 'Newest',
                 'price'      => 'Price: Low to High',
                 'price-desc' => 'Price: High to Low',

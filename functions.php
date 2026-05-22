@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.14.3' );
+define( 'FISHOTEL_THEME_VERSION', '1.15.0' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -38,6 +38,10 @@ require_once FISHOTEL_THEME_DIR . '/inc/medication-store/init.php';
 // Order Fulfillment (Phase 1) — opt-in split fulfillment for mixed orders.
 require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-order-fulfillment.php';
 FisHotel_Order_Fulfillment::init();
+// Fulfillment Orders (Phase 2.5) — aggregate source orders into a single
+// operational shipping unit. Replaces Phase 2 primary/secondary linking.
+require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-fulfillment.php';
+FisHotel_Fulfillment::init();
 // ─────────────────────────────────────────
 // THEME SETUP
 // ─────────────────────────────────────────

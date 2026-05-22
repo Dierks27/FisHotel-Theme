@@ -85,18 +85,18 @@ class FisHotel_Med_Packing_Slip {
 			echo '<p style="color:#666;">' . esc_html__( 'Order not loaded yet.', 'fishotel' ) . '</p>';
 			return;
 		}
-		// Combined secondary orders don't own their own slip — the primary
-		// generates one merged slip for the whole bundle.
-		if ( function_exists( 'fishotel_order_get_primary' ) ) {
-			$primary_id = fishotel_order_get_primary( $order );
-			if ( $primary_id ) {
-				$primary = wc_get_order( $primary_id );
-				$link    = $primary instanceof WC_Order ? $primary->get_edit_order_url() : '#';
+		// Source orders folded into a fulfillment don't own their own slip —
+		// the fulfillment carries the aggregated items and generates one slip.
+		if ( function_exists( 'fishotel_order_get_fulfillment' ) ) {
+			$ff_id = fishotel_order_get_fulfillment( $order );
+			if ( $ff_id ) {
+				$ff   = wc_get_order( $ff_id );
+				$link = $ff instanceof WC_Order ? $ff->get_edit_order_url() : '#';
 				echo '<p style="margin:0;color:#666;">';
 				printf(
-					/* translators: %s = primary order link */
-					wp_kses_post( __( 'This order is combined into %s — generate the slip from there.', 'fishotel' ) ),
-					'<a href="' . esc_url( $link ) . '"><strong>#' . esc_html( (string) $primary_id ) . '</strong></a>'
+					/* translators: %s = fulfillment order link */
+					wp_kses_post( __( 'This order is part of fulfillment %s — generate the slip from there.', 'fishotel' ) ),
+					'<a href="' . esc_url( $link ) . '"><strong>#FF-' . esc_html( (string) $ff_id ) . '</strong></a>'
 				);
 				echo '</p>';
 				return;
@@ -204,19 +204,16 @@ class FisHotel_Med_Packing_Slip {
 	 * @return string[]
 	 */
 	public static function combined_order_numbers( WC_Order $order ) {
-		if ( ! function_exists( 'fishotel_order_get_secondaries' ) ) {
-			return [];
+		// Phase 2.5: a fulfillment lists its bundled source orders.
+		if ( function_exists( 'fishotel_is_fulfillment' ) && fishotel_is_fulfillment( $order ) ) {
+			$numbers = [];
+			foreach ( fishotel_fulfillment_get_sources( $order ) as $sid ) {
+				$src       = wc_get_order( (int) $sid );
+				$numbers[] = '#' . ( $src instanceof WC_Order ? $src->get_order_number() : $sid );
+			}
+			return $numbers;
 		}
-		$secondaries = fishotel_order_get_secondaries( $order->get_id() );
-		if ( empty( $secondaries ) ) {
-			return [];
-		}
-		$numbers = [ '#' . $order->get_order_number() ];
-		foreach ( $secondaries as $sid ) {
-			$sec = wc_get_order( $sid );
-			$numbers[] = '#' . ( $sec instanceof WC_Order ? $sec->get_order_number() : $sid );
-		}
-		return $numbers;
+		return [];
 	}
 
 	/**

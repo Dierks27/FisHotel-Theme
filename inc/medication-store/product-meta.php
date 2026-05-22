@@ -48,7 +48,11 @@ class FisHotel_Med_Product_Meta {
 		global $post;
 		$pid = (int) $post->ID;
 
-		$mode      = fishotel_med_get_mode( $pid );
+		// Read the RAW fulfillment meta — NOT fishotel_med_get_mode(), which
+		// defaults unset/empty to 'ea'. A product that was never opted in
+		// (e.g. a live fish) must show the empty "Not a FisHotel-managed
+		// product" option, not silently pre-select EA.
+		$mode      = (string) get_post_meta( $pid, '_fishotel_fulfillment', true );
 		$eyebrow   = (string) get_post_meta( $pid, '_fishotel_med_eyebrow', true );
 		$ea_url    = (string) get_post_meta( $pid, '_fishotel_ea_url', true );
 		$ea_pid    = (string) get_post_meta( $pid, '_fishotel_ea_product_id', true );
@@ -70,6 +74,7 @@ class FisHotel_Med_Product_Meta {
 				<p class="form-field _fishotel_fulfillment_field">
 					<label for="_fishotel_fulfillment"><?php esc_html_e( 'Fulfillment mode', 'fishotel' ); ?></label>
 					<select id="_fishotel_fulfillment" name="_fishotel_fulfillment" class="fishotel-med-mode">
+						<option value=""       <?php selected( $mode, '' ); ?>>— Not a FisHotel-managed product —</option>
 						<option value="ea"     <?php selected( $mode, 'ea' ); ?>>EA — synced from EverythingAquatic</option>
 						<option value="amazon" <?php selected( $mode, 'amazon' ); ?>>Amazon — affiliate buy-out</option>
 						<option value="self"   <?php selected( $mode, 'self' ); ?>>Self — Jeff stocks &amp; ships</option>
@@ -201,10 +206,20 @@ class FisHotel_Med_Product_Meta {
 		if ( ! wp_verify_nonce( $nonce, self::NONCE ) ) return;
 		if ( ! current_user_can( 'edit_product', $post_id ) ) return;
 
-		$mode_in = isset( $_POST['_fishotel_fulfillment'] ) ? sanitize_text_field( wp_unslash( $_POST['_fishotel_fulfillment'] ) ) : 'ea';
-		$mode    = in_array( $mode_in, [ 'ea', 'amazon', 'self' ], true ) ? $mode_in : 'ea';
+		// Default to '' (not 'ea'): this panel renders on EVERY simple/
+		// variable product, so saving an unrelated product (a live fish)
+		// without touching the tab must NOT tag it as EA.
+		$mode_in = isset( $_POST['_fishotel_fulfillment'] ) ? sanitize_text_field( wp_unslash( $_POST['_fishotel_fulfillment'] ) ) : '';
+		$mode    = in_array( $mode_in, [ 'ea', 'amazon', 'self' ], true ) ? $mode_in : '';
 
-		update_post_meta( $post_id, '_fishotel_fulfillment',        $mode );
+		if ( $mode === '' ) {
+			// Remove the row entirely rather than storing '' — keeps the
+			// catalog clean and ensures fishotel_is_ea_fulfilled_product()
+			// (raw === 'ea') can never match an opted-out product.
+			delete_post_meta( $post_id, '_fishotel_fulfillment' );
+		} else {
+			update_post_meta( $post_id, '_fishotel_fulfillment', $mode );
+		}
 		update_post_meta( $post_id, '_fishotel_med_eyebrow',        sanitize_text_field( wp_unslash( $_POST['_fishotel_med_eyebrow']        ?? '' ) ) );
 		update_post_meta( $post_id, '_fishotel_ea_url',             esc_url_raw(           wp_unslash( $_POST['_fishotel_ea_url']           ?? '' ) ) );
 		update_post_meta( $post_id, '_fishotel_ea_product_id',      absint(                wp_unslash( $_POST['_fishotel_ea_product_id']    ?? 0  ) ) );
@@ -289,7 +304,13 @@ class FisHotel_Med_Product_Meta {
 		// Update WC price meta as well (regular_price + price) so the
 		// product page renders the calculated FisHotel price.
 		$parent_id = wp_get_post_parent_id( $variation_id );
-		$mode      = $parent_id ? fishotel_med_get_mode( $parent_id ) : 'ea';
+		// No-parent fallback is '' rather than 'ea' for consistency with the
+		// opt-in fix above. This does NOT change EA pricing: a variation
+		// always has a parent (so the real mode comes from
+		// fishotel_med_get_mode()), and the calc below only runs when the
+		// mode is 'ea' AND wholesale/retail are numeric — non-EA products
+		// carry no such pricing meta, so they're never repriced here.
+		$mode      = $parent_id ? fishotel_med_get_mode( $parent_id ) : '';
 		if ( $mode === 'ea' && is_numeric( $wholesale ) && is_numeric( $retail ) ) {
 			$price = fishotel_calculate_med_price(
 				(float) $wholesale,

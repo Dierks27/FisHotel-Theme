@@ -73,6 +73,66 @@ function fishotel_order_is_mixed( $order ) {
 	return false;
 }
 
+/**
+ * If this order is a *secondary* (combined into another), return the
+ * primary order ID. Standalone and primary orders return null.
+ *
+ * @param int|WC_Order $order_id
+ * @return int|null
+ */
+function fishotel_order_get_primary( $order_id ) {
+	$order = $order_id instanceof WC_Order ? $order_id : wc_get_order( (int) $order_id );
+	if ( ! $order instanceof WC_Order ) {
+		return null;
+	}
+	$primary = (int) $order->get_meta( '_fishotel_combined_into' );
+	return $primary > 0 ? $primary : null;
+}
+
+/**
+ * IDs of the secondary orders combined into this one. Reverse lookup on
+ * the _fishotel_combined_into meta — HPOS-safe via wc_get_orders().
+ *
+ * @param int|WC_Order $order_id
+ * @return int[]
+ */
+function fishotel_order_get_secondaries( $order_id ) {
+	$primary_id = $order_id instanceof WC_Order ? $order_id->get_id() : (int) $order_id;
+	if ( ! $primary_id ) {
+		return [];
+	}
+	$ids = wc_get_orders( [
+		'limit'      => -1,
+		'return'     => 'ids',
+		'meta_query' => [
+			[
+				'key'     => '_fishotel_combined_into',
+				'value'   => $primary_id,
+				'compare' => '=',
+			],
+		],
+	] );
+	return array_map( 'intval', (array) $ids );
+}
+
+/**
+ * True when an order can be combined: it's processing or on-hold and not
+ * already a secondary of another order.
+ *
+ * @param int|WC_Order $order_id
+ * @return bool
+ */
+function fishotel_order_is_combinable( $order_id ) {
+	$order = $order_id instanceof WC_Order ? $order_id : wc_get_order( (int) $order_id );
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+	if ( fishotel_order_get_primary( $order ) ) {
+		return false; // Already a secondary.
+	}
+	return $order->has_status( [ 'processing', 'on-hold' ] );
+}
+
 class FisHotel_Order_Fulfillment {
 
 	const META_SPLIT    = '_fishotel_split_fulfillment';
@@ -80,6 +140,15 @@ class FisHotel_Order_Fulfillment {
 	const META_TRACKING = '_fishotel_line_tracking';
 	const NONCE_ACTION  = 'fishotel_ff_save';
 	const NONCE_FIELD   = 'fishotel_ff_nonce';
+
+	// Phase 2 — order combining.
+	const META_COMBINED_INTO = '_fishotel_combined_into';
+	const META_ORIG_SHIP     = '_fishotel_combined_orig_ship_date';
+	const META_SHIP_DATE     = '_fishotel_shipping_date';
+	const META_ORPHAN_WARNED = '_fishotel_combined_orphan_warned';
+	const ACTION_COMBINE     = 'fishotel_combine_orders';
+	const ACTION_UNCOMBINE   = 'fishotel_uncombine_order';
+	const ACTION_SEARCH      = 'fishotel_search_combinable_orders';
 
 	/** Allowed per-line status values. */
 	public static function statuses() {
@@ -114,6 +183,23 @@ class FisHotel_Order_Fulfillment {
 		// rock-solid woocommerce_order_status_changed action.
 		add_action( 'woocommerce_before_order_object_save', [ __CLASS__, 'gate_completion_pre_save' ], 5, 1 );
 		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'gate_completion' ], 5, 4 );
+
+		// ── Phase 2: order combining ───────────────────────────────────
+		add_action( 'add_meta_boxes_shop_order', [ __CLASS__, 'register_combine_meta_box' ] );
+		add_action( 'add_meta_boxes_woocommerce_page_wc-orders', [ __CLASS__, 'register_combine_meta_box' ] );
+
+		add_action( 'admin_post_' . self::ACTION_COMBINE, [ __CLASS__, 'handle_combine' ] );
+		add_action( 'admin_post_' . self::ACTION_UNCOMBINE, [ __CLASS__, 'handle_uncombine' ] );
+		add_action( 'wp_ajax_' . self::ACTION_SEARCH, [ __CLASS__, 'ajax_search_combinable' ] );
+
+		// When a primary dies (refunded/cancelled/failed), free its secondaries.
+		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'cleanup_dead_primary' ], 20, 4 );
+
+		// Order list "linked" badge — legacy (CPT) + HPOS list tables.
+		add_filter( 'manage_edit-shop_order_columns', [ __CLASS__, 'add_list_column' ] );
+		add_action( 'manage_shop_order_posts_custom_column', [ __CLASS__, 'render_list_column_cpt' ], 10, 2 );
+		add_filter( 'manage_woocommerce_page_wc-orders_columns', [ __CLASS__, 'add_list_column' ] );
+		add_action( 'woocommerce_shop_order_list_table_custom_column', [ __CLASS__, 'render_list_column_hpos' ], 10, 2 );
 	}
 
 	/** Register the "Fulfillment Status" meta box. $screen_or_post varies by screen. */
@@ -561,5 +647,554 @@ class FisHotel_Order_Fulfillment {
 			}
 		}
 		return false;
+	}
+
+	// ════════════════════════════════════════════════════════════════
+	//  Phase 2 — Order combining
+	// ════════════════════════════════════════════════════════════════
+
+	/** Register the "Combine Orders" meta box (side column, default priority). */
+	public static function register_combine_meta_box( $screen_or_post = null ) {
+		add_meta_box(
+			'fishotel-combine-orders',
+			__( 'Combine Orders', 'fishotel' ),
+			[ __CLASS__, 'render_combine_meta_box' ],
+			self::screen_id(),
+			'side',
+			'default'
+		);
+	}
+
+	/** Render the "Combine Orders" meta box body — content varies by role. */
+	public static function render_combine_meta_box( $post_or_order ) {
+		$order = self::resolve_order( $post_or_order );
+		if ( ! $order instanceof WC_Order ) {
+			echo '<p style="margin:0;color:#666;">' . esc_html__( 'Order not loaded yet.', 'fishotel' ) . '</p>';
+			return;
+		}
+
+		self::maybe_warn_orphaned_backup( $order );
+		self::render_combine_notice();
+
+		$order_id    = $order->get_id();
+		$primary_id  = fishotel_order_get_primary( $order );
+		$secondaries = fishotel_order_get_secondaries( $order_id );
+
+		// Role: secondary.
+		if ( $primary_id ) {
+			$primary = wc_get_order( $primary_id );
+			$link    = $primary ? $primary->get_edit_order_url() : '#';
+			?>
+			<p style="margin:0 0 8px;">
+				<?php
+				printf(
+					/* translators: %s = primary order link */
+					wp_kses_post( __( 'This order is combined into %s. Shipping date and EA slip are owned by the primary.', 'fishotel' ) ),
+					'<a href="' . esc_url( $link ) . '"><strong>#' . esc_html( (string) $primary_id ) . '</strong></a>'
+				);
+				?>
+			</p>
+			<?php
+			self::render_action_button( self::ACTION_UNCOMBINE, $order_id, __( 'Uncombine', 'fishotel' ), 'button-secondary' );
+			return;
+		}
+
+		// Role: primary.
+		if ( ! empty( $secondaries ) ) {
+			?>
+			<p style="margin:0 0 6px;">
+				<?php
+				printf(
+					/* translators: %d = number of combined orders */
+					esc_html( _n( 'This order has %d combined order:', 'This order has %d combined orders:', count( $secondaries ), 'fishotel' ) ),
+					count( $secondaries )
+				);
+				?>
+			</p>
+			<ul style="margin:0 0 4px 16px;list-style:disc;">
+				<?php foreach ( $secondaries as $sid ) :
+					$sec   = wc_get_order( $sid );
+					$slink = $sec ? $sec->get_edit_order_url() : '#';
+					?>
+					<li><a href="<?php echo esc_url( $slink ); ?>">#<?php echo esc_html( (string) $sid ); ?></a></li>
+				<?php endforeach; ?>
+			</ul>
+			<p class="description" style="margin:0;">
+				<?php esc_html_e( 'Uncombine from each secondary order’s own screen.', 'fishotel' ); ?>
+			</p>
+			<?php
+			return;
+		}
+
+		// Role: standalone — offer combine, but only if this order itself is
+		// in a combinable state.
+		if ( ! fishotel_order_is_combinable( $order ) ) {
+			echo '<p style="margin:0;color:#666;">'
+				. esc_html__( 'Only processing or on-hold orders can be combined.', 'fishotel' )
+				. '</p>';
+			return;
+		}
+
+		self::render_combine_form( $order );
+	}
+
+	/** Standalone-order combine UI: search input + hidden combine form. */
+	private static function render_combine_form( WC_Order $order ) {
+		$order_id = $order->get_id();
+		$action   = admin_url( 'admin-post.php' );
+		?>
+		<div class="fishotel-combine" data-fishotel-combine>
+			<p style="margin:0 0 6px;font-weight:600;"><?php esc_html_e( 'Combine into this order', 'fishotel' ); ?></p>
+			<p class="description" style="margin:0 0 8px;">
+				<?php esc_html_e( 'Search this customer’s other open orders to ship them together.', 'fishotel' ); ?>
+			</p>
+			<input type="text" data-combine-search autocomplete="off"
+				placeholder="<?php esc_attr_e( 'Search orders…', 'fishotel' ); ?>" style="width:100%;">
+			<ul data-combine-results style="margin:6px 0 0;max-height:180px;overflow:auto;display:none;
+				border:1px solid #dcdcde;border-radius:3px;list-style:none;padding:0;"></ul>
+
+			<form method="post" action="<?php echo esc_url( $action ); ?>" data-combine-form style="margin-top:10px;display:none;">
+				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION_COMBINE ); ?>">
+				<input type="hidden" name="primary_id" value="<?php echo esc_attr( $order_id ); ?>">
+				<input type="hidden" name="secondary_id" data-combine-secondary value="">
+				<?php wp_nonce_field( self::ACTION_COMBINE . '_' . $order_id ); ?>
+				<p style="margin:0 0 8px;">
+					<?php esc_html_e( 'Selected:', 'fishotel' ); ?>
+					<strong data-combine-selected-label></strong>
+				</p>
+				<button type="submit" class="button button-primary" data-combine-submit>
+					<?php esc_html_e( 'Combine', 'fishotel' ); ?>
+				</button>
+			</form>
+		</div>
+		<script>
+		( function () {
+			var box = document.querySelector( '#fishotel-combine-orders [data-fishotel-combine]' );
+			if ( ! box ) { return; }
+			var input    = box.querySelector( '[data-combine-search]' );
+			var results  = box.querySelector( '[data-combine-results]' );
+			var form     = box.querySelector( '[data-combine-form]' );
+			var hidden   = box.querySelector( '[data-combine-secondary]' );
+			var selLabel = box.querySelector( '[data-combine-selected-label]' );
+			var ajaxUrl  = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+			var nonce    = <?php echo wp_json_encode( wp_create_nonce( self::ACTION_SEARCH ) ); ?>;
+			var orderId  = <?php echo (int) $order_id; ?>;
+			var timer    = null;
+
+			function render( items ) {
+				results.innerHTML = '';
+				if ( ! items.length ) { results.style.display = 'none'; return; }
+				items.forEach( function ( it ) {
+					var li = document.createElement( 'li' );
+					li.textContent = it.label;
+					li.style.cssText = 'padding:6px 8px;cursor:pointer;border-bottom:1px solid #f0f0f1;';
+					li.addEventListener( 'click', function () {
+						hidden.value = it.id;
+						selLabel.textContent = it.label;
+						form.style.display = '';
+						results.style.display = 'none';
+						input.value = it.label;
+					} );
+					results.appendChild( li );
+				} );
+				results.style.display = '';
+			}
+
+			function search() {
+				var body = new URLSearchParams();
+				body.set( 'action', <?php echo wp_json_encode( self::ACTION_SEARCH ); ?> );
+				body.set( 'nonce', nonce );
+				body.set( 'order_id', orderId );
+				body.set( 'term', input.value );
+				fetch( ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' } )
+					.then( function ( r ) { return r.json(); } )
+					.then( function ( res ) { render( ( res && res.data ) ? res.data : [] ); } )
+					.catch( function () { results.style.display = 'none'; } );
+			}
+
+			input.addEventListener( 'input', function () {
+				form.style.display = 'none';
+				clearTimeout( timer );
+				timer = setTimeout( search, 250 );
+			} );
+			input.addEventListener( 'focus', search );
+
+			form.addEventListener( 'submit', function ( e ) {
+				if ( ! hidden.value ) { e.preventDefault(); return; }
+				if ( ! window.confirm( 'Combine order ' + selLabel.textContent.split( ' ' )[0] + ' into this order? The shipping date will be transferred.' ) ) {
+					e.preventDefault();
+				}
+			} );
+		} )();
+		</script>
+		<?php
+	}
+
+	/** A nonce-protected GET action button (used for Uncombine). */
+	private static function render_action_button( $action, $order_id, $label, $class = 'button-secondary' ) {
+		$url = wp_nonce_url(
+			admin_url( 'admin-post.php?action=' . $action . '&order_id=' . (int) $order_id ),
+			$action . '_' . (int) $order_id
+		);
+		printf(
+			'<a class="button %1$s" href="%2$s">%3$s</a>',
+			esc_attr( $class ),
+			esc_url( $url ),
+			esc_html( $label )
+		);
+	}
+
+	/** Render the success/error notice after a combine/uncombine redirect. */
+	private static function render_combine_notice() {
+		$msg = isset( $_GET['fishotel_combine_msg'] ) ? sanitize_key( wp_unslash( $_GET['fishotel_combine_msg'] ) ) : '';
+		if ( '' === $msg ) {
+			return;
+		}
+		$map = [
+			'combined'     => [ 'success', __( 'Orders combined.', 'fishotel' ) ],
+			'uncombined'   => [ 'success', __( 'Order uncombined.', 'fishotel' ) ],
+			'err_customer' => [ 'error', __( 'Those orders belong to different customers — cannot combine.', 'fishotel' ) ],
+			'err_chain'    => [ 'error', __( 'The target order is itself combined into another — chains are not allowed.', 'fishotel' ) ],
+			'err_nested'   => [ 'error', __( 'That order already has combined orders of its own — cannot nest.', 'fishotel' ) ],
+			'err_status'   => [ 'error', __( 'Only processing or on-hold orders can be combined.', 'fishotel' ) ],
+			'err_generic'  => [ 'error', __( 'Could not combine those orders.', 'fishotel' ) ],
+		];
+		if ( ! isset( $map[ $msg ] ) ) {
+			return;
+		}
+		printf(
+			'<div class="notice notice-%1$s inline" style="margin:0 0 10px;padding:6px 10px;"><p style="margin:0;">%2$s</p></div>',
+			esc_attr( $map[ $msg ][0] ),
+			esc_html( $map[ $msg ][1] )
+		);
+	}
+
+	/**
+	 * Combine handler. Makes the selected order a secondary of this order:
+	 * stores the link, backs up + clears the secondary's shipping date, and
+	 * notes both orders.
+	 */
+	public static function handle_combine() {
+		if ( ! current_user_can( 'edit_shop_orders' ) ) {
+			wp_die( esc_html__( 'Unauthorized', 'fishotel' ), '', [ 'response' => 403 ] );
+		}
+		$primary_id   = isset( $_POST['primary_id'] ) ? absint( wp_unslash( $_POST['primary_id'] ) ) : 0;
+		$secondary_id = isset( $_POST['secondary_id'] ) ? absint( wp_unslash( $_POST['secondary_id'] ) ) : 0;
+		check_admin_referer( self::ACTION_COMBINE . '_' . $primary_id );
+
+		$primary  = wc_get_order( $primary_id );
+		$redirect = $primary ? $primary->get_edit_order_url() : admin_url();
+
+		$error = self::validate_combine( $primary_id, $secondary_id );
+		if ( '' !== $error ) {
+			self::redirect_with_msg( $redirect, $error );
+		}
+
+		$secondary = wc_get_order( $secondary_id );
+
+		// Back up and clear the secondary's shipping date so the batch
+		// counter only sees the primary's slot.
+		$orig = $secondary->get_meta( self::META_SHIP_DATE );
+		if ( '' !== $orig && null !== $orig ) {
+			$secondary->update_meta_data( self::META_ORIG_SHIP, $orig );
+		}
+		$secondary->delete_meta_data( self::META_SHIP_DATE );
+		$secondary->update_meta_data( self::META_COMBINED_INTO, $primary_id );
+		$secondary->add_order_note( sprintf(
+			/* translators: %s = primary order number */
+			__( 'Combined into #%s.', 'fishotel' ),
+			$primary->get_order_number()
+		) );
+		$secondary->save();
+
+		$primary->add_order_note( sprintf(
+			/* translators: %s = secondary order number */
+			__( 'Combined order #%s into this one.', 'fishotel' ),
+			$secondary->get_order_number()
+		) );
+		$primary->save();
+
+		self::redirect_with_msg( $redirect, 'combined' );
+	}
+
+	/**
+	 * Validate a combine request. Returns '' when valid, otherwise an error
+	 * code understood by render_combine_notice().
+	 */
+	private static function validate_combine( $primary_id, $secondary_id ) {
+		$primary   = wc_get_order( $primary_id );
+		$secondary = wc_get_order( $secondary_id );
+		if ( ! $primary instanceof WC_Order || ! $secondary instanceof WC_Order || $primary_id === $secondary_id ) {
+			return 'err_generic';
+		}
+		// Same customer: customer_id OR billing_email.
+		$same_id    = $primary->get_customer_id() && $primary->get_customer_id() === $secondary->get_customer_id();
+		$p_email    = strtolower( trim( (string) $primary->get_billing_email() ) );
+		$s_email    = strtolower( trim( (string) $secondary->get_billing_email() ) );
+		$same_email = '' !== $p_email && $p_email === $s_email;
+		if ( ! $same_id && ! $same_email ) {
+			return 'err_customer';
+		}
+		// Status: both must be processing/on-hold.
+		if ( ! $primary->has_status( [ 'processing', 'on-hold' ] ) || ! $secondary->has_status( [ 'processing', 'on-hold' ] ) ) {
+			return 'err_status';
+		}
+		// No chains: the primary must not itself be a secondary.
+		if ( fishotel_order_get_primary( $primary ) ) {
+			return 'err_chain';
+		}
+		// No inverted nesting: the secondary must not already be a primary,
+		// and must not already be combined elsewhere.
+		if ( fishotel_order_get_primary( $secondary ) || fishotel_order_get_secondaries( $secondary_id ) ) {
+			return 'err_nested';
+		}
+		return '';
+	}
+
+	/** Uncombine handler — initiated from a secondary order's screen. */
+	public static function handle_uncombine() {
+		if ( ! current_user_can( 'edit_shop_orders' ) ) {
+			wp_die( esc_html__( 'Unauthorized', 'fishotel' ), '', [ 'response' => 403 ] );
+		}
+		$order_id = isset( $_GET['order_id'] ) ? absint( wp_unslash( $_GET['order_id'] ) ) : 0;
+		check_admin_referer( self::ACTION_UNCOMBINE . '_' . $order_id );
+
+		$secondary = wc_get_order( $order_id );
+		$redirect  = $secondary ? $secondary->get_edit_order_url() : admin_url();
+
+		self::do_uncombine( $order_id );
+		self::redirect_with_msg( $redirect, 'uncombined' );
+	}
+
+	/**
+	 * Detach a secondary from its primary: restore the backed-up shipping
+	 * date, clear the combine metas, and note both orders. Shared by the
+	 * manual Uncombine action and the dead-primary auto-cleanup.
+	 */
+	public static function do_uncombine( $secondary_id ) {
+		$secondary = wc_get_order( (int) $secondary_id );
+		if ( ! $secondary instanceof WC_Order ) {
+			return;
+		}
+		$primary_id = fishotel_order_get_primary( $secondary );
+
+		$orig = $secondary->get_meta( self::META_ORIG_SHIP );
+		if ( '' !== $orig && null !== $orig ) {
+			$secondary->update_meta_data( self::META_SHIP_DATE, $orig );
+		}
+		$secondary->delete_meta_data( self::META_COMBINED_INTO );
+		$secondary->delete_meta_data( self::META_ORIG_SHIP );
+		$secondary->add_order_note( $primary_id
+			? sprintf( /* translators: %s = primary order number */ __( 'Uncombined from #%s.', 'fishotel' ), $primary_id )
+			: __( 'Uncombined.', 'fishotel' )
+		);
+		$secondary->save();
+
+		if ( $primary_id ) {
+			$primary = wc_get_order( $primary_id );
+			if ( $primary instanceof WC_Order ) {
+				$primary->add_order_note( sprintf(
+					/* translators: %s = secondary order number */
+					__( 'Order #%s uncombined from this one.', 'fishotel' ),
+					$secondary->get_order_number()
+				) );
+				$primary->save();
+			}
+		}
+	}
+
+	/** Free all secondaries when a primary transitions to a dead status. */
+	public static function cleanup_dead_primary( $order_id, $status_from, $status_to, $order ) {
+		if ( ! in_array( $status_to, [ 'refunded', 'cancelled', 'failed' ], true ) ) {
+			return;
+		}
+		foreach ( fishotel_order_get_secondaries( $order_id ) as $sid ) {
+			self::do_uncombine( $sid );
+		}
+	}
+
+	/**
+	 * One-time order note when a shipping-date backup is left orphaned —
+	 * i.e. someone cleared _fishotel_combined_into manually (via custom
+	 * fields) without going through Uncombine.
+	 */
+	private static function maybe_warn_orphaned_backup( WC_Order $order ) {
+		$has_backup = '' !== (string) $order->get_meta( self::META_ORIG_SHIP );
+		$has_link   = '' !== (string) $order->get_meta( self::META_COMBINED_INTO );
+		if ( ! $has_backup || $has_link ) {
+			return;
+		}
+		if ( '1' === (string) $order->get_meta( self::META_ORPHAN_WARNED ) ) {
+			return;
+		}
+		$order->add_order_note( __( 'FisHotel: orphaned shipping-date backup found (combine link missing). Use Uncombine to restore cleanly, or clear the backup meta.', 'fishotel' ) );
+		$order->update_meta_data( self::META_ORPHAN_WARNED, '1' );
+		$order->save();
+	}
+
+	/** Redirect back to the order screen carrying a notice code, then exit. */
+	private static function redirect_with_msg( $url, $msg ) {
+		wp_safe_redirect( add_query_arg( 'fishotel_combine_msg', $msg, $url ) );
+		exit;
+	}
+
+	/**
+	 * AJAX: return up to 20 of this customer's other combinable orders,
+	 * optionally filtered by a free-text term against the result label.
+	 */
+	public static function ajax_search_combinable() {
+		if ( ! current_user_can( 'edit_shop_orders' ) ) {
+			wp_send_json_error( [], 403 );
+		}
+		check_ajax_referer( self::ACTION_SEARCH, 'nonce' );
+
+		$order_id = isset( $_POST['order_id'] ) ? absint( wp_unslash( $_POST['order_id'] ) ) : 0;
+		$term     = isset( $_POST['term'] ) ? sanitize_text_field( wp_unslash( $_POST['term'] ) ) : '';
+		$order    = wc_get_order( $order_id );
+		if ( ! $order instanceof WC_Order ) {
+			wp_send_json_success( [] );
+		}
+
+		$out = [];
+		foreach ( self::customer_combinable_orders( $order ) as $id ) {
+			$candidate = wc_get_order( $id );
+			if ( ! $candidate instanceof WC_Order ) {
+				continue;
+			}
+			$label = self::order_search_label( $candidate );
+			if ( '' !== $term && false === stripos( $label, $term ) ) {
+				continue;
+			}
+			$out[] = [ 'id' => $id, 'label' => $label ];
+			if ( count( $out ) >= 20 ) {
+				break;
+			}
+		}
+		wp_send_json_success( $out );
+	}
+
+	/**
+	 * Candidate secondary orders for combining into $order: same customer,
+	 * processing/on-hold, not this order, and not already part of any
+	 * combine relationship. Newest first.
+	 *
+	 * @return int[]
+	 */
+	private static function customer_combinable_orders( WC_Order $order ) {
+		$base = [
+			'limit'   => 40,
+			'status'  => [ 'wc-processing', 'wc-on-hold' ],
+			'orderby' => 'date',
+			'order'   => 'DESC',
+			'return'  => 'ids',
+			'exclude' => [ $order->get_id() ],
+		];
+
+		$found       = [];
+		$customer_id = (int) $order->get_customer_id();
+		if ( $customer_id ) {
+			foreach ( (array) wc_get_orders( $base + [ 'customer_id' => $customer_id ] ) as $id ) {
+				$found[ (int) $id ] = true;
+			}
+		}
+		$email = (string) $order->get_billing_email();
+		if ( '' !== $email ) {
+			foreach ( (array) wc_get_orders( $base + [ 'billing_email' => $email ] ) as $id ) {
+				$found[ (int) $id ] = true;
+			}
+		}
+
+		$out = [];
+		foreach ( array_keys( $found ) as $id ) {
+			// Exclude orders already in a relationship (secondary or primary).
+			if ( fishotel_order_get_primary( $id ) || fishotel_order_get_secondaries( $id ) ) {
+				continue;
+			}
+			$out[] = $id;
+		}
+		return $out;
+	}
+
+	/** Autocomplete label: "#34195 — May 21, $475.00 — 4 items (Foo, Bar, …)". */
+	private static function order_search_label( WC_Order $order ) {
+		$date  = $order->get_date_created();
+		$date  = $date ? $date->date_i18n( 'M j' ) : '';
+		$total = wp_strip_all_tags( $order->get_formatted_order_total() );
+
+		$names = [];
+		foreach ( $order->get_items( 'line_item' ) as $item ) {
+			$names[] = $item->get_name();
+		}
+		$count   = count( $names );
+		$summary = implode( ', ', array_slice( $names, 0, 2 ) );
+		if ( $count > 2 ) {
+			$summary .= ', …';
+		}
+
+		return sprintf(
+			'#%s — %s, %s — %d %s (%s)',
+			$order->get_order_number(),
+			$date,
+			$total,
+			$count,
+			_n( 'item', 'items', $count, 'fishotel' ),
+			$summary
+		);
+	}
+
+	// ── Order list "linked" badge ───────────────────────────────────
+
+	/** Add a compact "🔗" column to the orders list (legacy + HPOS). */
+	public static function add_list_column( $columns ) {
+		$new = [];
+		foreach ( $columns as $key => $label ) {
+			$new[ $key ] = $label;
+			if ( 'order_number' === $key ) {
+				$new['fishotel_linked'] = '🔗';
+			}
+		}
+		if ( ! isset( $new['fishotel_linked'] ) ) {
+			$new['fishotel_linked'] = '🔗';
+		}
+		return $new;
+	}
+
+	/** Legacy (CPT) list-table column renderer. */
+	public static function render_list_column_cpt( $column, $post_id ) {
+		if ( 'fishotel_linked' === $column ) {
+			self::render_list_badge( (int) $post_id );
+		}
+	}
+
+	/** HPOS list-table column renderer. */
+	public static function render_list_column_hpos( $column, $order ) {
+		if ( 'fishotel_linked' !== $column ) {
+			return;
+		}
+		$id = $order instanceof WC_Order ? $order->get_id() : (int) $order;
+		self::render_list_badge( $id );
+	}
+
+	/** Echo the 🔗 badge for an order in the list table. */
+	private static function render_list_badge( $order_id ) {
+		$primary = fishotel_order_get_primary( $order_id );
+		if ( $primary ) {
+			$url = admin_url( 'post.php?post=' . $primary . '&action=edit' );
+			printf(
+				'<a href="%s" title="%s">🔗 →#%s</a>',
+				esc_url( $url ),
+				esc_attr__( 'Combined into this order', 'fishotel' ),
+				esc_html( (string) $primary )
+			);
+			return;
+		}
+		$secondaries = fishotel_order_get_secondaries( $order_id );
+		if ( ! empty( $secondaries ) ) {
+			printf(
+				'<span title="%s">🔗 %d</span>',
+				esc_attr__( 'Combined orders shipping with this one', 'fishotel' ),
+				count( $secondaries )
+			);
+		}
 	}
 }

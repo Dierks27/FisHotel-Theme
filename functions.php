@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.15.2' );
+define( 'FISHOTEL_THEME_VERSION', '1.16.0' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -42,6 +42,10 @@ FisHotel_Order_Fulfillment::init();
 // operational shipping unit. Replaces Phase 2 primary/secondary linking.
 require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-fulfillment.php';
 FisHotel_Fulfillment::init();
+// Checkout Shipping Reuse (Phase 3) — zero duplicate shipping when a customer
+// already has an unshipped order/fulfillment to the same address.
+require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-checkout-reuse.php';
+FisHotel_Checkout_Reuse::init();
 // ─────────────────────────────────────────
 // THEME SETUP
 // ─────────────────────────────────────────

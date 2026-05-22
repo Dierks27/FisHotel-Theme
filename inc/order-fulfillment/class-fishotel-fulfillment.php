@@ -50,6 +50,34 @@ function fishotel_fulfillment_calculate_aggregate_total( $fulfillment ) {
 	return FisHotel_Fulfillment::calculate_aggregate_total( $fulfillment );
 }
 
+/**
+ * Unrefunded shipping still sitting on a source order: total shipping minus
+ * any shipping already refunded (summed across all shipping lines + refunds).
+ * Returns 0 for non-orders or fully-refunded shipping.
+ *
+ * @param WC_Order $source_order
+ * @return float
+ */
+function fishotel_source_unrefunded_shipping( $source_order ) {
+	if ( ! $source_order instanceof WC_Order ) {
+		return 0;
+	}
+	$shipping_total = (float) $source_order->get_shipping_total();
+	if ( $shipping_total <= 0 ) {
+		return 0;
+	}
+	$shipping_refunded = 0.0;
+	foreach ( $source_order->get_refunds() as $refund ) {
+		if ( ! $refund instanceof WC_Order_Refund ) {
+			continue;
+		}
+		foreach ( $refund->get_items( 'shipping' ) as $refund_item ) {
+			$shipping_refunded += abs( (float) $refund_item->get_total() );
+		}
+	}
+	return max( 0, $shipping_total - $shipping_refunded );
+}
+
 class FisHotel_Fulfillment {
 
 	const STATUS              = 'wc-fulfillment';
@@ -67,10 +95,18 @@ class FisHotel_Fulfillment {
 	// Bumped to v2 in 1.15.2 — totals now use item subtotals, so existing
 	// fulfillments must be recalculated.
 	const META_TOTALS_BACKFILLED = 'fishotel_fulfillment_totals_backfilled_v2';
+	const META_FLAG_DISMISSED = '_fishotel_shipping_flag_dismissed';
 
 	const ACTION_DELETE          = 'fishotel_delete_fulfillment';
 	const ACTION_COMBINE_SELECTED = 'fishotel_combine_selected';
+	const ACTION_DISMISS_FLAG    = 'fishotel_dismiss_shipping_flag';
 	const PAGE_SCAN              = 'fishotel-scan-combinable';
+	const COUNT_TRANSIENT        = 'fishotel_open_orders_count';
+	// Sortable Delivery Date column. The column itself ("Delivery Date") is
+	// registered by the fishotel-shiptracker plugin under the id
+	// 'fst_ship_date', reading the _fishotel_shipping_date order meta. We only
+	// add the sort affordance + orderby here.
+	const DELIVERY_COL           = 'fst_ship_date';
 
 	public static function init() {
 		// Custom order status (CPT + HPOS).
@@ -131,6 +167,25 @@ class FisHotel_Fulfillment {
 		add_action( 'add_meta_boxes_shop_order', [ __CLASS__, 'register_delete_meta_box' ] );
 		add_action( 'add_meta_boxes_woocommerce_page_wc-orders', [ __CLASS__, 'register_delete_meta_box' ] );
 		add_action( 'admin_post_' . self::ACTION_DELETE, [ __CLASS__, 'handle_delete' ] );
+
+		// Bright-flag fallback: shipping-refund-pending banner on fulfillment +
+		// source order edit pages, with manual (admin-confirmed) refund.
+		add_action( 'add_meta_boxes_shop_order', [ __CLASS__, 'register_flag_meta_box' ] );
+		add_action( 'add_meta_boxes_woocommerce_page_wc-orders', [ __CLASS__, 'register_flag_meta_box' ] );
+		add_action( 'admin_post_' . self::ACTION_DISMISS_FLAG, [ __CLASS__, 'handle_dismiss_flag' ] );
+
+		// Sidebar "Orders" badge: match the in-page Open Orders count.
+		add_filter( 'woocommerce_menu_order_count', [ __CLASS__, 'menu_order_count' ] );
+		// Bust the cached count when orders change or fulfillments mutate.
+		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'bust_count_cache' ] );
+
+		// Sortable "Delivery Date" column (legacy + HPOS). The column is owned
+		// by fishotel-shiptracker; we only make it orderable.
+		add_filter( 'manage_edit-shop_order_sortable_columns', [ __CLASS__, 'add_sortable_delivery_column' ] );
+		add_filter( 'woocommerce_shop_order_list_table_sortable_columns', [ __CLASS__, 'add_sortable_delivery_column' ] );
+		add_action( 'pre_get_posts', [ __CLASS__, 'sort_delivery_cpt' ] );
+		add_filter( 'woocommerce_order_list_table_prepare_items_query_args', [ __CLASS__, 'sort_delivery_hpos' ] );
+		add_filter( 'woocommerce_shop_order_list_table_prepare_items_query_args', [ __CLASS__, 'sort_delivery_hpos' ] );
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────────
@@ -279,6 +334,7 @@ class FisHotel_Fulfillment {
 				self::numbers_list( array_keys( $sources ) )
 			) );
 			$f->save();
+			self::bust_count_cache();
 			return $ff_id;
 		} catch ( \Throwable $e ) {
 			if ( function_exists( 'wc_get_logger' ) ) {
@@ -483,6 +539,7 @@ class FisHotel_Fulfillment {
 			}
 		}
 		$f->delete( true );
+		self::bust_count_cache();
 		return true;
 	}
 
@@ -741,7 +798,7 @@ class FisHotel_Fulfillment {
 	}
 
 	/** Visible Open Orders count: processing standalones + fulfillments. */
-	private static function processing_open_count() {
+	public static function processing_open_count() {
 		$standalones = 0;
 		$processing  = wc_get_orders( [
 			'status' => 'wc-processing',
@@ -759,6 +816,25 @@ class FisHotel_Fulfillment {
 			'return' => 'ids',
 		] );
 		return $standalones + count( (array) $fulfillments );
+	}
+
+	/**
+	 * Sidebar "Orders" menu badge count. Cached briefly since the menu renders
+	 * on every admin page; busted on order/fulfillment changes.
+	 */
+	public static function menu_order_count( $count ) {
+		$cached = get_transient( self::COUNT_TRANSIENT );
+		if ( false !== $cached ) {
+			return (int) $cached;
+		}
+		$open = self::processing_open_count();
+		set_transient( self::COUNT_TRANSIENT, $open, 2 * MINUTE_IN_SECONDS );
+		return $open;
+	}
+
+	/** Drop the cached Open Orders count. */
+	public static function bust_count_cache() {
+		delete_transient( self::COUNT_TRANSIENT );
 	}
 
 	public static function render_sources_toggle_cpt( $post_type ) {
@@ -894,6 +970,217 @@ class FisHotel_Fulfillment {
 			: admin_url( 'edit.php?post_type=shop_order' );
 		wp_safe_redirect( add_query_arg( 'fishotel_fulfillment_deleted', '1', $list ) );
 		exit;
+	}
+
+	// ── Bright-flag fallback (shipping refund pending) ───────────────
+
+	/** True when this source order still has unrefunded shipping and isn't dismissed. */
+	private static function source_flagged( WC_Order $source ) {
+		if ( '1' === (string) $source->get_meta( self::META_FLAG_DISMISSED ) ) {
+			return false;
+		}
+		return fishotel_source_unrefunded_shipping( $source ) > 0;
+	}
+
+	/** Source orders of a fulfillment that currently carry an active flag. */
+	private static function flagged_sources( WC_Order $fulfillment ) {
+		$out = [];
+		foreach ( self::get_sources( $fulfillment ) as $sid ) {
+			$o = wc_get_order( (int) $sid );
+			if ( $o instanceof WC_Order && self::source_flagged( $o ) ) {
+				$out[] = $o;
+			}
+		}
+		return $out;
+	}
+
+	public static function register_flag_meta_box( $screen_or_post = null ) {
+		$order = $screen_or_post instanceof WC_Order
+			? $screen_or_post
+			: ( $screen_or_post instanceof WP_Post ? wc_get_order( $screen_or_post->ID ) : null );
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+
+		// Show on a fulfillment with ≥1 flagged source, or on a flagged source
+		// order that belongs to a fulfillment.
+		$show = false;
+		if ( self::is_fulfillment( $order ) ) {
+			$show = ! empty( self::flagged_sources( $order ) );
+		} elseif ( self::get_fulfillment( $order ) && self::source_flagged( $order ) ) {
+			$show = true;
+		}
+		if ( ! $show ) {
+			return;
+		}
+
+		$screen = self::on_hpos_screen() && function_exists( 'wc_get_page_screen_id' )
+			? wc_get_page_screen_id( 'shop-order' )
+			: 'shop_order';
+		add_meta_box(
+			'fishotel-shipping-flag',
+			__( '⚠️ Shipping refund pending', 'fishotel' ),
+			[ __CLASS__, 'render_flag_meta_box' ],
+			$screen,
+			'normal',
+			'high'
+		);
+	}
+
+	public static function render_flag_meta_box( $post_or_order ) {
+		$order = $post_or_order instanceof WC_Order
+			? $post_or_order
+			: ( $post_or_order instanceof WP_Post ? wc_get_order( $post_or_order->ID ) : null );
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+
+		echo '<div style="background:#fcf3cd;border:2px solid #d4a017;border-radius:4px;padding:12px 14px;color:#3a2f00;">';
+
+		if ( self::is_fulfillment( $order ) ) {
+			$ff_id = $order->get_id();
+			foreach ( self::flagged_sources( $order ) as $src ) {
+				self::render_flag_row( $src, $ff_id, /*on_source_page=*/ false );
+			}
+		} else {
+			$ff_id = (int) self::get_fulfillment( $order );
+			self::render_flag_row( $order, $ff_id, /*on_source_page=*/ true );
+		}
+
+		echo '</div>';
+	}
+
+	/** One flagged-source row inside the banner. */
+	private static function render_flag_row( WC_Order $source, $ff_id, $on_source_page ) {
+		$amount   = fishotel_source_unrefunded_shipping( $source );
+		$amount_s = html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' );
+		$reason   = sprintf(
+			/* translators: %d = fulfillment ID */
+			__( 'Combined into fulfillment #FF-%d — duplicate shipping', 'fishotel' ),
+			(int) $ff_id
+		);
+		$dismiss_url = wp_nonce_url(
+			admin_url( 'admin-post.php?action=' . self::ACTION_DISMISS_FLAG . '&order_id=' . $source->get_id() ),
+			self::ACTION_DISMISS_FLAG . '_' . $source->get_id()
+		);
+		?>
+		<div style="margin:0 0 10px;">
+			<p style="margin:0 0 8px;font-weight:600;">
+				<?php
+				printf(
+					/* translators: 1: source order number, 2: amount */
+					esc_html__( 'Source order #%1$s has a %2$s shipping charge. This fulfillment ships as one box, so the duplicate shipping is likely refundable.', 'fishotel' ),
+					esc_html( $source->get_order_number() ),
+					esc_html( $amount_s )
+				);
+				?>
+			</p>
+			<p style="margin:0;">
+				<?php if ( $on_source_page ) : ?>
+					<button type="button" class="button button-primary" data-fishotel-refund
+						data-amount="<?php echo esc_attr( wc_format_decimal( $amount ) ); ?>"
+						data-reason="<?php echo esc_attr( $reason ); ?>">
+						<?php
+						/* translators: %s = amount */
+						printf( esc_html__( 'Refund %s', 'fishotel' ), esc_html( $amount_s ) );
+						?>
+					</button>
+				<?php else : ?>
+					<a class="button button-primary"
+						href="<?php echo esc_url( add_query_arg( 'fishotel_refund_shipping', '1', $source->get_edit_order_url() ) ); ?>">
+						<?php
+						/* translators: 1: amount, 2: order number */
+						printf( esc_html__( 'Refund %1$s (order #%2$s)', 'fishotel' ), esc_html( $amount_s ), esc_html( $source->get_order_number() ) );
+						?>
+					</a>
+				<?php endif; ?>
+				<a class="button" href="<?php echo esc_url( $dismiss_url ); ?>"><?php esc_html_e( 'Dismiss', 'fishotel' ); ?></a>
+			</p>
+		</div>
+		<?php
+
+		if ( $on_source_page ) {
+			$auto = isset( $_GET['fishotel_refund_shipping'] ) && '1' === $_GET['fishotel_refund_shipping']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			?>
+			<script>
+			( function () {
+				function prefill( amount, reason ) {
+					var open = document.querySelector( 'button.refund-items' );
+					if ( open ) { open.click(); }
+					setTimeout( function () {
+						var reasonEl = document.querySelector( '#refund_reason' );
+						if ( reasonEl ) { reasonEl.value = reason; }
+						var ship = document.querySelector( 'input[name^="refund_shipping["]' );
+						if ( ship ) {
+							ship.value = amount;
+							ship.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+						} else {
+							var amt = document.querySelector( '#refund_amount' );
+							if ( amt ) { amt.value = amount; amt.dispatchEvent( new Event( 'change', { bubbles: true } ) ); }
+						}
+						var items = document.querySelector( '#woocommerce-order-items' );
+						if ( items ) { items.scrollIntoView( { behavior: 'smooth' } ); }
+					}, 350 );
+				}
+				var btn = document.querySelector( '[data-fishotel-refund]' );
+				if ( btn ) {
+					btn.addEventListener( 'click', function () {
+						prefill( btn.getAttribute( 'data-amount' ), btn.getAttribute( 'data-reason' ) );
+					} );
+					<?php if ( $auto ) : ?>
+					prefill( btn.getAttribute( 'data-amount' ), btn.getAttribute( 'data-reason' ) );
+					<?php endif; ?>
+				}
+			} )();
+			</script>
+			<?php
+		}
+	}
+
+	public static function handle_dismiss_flag() {
+		if ( ! current_user_can( 'edit_shop_orders' ) ) {
+			wp_die( esc_html__( 'Unauthorized', 'fishotel' ), '', [ 'response' => 403 ] );
+		}
+		$order_id = isset( $_GET['order_id'] ) ? absint( wp_unslash( $_GET['order_id'] ) ) : 0;
+		check_admin_referer( self::ACTION_DISMISS_FLAG . '_' . $order_id );
+
+		$order    = wc_get_order( $order_id );
+		$redirect = $order instanceof WC_Order ? $order->get_edit_order_url() : admin_url();
+		if ( $order instanceof WC_Order ) {
+			$order->update_meta_data( self::META_FLAG_DISMISSED, '1' );
+			$order->add_order_note( __( 'Shipping refund flag dismissed.', 'fishotel' ) );
+			$order->save();
+		}
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
+	// ── Sortable Delivery Date column ────────────────────────────────
+
+	public static function add_sortable_delivery_column( $columns ) {
+		$columns[ self::DELIVERY_COL ] = self::DELIVERY_COL;
+		return $columns;
+	}
+
+	public static function sort_delivery_cpt( $query ) {
+		if ( ! is_admin() || ! $query->is_main_query() ) {
+			return;
+		}
+		if ( 'shop_order' !== $query->get( 'post_type' ) ) {
+			return;
+		}
+		if ( self::DELIVERY_COL === $query->get( 'orderby' ) ) {
+			$query->set( 'meta_key', self::META_SHIP_DATE );
+			$query->set( 'orderby', 'meta_value' );
+		}
+	}
+
+	public static function sort_delivery_hpos( $args ) {
+		if ( isset( $args['orderby'] ) && self::DELIVERY_COL === $args['orderby'] ) {
+			$args['meta_key'] = self::META_SHIP_DATE; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			$args['orderby']  = 'meta_value';
+		}
+		return $args;
 	}
 
 	// ── Migration ────────────────────────────────────────────────────

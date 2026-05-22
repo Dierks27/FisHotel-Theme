@@ -107,9 +107,12 @@ class FisHotel_Order_Fulfillment {
 		add_action( 'woocommerce_process_shop_order_meta', [ __CLASS__, 'save' ], 20, 1 );
 		add_action( 'woocommerce_update_order', [ __CLASS__, 'save' ], 20, 1 );
 
-		// ShipTracker completion gate. See gate_completion() for why this is
-		// hooked on the real transition action rather than the (non-core)
-		// woocommerce_order_status_changing named in the spec.
+		// ShipTracker completion gate (two layers — see the gate methods).
+		// Layer 1 (preferred): intercept before the save commits so the
+		// premature transition — and its customer "completed" email — never
+		// fire. Layer 2 (guaranteed net): revert after the transition on the
+		// rock-solid woocommerce_order_status_changed action.
+		add_action( 'woocommerce_before_order_object_save', [ __CLASS__, 'gate_completion_pre_save' ], 5, 1 );
 		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'gate_completion' ], 5, 4 );
 	}
 
@@ -439,20 +442,58 @@ class FisHotel_Order_Fulfillment {
 	}
 
 	/**
-	 * ShipTracker completion gate.
+	 * ShipTracker completion gate — Layer 1 (pre-commit).
 	 *
-	 * Spec intent: when an external ShipTracker integration tries to flip a
-	 * split order to "completed" before every portion has shipped, block it.
+	 * ShipTracker (FST_Tracker::process_status_change) calls
+	 * $order->set_status( $target ) then $order->save(); it only fires its
+	 * own fst_status_changed action *after* the save, so it offers no
+	 * pre-commit veto. WC core has none either — set_status() just sets a
+	 * prop and the status_transition() (which fires the
+	 * woocommerce_order_status_* actions, including the customer "completed"
+	 * email) runs inside save().
 	 *
-	 * The spec names woocommerce_order_status_changing, but that hook does
-	 * not exist in WooCommerce core — WC_Order::set_status() only sets a
-	 * prop, and the actual status_transition() (which fires the
-	 * woocommerce_order_status_* actions) runs inside save(), with no
-	 * pre-commit veto point. So we hook the real, reliable
-	 * woocommerce_order_status_changed action and enforce by reverting the
-	 * status when the transition was driven by ShipTracker and the order
-	 * isn't actually fully shipped. ShipTracker not being present in this
-	 * codebase, this gate simply never fires until that integration lands.
+	 * woocommerce_before_order_object_save fires inside save() *before* the
+	 * persist + transition, so neutralizing the pending "completed" status
+	 * here stops the premature completion AND its customer email outright.
+	 * The order is held at "processing" with a note. If this hook isn't
+	 * available on a given WC build, Layer 2 (gate_completion) still catches
+	 * it after the fact. ShipTracker not being installed alongside the
+	 * theme, this gate stays inert until that plugin is active.
+	 *
+	 * @param WC_Order $order
+	 */
+	public static function gate_completion_pre_save( $order ) {
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+		if ( 'completed' !== $order->get_status() ) {
+			return;
+		}
+		if ( '1' !== (string) $order->get_meta( self::META_SPLIT ) ) {
+			return;
+		}
+		if ( self::all_lines_shipped_or_na( $order ) ) {
+			return; // Legitimately complete.
+		}
+		if ( ! self::transition_is_from_shiptracker() ) {
+			return; // Only gate ShipTracker-driven completions.
+		}
+
+		// Neutralize the pending completion before it commits. Held at
+		// processing — the sane state for a split order still awaiting a
+		// portion. set_status() here doesn't re-enter this hook.
+		$order->set_status( 'processing' );
+		$order->add_order_note(
+			__( 'FisHotel: ShipTracker completion blocked — not all portions have shipped.', 'fishotel' )
+		);
+	}
+
+	/**
+	 * ShipTracker completion gate — Layer 2 (post-transition safety net).
+	 *
+	 * Guaranteed-to-fire fallback for WC builds where the pre-save hook
+	 * doesn't run: when a split order is transitioned to "completed" by a
+	 * ShipTracker-driven call and isn't actually fully shipped, revert it.
 	 *
 	 * @param int      $order_id
 	 * @param string   $status_from
@@ -497,15 +538,22 @@ class FisHotel_Order_Fulfillment {
 
 	/**
 	 * Best-effort detection of whether the current status transition was
-	 * initiated by the ShipTracker integration (class-fst-tracker.php).
-	 * Scans the call stack for an FST/ShipTracker frame.
+	 * initiated by the ShipTracker plugin. ShipTracker drives completions
+	 * through FST_Tracker::process_status_change() (class-fst-tracker.php),
+	 * so we scan the call stack for that frame, falling back to any FST_* /
+	 * ShipTracker frame.
 	 */
 	private static function transition_is_from_shiptracker() {
 		$frames = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
 		foreach ( $frames as $frame ) {
-			$class = isset( $frame['class'] ) ? strtolower( (string) $frame['class'] ) : '';
-			$file  = isset( $frame['file'] ) ? strtolower( (string) $frame['file'] ) : '';
-			if ( false !== strpos( $class, 'fst' )
+			$class    = isset( $frame['class'] ) ? strtolower( (string) $frame['class'] ) : '';
+			$function = isset( $frame['function'] ) ? strtolower( (string) $frame['function'] ) : '';
+			$file     = isset( $frame['file'] ) ? strtolower( (string) $frame['file'] ) : '';
+
+			if ( 'fst_tracker' === $class || 'process_status_change' === $function ) {
+				return true;
+			}
+			if ( 0 === strpos( $class, 'fst_' )
 				|| false !== strpos( $class, 'shiptracker' )
 				|| false !== strpos( $file, 'fst-tracker' )
 				|| false !== strpos( $file, 'shiptracker' ) ) {

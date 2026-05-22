@@ -1251,6 +1251,26 @@ class FisHotel_Order_Fulfillment {
 	}
 
 	/** Echo the 🔗 badge for an order in the list table. */
+	/** True when any source of a fulfillment has an active shipping-refund flag. */
+	private static function fulfillment_has_shipping_flag( array $source_ids ) {
+		if ( ! function_exists( 'fishotel_source_unrefunded_shipping' ) ) {
+			return false;
+		}
+		foreach ( $source_ids as $sid ) {
+			$src = wc_get_order( (int) $sid );
+			if ( ! $src instanceof WC_Order ) {
+				continue;
+			}
+			if ( '1' === (string) $src->get_meta( '_fishotel_shipping_flag_dismissed' ) ) {
+				continue;
+			}
+			if ( fishotel_source_unrefunded_shipping( $src ) > 0 ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private static function render_list_badge( $order_id ) {
 		// This row IS a fulfillment. The Order column already shows #id, the
 		// status badge says "Fulfillment", and the Total column shows the
@@ -1275,6 +1295,18 @@ class FisHotel_Order_Fulfillment {
 				(int) $count,
 				esc_html( _n( 'source', 'sources', $count, 'fishotel' ) )
 			);
+
+			// Bright-flag indicator: any source with unrefunded shipping that
+			// hasn't been dismissed → ⚠️ linking to the fulfillment edit page.
+			if ( self::fulfillment_has_shipping_flag( $sources ) ) {
+				$ff    = wc_get_order( (int) $order_id );
+				$ffurl = $ff instanceof WC_Order ? $ff->get_edit_order_url() : admin_url();
+				printf(
+					' <a href="%s" title="%s" style="text-decoration:none;">⚠️</a>',
+					esc_url( $ffurl ),
+					esc_attr__( 'Shipping refund pending on a source order', 'fishotel' )
+				);
+			}
 			return;
 		}
 

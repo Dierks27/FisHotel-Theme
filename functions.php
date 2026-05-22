@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.12.3' );
+define( 'FISHOTEL_THEME_VERSION', '1.13.0' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -35,6 +35,9 @@ require_once FISHOTEL_THEME_DIR . '/inc/calculator/init.php';
 require_once FISHOTEL_THEME_DIR . '/inc/scheduler/init.php';
 // Medication Store (Phase 1) — universal product model, EA sync, disclaimer wall.
 require_once FISHOTEL_THEME_DIR . '/inc/medication-store/init.php';
+// Order Fulfillment (Phase 1) — opt-in split fulfillment for mixed orders.
+require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-order-fulfillment.php';
+FisHotel_Order_Fulfillment::init();
 // ─────────────────────────────────────────
 // THEME SETUP
 // ─────────────────────────────────────────

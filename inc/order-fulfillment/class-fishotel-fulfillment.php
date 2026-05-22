@@ -53,13 +53,17 @@ class FisHotel_Fulfillment {
 
 	const META_IS_FULFILLMENT = '_fishotel_is_fulfillment';
 	const META_SOURCES        = '_fishotel_fulfillment_sources';
+	const META_TOTAL          = '_fishotel_fulfillment_total';
 	const META_FULFILLED_BY   = '_fishotel_fulfilled_by_order';
 	const META_ORIG_SHIP      = '_fishotel_fulfillment_orig_ship_date';
 	const META_SHIP_DATE      = '_fishotel_shipping_date';
 	const META_SOURCE_ORDER   = '_fishotel_source_order'; // on copied line items
 	const META_MIGRATED       = 'fishotel_fulfillment_migrated_v1';
+	const META_TOTALS_BACKFILLED = 'fishotel_fulfillment_totals_backfilled_v1';
 
-	const ACTION_DELETE       = 'fishotel_delete_fulfillment';
+	const ACTION_DELETE          = 'fishotel_delete_fulfillment';
+	const ACTION_COMBINE_SELECTED = 'fishotel_combine_selected';
+	const PAGE_SCAN              = 'fishotel-scan-combinable';
 
 	public static function init() {
 		// Custom order status (CPT + HPOS).
@@ -73,6 +77,18 @@ class FisHotel_Fulfillment {
 
 		// One-time, idempotent migration of Phase 2 combined orders.
 		add_action( 'admin_init', [ __CLASS__, 'maybe_migrate' ] );
+		// One-time backfill of aggregated totals onto pre-1.15.1 fulfillments
+		// (which were created with a $0 total).
+		add_action( 'admin_init', [ __CLASS__, 'maybe_backfill_totals' ] );
+
+		// Keep fulfillments out of WC Analytics so their aggregated total
+		// (now the order total, for the list column) doesn't double-count
+		// revenue already attributed to the source orders.
+		add_filter( 'woocommerce_analytics_excluded_order_statuses', [ __CLASS__, 'exclude_from_analytics' ] );
+
+		// "Scan for Combinable Orders" tool under the FisHotel Theme menu.
+		add_action( 'admin_menu', [ __CLASS__, 'register_scan_tool' ], 20 );
+		add_action( 'admin_post_' . self::ACTION_COMBINE_SELECTED, [ __CLASS__, 'handle_combine_selected' ] );
 
 		// Mirror completion to source orders so each customer's order email
 		// fires per WC defaults.
@@ -89,6 +105,14 @@ class FisHotel_Fulfillment {
 
 		// Customers never see fulfillments in My Account.
 		add_filter( 'woocommerce_my_account_my_orders_query', [ __CLASS__, 'hide_fulfillments_from_account' ] );
+
+		// Suppress WC customer-facing emails for the fulfillment entity itself.
+		// (It now carries a billing email for label/display, but completing it
+		// must not email the customer about a "$X fulfillment" — the per-source
+		// completion emails fire via mirror_status_to_sources instead.)
+		foreach ( [ 'customer_completed_order', 'customer_processing_order', 'customer_on_hold_order', 'customer_refunded_order', 'customer_invoice', 'customer_note' ] as $eid ) {
+			add_filter( 'woocommerce_email_enabled_' . $eid, [ __CLASS__, 'suppress_fulfillment_email' ], 10, 2 );
+		}
 
 		// "Delete Fulfillment" meta box + handler.
 		add_action( 'add_meta_boxes_shop_order', [ __CLASS__, 'register_delete_meta_box' ] );
@@ -211,7 +235,18 @@ class FisHotel_Fulfillment {
 			foreach ( $sources as $sid => $o ) {
 				self::copy_line_items( $o, $f, (int) $sid );
 			}
-			$f->set_total( 0 );
+			// Display-only customer fields from the first source so Jeff can
+			// see who the package belongs to and print labels. Refunds still
+			// run through each source order's own payment data.
+			$first = reset( $sources );
+			if ( $first instanceof WC_Order ) {
+				self::copy_customer_fields( $first, $f );
+			}
+			// Aggregated total becomes the fulfillment's order total so the
+			// native orders-list Total column shows it; cached in meta too.
+			$total = self::aggregate_total( $sources );
+			$f->set_total( $total );
+			$f->update_meta_data( self::META_TOTAL, wc_format_decimal( $total ) );
 			$f->update_meta_data( self::META_IS_FULFILLMENT, '1' );
 			$f->update_meta_data( self::META_SOURCES, implode( ',', array_keys( $sources ) ) );
 			$earliest = self::earliest_ship_date( $sources );
@@ -257,8 +292,31 @@ class FisHotel_Fulfillment {
 			self::copy_line_items( $o, $f, (int) $source_id );
 			$sources   = self::get_sources( $f );
 			$sources[] = (int) $source_id;
-			$f->update_meta_data( self::META_SOURCES, implode( ',', array_values( array_unique( $sources ) ) ) );
+			$sources   = array_values( array_unique( $sources ) );
+			$f->update_meta_data( self::META_SOURCES, implode( ',', $sources ) );
+
+			// Customer fields: copy when the fulfillment has none yet; warn (but
+			// don't overwrite) if the new source's customer differs.
+			$existing_email = strtolower( trim( (string) $f->get_billing_email() ) );
+			$new_email      = strtolower( trim( (string) $o->get_billing_email() ) );
+			if ( '' === $existing_email && '' === trim( (string) $f->get_billing_last_name() ) ) {
+				self::copy_customer_fields( $o, $f );
+			} elseif ( '' !== $new_email && '' !== $existing_email && $new_email !== $existing_email ) {
+				$f->add_order_note( sprintf(
+					/* translators: 1: order number, 2: new email, 3: existing email */
+					__( 'Warning: added order #%1$s belongs to a different customer (%2$s) than this fulfillment (%3$s).', 'fishotel' ),
+					$o->get_order_number(),
+					$new_email,
+					$existing_email
+				) );
+			}
+
+			// Recompute the aggregated total across all current sources.
+			$total = self::aggregate_total_from_ids( $sources );
+			$f->set_total( $total );
+			$f->update_meta_data( self::META_TOTAL, wc_format_decimal( $total ) );
 			$f->save();
+
 			self::attach_source( $o, $f->get_id() );
 			$f->add_order_note( sprintf(
 				/* translators: %s = order number */
@@ -299,6 +357,35 @@ class FisHotel_Fulfillment {
 			$new->add_meta_data( self::META_SOURCE_ORDER, (int) $source_id );
 			$to->add_item( $new );
 		}
+	}
+
+	/** Copy display-only billing + shipping fields from a source onto the fulfillment. */
+	private static function copy_customer_fields( WC_Order $from, WC_Order $to ) {
+		$to->set_address( $from->get_address( 'billing' ), 'billing' );
+		$to->set_address( $from->get_address( 'shipping' ), 'shipping' );
+	}
+
+	/** Sum of the source orders' totals. */
+	private static function aggregate_total( array $source_orders ) {
+		$total = 0.0;
+		foreach ( $source_orders as $o ) {
+			if ( $o instanceof WC_Order ) {
+				$total += (float) $o->get_total();
+			}
+		}
+		return $total;
+	}
+
+	/** Sum of the given source order IDs' totals. */
+	private static function aggregate_total_from_ids( array $ids ) {
+		$orders = [];
+		foreach ( $ids as $id ) {
+			$o = wc_get_order( (int) $id );
+			if ( $o instanceof WC_Order ) {
+				$orders[] = $o;
+			}
+		}
+		return self::aggregate_total( $orders );
 	}
 
 	/** Earliest source shipping date (Y-m-d string), or '' when none set. */
@@ -604,6 +691,14 @@ class FisHotel_Fulfillment {
 		);
 	}
 
+	/** Disable a WC customer email when the order is a fulfillment entity. */
+	public static function suppress_fulfillment_email( $enabled, $order ) {
+		if ( $order instanceof WC_Order && self::is_fulfillment( $order ) ) {
+			return false;
+		}
+		return $enabled;
+	}
+
 	/** Customers never see fulfillment orders in My Account → Orders. */
 	public static function hide_fulfillments_from_account( $args ) {
 		// Fulfillments have customer_id 0 so they won't match a logged-in
@@ -795,5 +890,255 @@ class FisHotel_Fulfillment {
 				$o->save();
 			}
 		}
+	}
+
+	// ── Analytics + totals backfill ──────────────────────────────────
+
+	/** Keep fulfillment orders out of WC Analytics revenue. */
+	public static function exclude_from_analytics( $statuses ) {
+		$statuses   = (array) $statuses;
+		$statuses[] = self::STATUS_BARE;
+		$statuses[] = self::STATUS;
+		return array_values( array_unique( $statuses ) );
+	}
+
+	/**
+	 * One-time backfill: pre-1.15.1 fulfillments were created with a $0
+	 * order total. Recompute each from its sources so the orders-list Total
+	 * column is accurate. Version-gated + idempotent.
+	 */
+	public static function maybe_backfill_totals() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			return;
+		}
+		if ( '1' === (string) get_option( self::META_TOTALS_BACKFILLED, '0' ) ) {
+			return;
+		}
+		try {
+			$ids = wc_get_orders( [
+				'limit'  => -1,
+				'status' => self::STATUS,
+				'return' => 'ids',
+			] );
+			foreach ( (array) $ids as $ff_id ) {
+				$f = wc_get_order( (int) $ff_id );
+				if ( ! $f instanceof WC_Order || ! self::is_fulfillment( $f ) ) {
+					continue;
+				}
+				$total = self::aggregate_total_from_ids( self::get_sources( $f ) );
+				$f->set_total( $total );
+				$f->update_meta_data( self::META_TOTAL, wc_format_decimal( $total ) );
+				// Backfill display customer fields if missing.
+				if ( '' === trim( (string) $f->get_billing_last_name() ) ) {
+					$sources = self::get_sources( $f );
+					$first   = $sources ? wc_get_order( (int) $sources[0] ) : null;
+					if ( $first instanceof WC_Order ) {
+						self::copy_customer_fields( $first, $f );
+					}
+				}
+				$f->save();
+			}
+		} catch ( \Throwable $e ) {
+			if ( function_exists( 'wc_get_logger' ) ) {
+				wc_get_logger()->error( 'Fulfillment totals backfill failed: ' . $e->getMessage(), [ 'source' => 'fishotel-fulfillment' ] );
+			}
+		}
+		update_option( self::META_TOTALS_BACKFILLED, '1', false );
+	}
+
+	// ── Scan for Combinable Orders tool ──────────────────────────────
+
+	public static function register_scan_tool() {
+		add_submenu_page(
+			'fishotel-theme',
+			__( 'Scan for Combinable Orders', 'fishotel' ),
+			__( 'Scan Combinable', 'fishotel' ),
+			'manage_woocommerce',
+			self::PAGE_SCAN,
+			[ __CLASS__, 'render_scan_page' ]
+		);
+	}
+
+	/**
+	 * Group same-customer processing orders that aren't already fulfilled.
+	 * Returns groups with 2+ orders, each tagged with whether all their
+	 * shipping addresses match.
+	 *
+	 * @return array<int,array{key:string,name:string,orders:int[],address_match:bool}>
+	 */
+	public static function scan_combinable_groups() {
+		$ids = wc_get_orders( [
+			'limit'   => 200,
+			'status'  => [ 'wc-processing' ],
+			'orderby' => 'date',
+			'order'   => 'DESC',
+			'return'  => 'ids',
+		] );
+
+		$by_customer = [];
+		foreach ( (array) $ids as $id ) {
+			$o = wc_get_order( (int) $id );
+			if ( ! $o instanceof WC_Order || 'shop_order' !== $o->get_type() ) {
+				continue;
+			}
+			if ( self::is_fulfillment( $o ) || self::get_fulfillment( $o ) ) {
+				continue;
+			}
+			$cid = (int) $o->get_customer_id();
+			$key = $cid > 0 ? 'cid:' . $cid : 'email:' . strtolower( trim( (string) $o->get_billing_email() ) );
+			if ( 'email:' === $key ) {
+				continue; // No way to group a guest with no email.
+			}
+			$by_customer[ $key ][] = $o;
+		}
+
+		$groups = [];
+		foreach ( $by_customer as $key => $orders ) {
+			if ( count( $orders ) < 2 ) {
+				continue;
+			}
+			$hashes = [];
+			foreach ( $orders as $o ) {
+				$hashes[] = self::ship_hash( $o );
+			}
+			$first = $orders[0];
+			$name  = trim( $first->get_formatted_shipping_full_name() );
+			if ( '' === $name ) {
+				$name = trim( $first->get_formatted_billing_full_name() );
+			}
+			$groups[] = [
+				'key'           => $key,
+				'name'          => $name,
+				'orders'        => array_map( static function ( $o ) {
+					return $o->get_id();
+				}, $orders ),
+				'address_match' => 1 === count( array_unique( $hashes ) ),
+			];
+		}
+		return $groups;
+	}
+
+	public static function render_scan_page() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Unauthorized', 'fishotel' ) );
+		}
+		$groups   = self::scan_combinable_groups();
+		$eligible = array_filter( $groups, static function ( $g ) {
+			return $g['address_match'];
+		} );
+		$differs  = array_filter( $groups, static function ( $g ) {
+			return ! $g['address_match'];
+		} );
+		$done = isset( $_GET['fishotel_combined_count'] ) ? absint( wp_unslash( $_GET['fishotel_combined_count'] ) ) : -1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'Scan for Combinable Orders', 'fishotel' ); ?></h1>
+			<?php if ( $done >= 0 ) : ?>
+				<div class="notice notice-success"><p>
+					<?php
+					printf(
+						/* translators: %d = number of fulfillments created */
+						esc_html( _n( 'Created %d fulfillment.', 'Created %d fulfillments.', $done, 'fishotel' ) ),
+						(int) $done
+					);
+					?>
+				</p></div>
+			<?php endif; ?>
+
+			<p class="description">
+				<?php esc_html_e( 'Same-customer processing orders that are not yet part of a fulfillment. Review and combine — same customer does not always mean same shipment.', 'fishotel' ); ?>
+			</p>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION_COMBINE_SELECTED ); ?>">
+				<?php wp_nonce_field( self::ACTION_COMBINE_SELECTED ); ?>
+
+				<h2><?php esc_html_e( 'Eligible (matching shipping address)', 'fishotel' ); ?></h2>
+				<?php if ( empty( $eligible ) ) : ?>
+					<p><em><?php esc_html_e( 'No eligible groups found.', 'fishotel' ); ?></em></p>
+				<?php else : ?>
+					<table class="widefat striped" style="max-width:760px;">
+						<thead><tr>
+							<td style="width:28px;"></td>
+							<th><?php esc_html_e( 'Customer', 'fishotel' ); ?></th>
+							<th><?php esc_html_e( 'Orders', 'fishotel' ); ?></th>
+						</tr></thead>
+						<tbody>
+						<?php foreach ( $eligible as $g ) : ?>
+							<tr>
+								<td><input type="checkbox" name="groups[]" value="<?php echo esc_attr( implode( ',', $g['orders'] ) ); ?>" checked></td>
+								<td><?php echo esc_html( $g['name'] ); ?></td>
+								<td>
+									<?php
+									$nums = array_map( static function ( $id ) {
+										$o = wc_get_order( (int) $id );
+										return '#' . ( $o instanceof WC_Order ? $o->get_order_number() : $id );
+									}, $g['orders'] );
+									echo esc_html( implode( ', ', $nums ) );
+									?>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+					<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Combine Selected', 'fishotel' ); ?></button></p>
+				<?php endif; ?>
+			</form>
+
+			<?php if ( ! empty( $differs ) ) : ?>
+				<h2><?php esc_html_e( 'Address differs — review manually', 'fishotel' ); ?></h2>
+				<table class="widefat striped" style="max-width:760px;">
+					<thead><tr>
+						<th><?php esc_html_e( 'Customer', 'fishotel' ); ?></th>
+						<th><?php esc_html_e( 'Orders', 'fishotel' ); ?></th>
+						<th><?php esc_html_e( 'Note', 'fishotel' ); ?></th>
+					</tr></thead>
+					<tbody>
+					<?php foreach ( $differs as $g ) : ?>
+						<tr>
+							<td><?php echo esc_html( $g['name'] ); ?></td>
+							<td>
+								<?php
+								$nums = array_map( static function ( $id ) {
+									$o = wc_get_order( (int) $id );
+									return '#' . ( $o instanceof WC_Order ? $o->get_order_number() : $id );
+								}, $g['orders'] );
+								echo esc_html( implode( ', ', $nums ) );
+								?>
+							</td>
+							<td style="color:#b32d2e;"><?php esc_html_e( 'Shipping addresses differ', 'fishotel' ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	public static function handle_combine_selected() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Unauthorized', 'fishotel' ), '', [ 'response' => 403 ] );
+		}
+		check_admin_referer( self::ACTION_COMBINE_SELECTED );
+
+		$groups  = isset( $_POST['groups'] ) && is_array( $_POST['groups'] ) ? wp_unslash( $_POST['groups'] ) : [];
+		$created = 0;
+		foreach ( $groups as $group ) {
+			$ids = array_filter( array_map( 'intval', explode( ',', (string) $group ) ) );
+			if ( count( $ids ) < 2 ) {
+				continue;
+			}
+			if ( self::create_fulfillment( $ids ) ) {
+				$created++;
+			}
+		}
+
+		$redirect = add_query_arg(
+			[ 'page' => self::PAGE_SCAN, 'fishotel_combined_count' => $created ],
+			admin_url( 'admin.php' )
+		);
+		wp_safe_redirect( $redirect );
+		exit;
 	}
 }

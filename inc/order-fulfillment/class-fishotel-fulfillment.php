@@ -45,6 +45,11 @@ function fishotel_fulfillment_get_sources( $fulfillment ) {
 	return FisHotel_Fulfillment::get_sources( $fulfillment );
 }
 
+/** Aggregated fulfillment total — sum of source orders' item subtotals. */
+function fishotel_fulfillment_calculate_aggregate_total( $fulfillment ) {
+	return FisHotel_Fulfillment::calculate_aggregate_total( $fulfillment );
+}
+
 class FisHotel_Fulfillment {
 
 	const STATUS              = 'wc-fulfillment';
@@ -59,7 +64,9 @@ class FisHotel_Fulfillment {
 	const META_SHIP_DATE      = '_fishotel_shipping_date';
 	const META_SOURCE_ORDER   = '_fishotel_source_order'; // on copied line items
 	const META_MIGRATED       = 'fishotel_fulfillment_migrated_v1';
-	const META_TOTALS_BACKFILLED = 'fishotel_fulfillment_totals_backfilled_v1';
+	// Bumped to v2 in 1.15.2 — totals now use item subtotals, so existing
+	// fulfillments must be recalculated.
+	const META_TOTALS_BACKFILLED = 'fishotel_fulfillment_totals_backfilled_v2';
 
 	const ACTION_DELETE          = 'fishotel_delete_fulfillment';
 	const ACTION_COMBINE_SELECTED = 'fishotel_combine_selected';
@@ -97,11 +104,17 @@ class FisHotel_Fulfillment {
 		add_action( 'fst_status_changed', [ __CLASS__, 'on_fst_status_changed' ], 10, 4 );
 
 		// Admin orders list: hide fulfilled sources by default; show toggle.
+		// The Processing tab is the unified "Open Orders" view — standalones
+		// plus the fulfillments themselves (see filter methods).
 		add_action( 'pre_get_posts', [ __CLASS__, 'filter_cpt_list_query' ] );
 		add_filter( 'woocommerce_order_list_table_prepare_items_query_args', [ __CLASS__, 'filter_hpos_list_query' ] );
 		add_filter( 'woocommerce_shop_order_list_table_prepare_items_query_args', [ __CLASS__, 'filter_hpos_list_query' ] );
 		add_action( 'restrict_manage_posts', [ __CLASS__, 'render_sources_toggle_cpt' ] );
 		add_action( 'woocommerce_order_list_table_restrict_manage_orders', [ __CLASS__, 'render_sources_toggle_hpos' ] );
+
+		// Make the Processing count badge match the unified Open Orders view.
+		add_filter( 'views_edit-shop_order', [ __CLASS__, 'override_processing_count' ] );
+		add_filter( 'views_woocommerce_page_wc-orders', [ __CLASS__, 'override_processing_count' ] );
 
 		// Customers never see fulfillments in My Account.
 		add_filter( 'woocommerce_my_account_my_orders_query', [ __CLASS__, 'hide_fulfillments_from_account' ] );
@@ -365,18 +378,23 @@ class FisHotel_Fulfillment {
 		$to->set_address( $from->get_address( 'shipping' ), 'shipping' );
 	}
 
-	/** Sum of the source orders' totals. */
+	/**
+	 * Aggregated fulfillment total = sum of the source orders' item subtotals
+	 * (what's actually in the box: no shipping, tax, refunds, or gift cards).
+	 * This is the operationally meaningful number and matches the items
+	 * subtotal the WC edit page shows natively.
+	 */
 	private static function aggregate_total( array $source_orders ) {
 		$total = 0.0;
 		foreach ( $source_orders as $o ) {
 			if ( $o instanceof WC_Order ) {
-				$total += (float) $o->get_total();
+				$total += (float) $o->get_subtotal();
 			}
 		}
 		return $total;
 	}
 
-	/** Sum of the given source order IDs' totals. */
+	/** Sum of the given source order IDs' item subtotals. */
 	private static function aggregate_total_from_ids( array $ids ) {
 		$orders = [];
 		foreach ( $ids as $id ) {
@@ -386,6 +404,21 @@ class FisHotel_Fulfillment {
 			}
 		}
 		return self::aggregate_total( $orders );
+	}
+
+	/**
+	 * Public aggregate-total calculator for a fulfillment: sum of its source
+	 * orders' item subtotals.
+	 *
+	 * @param int|WC_Order $fulfillment
+	 * @return float
+	 */
+	public static function calculate_aggregate_total( $fulfillment ) {
+		$ff = self::to_order( $fulfillment );
+		if ( ! $ff instanceof WC_Order ) {
+			return 0.0;
+		}
+		return self::aggregate_total_from_ids( self::get_sources( $ff ) );
 	}
 
 	/** Earliest source shipping date (Y-m-d string), or '' when none set. */
@@ -636,7 +669,12 @@ class FisHotel_Fulfillment {
 		return isset( $_GET['fishotel_show_sources'] ) && '1' === $_GET['fishotel_show_sources']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
 
-	/** Legacy CPT orders list: exclude fulfilled sources by default. */
+	/**
+	 * Legacy CPT orders list. Two behaviors:
+	 *   - Processing tab → unified Open Orders: expand the status filter to
+	 *     also include fulfillments (so it's standalones + fulfillments).
+	 *   - Always (unless "show fulfilled sources") → hide fulfilled sources.
+	 */
 	public static function filter_cpt_list_query( $query ) {
 		global $pagenow;
 		if ( ! is_admin() || 'edit.php' !== $pagenow || ! $query->is_main_query() ) {
@@ -645,6 +683,12 @@ class FisHotel_Fulfillment {
 		if ( 'shop_order' !== $query->get( 'post_type' ) ) {
 			return;
 		}
+
+		// Open Orders: Processing also surfaces the fulfillments themselves.
+		if ( 'wc-processing' === $query->get( 'post_status' ) ) {
+			$query->set( 'post_status', [ 'wc-processing', self::STATUS ] );
+		}
+
 		if ( self::show_sources_requested() ) {
 			return;
 		}
@@ -656,8 +700,18 @@ class FisHotel_Fulfillment {
 		$query->set( 'meta_query', $meta_query );
 	}
 
-	/** HPOS orders list: exclude fulfilled sources by default. */
+	/** HPOS orders list — same Open Orders expansion + fulfilled-source hiding. */
 	public static function filter_hpos_list_query( $args ) {
+		// Open Orders: when the status filter is exactly Processing, also
+		// include fulfillments. (The Fulfillment tab — status wc-fulfillment —
+		// and the All view are left untouched.)
+		if ( isset( $args['status'] ) ) {
+			$statuses = array_values( (array) $args['status'] );
+			if ( [ 'wc-processing' ] === $statuses ) {
+				$args['status'] = [ 'wc-processing', self::STATUS ];
+			}
+		}
+
 		if ( self::show_sources_requested() ) {
 			return $args;
 		}
@@ -669,6 +723,42 @@ class FisHotel_Fulfillment {
 			'compare' => 'NOT EXISTS',
 		];
 		return $args;
+	}
+
+	/**
+	 * Count badge for the Processing view = visible Open Orders:
+	 * standalones in processing (not fulfilled sources) + all fulfillments.
+	 */
+	public static function override_processing_count( $views ) {
+		$count = self::processing_open_count();
+		$label = '(' . number_format_i18n( $count ) . ')';
+		foreach ( [ 'wc-processing', 'processing' ] as $key ) {
+			if ( isset( $views[ $key ] ) ) {
+				$views[ $key ] = preg_replace( '/\((\d[\d,]*)\)/', $label, $views[ $key ], 1 );
+			}
+		}
+		return $views;
+	}
+
+	/** Visible Open Orders count: processing standalones + fulfillments. */
+	private static function processing_open_count() {
+		$standalones = 0;
+		$processing  = wc_get_orders( [
+			'status' => 'wc-processing',
+			'limit'  => -1,
+			'return' => 'ids',
+		] );
+		foreach ( (array) $processing as $id ) {
+			if ( ! self::get_fulfillment( $id ) ) {
+				$standalones++;
+			}
+		}
+		$fulfillments = wc_get_orders( [
+			'status' => self::STATUS,
+			'limit'  => -1,
+			'return' => 'ids',
+		] );
+		return $standalones + count( (array) $fulfillments );
 	}
 
 	public static function render_sources_toggle_cpt( $post_type ) {

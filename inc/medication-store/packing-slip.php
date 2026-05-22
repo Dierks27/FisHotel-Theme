@@ -85,23 +85,6 @@ class FisHotel_Med_Packing_Slip {
 			echo '<p style="color:#666;">' . esc_html__( 'Order not loaded yet.', 'fishotel' ) . '</p>';
 			return;
 		}
-		// Combined secondary orders don't own their own slip — the primary
-		// generates one merged slip for the whole bundle.
-		if ( function_exists( 'fishotel_order_get_primary' ) ) {
-			$primary_id = fishotel_order_get_primary( $order );
-			if ( $primary_id ) {
-				$primary = wc_get_order( $primary_id );
-				$link    = $primary ? $primary->get_edit_order_url() : '#';
-				echo '<p style="margin:0;color:#666;">';
-				printf(
-					/* translators: %s = primary order link */
-					wp_kses_post( __( 'This order is combined into %s — generate the slip from there.', 'fishotel' ) ),
-					'<a href="' . esc_url( $link ) . '"><strong>#' . esc_html( (string) $primary_id ) . '</strong></a>'
-				);
-				echo '</p>';
-				return;
-			}
-		}
 		if ( ! self::order_has_ea_items( $order ) ) {
 			echo '<p style="margin:0;color:#666;font-style:italic;">'
 				. esc_html__( 'No EA-mode items in this order.', 'fishotel' )
@@ -162,61 +145,12 @@ class FisHotel_Med_Packing_Slip {
 		<?php
 	}
 
-	/**
-	 * True when at least one line item is an EA-mode medication — including
-	 * items pulled in from combined secondary orders.
-	 */
+	/** True when at least one line item is an EA-mode medication. */
 	public static function order_has_ea_items( WC_Order $order ) {
-		foreach ( self::collect_ea_items_combined( $order ) as $_ ) {
+		foreach ( self::collect_ea_items( $order ) as $_ ) {
 			return true;
 		}
 		return false;
-	}
-
-	/**
-	 * Yield EA-mode rows for an order plus every order combined into it
-	 * (Phase 2). On a standalone order this is just its own items.
-	 *
-	 * @return Generator<array>
-	 */
-	public static function collect_ea_items_combined( WC_Order $order ) {
-		foreach ( self::collect_ea_items( $order ) as $row ) {
-			yield $row;
-		}
-		if ( ! function_exists( 'fishotel_order_get_secondaries' ) ) {
-			return;
-		}
-		foreach ( fishotel_order_get_secondaries( $order->get_id() ) as $sid ) {
-			$secondary = wc_get_order( $sid );
-			if ( ! $secondary instanceof WC_Order ) {
-				continue;
-			}
-			foreach ( self::collect_ea_items( $secondary ) as $row ) {
-				yield $row;
-			}
-		}
-	}
-
-	/**
-	 * Order numbers in a combined bundle (primary first), or [] when the
-	 * order has no secondaries. Used for the slip's "Combined order" line.
-	 *
-	 * @return string[]
-	 */
-	public static function combined_order_numbers( WC_Order $order ) {
-		if ( ! function_exists( 'fishotel_order_get_secondaries' ) ) {
-			return [];
-		}
-		$secondaries = fishotel_order_get_secondaries( $order->get_id() );
-		if ( empty( $secondaries ) ) {
-			return [];
-		}
-		$numbers = [ '#' . $order->get_order_number() ];
-		foreach ( $secondaries as $sid ) {
-			$sec = wc_get_order( $sid );
-			$numbers[] = '#' . ( $sec instanceof WC_Order ? $sec->get_order_number() : $sid );
-		}
-		return $numbers;
 	}
 
 	/**
@@ -497,13 +431,9 @@ on this order are fulfilled separately and are intentionally not on the attached
 		}
 
 		$rows = [];
-		foreach ( self::collect_ea_items_combined( $order ) as $row ) {
+		foreach ( self::collect_ea_items( $order ) as $row ) {
 			$rows[] = $row;
 		}
-
-		// Phase 2: when this order bundles combined secondaries, surface the
-		// full set of order numbers so Dena knows what shipped together.
-		$combined_numbers = self::combined_order_numbers( $order );
 
 		ob_start();
 		?>
@@ -565,17 +495,6 @@ on this order are fulfilled separately and are intentionally not on the attached
 			<div class="slip__doc">
 				Packing Slip
 				<strong>#<?php echo esc_html( $order_id ); ?></strong>
-				<?php if ( ! empty( $combined_numbers ) ) : ?>
-					<small style="display:block;font-size:10px;letter-spacing:1px;color:#b07d3c;margin-top:3px;">
-						<?php
-						printf(
-							/* translators: %s = list of combined order numbers */
-							esc_html__( 'Combined order: %s', 'fishotel' ),
-							esc_html( implode( ' · ', $combined_numbers ) )
-						);
-						?>
-					</small>
-				<?php endif; ?>
 			</div>
 		</header>
 

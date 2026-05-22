@@ -328,39 +328,9 @@ class FisHotel_Order_Fulfillment {
 
 		wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD );
 
-		// Fulfillment order: always show the per-line status table across all
-		// aggregated items (no split toggle — the whole fulfillment ships as a
-		// unit and these track each portion).
-		if ( fishotel_is_fulfillment( $order ) ) {
-			?>
-			<p class="description" style="margin:0 0 10px;">
-				<?php esc_html_e( 'Per-line status across all bundled source orders.', 'fishotel' ); ?>
-			</p>
-			<div class="fishotel-ff-table" style="overflow-x:auto;">
-				<table class="widefat striped" style="font-size:12px;">
-					<thead>
-						<tr>
-							<th><?php esc_html_e( 'Product', 'fishotel' ); ?></th>
-							<th style="width:34px;"><?php esc_html_e( 'Qty', 'fishotel' ); ?></th>
-							<th><?php esc_html_e( 'Status', 'fishotel' ); ?></th>
-							<th><?php esc_html_e( 'Tracking', 'fishotel' ); ?></th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php
-						foreach ( $items as $item_id => $item ) {
-							if ( ! $item instanceof WC_Order_Item_Product ) {
-								continue;
-							}
-							self::render_line_row( (int) $item_id, $item );
-						}
-						?>
-					</tbody>
-				</table>
-			</div>
-			<?php
-			return;
-		}
+		// Fulfillments flow through the same mixed-detection as regular orders
+		// (their copied line items keep product references): mixed → split
+		// toggle + per-line table; non-mixed → the single-fulfillment notice.
 
 		// Non-mixed: single-fulfillment note only, no toggle.
 		if ( ! fishotel_order_is_mixed( $order ) ) {
@@ -527,15 +497,8 @@ class FisHotel_Order_Fulfillment {
 		}
 		$saved[ $order_id ] = true;
 
-		// Fulfillment orders show the table unconditionally (no split toggle):
-		// just persist each line's status + tracking, then maybe auto-complete.
-		if ( fishotel_is_fulfillment( $order ) ) {
-			self::save_line_statuses( $order );
-			self::maybe_auto_complete_fulfillment( $order );
-			return;
-		}
-
-		// Only mixed orders ever show the toggle; ignore the rest.
+		// Only mixed orders ever show the toggle; ignore the rest. (Fulfillments
+		// included — a mixed fulfillment uses the same split mechanic.)
 		if ( ! fishotel_order_is_mixed( $order ) ) {
 			return;
 		}
@@ -580,21 +543,6 @@ class FisHotel_Order_Fulfillment {
 			wc_update_order_item_meta( $item_id, self::META_STATUS, $status );
 			wc_update_order_item_meta( $item_id, self::META_TRACKING, $track );
 		}
-	}
-
-	/**
-	 * Auto-complete a fulfillment when every aggregated line is shipped/na
-	 * (with at least one shipped). Completing it mirrors to the source orders
-	 * via FisHotel_Fulfillment::mirror_status_to_sources().
-	 */
-	private static function maybe_auto_complete_fulfillment( WC_Order $order ) {
-		if ( $order->has_status( 'completed' ) ) {
-			return;
-		}
-		if ( ! self::all_lines_shipped_or_na( $order, /*require_one_shipped=*/ true ) ) {
-			return;
-		}
-		$order->update_status( 'completed', __( 'FisHotel: all portions shipped.', 'fishotel' ) );
 	}
 
 	/**
@@ -1304,30 +1252,28 @@ class FisHotel_Order_Fulfillment {
 
 	/** Echo the 🔗 badge for an order in the list table. */
 	private static function render_list_badge( $order_id ) {
-		// This row IS a fulfillment: show "🔗 FF-{id}" with a tooltip listing
-		// its bundled source orders and their aggregated total (for reference).
+		// This row IS a fulfillment. The Order column already shows #id, the
+		// status badge says "Fulfillment", and the Total column shows the
+		// aggregate — so here we just surface the bundle size at a glance,
+		// with the bundled order numbers in the tooltip.
 		if ( fishotel_is_fulfillment( $order_id ) ) {
 			$sources = fishotel_fulfillment_get_sources( $order_id );
+			$count   = count( $sources );
 			$nums    = [];
-			$total   = 0.0;
 			foreach ( $sources as $sid ) {
-				$src = wc_get_order( (int) $sid );
-				if ( ! $src instanceof WC_Order ) {
-					continue;
-				}
-				$nums[] = '#' . $src->get_order_number();
-				$total += (float) $src->get_total();
+				$src    = wc_get_order( (int) $sid );
+				$nums[] = '#' . ( $src instanceof WC_Order ? $src->get_order_number() : $sid );
 			}
 			$tip = sprintf(
-				/* translators: 1: order numbers, 2: aggregated total */
-				__( 'Fulfillment of orders %1$s — %2$s', 'fishotel' ),
-				implode( ', ', $nums ),
-				html_entity_decode( wp_strip_all_tags( wc_price( $total ) ), ENT_QUOTES, 'UTF-8' )
+				/* translators: %s = order numbers */
+				__( 'Fulfillment of orders %s', 'fishotel' ),
+				implode( ', ', $nums )
 			);
 			printf(
-				'<strong title="%s">🔗 FF-%s</strong>',
+				'<strong title="%s">🔗 %d %s</strong>',
 				esc_attr( $tip ),
-				esc_html( (string) $order_id )
+				(int) $count,
+				esc_html( _n( 'source', 'sources', $count, 'fishotel' ) )
 			);
 			return;
 		}

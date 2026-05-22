@@ -21,7 +21,7 @@ get_header(); ?>
         <p class="fh-hero__subtitle">Every saltwater fish quarantined, observed, and treated before it ever reaches your tank. Because your reef deserves nothing less.</p>
         <div class="fh-hero__actions">
             <a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>" class="fh-btn fh-btn--gold">View Available Fish</a>
-            <a href="<?php echo esc_url( home_url('/our-process/') ); ?>" class="fh-btn fh-btn--ghost">Our Process</a>
+            <a href="<?php echo esc_url( home_url('/faq/') ); ?>" class="fh-btn fh-btn--ghost">Our Process</a>
         </div>
     </div>
     <div class="fh-hero__scroll"><span>Scroll</span><div class="fh-hero__scroll-line"></div></div>
@@ -138,7 +138,7 @@ $available_query = new WP_Query($available_args);
             <h2 class="fh-home-section-title">Your fish deserve a proper <em>welcome</em></h2>
             <p style="font-size:14px; line-height:1.8; color:var(--fh-text-2); margin-bottom:16px;">Most fish go straight from the bag to your display tank — stressed, potentially sick, and carrying parasites your tank has never seen.</p>
             <p style="font-size:14px; line-height:1.8; color:var(--fh-text-2); margin-bottom:32px;">Every fish at FisHotel spends a minimum of 30 days in dedicated quarantine, monitored daily, treated proactively, and cleared before entering your system.</p>
-            <a href="<?php echo esc_url( home_url('/our-process/') ); ?>" class="fh-btn fh-btn--gold">Learn Our Approach</a>
+            <a href="<?php echo esc_url( home_url('/faq/') ); ?>" class="fh-btn fh-btn--gold">Learn Our Approach</a>
         </div>
         <div class="fh-home-logo-block">
             <img src="<?php echo esc_url( 'https://fishotel.com/wp-content/uploads/2021/12/FisHotel-Retro-Hotel-Sign.gif' ); ?>"

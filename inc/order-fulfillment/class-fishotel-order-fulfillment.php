@@ -799,7 +799,6 @@ class FisHotel_Order_Fulfillment {
 	/** Standalone-order combine UI: search input + hidden combine form. */
 	private static function render_combine_form( WC_Order $order ) {
 		$order_id = $order->get_id();
-		$action   = admin_url( 'admin-post.php' );
 		?>
 		<div class="fishotel-combine" data-fishotel-combine>
 			<p style="margin:0 0 6px;font-weight:600;"><?php esc_html_e( 'Combine into this order', 'fishotel' ); ?></p>
@@ -811,19 +810,21 @@ class FisHotel_Order_Fulfillment {
 			<ul data-combine-results style="margin:6px 0 0;max-height:180px;overflow:auto;display:none;
 				border:1px solid #dcdcde;border-radius:3px;list-style:none;padding:0;"></ul>
 
-			<form method="post" action="<?php echo esc_url( $action ); ?>" data-combine-form style="margin-top:10px;display:none;">
-				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION_COMBINE ); ?>">
-				<input type="hidden" name="primary_id" value="<?php echo esc_attr( $order_id ); ?>">
+			<!-- NOT a <form>: this meta box renders inside WP's #post form, and
+			     the browser flattens nested forms — a nested <form>'s submit
+			     button ends up posting #post to post.php instead. So we keep a
+			     plain container and submit via a detached form built in JS
+			     (see below), which posts cleanly to admin-post.php. -->
+			<div data-combine-form style="margin-top:10px;display:none;">
 				<input type="hidden" name="secondary_id" data-combine-secondary value="">
-				<?php wp_nonce_field( self::ACTION_COMBINE . '_' . $order_id ); ?>
 				<p style="margin:0 0 8px;">
 					<?php esc_html_e( 'Selected:', 'fishotel' ); ?>
 					<strong data-combine-selected-label></strong>
 				</p>
-				<button type="submit" class="button button-primary" data-combine-submit>
+				<button type="button" class="button button-primary" data-combine-submit>
 					<?php esc_html_e( 'Combine', 'fishotel' ); ?>
 				</button>
-			</form>
+			</div>
 		</div>
 		<script>
 		( function () {
@@ -834,8 +835,12 @@ class FisHotel_Order_Fulfillment {
 			var form     = box.querySelector( '[data-combine-form]' );
 			var hidden   = box.querySelector( '[data-combine-secondary]' );
 			var selLabel = box.querySelector( '[data-combine-selected-label]' );
+			var submit   = box.querySelector( '[data-combine-submit]' );
 			var ajaxUrl  = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+			var adminPost = <?php echo wp_json_encode( admin_url( 'admin-post.php' ) ); ?>;
 			var nonce    = <?php echo wp_json_encode( wp_create_nonce( self::ACTION_SEARCH ) ); ?>;
+			var combineNonce = <?php echo wp_json_encode( wp_create_nonce( self::ACTION_COMBINE . '_' . $order_id ) ); ?>;
+			var combineAction = <?php echo wp_json_encode( self::ACTION_COMBINE ); ?>;
 			var orderId  = <?php echo (int) $order_id; ?>;
 			var timer    = null;
 
@@ -877,11 +882,32 @@ class FisHotel_Order_Fulfillment {
 			} );
 			input.addEventListener( 'focus', search );
 
-			form.addEventListener( 'submit', function ( e ) {
-				if ( ! hidden.value ) { e.preventDefault(); return; }
+			function addHidden( f, name, value ) {
+				var i = document.createElement( 'input' );
+				i.type = 'hidden';
+				i.name = name;
+				i.value = value;
+				f.appendChild( i );
+			}
+
+			submit.addEventListener( 'click', function () {
+				if ( ! hidden.value ) { return; }
 				if ( ! window.confirm( 'Combine order ' + selLabel.textContent.split( ' ' )[0] + ' into this order? The shipping date will be transferred.' ) ) {
-					e.preventDefault();
+					return;
 				}
+				// Build a detached form appended to <body> — outside #post — so
+				// it actually posts to admin-post.php instead of being swallowed
+				// by the surrounding order-edit form.
+				var f = document.createElement( 'form' );
+				f.method = 'post';
+				f.action = adminPost;
+				f.style.display = 'none';
+				addHidden( f, 'action', combineAction );
+				addHidden( f, 'primary_id', String( orderId ) );
+				addHidden( f, 'secondary_id', hidden.value );
+				addHidden( f, '_wpnonce', combineNonce );
+				document.body.appendChild( f );
+				f.submit();
 			} );
 		} )();
 		</script>

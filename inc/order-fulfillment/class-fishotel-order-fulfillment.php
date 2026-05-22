@@ -264,6 +264,11 @@ class FisHotel_Order_Fulfillment {
 		if ( $order instanceof WC_Order && ! $order->get_items( 'line_item' ) ) {
 			return;
 		}
+		// On a source order that's been folded into a fulfillment, the
+		// operational state lives on the fulfillment — don't show this box.
+		if ( $order instanceof WC_Order && fishotel_order_get_fulfillment( $order ) ) {
+			return;
+		}
 
 		$screen = self::screen_id();
 		add_meta_box(
@@ -322,6 +327,40 @@ class FisHotel_Order_Fulfillment {
 		}
 
 		wp_nonce_field( self::NONCE_ACTION, self::NONCE_FIELD );
+
+		// Fulfillment order: always show the per-line status table across all
+		// aggregated items (no split toggle — the whole fulfillment ships as a
+		// unit and these track each portion).
+		if ( fishotel_is_fulfillment( $order ) ) {
+			?>
+			<p class="description" style="margin:0 0 10px;">
+				<?php esc_html_e( 'Per-line status across all bundled source orders.', 'fishotel' ); ?>
+			</p>
+			<div class="fishotel-ff-table" style="overflow-x:auto;">
+				<table class="widefat striped" style="font-size:12px;">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Product', 'fishotel' ); ?></th>
+							<th style="width:34px;"><?php esc_html_e( 'Qty', 'fishotel' ); ?></th>
+							<th><?php esc_html_e( 'Status', 'fishotel' ); ?></th>
+							<th><?php esc_html_e( 'Tracking', 'fishotel' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php
+						foreach ( $items as $item_id => $item ) {
+							if ( ! $item instanceof WC_Order_Item_Product ) {
+								continue;
+							}
+							self::render_line_row( (int) $item_id, $item );
+						}
+						?>
+					</tbody>
+				</table>
+			</div>
+			<?php
+			return;
+		}
 
 		// Non-mixed: single-fulfillment note only, no toggle.
 		if ( ! fishotel_order_is_mixed( $order ) ) {
@@ -488,6 +527,14 @@ class FisHotel_Order_Fulfillment {
 		}
 		$saved[ $order_id ] = true;
 
+		// Fulfillment orders show the table unconditionally (no split toggle):
+		// just persist each line's status + tracking, then maybe auto-complete.
+		if ( fishotel_is_fulfillment( $order ) ) {
+			self::save_line_statuses( $order );
+			self::maybe_auto_complete_fulfillment( $order );
+			return;
+		}
+
 		// Only mixed orders ever show the toggle; ignore the rest.
 		if ( ! fishotel_order_is_mixed( $order ) ) {
 			return;
@@ -505,11 +552,17 @@ class FisHotel_Order_Fulfillment {
 		$order->update_meta_data( self::META_SPLIT, '1' );
 		$order->save();
 
-		$statuses = isset( $_POST['fishotel_ff_status'] ) && is_array( $_POST['fishotel_ff_status'] )
-			? wp_unslash( $_POST['fishotel_ff_status'] )
+		self::save_line_statuses( $order );
+		self::maybe_auto_complete( $order );
+	}
+
+	/** Persist each line item's posted status + tracking for an order. */
+	private static function save_line_statuses( WC_Order $order ) {
+		$statuses = isset( $_POST['fishotel_ff_status'] ) && is_array( $_POST['fishotel_ff_status'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			? wp_unslash( $_POST['fishotel_ff_status'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing
 			: [];
-		$tracking = isset( $_POST['fishotel_ff_tracking'] ) && is_array( $_POST['fishotel_ff_tracking'] )
-			? wp_unslash( $_POST['fishotel_ff_tracking'] )
+		$tracking = isset( $_POST['fishotel_ff_tracking'] ) && is_array( $_POST['fishotel_ff_tracking'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			? wp_unslash( $_POST['fishotel_ff_tracking'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing
 			: [];
 
 		foreach ( $order->get_items( 'line_item' ) as $item_id => $item ) {
@@ -527,8 +580,21 @@ class FisHotel_Order_Fulfillment {
 			wc_update_order_item_meta( $item_id, self::META_STATUS, $status );
 			wc_update_order_item_meta( $item_id, self::META_TRACKING, $track );
 		}
+	}
 
-		self::maybe_auto_complete( $order );
+	/**
+	 * Auto-complete a fulfillment when every aggregated line is shipped/na
+	 * (with at least one shipped). Completing it mirrors to the source orders
+	 * via FisHotel_Fulfillment::mirror_status_to_sources().
+	 */
+	private static function maybe_auto_complete_fulfillment( WC_Order $order ) {
+		if ( $order->has_status( 'completed' ) ) {
+			return;
+		}
+		if ( ! self::all_lines_shipped_or_na( $order, /*require_one_shipped=*/ true ) ) {
+			return;
+		}
+		$order->update_status( 'completed', __( 'FisHotel: all portions shipped.', 'fishotel' ) );
 	}
 
 	/**
@@ -731,54 +797,30 @@ class FisHotel_Order_Fulfillment {
 		self::maybe_warn_orphaned_backup( $order );
 		self::render_combine_notice();
 
-		$order_id    = $order->get_id();
-		$primary_id  = fishotel_order_get_primary( $order );
-		$secondaries = fishotel_order_get_secondaries( $order_id );
+		$order_id = $order->get_id();
 
-		// Role: secondary.
-		if ( $primary_id ) {
-			$primary = wc_get_order( $primary_id );
-			$link    = $primary instanceof WC_Order ? $primary->get_edit_order_url() : '#';
-			?>
-			<p style="margin:0 0 8px;">
-				<?php
-				printf(
-					/* translators: %s = primary order link */
-					wp_kses_post( __( 'This order is combined into %s. Shipping date and EA slip are owned by the primary.', 'fishotel' ) ),
-					'<a href="' . esc_url( $link ) . '"><strong>#' . esc_html( (string) $primary_id ) . '</strong></a>'
-				);
-				?>
-			</p>
-			<?php
-			self::render_action_button( self::ACTION_UNCOMBINE, $order_id, __( 'Uncombine', 'fishotel' ), 'button-secondary' );
+		// Role: this order IS a fulfillment — managed via the Fulfillment box.
+		if ( fishotel_is_fulfillment( $order ) ) {
+			echo '<p style="margin:0;color:#666;">'
+				. esc_html__( 'This is a fulfillment order. Use the Fulfillment box to release its source orders.', 'fishotel' )
+				. '</p>';
 			return;
 		}
 
-		// Role: primary.
-		if ( ! empty( $secondaries ) ) {
+		// Role: source folded into a fulfillment.
+		$ff_id = fishotel_order_get_fulfillment( $order );
+		if ( $ff_id ) {
+			$ff   = wc_get_order( $ff_id );
+			$link = $ff instanceof WC_Order ? $ff->get_edit_order_url() : '#';
 			?>
-			<p style="margin:0 0 6px;">
+			<p style="margin:0;">
 				<?php
 				printf(
-					/* translators: %d = number of combined orders */
-					esc_html( _n( 'This order has %d combined order:', 'This order has %d combined orders:', count( $secondaries ), 'fishotel' ) ),
-					count( $secondaries )
+					/* translators: %s = fulfillment order link */
+					wp_kses_post( __( 'This order is part of fulfillment %s — manage shipping and the EA slip from there.', 'fishotel' ) ),
+					'<a href="' . esc_url( $link ) . '"><strong>#FF-' . esc_html( (string) $ff_id ) . '</strong></a>'
 				);
 				?>
-			</p>
-			<ul style="margin:0 0 4px 16px;list-style:disc;">
-				<?php foreach ( $secondaries as $sid ) :
-					$sec = wc_get_order( $sid );
-					if ( ! $sec instanceof WC_Order ) {
-						continue; // Defensive: never call order methods on a refund/invalid id.
-					}
-					$slink = $sec->get_edit_order_url();
-					?>
-					<li><a href="<?php echo esc_url( $slink ); ?>">#<?php echo esc_html( (string) $sid ); ?></a></li>
-				<?php endforeach; ?>
-			</ul>
-			<p class="description" style="margin:0;">
-				<?php esc_html_e( 'Uncombine from each secondary order’s own screen.', 'fishotel' ); ?>
 			</p>
 			<?php
 			return;
@@ -954,9 +996,10 @@ class FisHotel_Order_Fulfillment {
 	}
 
 	/**
-	 * Combine handler. Makes the selected order a secondary of this order:
-	 * stores the link, backs up + clears the secondary's shipping date, and
-	 * notes both orders.
+	 * Combine handler. Folds the selected order and the current order into a
+	 * fulfillment (Phase 2.5): if the current order already belongs to one,
+	 * the selection is added to it; otherwise a new fulfillment is created
+	 * from both. Redirects to the fulfillment — the working surface.
 	 */
 	public static function handle_combine() {
 		if ( ! current_user_can( 'edit_shop_orders' ) ) {
@@ -966,38 +1009,28 @@ class FisHotel_Order_Fulfillment {
 		$secondary_id = isset( $_POST['secondary_id'] ) ? absint( wp_unslash( $_POST['secondary_id'] ) ) : 0;
 		check_admin_referer( self::ACTION_COMBINE . '_' . $primary_id );
 
-		$primary  = wc_get_order( $primary_id );
-		$redirect = $primary instanceof WC_Order ? $primary->get_edit_order_url() : admin_url();
+		$current  = wc_get_order( $primary_id );
+		$redirect = $current instanceof WC_Order ? $current->get_edit_order_url() : admin_url();
 
 		$error = self::validate_combine( $primary_id, $secondary_id );
 		if ( '' !== $error ) {
 			self::redirect_with_msg( $redirect, $error );
 		}
 
-		$secondary = wc_get_order( $secondary_id );
-
-		// Back up and clear the secondary's shipping date so the batch
-		// counter only sees the primary's slot.
-		$orig = $secondary->get_meta( self::META_SHIP_DATE );
-		if ( '' !== $orig && null !== $orig ) {
-			$secondary->update_meta_data( self::META_ORIG_SHIP, $orig );
+		$existing = fishotel_order_get_fulfillment( $primary_id );
+		if ( $existing ) {
+			$ok    = FisHotel_Fulfillment::add_source( $existing, $secondary_id );
+			$ff_id = $ok ? $existing : 0;
+		} else {
+			$ff_id = (int) FisHotel_Fulfillment::create_fulfillment( [ $primary_id, $secondary_id ] );
 		}
-		$secondary->delete_meta_data( self::META_SHIP_DATE );
-		$secondary->update_meta_data( self::META_COMBINED_INTO, $primary_id );
-		$secondary->add_order_note( sprintf(
-			/* translators: %s = primary order number */
-			__( 'Combined into #%s.', 'fishotel' ),
-			$primary->get_order_number()
-		) );
-		$secondary->save();
 
-		$primary->add_order_note( sprintf(
-			/* translators: %s = secondary order number */
-			__( 'Combined order #%s into this one.', 'fishotel' ),
-			$secondary->get_order_number()
-		) );
-		$primary->save();
+		if ( ! $ff_id ) {
+			self::redirect_with_msg( $redirect, 'err_generic' );
+		}
 
+		$ff       = wc_get_order( $ff_id );
+		$redirect = $ff instanceof WC_Order ? $ff->get_edit_order_url() : $redirect;
 		self::redirect_with_msg( $redirect, 'combined' );
 	}
 
@@ -1019,17 +1052,17 @@ class FisHotel_Order_Fulfillment {
 		if ( ! $same_id && ! $same_email ) {
 			return 'err_customer';
 		}
+		// Neither order may itself be a fulfillment entity.
+		if ( fishotel_is_fulfillment( $primary ) || fishotel_is_fulfillment( $secondary ) ) {
+			return 'err_generic';
+		}
 		// Status: both must be processing/on-hold.
 		if ( ! $primary->has_status( [ 'processing', 'on-hold' ] ) || ! $secondary->has_status( [ 'processing', 'on-hold' ] ) ) {
 			return 'err_status';
 		}
-		// No chains: the primary must not itself be a secondary.
-		if ( fishotel_order_get_primary( $primary ) ) {
-			return 'err_chain';
-		}
-		// No inverted nesting: the secondary must not already be a primary,
-		// and must not already be combined elsewhere.
-		if ( fishotel_order_get_primary( $secondary ) || fishotel_order_get_secondaries( $secondary_id ) ) {
+		// The selected order must not already belong to a fulfillment. (The
+		// current order may — handle_combine adds the selection to it.)
+		if ( fishotel_order_get_fulfillment( $secondary ) ) {
 			return 'err_nested';
 		}
 		return '';
@@ -1190,8 +1223,8 @@ class FisHotel_Order_Fulfillment {
 
 		$out = [];
 		foreach ( array_keys( $found ) as $id ) {
-			// Exclude orders already in a relationship (secondary or primary).
-			if ( fishotel_order_get_primary( $id ) || fishotel_order_get_secondaries( $id ) ) {
+			// Exclude fulfillment entities and orders already folded into one.
+			if ( fishotel_is_fulfillment( $id ) || fishotel_order_get_fulfillment( $id ) ) {
 				continue;
 			}
 			$out[] = $id;
@@ -1271,23 +1304,45 @@ class FisHotel_Order_Fulfillment {
 
 	/** Echo the 🔗 badge for an order in the list table. */
 	private static function render_list_badge( $order_id ) {
-		$primary = fishotel_order_get_primary( $order_id );
-		if ( $primary ) {
-			$url = admin_url( 'post.php?post=' . $primary . '&action=edit' );
+		// This row IS a fulfillment: show "🔗 FF-{id}" with a tooltip listing
+		// its bundled source orders and their aggregated total (for reference).
+		if ( fishotel_is_fulfillment( $order_id ) ) {
+			$sources = fishotel_fulfillment_get_sources( $order_id );
+			$nums    = [];
+			$total   = 0.0;
+			foreach ( $sources as $sid ) {
+				$src = wc_get_order( (int) $sid );
+				if ( ! $src instanceof WC_Order ) {
+					continue;
+				}
+				$nums[] = '#' . $src->get_order_number();
+				$total += (float) $src->get_total();
+			}
+			$tip = sprintf(
+				/* translators: 1: order numbers, 2: aggregated total */
+				__( 'Fulfillment of orders %1$s — %2$s', 'fishotel' ),
+				implode( ', ', $nums ),
+				html_entity_decode( wp_strip_all_tags( wc_price( $total ) ), ENT_QUOTES, 'UTF-8' )
+			);
 			printf(
-				'<a href="%s" title="%s">🔗 →#%s</a>',
-				esc_url( $url ),
-				esc_attr__( 'Combined into this order', 'fishotel' ),
-				esc_html( (string) $primary )
+				'<strong title="%s">🔗 FF-%s</strong>',
+				esc_attr( $tip ),
+				esc_html( (string) $order_id )
 			);
 			return;
 		}
-		$secondaries = fishotel_order_get_secondaries( $order_id );
-		if ( ! empty( $secondaries ) ) {
+
+		// This row is a source folded into a fulfillment (only visible with
+		// "Show fulfilled sources" on): link to its fulfillment.
+		$ff_id = fishotel_order_get_fulfillment( $order_id );
+		if ( $ff_id ) {
+			$ff  = wc_get_order( $ff_id );
+			$url = $ff instanceof WC_Order ? $ff->get_edit_order_url() : admin_url();
 			printf(
-				'<span title="%s">🔗 %d</span>',
-				esc_attr__( 'Combined orders shipping with this one', 'fishotel' ),
-				count( $secondaries )
+				'<a href="%s" title="%s">🔗 →FF-%s</a>',
+				esc_url( $url ),
+				esc_attr__( 'Part of this fulfillment', 'fishotel' ),
+				esc_html( (string) $ff_id )
 			);
 		}
 	}

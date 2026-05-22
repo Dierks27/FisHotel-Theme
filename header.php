@@ -23,7 +23,7 @@
             else : ?>
                 <ul class="site-header__menu">
                     <li <?php if ( is_front_page() ) echo 'class="current-menu-item"'; ?>><a href="<?php echo esc_url( home_url('/') ); ?>">Home</a></li>
-                    <li><a href="<?php echo esc_url( home_url('/our-process/') ); ?>">Our Process</a></li>
+                    <li><a href="<?php echo esc_url( home_url('/faq/') ); ?>">Our Process</a></li>
                     <li <?php if ( is_shop() || is_product_category() || is_product() ) echo 'class="current-menu-item"'; ?>><a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a></li>
                 </ul>
             <?php endif; ?>

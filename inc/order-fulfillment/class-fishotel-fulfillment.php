@@ -175,14 +175,28 @@ class FisHotel_Fulfillment {
 		add_action( 'admin_post_' . self::ACTION_DISMISS_FLAG, [ __CLASS__, 'handle_dismiss_flag' ] );
 
 		// Sidebar "Orders" badge: match the in-page Open Orders count.
-		add_filter( 'woocommerce_menu_order_count', [ __CLASS__, 'menu_order_count' ] );
+		// v1.16.0 used woocommerce_menu_order_count, which didn't apply on
+		// this build. Two reliable paths instead:
+		//   A) Filter wp_count_posts('shop_order') so anything reading the
+		//      raw post count gets our Open Orders number.
+		//   B) Late-priority admin_menu hook that rewrites the bubble HTML
+		//      on the Orders menu item directly (covers HPOS, where the
+		//      menu doesn't necessarily read wp_count_posts).
+		add_filter( 'wp_count_posts', [ __CLASS__, 'filter_count_posts' ], 10, 2 );
+		add_action( 'admin_menu', [ __CLASS__, 'rewrite_menu_badge' ], 999 );
 		// Bust the cached count when orders change or fulfillments mutate.
 		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'bust_count_cache' ] );
 
-		// Sortable "Delivery Date" column (legacy + HPOS). The column is owned
-		// by fishotel-shiptracker; we only make it orderable.
-		add_filter( 'manage_edit-shop_order_sortable_columns', [ __CLASS__, 'add_sortable_delivery_column' ] );
-		add_filter( 'woocommerce_shop_order_list_table_sortable_columns', [ __CLASS__, 'add_sortable_delivery_column' ] );
+		// Sortable "Delivery Date" column (legacy + HPOS). The column itself
+		// is registered by fishotel-shiptracker under the id 'fst_ship_date';
+		// we only add the sort affordance. Priority 20 to run after the
+		// plugin's default-priority registration, and both the
+		// manage_{screen}_sortable_columns (WP convention) and
+		// woocommerce_shop_order_list_table_sortable_columns (HPOS API)
+		// filters so we cover whichever WC actually uses.
+		add_filter( 'manage_edit-shop_order_sortable_columns', [ __CLASS__, 'add_sortable_delivery_column' ], 20 );
+		add_filter( 'manage_woocommerce_page_wc-orders_sortable_columns', [ __CLASS__, 'add_sortable_delivery_column' ], 20 );
+		add_filter( 'woocommerce_shop_order_list_table_sortable_columns', [ __CLASS__, 'add_sortable_delivery_column' ], 20 );
 		add_action( 'pre_get_posts', [ __CLASS__, 'sort_delivery_cpt' ] );
 		add_filter( 'woocommerce_order_list_table_prepare_items_query_args', [ __CLASS__, 'sort_delivery_hpos' ] );
 		add_filter( 'woocommerce_shop_order_list_table_prepare_items_query_args', [ __CLASS__, 'sort_delivery_hpos' ] );
@@ -819,10 +833,11 @@ class FisHotel_Fulfillment {
 	}
 
 	/**
-	 * Sidebar "Orders" menu badge count. Cached briefly since the menu renders
-	 * on every admin page; busted on order/fulfillment changes.
+	 * Cached Open Orders count. The menu and wp_count_posts filter both call
+	 * this on every admin page load, so we cache briefly and bust on order /
+	 * fulfillment changes.
 	 */
-	public static function menu_order_count( $count ) {
+	public static function cached_open_count() {
 		$cached = get_transient( self::COUNT_TRANSIENT );
 		if ( false !== $cached ) {
 			return (int) $cached;
@@ -835,6 +850,54 @@ class FisHotel_Fulfillment {
 	/** Drop the cached Open Orders count. */
 	public static function bust_count_cache() {
 		delete_transient( self::COUNT_TRANSIENT );
+	}
+
+	/**
+	 * Filter wp_count_posts('shop_order') so the badge — and anything else
+	 * reading the raw processing count — reflects Open Orders: processing
+	 * standalones (not fulfilled sources) + fulfillments.
+	 */
+	public static function filter_count_posts( $counts, $type ) {
+		if ( 'shop_order' !== $type || ! is_object( $counts ) ) {
+			return $counts;
+		}
+		$open = self::cached_open_count();
+		$counts->{'wc-processing'} = $open;
+		return $counts;
+	}
+
+	/**
+	 * Late-priority safety net for HPOS, where the Orders menu bubble can be
+	 * rendered without consulting wp_count_posts. Rewrites the count inside
+	 * the menu title HTML, preserving structure.
+	 */
+	public static function rewrite_menu_badge() {
+		global $menu;
+		if ( ! is_array( $menu ) ) {
+			return;
+		}
+		$open = self::cached_open_count();
+		foreach ( $menu as $i => $item ) {
+			if ( ! isset( $item[2] ) ) {
+				continue;
+			}
+			$slug = (string) $item[2];
+			if ( false === strpos( $slug, 'shop_order' ) && false === strpos( $slug, 'wc-orders' ) ) {
+				continue;
+			}
+			if ( ! isset( $item[0] ) || false === strpos( (string) $item[0], 'count-' ) ) {
+				continue;
+			}
+			// Replace the count number inside the existing pending-count span
+			// (preserves "Orders " label + WC's span structure).
+			$updated = preg_replace(
+				'/(<span class="pending-count">)\d+(<\/span>)/',
+				'${1}' . (int) $open . '${2}',
+				(string) $item[0]
+			);
+			$updated = preg_replace( '/(count-)\d+/', '${1}' . (int) $open, $updated );
+			$menu[ $i ][0] = $updated;
+		}
 	}
 
 	public static function render_sources_toggle_cpt( $post_type ) {

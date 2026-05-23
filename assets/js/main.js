@@ -67,6 +67,24 @@
         var maxQty = (variation && (variation.max_qty !== undefined && variation.max_qty !== ''))
             ? variation.max_qty : -1;
         applyStockState($panel, computeStockBadge(!!(variation && variation.is_in_stock), maxQty), $cta);
+
+        // Cap the quantity input at the variation's stock so the up-arrow
+        // can't overshoot. Clamp the current value down if it exceeds the
+        // new variation's max.
+        var $hidden  = $panel.find('#fh-qty-input, input[name="quantity"]').first();
+        var $display = $panel.find('.fh-qty__num').first();
+        if ($hidden.length) {
+            if (parseInt(maxQty, 10) > 0) {
+                $hidden.attr('max', parseInt(maxQty, 10));
+                var cur = parseInt($hidden.val(), 10) || 1;
+                if (cur > maxQty) {
+                    $hidden.val(maxQty);
+                    if ($display.length) $display.text(maxQty);
+                }
+            } else {
+                $hidden.removeAttr('max');
+            }
+        }
     });
 
     $(document).on('reset_data.wc-variation-form', '.fh-purchase__form', function() {
@@ -86,6 +104,17 @@
         $cta.toggleClass('fh-btn--notify', soldout)
             .text(soldout ? notifyLabel : addLabel)
             .prop('disabled', soldout);
+
+        // Clear the variation-driven max + reset the qty back to 1 when the
+        // user un-selects a variation (display and hidden input both).
+        var $hidden  = $panel.find('#fh-qty-input, input[name="quantity"]').first();
+        var $display = $panel.find('.fh-qty__num').first();
+        if ($hidden.length) {
+            $hidden.removeAttr('max').val(1);
+        }
+        if ($display.length) {
+            $display.text(1);
+        }
     });
 
     // Snapshot each purchase panel's server-rendered state so reset_data
@@ -357,18 +386,43 @@
         });
     }
 
-    // Qty buttons
+    // Qty buttons — keep the visible #fh-qty-display and the hidden
+    // #fh-qty-input in lockstep (the old selector .find('input.qty') silently
+    // missed the actual hidden input, so the form submitted whatever the
+    // server-rendered default was — usually 1 — regardless of clicks).
+    // Also respect the input's min/max so the customer can't overshoot stock.
     function initQty() {
+        function findHidden($btn) {
+            var $scope = $btn.closest('.fh-add-to-cart');
+            if (!$scope.length) $scope = $btn.closest('form');
+            return $scope.find('#fh-qty-input, input[name="quantity"]').first();
+        }
+        function parseLimit($h, attr, fallback) {
+            if (!$h.length) return fallback;
+            var raw = $h.attr(attr);
+            if (raw === undefined || raw === '') return fallback;
+            var n = parseInt(raw, 10);
+            return isNaN(n) ? fallback : n;
+        }
         $(document).on('click', '.fh-qty__up', function() {
             var $n = $(this).closest('.fh-qty').find('.fh-qty__num');
-            var v = parseInt($n.text(), 10) || 1;
-            $n.text(v + 1);
-            $(this).closest('form').find('input.qty').val(v + 1).trigger('change');
+            var $h = findHidden($(this));
+            var cur = parseInt($n.text(), 10) || 1;
+            var max = parseLimit($h, 'max', Infinity);
+            var next = Math.min(cur + 1, max);
+            if (next === cur) return;
+            $n.text(next);
+            if ($h.length) $h.val(next).trigger('change');
         });
         $(document).on('click', '.fh-qty__down', function() {
             var $n = $(this).closest('.fh-qty').find('.fh-qty__num');
-            var v = parseInt($n.text(), 10) || 1;
-            if (v > 1) { $n.text(v - 1); $(this).closest('form').find('input.qty').val(v - 1).trigger('change'); }
+            var $h = findHidden($(this));
+            var cur = parseInt($n.text(), 10) || 1;
+            var min = parseLimit($h, 'min', 1);
+            var next = Math.max(cur - 1, min);
+            if (next === cur) return;
+            $n.text(next);
+            if ($h.length) $h.val(next).trigger('change');
         });
     }
 

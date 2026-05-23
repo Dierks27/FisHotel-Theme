@@ -421,13 +421,35 @@ while ( have_posts() ) :
                 <span class="fh-stock-badge__text"><?php echo esc_html( $stock_badge['text'] ); ?></span>
             </div>
 
-            <?php /* Add to cart row */ ?>
+            <?php
+            /* Add to cart row. The qty input gets an initial `max` so the
+               up-arrow can't overshoot stock on simple products and on the
+               single-variation case (variable products' max is set on
+               found_variation by main.js). max_qty < 0 means "unlimited" —
+               leave the attribute off. */
+            $initial_qty_max = '';
+            if ( $is_single_var && isset( $variations_data[0]['max_qty'] ) ) {
+                $mq = (int) $variations_data[0]['max_qty'];
+                if ( $mq > 0 ) {
+                    $initial_qty_max = $mq;
+                }
+            } elseif ( ! $product->is_type( 'variable' ) ) {
+                $mq = (int) $product->get_max_purchase_quantity();
+                if ( $mq > 0 ) {
+                    $initial_qty_max = $mq;
+                }
+            }
+            ?>
             <div class="fh-add-to-cart">
                 <div class="fh-qty">
                     <div class="fh-qty__num" id="fh-qty-display">1</div>
                     <button type="button" class="fh-qty__up" aria-label="Increase">&#9650;</button>
                     <button type="button" class="fh-qty__down" aria-label="Decrease">&#9660;</button>
-                    <input type="hidden" name="quantity" id="fh-qty-input" value="1" min="1">
+                    <input type="hidden" name="quantity" id="fh-qty-input" value="1" min="1"<?php
+                        if ( '' !== $initial_qty_max ) {
+                            echo ' max="' . esc_attr( $initial_qty_max ) . '"';
+                        }
+                    ?>>
                 </div>
                 <?php /* Standard WC injection point for plugins that add fields
                         to the add-to-cart form (WC Gift Cards' recipient email /

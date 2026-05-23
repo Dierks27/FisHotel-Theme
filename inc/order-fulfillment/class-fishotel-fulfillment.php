@@ -51,6 +51,24 @@ function fishotel_fulfillment_calculate_aggregate_total( $fulfillment ) {
 }
 
 /**
+ * Duplicate-shipping sources on a fulfillment: returns the entries
+ * beyond the single legitimate single-box charge. Empty unless 2+
+ * sources still have unrefunded shipping.
+ *
+ * @param WC_Order|int $fulfillment
+ * @return array<int,array{order:WC_Order,amount:float}>
+ */
+function fishotel_fulfillment_duplicate_shipping_sources( $fulfillment ) {
+	if ( ! $fulfillment instanceof WC_Order ) {
+		$fulfillment = wc_get_order( (int) $fulfillment );
+	}
+	if ( ! $fulfillment instanceof WC_Order ) {
+		return [];
+	}
+	return FisHotel_Fulfillment::duplicate_shipping_sources( $fulfillment );
+}
+
+/**
  * Unrefunded shipping still sitting on a source order: total shipping minus
  * any shipping already refunded (summed across all shipping lines + refunds).
  * Returns 0 for non-orders or fully-refunded shipping.
@@ -1083,24 +1101,61 @@ class FisHotel_Fulfillment {
 
 	// ── Bright-flag fallback (shipping refund pending) ───────────────
 
-	/** True when this source order still has unrefunded shipping and isn't dismissed. */
-	private static function source_flagged( WC_Order $source ) {
-		if ( '1' === (string) $source->get_meta( self::META_FLAG_DISMISSED ) ) {
-			return false;
-		}
-		return fishotel_source_unrefunded_shipping( $source ) > 0;
+	/** Has the admin dismissed the shipping flag on this source order? */
+	private static function source_dismissed( WC_Order $s ) {
+		return '1' === (string) $s->get_meta( self::META_FLAG_DISMISSED );
 	}
 
-	/** Source orders of a fulfillment that currently carry an active flag. */
-	private static function flagged_sources( WC_Order $fulfillment ) {
-		$out = [];
+	/**
+	 * Duplicate shipping charges that survive on a fulfillment's sources.
+	 *
+	 * A fulfillment ships as ONE box → it costs ONE shipping charge.
+	 * The highest unrefunded shipping among sources is treated as the
+	 * legitimate single-box cost; everything beyond that is a duplicate.
+	 *
+	 * Returns an empty array unless there are 2+ unrefunded-shipping sources.
+	 * Dismissed sources are excluded.
+	 *
+	 * @return array<int,array{order:WC_Order,amount:float}>
+	 */
+	public static function duplicate_shipping_sources( WC_Order $fulfillment ) {
+		$candidates = [];
 		foreach ( self::get_sources( $fulfillment ) as $sid ) {
 			$o = wc_get_order( (int) $sid );
-			if ( $o instanceof WC_Order && self::source_flagged( $o ) ) {
-				$out[] = $o;
+			if ( ! $o instanceof WC_Order || self::source_dismissed( $o ) ) {
+				continue;
+			}
+			$amt = fishotel_source_unrefunded_shipping( $o );
+			if ( $amt > 0 ) {
+				$candidates[] = [ 'order' => $o, 'amount' => $amt ];
 			}
 		}
-		return $out;
+		if ( count( $candidates ) <= 1 ) {
+			return [];
+		}
+		usort( $candidates, static function ( $a, $b ) {
+			return $b['amount'] <=> $a['amount'];
+		} );
+		// Drop the highest — that one's the legitimate single-box charge.
+		return array_slice( $candidates, 1 );
+	}
+
+	/** True when this specific source is a duplicate in its fulfillment. */
+	private static function source_flagged( WC_Order $source ) {
+		$ff_id = (int) self::get_fulfillment( $source );
+		if ( ! $ff_id ) {
+			return false;
+		}
+		$ff = wc_get_order( $ff_id );
+		if ( ! $ff instanceof WC_Order ) {
+			return false;
+		}
+		foreach ( self::duplicate_shipping_sources( $ff ) as $dup ) {
+			if ( $dup['order']->get_id() === $source->get_id() ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public static function register_flag_meta_box( $screen_or_post = null ) {
@@ -1111,11 +1166,12 @@ class FisHotel_Fulfillment {
 			return;
 		}
 
-		// Show on a fulfillment with ≥1 flagged source, or on a flagged source
-		// order that belongs to a fulfillment.
+		// Fulfillment with ≥2 unrefunded-shipping sources (i.e. real
+		// duplicates), or a source that's been identified as a duplicate by
+		// its fulfillment.
 		$show = false;
 		if ( self::is_fulfillment( $order ) ) {
-			$show = ! empty( self::flagged_sources( $order ) );
+			$show = ! empty( self::duplicate_shipping_sources( $order ) );
 		} elseif ( self::get_fulfillment( $order ) && self::source_flagged( $order ) ) {
 			$show = true;
 		}
@@ -1147,9 +1203,27 @@ class FisHotel_Fulfillment {
 		echo '<div style="background:#fcf3cd;border:2px solid #d4a017;border-radius:4px;padding:12px 14px;color:#3a2f00;">';
 
 		if ( self::is_fulfillment( $order ) ) {
-			$ff_id = $order->get_id();
-			foreach ( self::flagged_sources( $order ) as $src ) {
-				self::render_flag_row( $src, $ff_id, /*on_source_page=*/ false );
+			$ff_id      = $order->get_id();
+			$duplicates = self::duplicate_shipping_sources( $order );
+			$count      = count( $duplicates );
+			?>
+			<p style="margin:0 0 10px;font-weight:600;">
+				<?php
+				echo esc_html( sprintf(
+					/* translators: %d = number of duplicate sources */
+					_n(
+						'This fulfillment has a duplicate shipping charge on %d source order. The combined shipment only needs one shipping charge — this is refundable:',
+						'This fulfillment has duplicate shipping charges across %d source orders. The combined shipment only needs one shipping charge — these are refundable:',
+						$count,
+						'fishotel'
+					),
+					$count
+				) );
+				?>
+			</p>
+			<?php
+			foreach ( $duplicates as $dup ) {
+				self::render_flag_row( $dup['order'], $ff_id, /*on_source_page=*/ false );
 			}
 		} else {
 			$ff_id = (int) self::get_fulfillment( $order );

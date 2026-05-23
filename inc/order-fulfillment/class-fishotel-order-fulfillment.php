@@ -1251,24 +1251,20 @@ class FisHotel_Order_Fulfillment {
 	}
 
 	/** Echo the 🔗 badge for an order in the list table. */
-	/** True when any source of a fulfillment has an active shipping-refund flag. */
-	private static function fulfillment_has_shipping_flag( array $source_ids ) {
-		if ( ! function_exists( 'fishotel_source_unrefunded_shipping' ) ) {
+	/**
+	 * True when a fulfillment has genuine duplicate shipping (2+ unrefunded
+	 * sources). One unrefunded source is the legitimate single-box charge
+	 * and does NOT light the ⚠️ badge.
+	 */
+	private static function fulfillment_has_shipping_flag( $fulfillment_id ) {
+		if ( ! class_exists( 'FisHotel_Fulfillment' ) ) {
 			return false;
 		}
-		foreach ( $source_ids as $sid ) {
-			$src = wc_get_order( (int) $sid );
-			if ( ! $src instanceof WC_Order ) {
-				continue;
-			}
-			if ( '1' === (string) $src->get_meta( '_fishotel_shipping_flag_dismissed' ) ) {
-				continue;
-			}
-			if ( fishotel_source_unrefunded_shipping( $src ) > 0 ) {
-				return true;
-			}
+		$ff = wc_get_order( (int) $fulfillment_id );
+		if ( ! $ff instanceof WC_Order ) {
+			return false;
 		}
-		return false;
+		return ! empty( FisHotel_Fulfillment::duplicate_shipping_sources( $ff ) );
 	}
 
 	private static function render_list_badge( $order_id ) {
@@ -1296,9 +1292,10 @@ class FisHotel_Order_Fulfillment {
 				esc_html( _n( 'source', 'sources', $count, 'fishotel' ) )
 			);
 
-			// Bright-flag indicator: any source with unrefunded shipping that
-			// hasn't been dismissed → ⚠️ linking to the fulfillment edit page.
-			if ( self::fulfillment_has_shipping_flag( $sources ) ) {
+			// Bright-flag indicator: only when there are genuine duplicates
+			// (2+ unrefunded sources). One unrefunded source is the legitimate
+			// single-box shipping charge → no badge.
+			if ( self::fulfillment_has_shipping_flag( (int) $order_id ) ) {
 				$ff    = wc_get_order( (int) $order_id );
 				$ffurl = $ff instanceof WC_Order ? $ff->get_edit_order_url() : admin_url();
 				printf(

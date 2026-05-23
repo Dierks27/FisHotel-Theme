@@ -174,6 +174,12 @@ class FisHotel_Fulfillment {
 		add_action( 'add_meta_boxes_woocommerce_page_wc-orders', [ __CLASS__, 'register_flag_meta_box' ] );
 		add_action( 'admin_post_' . self::ACTION_DISMISS_FLAG, [ __CLASS__, 'handle_dismiss_flag' ] );
 
+		// Linkify the _fishotel_source_order line-item meta on the order edit
+		// screen (admin order items table). Renames the label and turns the
+		// raw ID into a link to the source order's edit page.
+		add_filter( 'woocommerce_order_item_display_meta_key', [ __CLASS__, 'linkify_source_meta_key' ], 10, 3 );
+		add_filter( 'woocommerce_order_item_display_meta_value', [ __CLASS__, 'linkify_source_meta_value' ], 10, 3 );
+
 		// Sidebar "Orders" badge: match the in-page Open Orders count.
 		// v1.16.0 used woocommerce_menu_order_count, which didn't apply on
 		// this build. Two reliable paths instead:
@@ -981,10 +987,23 @@ class FisHotel_Fulfillment {
 		?>
 		<p style="margin:0 0 8px;">
 			<?php
+			$source_links = [];
+			foreach ( $sources as $sid ) {
+				$src = wc_get_order( (int) $sid );
+				$num = $src instanceof WC_Order ? $src->get_order_number() : (string) (int) $sid;
+				$url = $src instanceof WC_Order
+					? $src->get_edit_order_url()
+					: admin_url( 'post.php?post=' . (int) $sid . '&action=edit' );
+				$source_links[] = sprintf(
+					'<a href="%s">#%s</a>',
+					esc_url( $url ),
+					esc_html( $num )
+				);
+			}
 			printf(
-				/* translators: %s = list of order numbers */
+				/* translators: %s = comma-separated source order links */
 				esc_html__( 'This fulfillment bundles orders %s.', 'fishotel' ),
-				esc_html( self::numbers_list( $sources ) )
+				implode( ', ', $source_links ) // already escaped above
 			);
 			?>
 		</p>
@@ -1033,6 +1052,33 @@ class FisHotel_Fulfillment {
 			: admin_url( 'edit.php?post_type=shop_order' );
 		wp_safe_redirect( add_query_arg( 'fishotel_fulfillment_deleted', '1', $list ) );
 		exit;
+	}
+
+	// ── Line-item source-order linkifier ─────────────────────────────
+
+	/** Replace the raw '_fishotel_source_order' meta label with "Source order". */
+	public static function linkify_source_meta_key( $display_key, $meta, $item ) {
+		if ( isset( $meta->key ) && self::META_SOURCE_ORDER === $meta->key ) {
+			return __( 'Source order', 'fishotel' );
+		}
+		return $display_key;
+	}
+
+	/** Render the _fishotel_source_order meta value as a link to that order's edit page. */
+	public static function linkify_source_meta_value( $display_value, $meta, $item ) {
+		if ( ! isset( $meta->key ) || self::META_SOURCE_ORDER !== $meta->key ) {
+			return $display_value;
+		}
+		$source_id = isset( $meta->value ) ? (int) $meta->value : 0;
+		if ( $source_id <= 0 ) {
+			return $display_value;
+		}
+		$src = wc_get_order( $source_id );
+		$num = $src instanceof WC_Order ? $src->get_order_number() : (string) $source_id;
+		$url = $src instanceof WC_Order
+			? $src->get_edit_order_url()
+			: admin_url( 'post.php?post=' . $source_id . '&action=edit' );
+		return sprintf( '<a href="%s">#%s</a>', esc_url( $url ), esc_html( $num ) );
 	}
 
 	// ── Bright-flag fallback (shipping refund pending) ───────────────

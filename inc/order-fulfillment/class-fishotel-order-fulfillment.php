@@ -259,6 +259,13 @@ class FisHotel_Order_Fulfillment {
 
 	/** Register the "Fulfillment Status" meta box. $screen_or_post varies by screen. */
 	public static function register_meta_box( $screen_or_post = null ) {
+		// Phase 1 UI is superseded by the unified Shipments meta box (v1.17.0).
+		// Suppress registration unless the kill switch (FISHOTEL_NEW_SHIPMENTS_UI_OFF)
+		// is set — then this box returns so admins can roll back instantly.
+		if ( ! ( defined( 'FISHOTEL_NEW_SHIPMENTS_UI_OFF' ) && FISHOTEL_NEW_SHIPMENTS_UI_OFF ) ) {
+			return;
+		}
+
 		$order = self::resolve_order( $screen_or_post );
 		// Defensive: suppress the box entirely on orders with no line items.
 		if ( $order instanceof WC_Order && ! $order->get_items( 'line_item' ) ) {

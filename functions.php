@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.16.4' );
+define( 'FISHOTEL_THEME_VERSION', '1.17.0' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -46,6 +46,13 @@ FisHotel_Fulfillment::init();
 // already has an unshipped order/fulfillment to the same address.
 require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-checkout-reuse.php';
 FisHotel_Checkout_Reuse::init();
+// Unified Shipments meta box (v1.17.0) — replaces Phase 1 per-line UI + the
+// default ShipTracker sidebar widget. Kill switch: FISHOTEL_NEW_SHIPMENTS_UI_OFF.
+require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-shipments-metabox.php';
+FisHotel_Shipments_Metabox::init();
+// Per-line "Sent to EA" status — dropdown in the Shipments meta box + orders-list badge.
+require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-ea-status.php';
+FisHotel_EA_Status::init();
 // ─────────────────────────────────────────
 // THEME SETUP
 // ─────────────────────────────────────────

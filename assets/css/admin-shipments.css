@@ -1,0 +1,168 @@
+/**
+ * FisHotel Shipments meta box — admin styles.
+ */
+
+.fishotel-shipments-metabox h3 {
+	margin: 16px 0 8px;
+	font-size: 13px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	color: #50575e;
+}
+.fishotel-shipments-metabox h3:first-child {
+	margin-top: 0;
+}
+.fishotel-shipments-metabox h4.fhsm-source-heading {
+	margin: 10px 0 4px;
+	font-size: 12px;
+	color: #50575e;
+}
+
+/* ── EA Panel ─────────────────────────────────────── */
+.fhsm-ea-panel {
+	background: #fff8e1;
+	border: 1px solid #f1c40f;
+	border-radius: 3px;
+	padding: 10px 12px;
+	margin-bottom: 14px;
+}
+.fhsm-ea-panel table {
+	margin-bottom: 8px;
+}
+.fhsm-ea-bulk-actions {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+.fhsm-ea-ts {
+	color: #646970;
+	margin-left: 6px;
+}
+
+/* ── Shipment cards ───────────────────────────────── */
+.fhsm-shipment {
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	padding: 10px 12px;
+	margin-bottom: 10px;
+	background: #fafafa;
+}
+.fhsm-shipment-legacy {
+	background: #f6f7f7;
+	border-style: dashed;
+	border-color: #c3c4c7;
+}
+.fhsm-shipment-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: 6px;
+}
+.fhsm-status-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+}
+.fhsm-legacy-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	background: #8c8f94;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: .04em;
+}
+.fhsm-carrier {
+	font-weight: 600;
+	color: #50575e;
+	font-size: 11px;
+}
+.fhsm-tracking-number {
+	font-family: Consolas, Monaco, monospace;
+	font-size: 13px;
+}
+.fhsm-source-tag {
+	color: #646970;
+	font-size: 11px;
+	font-style: italic;
+}
+.fhsm-shipment-items {
+	margin: 4px 0 6px 18px;
+	padding: 0;
+	list-style: disc;
+}
+.fhsm-shipment-items li {
+	margin: 0;
+	font-size: 12px;
+}
+.fhsm-covers-all {
+	margin: 4px 0 6px;
+	color: #646970;
+	font-size: 12px;
+}
+.fhsm-shipment-actions {
+	display: flex;
+	gap: 6px;
+}
+.fhsm-legacy-note {
+	margin: 6px 0 0;
+	color: #646970;
+}
+
+/* ── Add Shipment form ────────────────────────────── */
+.fhsm-add-shipment {
+	border-top: 1px solid #dcdcde;
+	padding-top: 12px;
+	margin-top: 14px;
+}
+.fhsm-item-checkboxes {
+	margin: 4px 0 10px 0;
+	padding: 0;
+	list-style: none;
+	max-height: 240px;
+	overflow-y: auto;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	padding: 6px 10px;
+	background: #fff;
+}
+.fhsm-item-checkboxes li {
+	margin: 2px 0;
+}
+.fhsm-covered-note {
+	color: #8c8f94;
+	margin-left: 4px;
+}
+.fhsm-all-covered {
+	color: #2271b1;
+	background: #f0f6fc;
+	padding: 8px 10px;
+	border-left: 3px solid #2271b1;
+	border-radius: 0 3px 3px 0;
+	margin-top: 8px;
+}
+.fhsm-empty {
+	color: #646970;
+	font-style: italic;
+	margin: 0 0 8px;
+}
+
+/* ── Messages ─────────────────────────────────────── */
+.fhsm-message {
+	margin-left: 10px;
+	font-size: 12px;
+}
+.fhsm-message-error {
+	color: #c1483a;
+}
+.fhsm-message-success {
+	color: #5aaa78;
+}

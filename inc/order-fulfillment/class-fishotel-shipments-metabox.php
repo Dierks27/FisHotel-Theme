@@ -203,6 +203,11 @@ class FisHotel_Shipments_Metabox {
 	 *   - line item meta: _fishotel_line_tracking (the tracking number)
 	 * Groups items by tracking number to produce virtual shipment records that
 	 * can be displayed read-only.
+	 *
+	 * Skips any tracking number already represented by a real wp_fst_shipments
+	 * row on this order — the real shipment renders that tracking, with items
+	 * reconciled via the Phase 1 metadata (see resolve_shipment_items()), so a
+	 * separate "LEGACY (Phase 1)" block would duplicate it.
 	 */
 	public static function resolve_phase1_legacy_shipments( WC_Order $order, $is_fulfillment ) {
 		$orders_to_scan = [];
@@ -220,6 +225,15 @@ class FisHotel_Shipments_Metabox {
 			$orders_to_scan = [ $order ];
 		}
 
+		// Tracking numbers already represented by real ShipTracker rows.
+		$real_tracking = [];
+		foreach ( self::resolve_shipments( $order, $is_fulfillment ) as $s ) {
+			$tn = isset( $s->tracking_number ) ? (string) $s->tracking_number : '';
+			if ( '' !== $tn ) {
+				$real_tracking[ $tn ] = true;
+			}
+		}
+
 		$by_tracking = [];
 		foreach ( $orders_to_scan as $o ) {
 			foreach ( $o->get_items( 'line_item' ) as $item_id => $item ) {
@@ -229,6 +243,11 @@ class FisHotel_Shipments_Metabox {
 				$status   = (string) $item->get_meta( '_fishotel_line_status' );
 				$tracking = (string) $item->get_meta( '_fishotel_line_tracking' );
 				if ( 'shipped' !== $status || '' === $tracking ) {
+					continue;
+				}
+				// Skip when a real shipment already carries this tracking number —
+				// it'll be rendered (and item-reconciled) by the real-shipment branch.
+				if ( isset( $real_tracking[ $tracking ] ) ) {
 					continue;
 				}
 				if ( ! isset( $by_tracking[ $tracking ] ) ) {
@@ -248,30 +267,77 @@ class FisHotel_Shipments_Metabox {
 	}
 
 	/**
+	 * Phase 1 per-line shipped items on a specific order matching a given
+	 * tracking number. Used to reconcile legacy NULL-line_item_ids shipments
+	 * with Phase 1 metadata so the UI can disable already-shipped checkboxes
+	 * accurately without falsely covering items that physically did NOT ship.
+	 *
+	 * @return int[] order item IDs.
+	 */
+	public static function get_phase1_shipped_items_for_tracking( WC_Order $order, $tracking_number ) {
+		$out      = [];
+		$tracking = (string) $tracking_number;
+		if ( '' === $tracking ) {
+			return $out;
+		}
+		foreach ( $order->get_items( 'line_item' ) as $item_id => $item ) {
+			if ( ! $item instanceof WC_Order_Item_Product ) {
+				continue;
+			}
+			$status = (string) $item->get_meta( '_fishotel_line_status' );
+			$track  = (string) $item->get_meta( '_fishotel_line_tracking' );
+			if ( 'shipped' === $status && $track === $tracking ) {
+				$out[] = (int) $item_id;
+			}
+		}
+		return $out;
+	}
+
+	/**
 	 * All line item IDs already covered by ANY shipment (real or legacy).
 	 * Used to disable checkboxes in the "Add Shipment" form so the same item
 	 * can't be put in two shipments by accident.
+	 *
+	 * Hybrid reconciliation: when a real shipment has NULL line_item_ids
+	 * (created before ShipTracker v1.9.0), the strict "covers all" reading
+	 * over-counts on orders where only a subset physically shipped under
+	 * that tracking number. Phase 1 per-line metadata on the same order with
+	 * the same tracking number is the more precise source of truth, so we
+	 * use it when it exists. Pure legacy orders (NULL ids, no Phase 1 meta)
+	 * still fall back to "covers all".
 	 */
 	public static function get_covered_item_ids( WC_Order $order, $is_fulfillment ) {
 		$covered = [];
 
 		foreach ( self::resolve_shipments( $order, $is_fulfillment ) as $s ) {
 			$line_ids = isset( $s->line_item_ids ) ? $s->line_item_ids : null;
-			if ( empty( $line_ids ) ) {
-				// NULL line_item_ids = the shipment covers ALL items on its source order.
-				$source_id     = isset( $s->order_id ) ? (int) $s->order_id : 0;
-				$covered_order = $source_id ? wc_get_order( $source_id ) : null;
-				if ( $covered_order instanceof WC_Order ) {
-					foreach ( $covered_order->get_items( 'line_item' ) as $cid => $citem ) {
-						$covered[] = (int) $cid;
-					}
-				}
-			} else {
+			if ( ! empty( $line_ids ) ) {
 				$ids = is_array( $line_ids ) ? $line_ids : json_decode( (string) $line_ids, true );
 				if ( is_array( $ids ) ) {
 					foreach ( $ids as $cid ) {
 						$covered[] = (int) $cid;
 					}
+				}
+				continue;
+			}
+
+			$source_id     = isset( $s->order_id ) ? (int) $s->order_id : 0;
+			$covered_order = $source_id ? wc_get_order( $source_id ) : null;
+			if ( ! $covered_order instanceof WC_Order ) {
+				continue;
+			}
+
+			$tracking     = isset( $s->tracking_number ) ? (string) $s->tracking_number : '';
+			$phase1_items = self::get_phase1_shipped_items_for_tracking( $covered_order, $tracking );
+			if ( ! empty( $phase1_items ) ) {
+				foreach ( $phase1_items as $cid ) {
+					$covered[] = (int) $cid;
+				}
+			} else {
+				// Pure legacy: no Phase 1 reconciliation available. Treat as
+				// "covers all" — the historical NULL semantic.
+				foreach ( $covered_order->get_items( 'line_item' ) as $cid => $citem ) {
+					$covered[] = (int) $cid;
 				}
 			}
 		}
@@ -354,7 +420,17 @@ class FisHotel_Shipments_Metabox {
 		}
 	}
 
-	/** Resolve the WC_Order_Item_Product objects covered by a shipment. */
+	/**
+	 * Resolve the WC_Order_Item_Product objects covered by a shipment.
+	 *
+	 * Same hybrid reconciliation as get_covered_item_ids():
+	 *   - line_item_ids JSON present  → use it (modern shipment).
+	 *   - line_item_ids NULL + Phase 1 meta on this order with same tracking#
+	 *                                 → use the Phase 1 items (reconciliation).
+	 *   - line_item_ids NULL, no Phase 1 → return [] so the template renders
+	 *                                       the "Covers all items on this
+	 *                                       order" note (historical semantic).
+	 */
 	public static function resolve_shipment_items( $shipment ) {
 		$source_id = isset( $shipment->order_id ) ? (int) $shipment->order_id : 0;
 		$source    = $source_id ? wc_get_order( $source_id ) : null;
@@ -362,17 +438,31 @@ class FisHotel_Shipments_Metabox {
 			return [];
 		}
 		$line_ids = isset( $shipment->line_item_ids ) ? $shipment->line_item_ids : null;
-		if ( empty( $line_ids ) ) {
-			return []; // Empty list signals "covers all" — template renders a note.
+
+		if ( ! empty( $line_ids ) ) {
+			$ids = is_array( $line_ids ) ? $line_ids : json_decode( (string) $line_ids, true );
+			if ( ! is_array( $ids ) ) {
+				return [];
+			}
+			$ids   = array_map( 'intval', $ids );
+			$items = [];
+			foreach ( $source->get_items( 'line_item' ) as $iid => $item ) {
+				if ( in_array( (int) $iid, $ids, true ) ) {
+					$items[] = $item;
+				}
+			}
+			return $items;
 		}
-		$ids   = is_array( $line_ids ) ? $line_ids : json_decode( (string) $line_ids, true );
-		if ( ! is_array( $ids ) ) {
-			return [];
+
+		// NULL line_item_ids: try Phase 1 hybrid reconciliation first.
+		$tracking   = isset( $shipment->tracking_number ) ? (string) $shipment->tracking_number : '';
+		$phase1_ids = self::get_phase1_shipped_items_for_tracking( $source, $tracking );
+		if ( empty( $phase1_ids ) ) {
+			return []; // Pure legacy — template renders "Covers all" note.
 		}
-		$ids   = array_map( 'intval', $ids );
 		$items = [];
 		foreach ( $source->get_items( 'line_item' ) as $iid => $item ) {
-			if ( in_array( (int) $iid, $ids, true ) ) {
+			if ( in_array( (int) $iid, $phase1_ids, true ) ) {
 				$items[] = $item;
 			}
 		}

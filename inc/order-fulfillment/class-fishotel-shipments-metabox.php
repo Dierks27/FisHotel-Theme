@@ -71,11 +71,10 @@ class FisHotel_Shipments_Metabox {
 		if ( ! $order instanceof WC_Order ) {
 			return;
 		}
-		// Skip on source orders folded into a fulfillment — the fulfillment is
-		// the operational surface there.
-		if ( function_exists( 'fishotel_order_get_fulfillment' ) && fishotel_order_get_fulfillment( $order ) ) {
-			return;
-		}
+		// Render on every shop_order, including source orders folded into a
+		// fulfillment. After ShipTracker fan-out, each source carries its own
+		// wp_fst_shipments row — viewing the source order needs to surface
+		// that shipment + its tracking link, not hide the box entirely.
 		add_meta_box(
 			'fishotel-shipments',
 			__( 'Shipments', 'fishotel' ),
@@ -314,15 +313,45 @@ class FisHotel_Shipments_Metabox {
 		return $ea;
 	}
 
-	/** Best-effort tracking URL for a shipment row. */
+	/**
+	 * Best-effort tracking URL for a shipment row.
+	 *
+	 * FST_Carrier is abstract — get_tracking_url() is an instance method on a
+	 * concrete subclass (FST_Carrier_UPS / FST_Carrier_USPS / ...). Calling
+	 * it statically on the base class fatals. Mirror ShipTracker's own
+	 * pattern (see class-fst-order.php) and instantiate the right subclass.
+	 */
 	public static function get_tracking_url( $shipment ) {
-		if ( class_exists( 'FST_Carrier' ) && method_exists( 'FST_Carrier', 'get_tracking_url' ) ) {
-			$url = FST_Carrier::get_tracking_url( $shipment->carrier ?? '', $shipment->tracking_number ?? '' );
-			if ( $url ) {
-				return $url;
-			}
+		$carrier_slug    = isset( $shipment->carrier ) ? (string) $shipment->carrier : '';
+		$tracking_number = isset( $shipment->tracking_number ) ? (string) $shipment->tracking_number : '';
+		if ( '' === $tracking_number ) {
+			return '#';
 		}
-		return '#';
+		$carrier = self::get_carrier_instance( $carrier_slug );
+		if ( ! $carrier ) {
+			return '#';
+		}
+		try {
+			$url = $carrier->get_tracking_url( $tracking_number );
+		} catch ( \Throwable $e ) {
+			return '#';
+		}
+		return $url ? (string) $url : '#';
+	}
+
+	/** Instantiate the concrete FST_Carrier_* subclass for a carrier slug, or null. */
+	private static function get_carrier_instance( $slug ) {
+		$slug = strtolower( trim( (string) $slug ) );
+		switch ( $slug ) {
+			case 'ups':
+				return class_exists( 'FST_Carrier_UPS' ) ? new FST_Carrier_UPS() : null;
+			case 'usps':
+				return class_exists( 'FST_Carrier_USPS' ) ? new FST_Carrier_USPS() : null;
+			case 'fedex':
+				return class_exists( 'FST_Carrier_FedEx' ) ? new FST_Carrier_FedEx() : null;
+			default:
+				return null;
+		}
 	}
 
 	/** Resolve the WC_Order_Item_Product objects covered by a shipment. */

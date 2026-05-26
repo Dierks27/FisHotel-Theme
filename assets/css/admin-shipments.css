@@ -53,6 +53,12 @@
 	border-style: dashed;
 	border-color: #c3c4c7;
 }
+.fhsm-shipment-error {
+	background: #fbeaea;
+	border-color: #c1483a;
+	color: #7a2a1f;
+	font-size: 12px;
+}
 .fhsm-shipment-header {
 	display: flex;
 	align-items: center;

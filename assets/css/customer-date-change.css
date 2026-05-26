@@ -1,0 +1,103 @@
+/**
+ * FisHotel — Customer self-serve delivery date change.
+ *
+ * Styles the inline change form on YOUR FOLIO + the (change) link in the
+ * Past Stays delivery date column. Re-uses the My Account design tokens
+ * (--fha-gold, --fha-cream, --fha-border) defined in my-account.css.
+ */
+
+.fh-view-order__delivery-actions {
+	margin-top: 12px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-items: center;
+}
+
+.fh-change-date-btn {
+	font-family: 'Josefin Sans', sans-serif;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	font-size: 11px;
+	background: transparent;
+	color: var(--fha-gold);
+	border: 1px solid var(--fha-gold);
+	padding: 8px 14px;
+	cursor: pointer;
+	transition: background 0.2s ease, color 0.2s ease;
+}
+.fh-change-date-btn:hover {
+	background: var(--fha-gold);
+	color: #1a1612;
+}
+
+.fh-change-date-form {
+	margin-top: 14px;
+	padding: 14px 16px;
+	background: rgba(212, 165, 116, 0.06);
+	border: 1px solid var(--fha-border-gold);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+}
+.fh-change-date-form .fh-date-select {
+	flex: 1 1 220px;
+	min-width: 200px;
+	padding: 8px 10px;
+	background: #1a1612;
+	color: var(--fha-cream);
+	border: 1px solid var(--fha-border-gold);
+	font-family: var(--fha-font-display);
+	font-size: 14px;
+}
+.fh-save-date-btn,
+.fh-cancel-date-btn {
+	font-family: 'Josefin Sans', sans-serif;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	font-size: 11px;
+	padding: 8px 14px;
+	cursor: pointer;
+	border: 1px solid var(--fha-gold);
+}
+.fh-save-date-btn {
+	background: var(--fha-gold);
+	color: #1a1612;
+}
+.fh-save-date-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.fh-cancel-date-btn {
+	background: transparent;
+	color: var(--fha-cream-muted);
+	border-color: var(--fha-border-gold);
+}
+.fh-date-message {
+	flex: 1 0 100%;
+	font-size: 12px;
+	color: var(--fha-cream-muted);
+}
+.fh-date-message.is-error { color: #c1483a; }
+.fh-date-message.is-success { color: #5aaa78; }
+
+.fh-view-order__delivery-locked {
+	margin-top: 10px;
+	font-size: 12px;
+	color: var(--fha-cream-muted);
+}
+.fh-view-order__delivery-locked a {
+	color: var(--fha-gold);
+	text-decoration: underline;
+}
+
+/* Past Stays "(change)" link */
+.fh-orders-row__change-link {
+	margin-left: 6px;
+	font-size: 11px;
+	letter-spacing: 0.08em;
+	color: var(--fha-gold);
+	text-decoration: underline;
+}
+.fh-orders-row__change-link:hover { color: var(--fha-gold-bright); }

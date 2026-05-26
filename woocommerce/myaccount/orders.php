@@ -41,6 +41,13 @@ do_action( 'woocommerce_before_account_orders', $has_orders );
 						$delivery_ts   = '' !== $delivery_date ? strtotime( $delivery_date ) : false;
 						if ( $delivery_ts ) {
 							echo esc_html( date_i18n( 'M j, Y', $delivery_ts ) );
+							if ( class_exists( 'FisHotel_Self_Serve_Date' ) && FisHotel_Self_Serve_Date::can_change( $order ) ) {
+								printf(
+									' <a class="fh-orders-row__change-link" href="%s">%s</a>',
+									esc_url( $order->get_view_order_url() . '#fh-change-date' ),
+									esc_html__( '(change)', 'fishotel' )
+								);
+							}
 						} else {
 							echo '<span class="fh-orders-row__no-delivery">—</span>';
 						}

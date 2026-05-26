@@ -81,56 +81,81 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 			<p class="fhsm-empty"><?php esc_html_e( 'No shipments yet.', 'fishotel' ); ?></p>
 		<?php endif; ?>
 
-		<?php foreach ( $shipments as $shipment ) :
-			$items_in_shipment = FisHotel_Shipments_Metabox::resolve_shipment_items( $shipment );
-			$status            = isset( $shipment->status ) ? (string) $shipment->status : '';
-			$carrier           = isset( $shipment->carrier ) ? (string) $shipment->carrier : '';
-			$tracking_no       = isset( $shipment->tracking_number ) ? (string) $shipment->tracking_number : '';
-			$source_order_id   = isset( $shipment->order_id ) ? (int) $shipment->order_id : 0;
-			$ship_id           = isset( $shipment->id ) ? (int) $shipment->id : 0;
-			$color             = ( class_exists( 'FST_Carrier' ) && method_exists( 'FST_Carrier', 'get_status_color' ) ) ? FST_Carrier::get_status_color( $status ) : '#888';
-			$label             = ( class_exists( 'FST_Carrier' ) && method_exists( 'FST_Carrier', 'get_status_label' ) ) ? FST_Carrier::get_status_label( $status ) : ucfirst( $status );
-			$tracking_url      = FisHotel_Shipments_Metabox::get_tracking_url( $shipment );
-		?>
-			<div class="fhsm-shipment" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>">
-				<div class="fhsm-shipment-header">
-					<span class="fhsm-status-badge" style="background:<?php echo esc_attr( $color ); ?>;">
-						<?php echo esc_html( $label ); ?>
-					</span>
-					<span class="fhsm-carrier"><?php echo esc_html( strtoupper( $carrier ) ); ?></span>
-					<?php if ( '#' !== $tracking_url ) : ?>
-						<a class="fhsm-tracking-number" href="<?php echo esc_url( $tracking_url ); ?>" target="_blank" rel="noopener noreferrer">
-							<?php echo esc_html( $tracking_no ); ?>
-						</a>
-					<?php else : ?>
-						<span class="fhsm-tracking-number"><?php echo esc_html( $tracking_no ); ?></span>
-					<?php endif; ?>
-					<?php if ( $is_fulfillment && $source_order_id ) : ?>
-						<span class="fhsm-source-tag">
-							<?php
-							printf(
-								/* translators: %d order ID */
-								esc_html__( 'source: #%d', 'fishotel' ),
-								(int) $source_order_id
-							);
-							?>
+		<?php foreach ( $shipments as $shipment ) : ?>
+			<?php try { ?>
+				<?php
+				$items_in_shipment = FisHotel_Shipments_Metabox::resolve_shipment_items( $shipment );
+				$status            = isset( $shipment->status ) ? (string) $shipment->status : '';
+				$carrier           = isset( $shipment->carrier ) ? (string) $shipment->carrier : '';
+				$tracking_no       = isset( $shipment->tracking_number ) ? (string) $shipment->tracking_number : '';
+				$source_order_id   = isset( $shipment->order_id ) ? (int) $shipment->order_id : 0;
+				$ship_id           = isset( $shipment->id ) ? (int) $shipment->id : 0;
+				$color             = '#888';
+				$label             = ucfirst( $status );
+				if ( class_exists( 'FST_Carrier' ) ) {
+					if ( method_exists( 'FST_Carrier', 'get_status_color' ) ) {
+						$color = FST_Carrier::get_status_color( $status );
+					}
+					if ( method_exists( 'FST_Carrier', 'get_status_label' ) ) {
+						$label = FST_Carrier::get_status_label( $status );
+					}
+				}
+				$tracking_url = FisHotel_Shipments_Metabox::get_tracking_url( $shipment );
+				?>
+				<div class="fhsm-shipment" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>">
+					<div class="fhsm-shipment-header">
+						<span class="fhsm-status-badge" style="background:<?php echo esc_attr( $color ); ?>;">
+							<?php echo esc_html( $label ); ?>
 						</span>
+						<span class="fhsm-carrier"><?php echo esc_html( strtoupper( $carrier ) ); ?></span>
+						<?php if ( '#' !== $tracking_url ) : ?>
+							<a class="fhsm-tracking-number" href="<?php echo esc_url( $tracking_url ); ?>" target="_blank" rel="noopener noreferrer">
+								<?php echo esc_html( $tracking_no ); ?>
+							</a>
+						<?php else : ?>
+							<span class="fhsm-tracking-number"><?php echo esc_html( $tracking_no ); ?></span>
+						<?php endif; ?>
+						<?php if ( $is_fulfillment && $source_order_id ) : ?>
+							<span class="fhsm-source-tag">
+								<?php
+								printf(
+									/* translators: %d order ID */
+									esc_html__( 'source: #%d', 'fishotel' ),
+									(int) $source_order_id
+								);
+								?>
+							</span>
+						<?php endif; ?>
+					</div>
+					<?php if ( ! empty( $items_in_shipment ) ) : ?>
+						<ul class="fhsm-shipment-items">
+							<?php foreach ( $items_in_shipment as $sitem ) : ?>
+								<li><?php echo esc_html( $sitem->get_name() ); ?> &times; <?php echo esc_html( (string) $sitem->get_quantity() ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+					<?php else : ?>
+						<p class="fhsm-covers-all"><em><?php esc_html_e( 'Covers all items on this order.', 'fishotel' ); ?></em></p>
 					<?php endif; ?>
+					<div class="fhsm-shipment-actions">
+						<button type="button" class="button fhsm-recheck" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>"><?php esc_html_e( 'Re-check', 'fishotel' ); ?></button>
+						<button type="button" class="button fhsm-remove" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>"><?php esc_html_e( 'Remove', 'fishotel' ); ?></button>
+					</div>
 				</div>
-				<?php if ( ! empty( $items_in_shipment ) ) : ?>
-					<ul class="fhsm-shipment-items">
-						<?php foreach ( $items_in_shipment as $sitem ) : ?>
-							<li><?php echo esc_html( $sitem->get_name() ); ?> &times; <?php echo esc_html( (string) $sitem->get_quantity() ); ?></li>
-						<?php endforeach; ?>
-					</ul>
-				<?php else : ?>
-					<p class="fhsm-covers-all"><em><?php esc_html_e( 'Covers all items on this order.', 'fishotel' ); ?></em></p>
-				<?php endif; ?>
-				<div class="fhsm-shipment-actions">
-					<button type="button" class="button fhsm-recheck" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>"><?php esc_html_e( 'Re-check', 'fishotel' ); ?></button>
-					<button type="button" class="button fhsm-remove" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>"><?php esc_html_e( 'Remove', 'fishotel' ); ?></button>
+			<?php } catch ( \Throwable $e ) {
+				$fail_id = is_object( $shipment ) && isset( $shipment->id ) ? (string) $shipment->id : '?';
+				?>
+				<div class="fhsm-shipment fhsm-shipment-error">
+					<strong><?php esc_html_e( 'Shipment render failed', 'fishotel' ); ?>:</strong>
+					<?php
+					printf(
+						/* translators: 1: shipment id, 2: error message */
+						esc_html__( '#%1$s — %2$s', 'fishotel' ),
+						esc_html( $fail_id ),
+						esc_html( $e->getMessage() )
+					);
+					?>
 				</div>
-			</div>
+			<?php } ?>
 		<?php endforeach; ?>
 
 		<?php foreach ( $legacy_shipments as $legacy ) : ?>

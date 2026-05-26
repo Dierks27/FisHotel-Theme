@@ -50,7 +50,9 @@ function fishotel_email_delivery_date_block( $order, $sent_to_admin, $plain_text
 		return;
 	}
 
-	$delivery_date = (string) $order->get_meta( '_fishotel_shipping_date' );
+	$delivery_date = function_exists( 'fishotel_get_effective_delivery_date' )
+		? fishotel_get_effective_delivery_date( $order )
+		: (string) $order->get_meta( '_fishotel_shipping_date' );
 	if ( '' === $delivery_date ) {
 		return;
 	}

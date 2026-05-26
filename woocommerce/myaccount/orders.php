@@ -37,7 +37,9 @@ do_action( 'woocommerce_before_account_orders', $has_orders );
 					</td>
 					<td class="col-delivery" data-title="<?php esc_attr_e( 'Delivery Date', 'fishotel' ); ?>">
 						<?php
-						$delivery_date = (string) $order->get_meta( '_fishotel_shipping_date' );
+						$delivery_date = function_exists( 'fishotel_get_effective_delivery_date' )
+							? fishotel_get_effective_delivery_date( $order )
+							: (string) $order->get_meta( '_fishotel_shipping_date' );
 						$delivery_ts   = '' !== $delivery_date ? strtotime( $delivery_date ) : false;
 						if ( $delivery_ts ) {
 							echo esc_html( date_i18n( 'M j, Y', $delivery_ts ) );

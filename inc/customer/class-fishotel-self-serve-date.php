@@ -29,6 +29,42 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Effective delivery date for an order, falling back to the order's
+ * fulfillment when the source order's own _fishotel_shipping_date has been
+ * cleared (the normal state for a source folded into a fulfillment).
+ *
+ * Customer-facing displays should always go through this helper so a customer
+ * looking at their source order in My Account still sees the fulfillment's
+ * scheduled delivery date — the fulfillment is invisible to them.
+ *
+ * @param WC_Order|int $order
+ * @return string '' if no date is set on the order OR any fulfillment.
+ */
+function fishotel_get_effective_delivery_date( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		$order = wc_get_order( (int) $order );
+	}
+	if ( ! $order instanceof WC_Order ) {
+		return '';
+	}
+	$own = (string) $order->get_meta( '_fishotel_shipping_date' );
+	if ( '' !== $own ) {
+		return $own;
+	}
+	$ff_id = (int) $order->get_meta( '_fishotel_fulfilled_by_order' );
+	if ( $ff_id > 0 ) {
+		$ff = wc_get_order( $ff_id );
+		if ( $ff instanceof WC_Order ) {
+			$ff_date = (string) $ff->get_meta( '_fishotel_shipping_date' );
+			if ( '' !== $ff_date ) {
+				return $ff_date;
+			}
+		}
+	}
+	return '';
+}
+
 class FisHotel_Self_Serve_Date {
 
 	const META_DELIVERY    = '_fishotel_shipping_date';

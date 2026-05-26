@@ -30,7 +30,9 @@ $reorder_url = $order ? wp_nonce_url( add_query_arg( 'order_again', $order->get_
 	</p>
 
 	<?php
-	$delivery_date = (string) $order->get_meta( '_fishotel_shipping_date' );
+	$delivery_date = function_exists( 'fishotel_get_effective_delivery_date' )
+		? fishotel_get_effective_delivery_date( $order )
+		: (string) $order->get_meta( '_fishotel_shipping_date' );
 	$delivery_ts   = '' !== $delivery_date ? strtotime( $delivery_date ) : false;
 	$can_change    = class_exists( 'FisHotel_Self_Serve_Date' ) && FisHotel_Self_Serve_Date::can_change( $order );
 	$lock_reason   = class_exists( 'FisHotel_Self_Serve_Date' ) ? FisHotel_Self_Serve_Date::lock_reason( $order ) : '';
@@ -63,7 +65,7 @@ $reorder_url = $order ? wp_nonce_url( add_query_arg( 'order_again', $order->get_
 							esc_html_e( 'Your order has already shipped — the delivery date can no longer be changed.', 'fishotel' );
 							break;
 						case 'fulfillment':
-							esc_html_e( 'This order is being shipped with another — please contact us to coordinate a date change.', 'fishotel' );
+							esc_html_e( 'This order has been combined with another of yours into a single delivery.', 'fishotel' );
 							break;
 						case 'status':
 							esc_html_e( 'Date changes are no longer available for this order.', 'fishotel' );

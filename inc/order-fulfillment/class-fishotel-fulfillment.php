@@ -154,8 +154,19 @@ class FisHotel_Fulfillment {
 		// Mirror completion to source orders so each customer's order email
 		// fires per WC defaults.
 		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'mirror_status_to_sources' ], 30, 4 );
+		// Source→fulfillment auto-advance: when every active source has
+		// shipped (or completed), bump the fulfillment to match so it doesn't
+		// stay stuck in wc-fulfillment forever. Priority 20 runs after
+		// ShipTracker's own transitions but before our completion-mirror at
+		// priority 30 (which only acts on fulfillment→completed anyway).
+		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'maybe_advance_fulfillment_from_source' ], 20, 4 );
 		// ShipTracker fires its own action after a shipment-driven transition.
 		add_action( 'fst_status_changed', [ __CLASS__, 'on_fst_status_changed' ], 10, 4 );
+
+		// One-time backfill: re-evaluate existing fulfillments whose sources
+		// have already advanced past them (fixes fulfillments stuck in
+		// wc-fulfillment from before the auto-advance hook existed).
+		add_action( 'admin_init', [ __CLASS__, 'maybe_backfill_fulfillment_advance' ] );
 
 		// Admin orders list: hide fulfilled sources by default; show toggle.
 		// The Processing tab is the unified "Open Orders" view — standalones
@@ -756,6 +767,138 @@ class FisHotel_Fulfillment {
 		if ( $order->has_status( 'completed' ) ) {
 			self::mirror_status_to_sources( $order->get_id(), $old_status, 'completed', $order );
 		}
+	}
+
+	/**
+	 * When a source order transitions to shipped/completed, advance its parent
+	 * fulfillment to match once every still-active sibling has done the same.
+	 *
+	 * Forward-only:
+	 *   - All active siblings completed              → fulfillment → completed
+	 *   - All active siblings shipped (or completed) → fulfillment → shipped
+	 * Refunded/cancelled/failed siblings are ignored when computing the
+	 * aggregate so a single refund doesn't permanently strand a fulfillment.
+	 *
+	 * Loop-safe: the fulfillment entity itself has no _fishotel_fulfilled_by_order
+	 * meta, so the re-fired status_changed event short-circuits on the early
+	 * fulfilled_by lookup.
+	 *
+	 * Kill switch: define( 'FISHOTEL_FULFILLMENT_AUTO_ADVANCE_OFF', true ) in
+	 * wp-config.php skips this hook entirely.
+	 *
+	 * @param int      $order_id
+	 * @param string   $from_status
+	 * @param string   $to_status
+	 * @param WC_Order $order
+	 */
+	public static function maybe_advance_fulfillment_from_source( $order_id, $from_status, $to_status, $order ) {
+		if ( defined( 'FISHOTEL_FULFILLMENT_AUTO_ADVANCE_OFF' ) && FISHOTEL_FULFILLMENT_AUTO_ADVANCE_OFF ) {
+			return;
+		}
+		if ( ! in_array( $to_status, [ 'shipped', 'completed' ], true ) ) {
+			return;
+		}
+		if ( ! $order instanceof WC_Order ) {
+			$order = wc_get_order( $order_id );
+		}
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+		// The fulfillment entity itself has no fulfilled_by → this short-circuit
+		// is also our recursion guard.
+		$ff_id = (int) $order->get_meta( self::META_FULFILLED_BY );
+		if ( $ff_id <= 0 ) {
+			return;
+		}
+		$fulfillment = wc_get_order( $ff_id );
+		if ( ! $fulfillment instanceof WC_Order || ! self::is_fulfillment( $fulfillment ) ) {
+			return;
+		}
+
+		self::advance_fulfillment_to_aggregate( $fulfillment );
+	}
+
+	/**
+	 * Compute the aggregate state of a fulfillment's sources and bump the
+	 * fulfillment to match (forward-only). Shared by the live hook and the
+	 * one-time backfill.
+	 *
+	 * @param WC_Order $fulfillment
+	 */
+	private static function advance_fulfillment_to_aggregate( WC_Order $fulfillment ) {
+		$ff_status = $fulfillment->get_status();
+		// Only advance from these states. 'completed' is terminal; 'cancelled'
+		// / 'refunded' aren't ours to touch.
+		if ( ! in_array( $ff_status, [ self::STATUS_BARE, 'shipped' ], true ) ) {
+			return;
+		}
+
+		$source_ids = self::get_sources( $fulfillment );
+		if ( empty( $source_ids ) ) {
+			return;
+		}
+
+		$active_statuses = [];
+		foreach ( $source_ids as $sid ) {
+			$src = wc_get_order( (int) $sid );
+			if ( ! $src instanceof WC_Order ) {
+				continue;
+			}
+			$s = $src->get_status();
+			if ( in_array( $s, [ 'refunded', 'cancelled', 'failed' ], true ) ) {
+				continue;
+			}
+			$active_statuses[] = $s;
+		}
+
+		if ( empty( $active_statuses ) ) {
+			// Every source is refunded/cancelled — separate handling beyond
+			// this PR's scope. Leave the fulfillment alone.
+			return;
+		}
+
+		$all_completed = ! in_array( false, array_map( static function ( $s ) {
+			return 'completed' === $s;
+		}, $active_statuses ), true );
+		$all_done = ! in_array( false, array_map( static function ( $s ) {
+			return in_array( $s, [ 'shipped', 'completed' ], true );
+		}, $active_statuses ), true );
+
+		if ( $all_completed && 'completed' !== $ff_status ) {
+			$fulfillment->update_status( 'completed', __( 'FisHotel: auto-advanced — all source orders delivered.', 'fishotel' ) );
+			return;
+		}
+		if ( $all_done && self::STATUS_BARE === $ff_status ) {
+			$fulfillment->update_status( 'shipped', __( 'FisHotel: auto-advanced — all source orders shipped.', 'fishotel' ) );
+			return;
+		}
+	}
+
+	/**
+	 * One-shot reconciliation for fulfillments that pre-date the auto-advance
+	 * hook. Runs once per site (gated by an option flag) on admin_init.
+	 * Iterates every fulfillment still in wc-fulfillment or wc-shipped and
+	 * runs advance_fulfillment_to_aggregate() on each. Idempotent.
+	 */
+	public static function maybe_backfill_fulfillment_advance() {
+		if ( defined( 'FISHOTEL_FULFILLMENT_AUTO_ADVANCE_OFF' ) && FISHOTEL_FULFILLMENT_AUTO_ADVANCE_OFF ) {
+			return;
+		}
+		$flag = 'fishotel_fulfillment_advance_backfilled_v1';
+		if ( '1' === (string) get_option( $flag ) ) {
+			return;
+		}
+		$fulfillments = wc_get_orders( [
+			'status' => [ self::STATUS_BARE, 'shipped' ],
+			'limit'  => -1,
+			'return' => 'objects',
+		] );
+		foreach ( (array) $fulfillments as $ff ) {
+			if ( $ff instanceof WC_Order && self::is_fulfillment( $ff ) ) {
+				self::advance_fulfillment_to_aggregate( $ff );
+			}
+		}
+		update_option( $flag, '1', false );
 	}
 
 	// ── Admin list filtering ─────────────────────────────────────────

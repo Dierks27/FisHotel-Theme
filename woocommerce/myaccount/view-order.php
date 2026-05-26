@@ -29,6 +29,16 @@ $reorder_url = $order ? wp_nonce_url( add_query_arg( 'order_again', $order->get_
 		?>
 	</p>
 
+	<?php
+	$delivery_date = (string) $order->get_meta( '_fishotel_shipping_date' );
+	$delivery_ts   = '' !== $delivery_date ? strtotime( $delivery_date ) : false;
+	if ( $delivery_ts ) : ?>
+		<div class="fh-view-order__delivery">
+			<div class="fh-view-order__delivery-eyebrow"><?php esc_html_e( 'Your Reserved Delivery Date', 'fishotel' ); ?></div>
+			<div class="fh-view-order__delivery-date"><?php echo esc_html( date_i18n( 'l, F j, Y', $delivery_ts ) ); ?></div>
+		</div>
+	<?php endif; ?>
+
 	<?php if ( $notes ) : ?>
 		<ol class="fh-view-order__notes">
 			<?php foreach ( $notes as $note ) : ?>

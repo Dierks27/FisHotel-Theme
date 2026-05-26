@@ -438,6 +438,34 @@ body.woocommerce-account { background: var(--fha-bg); }
 }
 .fh-orders-row__view:hover { border-bottom-color: var(--fha-gold); }
 
+.fh-orders-table .col-delivery {
+	color: var(--fha-cream);
+	font-size: 13px;
+	font-family: var(--fha-font-display);
+}
+.fh-orders-row__no-delivery { color: var(--fha-cream-faded); }
+
+.fh-view-order__delivery {
+	background: rgba(212, 165, 116, 0.10);
+	border-left: 3px solid var(--fha-gold);
+	padding: 16px 20px;
+	margin: 18px 0 24px;
+}
+.fh-view-order__delivery-eyebrow {
+	font-family: 'Josefin Sans', sans-serif;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	font-size: 11px;
+	color: var(--fha-gold);
+	margin-bottom: 4px;
+}
+.fh-view-order__delivery-date {
+	font-family: var(--fha-font-display);
+	font-size: 22px;
+	color: var(--fha-cream);
+	line-height: 1.25;
+}
+
 .fh-orders-pagination {
 	display: flex;
 	justify-content: center;

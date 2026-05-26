@@ -64,9 +64,6 @@ $reorder_url = $order ? wp_nonce_url( add_query_arg( 'order_again', $order->get_
 						case 'shipped':
 							esc_html_e( 'Your order has already shipped — the delivery date can no longer be changed.', 'fishotel' );
 							break;
-						case 'fulfillment':
-							esc_html_e( 'This order has been combined with another of yours into a single delivery.', 'fishotel' );
-							break;
 						case 'status':
 							esc_html_e( 'Date changes are no longer available for this order.', 'fishotel' );
 							break;

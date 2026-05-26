@@ -65,6 +65,56 @@ function fishotel_get_effective_delivery_date( $order ) {
 	return '';
 }
 
+/**
+ * All orders that share a delivery date through fulfillment grouping.
+ *
+ * - Standalone order → [self]
+ * - Source order folded into a fulfillment → [fulfillment, source #1, source #2, ...]
+ * - Fulfillment entity → [fulfillment, source #1, source #2, ...]
+ *
+ * Used so eligibility checks (shipments, Phase 1 shipped lines) cover every
+ * order in the same physical delivery, and the save flow can write to the
+ * fulfillment + propagate notes to every sibling source.
+ *
+ * @param WC_Order|int $order
+ * @return WC_Order[]
+ */
+function fishotel_get_fulfillment_group_orders( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		$order = wc_get_order( (int) $order );
+	}
+	if ( ! $order instanceof WC_Order ) {
+		return [];
+	}
+
+	// The fulfillment entity itself: self + all sources.
+	if ( function_exists( 'fishotel_is_fulfillment' ) && fishotel_is_fulfillment( $order ) ) {
+		$out     = [ $order ];
+		$sources = function_exists( 'fishotel_fulfillment_get_sources' )
+			? fishotel_fulfillment_get_sources( $order )
+			: [];
+		foreach ( $sources as $sid ) {
+			$src = wc_get_order( (int) $sid );
+			if ( $src instanceof WC_Order ) {
+				$out[] = $src;
+			}
+		}
+		return $out;
+	}
+
+	// Source order: resolve up to the fulfillment, then expand again.
+	$ff_id = (int) $order->get_meta( '_fishotel_fulfilled_by_order' );
+	if ( $ff_id > 0 ) {
+		$ff = wc_get_order( $ff_id );
+		if ( $ff instanceof WC_Order ) {
+			return fishotel_get_fulfillment_group_orders( $ff );
+		}
+	}
+
+	// Standalone.
+	return [ $order ];
+}
+
 class FisHotel_Self_Serve_Date {
 
 	const META_DELIVERY    = '_fishotel_shipping_date';
@@ -100,39 +150,42 @@ class FisHotel_Self_Serve_Date {
 			return false;
 		}
 
-		// Status gate.
+		// Status gate (on the order being viewed — its status, not the fulfillment's).
 		if ( ! $order->has_status( [ 'processing', 'on-hold' ] ) ) {
 			return false;
 		}
 
-		// Must have a delivery date.
-		$delivery = (string) $order->get_meta( self::META_DELIVERY );
+		// Effective delivery date — own meta OR fulfillment fallback.
+		$delivery = fishotel_get_effective_delivery_date( $order );
 		if ( '' === $delivery ) {
 			return false;
 		}
 
-		// In a fulfillment → delivery is driven by the fulfillment.
-		$fulfilled_by = (string) $order->get_meta( self::META_FULFILLED );
-		if ( '' !== $fulfilled_by ) {
-			return false;
-		}
+		// All orders that physically ship together — for a source order, that's
+		// the fulfillment + every sibling source. Eligibility must hold across
+		// the whole group (one shipped sibling locks the date for everyone).
+		$group = fishotel_get_fulfillment_group_orders( $order );
 
-		// Real shipments already created → lock.
+		// Real shipments anywhere in the group → lock.
 		if ( class_exists( 'FST_Shipment' ) && method_exists( 'FST_Shipment', 'get_by_order' ) ) {
-			$rows = FST_Shipment::get_by_order( $order->get_id() );
-			if ( ! empty( $rows ) ) {
-				return false;
+			foreach ( $group as $member ) {
+				$rows = FST_Shipment::get_by_order( $member->get_id() );
+				if ( ! empty( $rows ) ) {
+					return false;
+				}
 			}
 		}
 
-		// Phase 1 legacy shipped line items → lock.
-		foreach ( $order->get_items( 'line_item' ) as $item ) {
-			if ( 'shipped' === (string) $item->get_meta( self::META_LINE_STATUS ) ) {
-				return false;
+		// Phase 1 legacy shipped line items anywhere in the group → lock.
+		foreach ( $group as $member ) {
+			foreach ( $member->get_items( 'line_item' ) as $item ) {
+				if ( 'shipped' === (string) $item->get_meta( self::META_LINE_STATUS ) ) {
+					return false;
+				}
 			}
 		}
 
-		// 48hr cutoff — admin override skips this.
+		// 48hr cutoff — admin override on the viewed order skips this.
 		if ( 'yes' === (string) $order->get_meta( self::META_UNLOCK ) ) {
 			return true;
 		}
@@ -148,7 +201,10 @@ class FisHotel_Self_Serve_Date {
 	 * Distinguish "locked because of the 48hr cutoff" from "locked because the
 	 * order has moved on" so the UI can choose the right copy.
 	 *
-	 * @return string 'cutoff', 'shipped', 'fulfillment', 'status', 'none' or '' (eligible)
+	 * Mirrors can_change() — shipments/Phase 1 are evaluated across the whole
+	 * fulfillment group, not just the viewed order.
+	 *
+	 * @return string 'cutoff', 'shipped', 'status', 'none' or '' (eligible)
 	 */
 	public static function lock_reason( $order ) {
 		if ( ! $order instanceof WC_Order ) {
@@ -157,24 +213,26 @@ class FisHotel_Self_Serve_Date {
 		if ( self::can_change( $order ) ) {
 			return '';
 		}
-		if ( '' === (string) $order->get_meta( self::META_DELIVERY ) ) {
+		if ( '' === fishotel_get_effective_delivery_date( $order ) ) {
 			return 'none';
 		}
 		if ( ! $order->has_status( [ 'processing', 'on-hold' ] ) ) {
 			return 'status';
 		}
-		if ( '' !== (string) $order->get_meta( self::META_FULFILLED ) ) {
-			return 'fulfillment';
-		}
+		$group = fishotel_get_fulfillment_group_orders( $order );
 		if ( class_exists( 'FST_Shipment' ) && method_exists( 'FST_Shipment', 'get_by_order' ) ) {
-			$rows = FST_Shipment::get_by_order( $order->get_id() );
-			if ( ! empty( $rows ) ) {
-				return 'shipped';
+			foreach ( $group as $member ) {
+				$rows = FST_Shipment::get_by_order( $member->get_id() );
+				if ( ! empty( $rows ) ) {
+					return 'shipped';
+				}
 			}
 		}
-		foreach ( $order->get_items( 'line_item' ) as $item ) {
-			if ( 'shipped' === (string) $item->get_meta( self::META_LINE_STATUS ) ) {
-				return 'shipped';
+		foreach ( $group as $member ) {
+			foreach ( $member->get_items( 'line_item' ) as $item ) {
+				if ( 'shipped' === (string) $item->get_meta( self::META_LINE_STATUS ) ) {
+					return 'shipped';
+				}
 			}
 		}
 		return 'cutoff';
@@ -305,7 +363,7 @@ class FisHotel_Self_Serve_Date {
 		if ( ! self::can_change( $order ) ) {
 			wp_send_json_error( __( 'This order can no longer be changed.', 'fishotel' ) );
 		}
-		$current   = (string) $order->get_meta( self::META_DELIVERY );
+		$current   = fishotel_get_effective_delivery_date( $order );
 		$available = self::get_available_dates( $current );
 		wp_send_json_success( [
 			'current' => $current,
@@ -341,7 +399,8 @@ class FisHotel_Self_Serve_Date {
 			wp_send_json_error( __( 'Delivery dates are Mon, Tue, or Wed only.', 'fishotel' ) );
 		}
 
-		$current = (string) $order->get_meta( self::META_DELIVERY );
+		// Effective current (own meta OR fulfillment's date).
+		$current = fishotel_get_effective_delivery_date( $order );
 		if ( $new_date === $current ) {
 			wp_send_json_error( __( 'That is already your delivery date.', 'fishotel' ) );
 		}
@@ -355,17 +414,54 @@ class FisHotel_Self_Serve_Date {
 			wp_send_json_error( __( 'That date is no longer available. Please refresh and try again.', 'fishotel' ) );
 		}
 
-		// Commit.
-		$order->update_meta_data( self::META_DELIVERY, $new_date );
-		$order->add_order_note( sprintf(
+		// Resolve the AUTHORITATIVE order to write to. For a source order in a
+		// fulfillment, that's the fulfillment entity — the date lives there,
+		// not on sources. For everything else, it's the order itself.
+		$ff_id         = (int) $order->get_meta( self::META_FULFILLED );
+		$authoritative = $order;
+		$is_in_group   = false;
+		if ( $ff_id > 0 ) {
+			$ff = wc_get_order( $ff_id );
+			if ( $ff instanceof WC_Order ) {
+				$authoritative = $ff;
+				$is_in_group   = true;
+			}
+		} elseif ( function_exists( 'fishotel_is_fulfillment' ) && fishotel_is_fulfillment( $order ) ) {
+			// Customer shouldn't reach a fulfillment view, but if they do, treat
+			// it as the authoritative order.
+			$is_in_group = true;
+		}
+
+		// Commit the date to the authoritative order.
+		$authoritative->update_meta_data( self::META_DELIVERY, $new_date );
+		$authoritative->add_order_note( sprintf(
 			/* translators: 1: old date, 2: new date */
 			__( 'Customer self-served delivery date change: %1$s → %2$s.', 'fishotel' ),
 			'' !== $current ? $current : __( '(unset)', 'fishotel' ),
 			$new_date
 		), false );
-		$order->save();
+		$authoritative->save();
 
-		self::notify_admin( $order, $current, $new_date );
+		// Propagate a note to each sibling source so audit trail is complete
+		// per-order (the source orders still don't carry the date itself).
+		$group = $is_in_group ? fishotel_get_fulfillment_group_orders( $authoritative ) : [ $authoritative ];
+		if ( $is_in_group ) {
+			foreach ( $group as $sibling ) {
+				if ( $sibling->get_id() === $authoritative->get_id() ) {
+					continue;
+				}
+				$sibling->add_order_note( sprintf(
+					/* translators: 1: fulfillment id, 2: old date, 3: new date */
+					__( 'Delivery date changed via combined fulfillment FF-%1$d: %2$s → %3$s.', 'fishotel' ),
+					$authoritative->get_id(),
+					'' !== $current ? $current : __( '(unset)', 'fishotel' ),
+					$new_date
+				), false );
+				$sibling->save();
+			}
+		}
+
+		self::notify_admin( $order, $authoritative, $is_in_group, $group, $current, $new_date );
 		self::notify_customer( $order, $new_date );
 
 		wp_send_json_success( [
@@ -374,23 +470,61 @@ class FisHotel_Self_Serve_Date {
 		] );
 	}
 
-	private static function notify_admin( WC_Order $order, $old, $new ) {
-		$to      = get_option( 'admin_email' );
-		$subject = sprintf(
-			/* translators: %d order ID */
-			__( '[FisHotel] Delivery date changed: Order #%d', 'fishotel' ),
-			$order->get_id()
-		);
-		$body  = sprintf( "Customer self-served a delivery date change.\n\n" );
-		$body .= sprintf( "Order: #%d\n", $order->get_id() );
-		$body .= sprintf( "Customer: %s %s (%s)\n",
-			$order->get_billing_first_name(),
-			$order->get_billing_last_name(),
-			$order->get_billing_email()
-		);
-		$body .= sprintf( "Old date: %s\n", '' !== $old ? $old : '(unset)' );
-		$body .= sprintf( "New date: %s\n\n", $new );
-		$body .= sprintf( "View order: %s\n", admin_url( 'post.php?post=' . $order->get_id() . '&action=edit' ) );
+	/**
+	 * Admin email — single-order body for standalone, combined-orders body when
+	 * the change writes to a fulfillment. $viewed_order is what the customer was
+	 * looking at (for billing fields); $authoritative is where the date lives;
+	 * $group is every order in the same physical delivery.
+	 *
+	 * @param WC_Order   $viewed_order
+	 * @param WC_Order   $authoritative
+	 * @param bool       $is_in_group
+	 * @param WC_Order[] $group
+	 * @param string     $old
+	 * @param string     $new
+	 */
+	private static function notify_admin( WC_Order $viewed_order, WC_Order $authoritative, $is_in_group, array $group, $old, $new ) {
+		$to = get_option( 'admin_email' );
+		if ( $is_in_group ) {
+			$sources = array_filter( $group, function ( $o ) use ( $authoritative ) {
+				return $o->get_id() !== $authoritative->get_id();
+			} );
+			$source_labels = array_map( function ( $o ) {
+				return '#' . $o->get_id();
+			}, $sources );
+			$subject = sprintf(
+				/* translators: %d fulfillment ID */
+				__( '[FisHotel] Delivery date changed (combined): FF-%d', 'fishotel' ),
+				$authoritative->get_id()
+			);
+			$body  = "Customer self-served a delivery date change on a combined order.\n\n";
+			$body .= sprintf( "Fulfillment: FF-%d\n", $authoritative->get_id() );
+			$body .= sprintf( "Affected source orders: %s\n", implode( ', ', $source_labels ) );
+			$body .= sprintf( "Customer: %s %s (%s)\n",
+				$viewed_order->get_billing_first_name(),
+				$viewed_order->get_billing_last_name(),
+				$viewed_order->get_billing_email()
+			);
+			$body .= sprintf( "Old date: %s\n", '' !== $old ? $old : '(unset)' );
+			$body .= sprintf( "New date: %s\n\n", $new );
+			$body .= sprintf( "View fulfillment: %s\n", admin_url( 'post.php?post=' . $authoritative->get_id() . '&action=edit' ) );
+		} else {
+			$subject = sprintf(
+				/* translators: %d order ID */
+				__( '[FisHotel] Delivery date changed: Order #%d', 'fishotel' ),
+				$authoritative->get_id()
+			);
+			$body  = "Customer self-served a delivery date change.\n\n";
+			$body .= sprintf( "Order: #%d\n", $authoritative->get_id() );
+			$body .= sprintf( "Customer: %s %s (%s)\n",
+				$viewed_order->get_billing_first_name(),
+				$viewed_order->get_billing_last_name(),
+				$viewed_order->get_billing_email()
+			);
+			$body .= sprintf( "Old date: %s\n", '' !== $old ? $old : '(unset)' );
+			$body .= sprintf( "New date: %s\n\n", $new );
+			$body .= sprintf( "View order: %s\n", admin_url( 'post.php?post=' . $authoritative->get_id() . '&action=edit' ) );
+		}
 		wp_mail( $to, $subject, $body );
 	}
 

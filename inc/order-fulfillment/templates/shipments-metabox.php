@@ -229,17 +229,20 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 						$any_uncovered = true;
 					}
 				?>
-					<li>
+					<li class="<?php echo $is_covered ? 'fhsm-line-item-covered' : ''; ?>">
 						<label>
 							<input type="checkbox"
 								class="fhsm-line-item-check"
+								name="line_item_ids[]"
 								value="<?php echo esc_attr( $item_id ); ?>"
 								data-source-id="<?php echo esc_attr( $source_id ); ?>"
 								<?php disabled( $is_covered ); ?>>
-							<?php echo esc_html( $item->get_name() ); ?>
-							&times; <?php echo esc_html( (string) $item->get_quantity() ); ?>
+							<span class="fhsm-line-item-label">
+								<?php echo esc_html( $item->get_name() ); ?>
+								&times; <?php echo esc_html( (string) $item->get_quantity() ); ?>
+							</span>
 							<?php if ( $is_covered ) : ?>
-								<em class="fhsm-covered-note">(<?php esc_html_e( 'already in a shipment', 'fishotel' ); ?>)</em>
+								<em class="fhsm-covered-note">[<?php esc_html_e( 'shipped', 'fishotel' ); ?>]</em>
 							<?php endif; ?>
 						</label>
 					</li>

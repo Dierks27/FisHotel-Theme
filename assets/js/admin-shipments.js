@@ -41,9 +41,11 @@
 			var $msg      = $box.find( '#fhsm-message' );
 			var tracking  = String( $box.find( '#fhsm-new-tracking' ).val() || '' ).trim();
 			var carrier   = String( $box.find( '#fhsm-new-carrier' ).val() || 'auto' );
+			// Coerce to int so a bad cast on the server can't silently fall
+			// through to "covers all" because of a string/int mismatch.
 			var itemIds   = $box.find( '.fhsm-line-item-check:checked' ).map( function () {
-				return $( this ).val();
-			} ).get();
+				return parseInt( $( this ).val(), 10 );
+			} ).get().filter( function ( n ) { return n > 0; } );
 
 			if ( ! tracking ) {
 				setMessage( $msg, 'Tracking number is required.', 'error' );
@@ -57,13 +59,21 @@
 			$btn.prop( 'disabled', true );
 			setMessage( $msg, 'Saving…', '' );
 
-			$.post( window.ajaxurl, {
-				action:          'fst_add_tracking',
-				nonce:           nonce,
-				order_id:        orderId,
-				tracking_number: tracking,
-				carrier:         carrier,
-				line_item_ids:   itemIds
+			// $.ajax with traditional:false explicitly so line_item_ids
+			// serializes as line_item_ids[]=12&line_item_ids[]=34 — the form
+			// ShipTracker's $_POST['line_item_ids'] reader expects.
+			$.ajax( {
+				url:        window.ajaxurl,
+				method:     'POST',
+				traditional: false,
+				data:       {
+					action:          'fst_add_tracking',
+					nonce:           nonce,
+					order_id:        orderId,
+					tracking_number: tracking,
+					carrier:         carrier,
+					line_item_ids:   itemIds
+				}
 			} ).done( function ( response ) {
 				if ( response && response.success ) {
 					var msgText = ( response.data && response.data.message ) ? response.data.message : 'Shipment saved.';

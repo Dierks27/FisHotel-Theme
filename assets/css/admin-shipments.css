@@ -143,9 +143,20 @@
 .fhsm-item-checkboxes li {
 	margin: 2px 0;
 }
+.fhsm-line-item-covered .fhsm-line-item-label {
+	text-decoration: line-through;
+	color: #8c8f94;
+}
+.fhsm-line-item-covered label {
+	cursor: not-allowed;
+}
 .fhsm-covered-note {
 	color: #8c8f94;
 	margin-left: 4px;
+	font-style: normal;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
 }
 .fhsm-all-covered {
 	color: #2271b1;

@@ -964,18 +964,133 @@ class FisHotel_Fulfillment {
 	}
 
 	/**
-	 * Count badge for the Processing view = visible Open Orders:
-	 * standalones in processing (not fulfilled sources) + all fulfillments.
+	 * Rewrite the per-status counts in the orders-list views row.
+	 *
+	 * - Processing tab: keeps the existing "Open Orders" semantic
+	 *   (standalones in processing + every fulfillment) via processing_open_count().
+	 * - Every other tab: count orders at that status EXCLUDING fulfilled
+	 *   sources. Sources are hidden from the list when the toggle is off, so
+	 *   counting them inflated the per-status numbers (e.g. "Shipped (11)"
+	 *   when only 6 rows are visible).
+	 * - All tab: sum of every visible-status count (excluding trash).
+	 *
+	 * When the "Show fulfilled sources" toggle is on, the raw WC counts are
+	 * the right answer — leave the views row alone.
 	 */
 	public static function override_processing_count( $views ) {
-		$count = self::processing_open_count();
-		$label = '(' . number_format_i18n( $count ) . ')';
-		foreach ( [ 'wc-processing', 'processing' ] as $key ) {
+		// Toggle on → user explicitly wants the raw view. Leave counts as-is.
+		if ( self::show_sources_requested() ) {
+			return $views;
+		}
+
+		$visible = self::visible_status_counts_cached();
+
+		// All tab: sum every visible status, excluding trash.
+		$all_total = 0;
+		foreach ( $visible as $status => $cnt ) {
+			if ( in_array( $status, [ 'trash', 'auto-draft' ], true ) ) {
+				continue;
+			}
+			$all_total += (int) $cnt;
+		}
+		foreach ( [ 'all' ] as $key ) {
 			if ( isset( $views[ $key ] ) ) {
-				$views[ $key ] = preg_replace( '/\((\d[\d,]*)\)/', $label, $views[ $key ], 1 );
+				$views[ $key ] = self::replace_view_count( $views[ $key ], $all_total );
 			}
 		}
+
+		// Per-status tabs. WC's view keys come in two flavors:
+		//   CPT screen → 'wc-processing', 'wc-shipped', …
+		//   HPOS screen → 'processing', 'shipped', … (no prefix)
+		// If a status has rows in WC's raw count but ALL of them are
+		// fulfilled sources, our GROUP BY returns no entry for it — default
+		// to 0 in that case so the inflated raw count gets corrected too.
+		foreach ( $views as $key => $html ) {
+			if ( in_array( $key, [ 'all', 'trash' ], true ) ) {
+				continue;
+			}
+			$status_prefixed = ( 0 === strpos( $key, 'wc-' ) ) ? $key : 'wc-' . $key;
+			if ( 'wc-processing' === $status_prefixed ) {
+				$count = self::processing_open_count();
+			} else {
+				$count = isset( $visible[ $status_prefixed ] ) ? (int) $visible[ $status_prefixed ] : 0;
+			}
+			$views[ $key ] = self::replace_view_count( $html, $count );
+		}
+
 		return $views;
+	}
+
+	/** Swap the "(N)" count inside a single view HTML, preserving the rest. */
+	private static function replace_view_count( $html, $count ) {
+		return preg_replace(
+			'/\((\d[\d,]*)\)/',
+			'(' . number_format_i18n( $count ) . ')',
+			$html,
+			1
+		);
+	}
+
+	/**
+	 * status => count map of orders that are NOT fulfilled sources. One SQL
+	 * query per request, cached briefly (busted on order status changes via
+	 * bust_count_cache()).
+	 *
+	 * HPOS-aware: branches on the active store.
+	 *
+	 * @return array<string,int>
+	 */
+	public static function visible_status_counts_cached() {
+		$cached = get_transient( 'fishotel_visible_status_counts' );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+		$map = self::compute_visible_status_counts();
+		set_transient( 'fishotel_visible_status_counts', $map, 2 * MINUTE_IN_SECONDS );
+		return $map;
+	}
+
+	private static function compute_visible_status_counts() {
+		global $wpdb;
+
+		if ( function_exists( 'fishotel_order_hpos_active' ) && fishotel_order_hpos_active() ) {
+			$rows = $wpdb->get_results( $wpdb->prepare(
+				"SELECT o.status AS status, COUNT(*) AS cnt
+				 FROM {$wpdb->prefix}wc_orders o
+				 LEFT JOIN {$wpdb->prefix}wc_orders_meta m
+				   ON m.order_id = o.id
+				   AND m.meta_key = %s
+				   AND m.meta_value <> ''
+				 WHERE o.type = %s
+				   AND m.order_id IS NULL
+				 GROUP BY o.status",
+				self::META_FULFILLED_BY,
+				'shop_order'
+			) );
+		} else {
+			$rows = $wpdb->get_results( $wpdb->prepare(
+				"SELECT p.post_status AS status, COUNT(*) AS cnt
+				 FROM {$wpdb->posts} p
+				 LEFT JOIN {$wpdb->postmeta} m
+				   ON m.post_id = p.ID
+				   AND m.meta_key = %s
+				   AND m.meta_value <> ''
+				 WHERE p.post_type = %s
+				   AND m.post_id IS NULL
+				 GROUP BY p.post_status",
+				self::META_FULFILLED_BY,
+				'shop_order'
+			) );
+		}
+
+		$map = [];
+		foreach ( (array) $rows as $r ) {
+			if ( empty( $r->status ) ) {
+				continue;
+			}
+			$map[ (string) $r->status ] = (int) $r->cnt;
+		}
+		return $map;
 	}
 
 	/** Visible Open Orders count: processing standalones + fulfillments. */
@@ -1014,9 +1129,10 @@ class FisHotel_Fulfillment {
 		return $open;
 	}
 
-	/** Drop the cached Open Orders count. */
+	/** Drop the cached Open Orders count + visible-status-counts map. */
 	public static function bust_count_cache() {
 		delete_transient( self::COUNT_TRANSIENT );
+		delete_transient( 'fishotel_visible_status_counts' );
 	}
 
 	/**

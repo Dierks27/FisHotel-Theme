@@ -123,8 +123,8 @@ class FisHotel_Self_Serve_Date {
 	const META_UNLOCK      = '_fishotel_admin_unlock_date_change';
 	const NONCE_ACTION     = 'fishotel_change_date';
 	const NONCE_FIELD      = 'fishotel_change_date_nonce';
-	const CAPACITY_PER_DAY = 5;
-	const LOOKAHEAD_DAYS   = 56;
+	// 48hr cutoff for whether changes are allowed at all (separate from
+	// Batch Plugin's shipping_min_advance, which gates the new date itself).
 	const CUTOFF_HOURS     = 48;
 
 	public static function init() {
@@ -254,48 +254,86 @@ class FisHotel_Self_Serve_Date {
 	}
 
 	/**
-	 * Build the picker. Mon/Tue/Wed, > 48hr away, within LOOKAHEAD_DAYS,
-	 * skip dates at capacity (except the customer's own current date which
-	 * is always returned so the UI can show "(current)" — disabled).
+	 * Build the picker. Authoritative on the customer-facing rules:
+	 *
+	 *   - Allowed weekdays, min_advance, max_days_ahead, blocked dates,
+	 *     and per-day capacity all come from Batch Plugin's shipping
+	 *     options via fishotel_get_allowed_shipping_settings().
+	 *   - The customer's CURRENT date is always returned (even if it
+	 *     now violates a Batch Plugin rule — e.g. admin disabled
+	 *     Mondays after the customer was booked) so the UI can show
+	 *     "(current)" disabled and the customer can see what they have.
+	 *   - The class-level CUTOFF_HOURS=48 is layered on top of
+	 *     min_advance: a customer can't change a date that's already
+	 *     within 48 hours, and they can't pick a new date that's <48 hr
+	 *     away either. min_advance is enforced via Batch Plugin's
+	 *     settings (typically 1+ days).
 	 *
 	 * @param string $current_date Y-m-d the customer is currently booked on, or ''.
 	 * @return array<int,array{date:string,label:string,count:int,is_current:bool,capacity_full:bool}>
 	 */
 	public static function get_available_dates( $current_date = '' ) {
-		$out    = [];
-		$today  = strtotime( 'today' );
-		$cutoff = time() + ( self::CUTOFF_HOURS * HOUR_IN_SECONDS );
+		$settings = function_exists( 'fishotel_get_allowed_shipping_settings' )
+			? fishotel_get_allowed_shipping_settings()
+			: [
+				'days'           => [ 'Tuesday', 'Wednesday', 'Thursday' ],
+				'min_advance'    => 1,
+				'max_days_ahead' => 21,
+				'max_per_day'    => 0,
+				'blocked_dates'  => [],
+			];
 
-		for ( $i = 0; $i < self::LOOKAHEAD_DAYS; $i++ ) {
+		$out         = [];
+		$today       = strtotime( 'today' );
+		$hour_cutoff = time() + ( self::CUTOFF_HOURS * HOUR_IN_SECONDS );
+		$min_advance = (int) $settings['min_advance'];
+		$max_ahead   = (int) $settings['max_days_ahead'];
+		$allowed     = (array) $settings['days'];
+		$blocked     = (array) $settings['blocked_dates'];
+		$max_per_day = (int) $settings['max_per_day'];
+
+		for ( $i = 0; $i <= $max_ahead; $i++ ) {
 			$ts = strtotime( "+{$i} days", $today );
 			if ( ! $ts ) {
 				continue;
 			}
-			$dow = (int) date( 'w', $ts );
-			if ( ! in_array( $dow, [ 1, 2, 3 ], true ) ) {
-				continue;
-			}
-			// Must clear the 48hr cutoff (measured from "now", not "today
-			// midnight") so a Tuesday morning request can't pick Wednesday
-			// when there's <48hr between them.
-			if ( strtotime( $current_date . ' 00:00:00' ) === $ts && $current_date !== '' ) {
-				// Customer's own slot — always present, even past cutoff.
-				$count = self::count_orders_for_date( date( 'Y-m-d', $ts ) );
+			$date_str = date( 'Y-m-d', $ts );
+			$weekday  = date( 'l', $ts );
+			$is_current_slot = ( '' !== $current_date && $current_date === $date_str );
+
+			if ( $is_current_slot ) {
+				// Customer's own slot — always present, regardless of rule
+				// changes, so the picker can render "(current)" disabled.
+				$count = self::count_orders_for_date( $date_str );
 				$out[] = [
-					'date'          => date( 'Y-m-d', $ts ),
+					'date'          => $date_str,
 					'label'         => date_i18n( 'l, F j', $ts ),
 					'count'         => $count,
 					'is_current'    => true,
-					'capacity_full' => $count >= self::CAPACITY_PER_DAY,
+					'capacity_full' => $max_per_day > 0 && $count >= $max_per_day,
 				];
 				continue;
 			}
-			if ( $ts < $cutoff ) {
+
+			// Batch Plugin rule gates.
+			if ( $i < $min_advance ) {
 				continue;
 			}
-			$date_str = date( 'Y-m-d', $ts );
-			$count    = self::count_orders_for_date( $date_str );
-			if ( $count >= self::CAPACITY_PER_DAY ) {
+			if ( ! in_array( $weekday, $allowed, true ) ) {
+				continue;
+			}
+			if ( in_array( $date_str, $blocked, true ) ) {
+				continue;
+			}
+			// Theme-level: must clear the 48hr cutoff (measured from "now",
+			// not midnight) — protects against a Tue morning request picking
+			// Wed when there's <48hr between them.
+			if ( $ts < $hour_cutoff ) {
+				continue;
+			}
+			// Capacity (0 = unlimited).
+			$count = self::count_orders_for_date( $date_str );
+			if ( $max_per_day > 0 && $count >= $max_per_day ) {
 				continue;
 			}
 			$out[] = [
@@ -386,17 +424,25 @@ class FisHotel_Self_Serve_Date {
 			wp_send_json_error( __( 'This order can no longer be changed.', 'fishotel' ) );
 		}
 
-		// Shape sanity: Y-m-d, real date, parses to a Mon/Tue/Wed.
-		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $new_date ) ) {
-			wp_send_json_error( __( 'Invalid date format.', 'fishotel' ) );
+		// Authoritative server-side validation against Batch Plugin's
+		// shipping settings (weekdays, min_advance, max_days_ahead, blocked
+		// dates). Capacity is enforced separately via the available-list
+		// re-check below so the "is_current" exemption can still apply.
+		if ( function_exists( 'fishotel_is_valid_delivery_date' ) ) {
+			list( $valid, $reason ) = fishotel_is_valid_delivery_date( $new_date );
+			if ( ! $valid ) {
+				wp_send_json_error( $reason );
+			}
+		} else {
+			// Defensive fallback if the helper file failed to load: at least
+			// gate on shape so we don't write garbage.
+			if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $new_date ) ) {
+				wp_send_json_error( __( 'Invalid date format.', 'fishotel' ) );
+			}
 		}
 		$new_ts = strtotime( $new_date );
 		if ( ! $new_ts ) {
 			wp_send_json_error( __( 'Invalid date.', 'fishotel' ) );
-		}
-		$dow = (int) date( 'w', $new_ts );
-		if ( ! in_array( $dow, [ 1, 2, 3 ], true ) ) {
-			wp_send_json_error( __( 'Delivery dates are Mon, Tue, or Wed only.', 'fishotel' ) );
 		}
 
 		// Effective current (own meta OR fulfillment's date).

@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.18.5' );
+define( 'FISHOTEL_THEME_VERSION', '1.18.6' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -57,6 +57,9 @@ FisHotel_EA_Status::init();
 // (depends on ShipTracker v1.9.9+ fst_send_customer_email filter).
 require_once FISHOTEL_THEME_DIR . '/inc/email/class-fishotel-consolidated-shipping-email.php';
 FisHotel_Consolidated_Shipping_Email::init();
+// Shipping settings helper (reads Batch Plugin options). Loaded first so the
+// self-serve module below can call into it.
+require_once FISHOTEL_THEME_DIR . '/inc/customer/shipping-days-helper.php';
 // Customer self-serve delivery date change (v1.18.0). Kill switch:
 // FISHOTEL_SELF_SERVE_DATES_OFF in wp-config.php.
 require_once FISHOTEL_THEME_DIR . '/inc/customer/class-fishotel-self-serve-date.php';

@@ -1243,7 +1243,9 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 /* ── Right card — order totals (sticky) ── */
 .fh-cart-totals {
   position: sticky;
-  top: 20px;
+  /* Clear the announcer bar (--ancr-bar-height) when it pushes the
+     sticky header down; falls back to the bare 20px gap otherwise. */
+  top: calc(20px + var(--ancr-bar-height, 0px));
 }
 
 .fh-cart-ledger {
@@ -1482,7 +1484,7 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 
 .fh-checkout-left  { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
-.fh-checkout-right { min-width: 0; position: sticky; top: 20px; }
+.fh-checkout-right { min-width: 0; position: sticky; top: calc(20px + var(--ancr-bar-height, 0px)); }
 
 /* Card chrome — same surface as cart cards */
 .fh-checkout-card {

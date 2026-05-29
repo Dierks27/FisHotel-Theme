@@ -187,15 +187,18 @@ h1, h2, h3, h4, h5 {
   background: #0f0f0f;
   border-bottom: 1px solid rgba(212,165,116,0.5);
   position: sticky;
-  top: 0;
+  /* Offset by the announcer bar (FisHotel Hotel Data plugin sets
+     --ancr-bar-height) so the sticky header tucks beneath the bar
+     instead of overlapping it. Falls back to 0 when no bar is present. */
+  top: var(--ancr-bar-height, 0px);
   z-index: 1000;
   transition: all 0.3s ease;
 }
 
-/* WP admin bar collision */
-.admin-bar .site-header { top: 32px; }
+/* WP admin bar collision — stack the admin bar + announcer bar heights */
+.admin-bar .site-header { top: calc(32px + var(--ancr-bar-height, 0px)); }
 @media screen and (max-width: 782px) {
-  .admin-bar .site-header { top: 46px; }
+  .admin-bar .site-header { top: calc(46px + var(--ancr-bar-height, 0px)); }
 }
 
 .site-header__inner {
@@ -857,7 +860,7 @@ h1, h2, h3, h4, h5 {
 }
 
 /* Gallery */
-.fh-gallery { position: sticky; top: 84px; }
+.fh-gallery { position: sticky; top: calc(84px + var(--ancr-bar-height, 0px)); }
 
 .fh-gallery__main {
   position: relative;

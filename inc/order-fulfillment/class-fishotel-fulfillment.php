@@ -109,6 +109,7 @@ class FisHotel_Fulfillment {
 	const META_ORIG_SHIP      = '_fishotel_fulfillment_orig_ship_date';
 	const META_SHIP_DATE      = '_fishotel_shipping_date';
 	const META_SOURCE_ORDER   = '_fishotel_source_order'; // on copied line items
+	const META_SOURCE_LINE_ITEM = '_fishotel_source_line_item_id'; // on copied line items
 	const META_MIGRATED       = 'fishotel_fulfillment_migrated_v1';
 	// Bumped to v2 in 1.15.2 — totals now use item subtotals, so existing
 	// fulfillments must be recalculated.
@@ -154,6 +155,10 @@ class FisHotel_Fulfillment {
 		// Mirror completion to source orders so each customer's order email
 		// fires per WC defaults.
 		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'mirror_status_to_sources' ], 30, 4 );
+		// Source→fulfillment refund mirror. Auto-issues a matching refund on the
+		// parent fulfillment when a source order is refunded, so the books stay in
+		// sync without a duplicate customer email or a second manual click.
+		add_action( 'woocommerce_order_refunded', [ __CLASS__, 'mirror_refund_to_fulfillment' ], 20, 2 );
 		// Source→fulfillment auto-advance: when every active source has
 		// shipped (or completed), bump the fulfillment to match so it doesn't
 		// stay stuck in wc-fulfillment forever. Priority 20 runs after
@@ -188,7 +193,7 @@ class FisHotel_Fulfillment {
 		// (It now carries a billing email for label/display, but completing it
 		// must not email the customer about a "$X fulfillment" — the per-source
 		// completion emails fire via mirror_status_to_sources instead.)
-		foreach ( [ 'customer_completed_order', 'customer_processing_order', 'customer_on_hold_order', 'customer_refunded_order', 'customer_invoice', 'customer_note' ] as $eid ) {
+		foreach ( [ 'customer_completed_order', 'customer_processing_order', 'customer_on_hold_order', 'customer_refunded_order', 'customer_partially_refunded_order', 'customer_invoice', 'customer_note' ] as $eid ) {
 			add_filter( 'woocommerce_email_enabled_' . $eid, [ __CLASS__, 'suppress_fulfillment_email' ], 10, 2 );
 		}
 
@@ -473,6 +478,7 @@ class FisHotel_Fulfillment {
 				}
 			}
 			$new->add_meta_data( self::META_SOURCE_ORDER, (int) $source_id );
+			$new->add_meta_data( self::META_SOURCE_LINE_ITEM, (int) $item->get_id() );
 			$to->add_item( $new );
 		}
 	}
@@ -757,6 +763,176 @@ class FisHotel_Fulfillment {
 				) );
 			}
 		}
+	}
+
+	/**
+	 * When a source order is refunded, mirror the refund up to its parent
+	 * fulfillment. One-way: source → fulfillment only.
+	 *
+	 * Kill switch: define( 'FISHOTEL_REFUND_MIRROR_OFF', true ) in wp-config.php.
+	 *
+	 * @param int $order_id  The source order that was refunded.
+	 * @param int $refund_id The refund object's ID.
+	 */
+	public static function mirror_refund_to_fulfillment( $order_id, $refund_id ) {
+		if ( defined( 'FISHOTEL_REFUND_MIRROR_OFF' ) && FISHOTEL_REFUND_MIRROR_OFF ) {
+			return;
+		}
+
+		try {
+			$source = wc_get_order( (int) $order_id );
+			$refund = wc_get_order( (int) $refund_id );
+			if ( ! $source instanceof WC_Order || ! $refund instanceof WC_Order_Refund ) {
+				return;
+			}
+
+			// Don't mirror an auto-mirrored refund. (Recursion guard.)
+			if ( '1' === (string) $refund->get_meta( '_fishotel_mirrored_refund' ) ) {
+				return;
+			}
+
+			$ff_id = (int) $source->get_meta( self::META_FULFILLED_BY );
+			if ( $ff_id <= 0 ) {
+				return;
+			}
+			$fulfillment = wc_get_order( $ff_id );
+			if ( ! $fulfillment instanceof WC_Order || ! self::is_fulfillment( $fulfillment ) ) {
+				return;
+			}
+
+			// Build the line_items argument for wc_create_refund().
+			$refund_line_items = [];
+			$mirror_amount = 0.0;
+			foreach ( $refund->get_items( 'line_item' ) as $refunded_item ) {
+				if ( ! $refunded_item instanceof WC_Order_Item_Product ) {
+					continue;
+				}
+				$source_line_id = (int) $refunded_item->get_meta( '_refunded_item_id', true );
+				if ( $source_line_id <= 0 ) {
+					continue;
+				}
+
+				$ff_line_id = self::find_fulfillment_line_for_source_line(
+					$fulfillment, (int) $source->get_id(), $source_line_id
+				);
+				if ( $ff_line_id <= 0 ) {
+					continue;
+				}
+
+				$refund_qty   = abs( (int) $refunded_item->get_quantity() );
+				$refund_total = abs( (float) $refunded_item->get_total() );
+
+				$refund_line_items[ $ff_line_id ] = [
+					'qty'          => $refund_qty,
+					'refund_total' => $refund_total,
+					'refund_tax'   => [],
+				];
+				$mirror_amount += $refund_total;
+			}
+
+			// Amount-only refund (no specific line items) → mirror as amount-only.
+			if ( empty( $refund_line_items ) ) {
+				$mirror_amount = abs( (float) $refund->get_amount() );
+				if ( $mirror_amount <= 0 ) {
+					return;
+				}
+			}
+
+			// Safety: never mirror more than the fulfillment has remaining.
+			$ff_remaining = (float) $fulfillment->get_total() - (float) $fulfillment->get_total_refunded();
+			if ( $mirror_amount > $ff_remaining + 0.01 ) {
+				$fulfillment->add_order_note( sprintf(
+					/* translators: 1: source order number, 2: refund ID, 3: would-mirror amount, 4: remaining */
+					__( 'FisHotel refund mirror skipped — source #%1$s refund #%2$d would mirror %3$s but only %4$s remains on this fulfillment.', 'fishotel' ),
+					$source->get_order_number(),
+					(int) $refund_id,
+					wc_price( $mirror_amount ),
+					wc_price( $ff_remaining )
+				) );
+				return;
+			}
+
+			$mirror = wc_create_refund( [
+				'order_id'       => $fulfillment->get_id(),
+				'amount'         => $mirror_amount,
+				'reason'         => sprintf(
+					/* translators: 1: source order number, 2: refund ID */
+					__( 'FisHotel: auto-mirrored from source order #%1$s, refund #%2$d.', 'fishotel' ),
+					$source->get_order_number(),
+					(int) $refund_id
+				),
+				'line_items'     => $refund_line_items,
+				'refund_payment' => false,  // Source paid; don't double-charge a gateway.
+				'restock_items'  => false,  // WC already restocked on the source refund.
+			] );
+
+			if ( is_wp_error( $mirror ) || ! $mirror instanceof WC_Order_Refund ) {
+				if ( function_exists( 'wc_get_logger' ) ) {
+					$msg = is_wp_error( $mirror ) ? $mirror->get_error_message() : 'unknown error';
+					wc_get_logger()->error( 'Refund mirror failed: ' . $msg, [ 'source' => 'fishotel-fulfillment' ] );
+				}
+				return;
+			}
+
+			$mirror->update_meta_data( '_fishotel_mirrored_refund', '1' );
+			$mirror->update_meta_data( '_fishotel_mirror_source_refund_id', (int) $refund_id );
+			$mirror->update_meta_data( '_fishotel_mirror_source_order_id', (int) $source->get_id() );
+			$mirror->save();
+
+			$fulfillment->add_order_note( sprintf(
+				/* translators: 1: mirrored amount, 2: source order number, 3: source refund ID */
+				__( 'Auto-mirrored refund of %1$s from source order #%2$s (refund #%3$d).', 'fishotel' ),
+				wc_price( $mirror_amount ),
+				$source->get_order_number(),
+				(int) $refund_id
+			) );
+			$source->add_order_note( sprintf(
+				/* translators: 1: mirrored amount, 2: fulfillment ID, 3: mirror refund ID */
+				__( 'Refund auto-mirrored (%1$s) up to fulfillment #FF-%2$d (refund #%3$d).', 'fishotel' ),
+				wc_price( $mirror_amount ),
+				(int) $fulfillment->get_id(),
+				(int) $mirror->get_id()
+			) );
+		} catch ( \Throwable $e ) {
+			if ( function_exists( 'wc_get_logger' ) ) {
+				wc_get_logger()->error( 'Refund mirror exception: ' . $e->getMessage(), [ 'source' => 'fishotel-fulfillment' ] );
+			}
+			// Swallow — source refund must succeed even if mirror fails.
+		}
+	}
+
+	/**
+	 * Find the fulfillment line item ID that corresponds to a given source
+	 * order's line item. Prefers the exact _fishotel_source_line_item_id match;
+	 * falls back to product+variation match scoped to source order for
+	 * fulfillments created before Change 2 landed.
+	 */
+	private static function find_fulfillment_line_for_source_line( WC_Order $fulfillment, $source_order_id, $source_line_id ) {
+		$fallback = 0;
+		foreach ( $fulfillment->get_items( 'line_item' ) as $ff_item_id => $ff_item ) {
+			if ( ! $ff_item instanceof WC_Order_Item_Product ) {
+				continue;
+			}
+			if ( (int) $ff_item->get_meta( self::META_SOURCE_ORDER ) !== (int) $source_order_id ) {
+				continue;
+			}
+			$stored = (int) $ff_item->get_meta( self::META_SOURCE_LINE_ITEM );
+			if ( $stored > 0 && $stored === (int) $source_line_id ) {
+				return (int) $ff_item_id;
+			}
+			if ( 0 === $stored && 0 === $fallback ) {
+				$src = wc_get_order( $source_order_id );
+				if ( $src instanceof WC_Order ) {
+					$src_item = $src->get_item( $source_line_id );
+					if ( $src_item instanceof WC_Order_Item_Product
+						&& (int) $src_item->get_product_id() === (int) $ff_item->get_product_id()
+						&& (int) $src_item->get_variation_id() === (int) $ff_item->get_variation_id() ) {
+						$fallback = (int) $ff_item_id;
+					}
+				}
+			}
+		}
+		return $fallback;
 	}
 
 	/** ShipTracker fired its post-transition action on the fulfillment. */

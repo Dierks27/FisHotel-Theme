@@ -143,11 +143,13 @@
 .fhsm-item-checkboxes li {
 	margin: 2px 0;
 }
-.fhsm-line-item-covered .fhsm-line-item-label {
+.fhsm-line-item-covered .fhsm-line-item-label,
+.fhsm-line-item-refunded .fhsm-line-item-label {
 	text-decoration: line-through;
 	color: #8c8f94;
 }
-.fhsm-line-item-covered label {
+.fhsm-line-item-covered label,
+.fhsm-line-item-refunded label {
 	cursor: not-allowed;
 }
 .fhsm-covered-note {
@@ -157,6 +159,10 @@
 	font-size: 11px;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
+}
+/* Partial refund: line stays shippable but flags the reduced quantity. */
+.fhsm-line-item-partial-refund .fhsm-line-item-label {
+	color: #b26a00;
 }
 .fhsm-all-covered {
 	color: #2271b1;

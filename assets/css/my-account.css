@@ -125,7 +125,9 @@ body.woocommerce-account { background: var(--fha-bg); }
 	border-radius: 2px;
 	padding: 28px 0 12px;
 	position: sticky;
-	top: 60px;
+	/* Clear the announcer bar (--ancr-bar-height) so the concierge nav
+	   stays below the sticky header; falls back to 60px when absent. */
+	top: calc(60px + var(--ancr-bar-height, 0px));
 }
 .fh-account-nav__mobile-toggle { display: none; }
 

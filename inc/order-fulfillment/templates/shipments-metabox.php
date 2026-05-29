@@ -219,30 +219,71 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 					?>
 				</h4>
 			<?php endif; ?>
+			<?php $source_order = isset( $group['order'] ) && $group['order'] instanceof WC_Order ? $group['order'] : null; ?>
 			<ul class="fhsm-item-checkboxes">
 				<?php foreach ( $group['items'] as $item_id => $item ) :
 					if ( ! ( $item instanceof WC_Order_Item_Product ) ) {
 						continue;
 					}
 					$is_covered = in_array( (int) $item_id, $covered_ids, true );
-					if ( ! $is_covered ) {
+
+					// Refund awareness: read the refunded quantity straight from
+					// the source order this line belongs to (get_qty_refunded_for_item
+					// returns a negative count). This is independent of the up-mirror,
+					// so historical / kill-switched refunds are still reflected here.
+					$original_qty   = (int) $item->get_quantity();
+					$refunded_qty   = $source_order ? abs( (int) $source_order->get_qty_refunded_for_item( (int) $item_id ) ) : 0;
+					$available_qty  = max( 0, $original_qty - $refunded_qty );
+					$fully_refunded = $refunded_qty > 0 && $available_qty <= 0;
+					$partial_refund = $refunded_qty > 0 && $available_qty > 0;
+
+					// Unavailable = nothing left to ship: already shipped, or fully refunded.
+					$is_unavailable = $is_covered || $fully_refunded;
+					if ( ! $is_unavailable ) {
 						$any_uncovered = true;
 					}
+
+					$li_classes = [];
+					if ( $is_covered ) {
+						$li_classes[] = 'fhsm-line-item-covered';
+					}
+					// Strike-through only when nothing remains to ship. A partial
+					// refund stays selectable (and shows "× N available").
+					if ( $fully_refunded ) {
+						$li_classes[] = 'fhsm-line-item-refunded';
+					} elseif ( $partial_refund ) {
+						$li_classes[] = 'fhsm-line-item-partial-refund';
+					}
 				?>
-					<li class="<?php echo $is_covered ? 'fhsm-line-item-covered' : ''; ?>">
+					<li class="<?php echo esc_attr( implode( ' ', $li_classes ) ); ?>">
 						<label>
 							<input type="checkbox"
 								class="fhsm-line-item-check"
 								name="line_item_ids[]"
 								value="<?php echo esc_attr( $item_id ); ?>"
 								data-source-id="<?php echo esc_attr( $source_id ); ?>"
-								<?php disabled( $is_covered ); ?>>
+								data-available-qty="<?php echo esc_attr( (string) $available_qty ); ?>"
+								<?php disabled( $is_unavailable ); ?>>
 							<span class="fhsm-line-item-label">
 								<?php echo esc_html( $item->get_name() ); ?>
-								&times; <?php echo esc_html( (string) $item->get_quantity() ); ?>
+								<?php if ( $partial_refund ) : ?>
+									&times; <?php
+									printf(
+										/* translators: %d = quantity still shippable */
+										esc_html__( '%d available', 'fishotel' ),
+										(int) $available_qty
+									);
+									?>
+								<?php else : ?>
+									&times; <?php echo esc_html( (string) $original_qty ); ?>
+								<?php endif; ?>
 							</span>
-							<?php if ( $is_covered ) : ?>
+							<?php if ( $is_covered && $refunded_qty > 0 ) : ?>
+								<em class="fhsm-covered-note fhsm-refunded-note">[<?php esc_html_e( 'shipped & refunded', 'fishotel' ); ?>]</em>
+							<?php elseif ( $is_covered ) : ?>
 								<em class="fhsm-covered-note">[<?php esc_html_e( 'shipped', 'fishotel' ); ?>]</em>
+							<?php elseif ( $fully_refunded ) : ?>
+								<em class="fhsm-covered-note fhsm-refunded-note">[<?php esc_html_e( 'refunded', 'fishotel' ); ?>]</em>
 							<?php endif; ?>
 						</label>
 					</li>

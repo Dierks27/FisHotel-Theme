@@ -116,9 +116,16 @@ class FisHotel_Fulfillment {
 	const META_TOTALS_BACKFILLED = 'fishotel_fulfillment_totals_backfilled_v2';
 	const META_FLAG_DISMISSED = '_fishotel_shipping_flag_dismissed';
 
+	// Piece 4 — visible flag when auto-combine skips on a shipping mismatch.
+	const META_COMBINE_SKIPPED_REASON    = '_fishotel_combine_skipped_reason';
+	const META_COMBINE_SKIPPED_WITH      = '_fishotel_combine_skipped_with_order_id';
+	const META_COMBINE_SKIPPED_DISMISSED = '_fishotel_combine_skipped_dismissed';
+
 	const ACTION_DELETE          = 'fishotel_delete_fulfillment';
 	const ACTION_COMBINE_SELECTED = 'fishotel_combine_selected';
 	const ACTION_DISMISS_FLAG    = 'fishotel_dismiss_shipping_flag';
+	const ACTION_FORCE_COMBINE        = 'fishotel_force_combine';
+	const ACTION_DISMISS_COMBINE_FLAG = 'fishotel_dismiss_combine_flag';
 	const PAGE_SCAN              = 'fishotel-scan-combinable';
 	const COUNT_TRANSIENT        = 'fishotel_open_orders_count';
 	// Sortable Delivery Date column. The column itself ("Delivery Date") is
@@ -207,6 +214,12 @@ class FisHotel_Fulfillment {
 		add_action( 'add_meta_boxes_shop_order', [ __CLASS__, 'register_flag_meta_box' ] );
 		add_action( 'add_meta_boxes_woocommerce_page_wc-orders', [ __CLASS__, 'register_flag_meta_box' ] );
 		add_action( 'admin_post_' . self::ACTION_DISMISS_FLAG, [ __CLASS__, 'handle_dismiss_flag' ] );
+
+		// Piece 4 — visible "auto-combine skipped" flag + its admin actions.
+		add_action( 'add_meta_boxes_shop_order', [ __CLASS__, 'register_combine_skipped_meta_box' ] );
+		add_action( 'add_meta_boxes_woocommerce_page_wc-orders', [ __CLASS__, 'register_combine_skipped_meta_box' ] );
+		add_action( 'admin_post_' . self::ACTION_FORCE_COMBINE, [ __CLASS__, 'handle_force_combine' ] );
+		add_action( 'admin_post_' . self::ACTION_DISMISS_COMBINE_FLAG, [ __CLASS__, 'handle_dismiss_combine_flag' ] );
 
 		// Linkify the _fishotel_source_order line-item meta on the order edit
 		// screen (admin order items table). Renames the label and turns the
@@ -633,7 +646,8 @@ class FisHotel_Fulfillment {
 			}
 
 			// Shipping-address constraint: only combine same-destination orders.
-			$matching = [];
+			$matching  = [];
+			$differing = [];
 			foreach ( $others as $oid ) {
 				$candidate = wc_get_order( $oid );
 				if ( ! $candidate instanceof WC_Order ) {
@@ -642,6 +656,7 @@ class FisHotel_Fulfillment {
 				if ( self::shipping_matches( $order, $candidate ) ) {
 					$matching[] = $oid;
 				} else {
+					$differing[] = $candidate;
 					$order->add_order_note( sprintf(
 						/* translators: %s = order number */
 						__( 'Auto-combine skipped: shipping address differs from order #%s.', 'fishotel' ),
@@ -650,6 +665,11 @@ class FisHotel_Fulfillment {
 				}
 			}
 			if ( empty( $matching ) ) {
+				// Nothing combined despite an open order — surface it loudly to
+				// admin (Piece 4) against the most recent differing candidate.
+				if ( ! empty( $differing ) ) {
+					self::flag_combine_skipped( $order, $differing[0] );
+				}
 				return;
 			}
 
@@ -1767,6 +1787,162 @@ class FisHotel_Fulfillment {
 		if ( $order instanceof WC_Order ) {
 			$order->update_meta_data( self::META_FLAG_DISMISSED, '1' );
 			$order->add_order_note( __( 'Shipping refund flag dismissed.', 'fishotel' ) );
+			$order->save();
+		}
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
+	// ── Piece 4: visible auto-combine-skipped flag ───────────────────
+
+	/** True when Piece 4's meta box is switched off (the note still writes). */
+	private static function combine_flag_disabled() {
+		return defined( 'FISHOTEL_COMBINE_SKIP_FLAG_OFF' ) && FISHOTEL_COMBINE_SKIP_FLAG_OFF;
+	}
+
+	/** Record the skip on the new order so the admin meta box can render it. */
+	private static function flag_combine_skipped( WC_Order $order, WC_Order $candidate ) {
+		// Respect a prior dismissal — don't re-flag what admin already cleared.
+		if ( '1' === (string) $order->get_meta( self::META_COMBINE_SKIPPED_DISMISSED ) ) {
+			return;
+		}
+		$order->update_meta_data( self::META_COMBINE_SKIPPED_REASON, 'shipping_address_mismatch' );
+		$order->update_meta_data( self::META_COMBINE_SKIPPED_WITH, (int) $candidate->get_id() );
+		$order->save();
+	}
+
+	/** True when this order has an active (un-dismissed, unresolved) skip flag. */
+	private static function has_active_combine_skip( WC_Order $order ) {
+		if ( 'shipping_address_mismatch' !== (string) $order->get_meta( self::META_COMBINE_SKIPPED_REASON ) ) {
+			return false;
+		}
+		if ( '1' === (string) $order->get_meta( self::META_COMBINE_SKIPPED_DISMISSED ) ) {
+			return false;
+		}
+		// Resolved once the order joined a fulfillment (force-combine or manual).
+		if ( self::is_fulfillment( $order ) || self::get_fulfillment( $order ) ) {
+			return false;
+		}
+		return (int) $order->get_meta( self::META_COMBINE_SKIPPED_WITH ) > 0;
+	}
+
+	public static function register_combine_skipped_meta_box( $screen_or_post = null ) {
+		if ( self::combine_flag_disabled() ) {
+			return;
+		}
+		$order = $screen_or_post instanceof WC_Order
+			? $screen_or_post
+			: ( $screen_or_post instanceof WP_Post ? wc_get_order( $screen_or_post->ID ) : null );
+		if ( ! $order instanceof WC_Order || ! self::has_active_combine_skip( $order ) ) {
+			return;
+		}
+
+		$screen = self::on_hpos_screen() && function_exists( 'wc_get_page_screen_id' )
+			? wc_get_page_screen_id( 'shop-order' )
+			: 'shop_order';
+		add_meta_box(
+			'fishotel-combine-skipped',
+			__( '⚠️ Auto-combine skipped — shipping address mismatch', 'fishotel' ),
+			[ __CLASS__, 'render_combine_skipped_meta_box' ],
+			$screen,
+			'normal',
+			'high'
+		);
+	}
+
+	public static function render_combine_skipped_meta_box( $post_or_order ) {
+		$order = $post_or_order instanceof WC_Order
+			? $post_or_order
+			: ( $post_or_order instanceof WP_Post ? wc_get_order( $post_or_order->ID ) : null );
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+		$candidate = wc_get_order( (int) $order->get_meta( self::META_COMBINE_SKIPPED_WITH ) );
+		if ( ! $candidate instanceof WC_Order ) {
+			return;
+		}
+
+		$view_url    = $candidate->get_edit_order_url();
+		$force_url   = wp_nonce_url(
+			admin_url( 'admin-post.php?action=' . self::ACTION_FORCE_COMBINE . '&order_id=' . $order->get_id() ),
+			self::ACTION_FORCE_COMBINE . '_' . $order->get_id()
+		);
+		$dismiss_url = wp_nonce_url(
+			admin_url( 'admin-post.php?action=' . self::ACTION_DISMISS_COMBINE_FLAG . '&order_id=' . $order->get_id() ),
+			self::ACTION_DISMISS_COMBINE_FLAG . '_' . $order->get_id()
+		);
+		$force_confirm = esc_js( sprintf(
+			/* translators: %s = order number */
+			__( 'Combine this order with #%s into one fulfillment?', 'fishotel' ),
+			$candidate->get_order_number()
+		) );
+		?>
+		<div style="background:#fcf3cd;border:2px solid #d4a017;border-radius:4px;padding:12px 14px;color:#3a2f00;">
+			<p style="margin:0 0 10px;font-weight:600;">
+				<?php
+				printf(
+					/* translators: %s = candidate order number */
+					esc_html__( "This order couldn't auto-combine with #%s because the shipping addresses differ.", 'fishotel' ),
+					esc_html( $candidate->get_order_number() )
+				);
+				?>
+			</p>
+			<p style="margin:0;">
+				<a class="button" href="<?php echo esc_url( $view_url ); ?>"><?php esc_html_e( 'View other order →', 'fishotel' ); ?></a>
+				<a class="button button-primary" href="<?php echo esc_url( $force_url ); ?>" onclick="return confirm('<?php echo $force_confirm; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>');"><?php esc_html_e( 'Force combine anyway', 'fishotel' ); ?></a>
+				<a class="button" href="<?php echo esc_url( $dismiss_url ); ?>"><?php esc_html_e( 'Dismiss flag', 'fishotel' ); ?></a>
+			</p>
+		</div>
+		<?php
+	}
+
+	/** Run the combine path maybe_auto_create would have, ignoring the mismatch. */
+	public static function handle_force_combine() {
+		if ( ! current_user_can( 'edit_shop_orders' ) ) {
+			wp_die( esc_html__( 'Unauthorized', 'fishotel' ), '', [ 'response' => 403 ] );
+		}
+		$order_id = isset( $_GET['order_id'] ) ? absint( wp_unslash( $_GET['order_id'] ) ) : 0;
+		check_admin_referer( self::ACTION_FORCE_COMBINE . '_' . $order_id );
+
+		$order    = wc_get_order( $order_id );
+		$redirect = $order instanceof WC_Order ? $order->get_edit_order_url() : admin_url();
+		if ( $order instanceof WC_Order ) {
+			$cand_id   = (int) $order->get_meta( self::META_COMBINE_SKIPPED_WITH );
+			$candidate = wc_get_order( $cand_id );
+			if ( $candidate instanceof WC_Order && ! self::is_fulfillment( $order ) && ! self::get_fulfillment( $order ) ) {
+				$existing = self::get_fulfillment( $cand_id );
+				if ( $existing ) {
+					self::add_source( $existing, $order->get_id() );
+				} else {
+					self::create_fulfillment( [ $cand_id, $order->get_id() ] );
+				}
+				$order->add_order_note( sprintf(
+					/* translators: %s = candidate order number */
+					__( 'Force-combined with order #%s by admin (address mismatch overridden).', 'fishotel' ),
+					$candidate->get_order_number()
+				) );
+			}
+			// Clear the flag — resolved (combined) or moot.
+			$order->delete_meta_data( self::META_COMBINE_SKIPPED_REASON );
+			$order->delete_meta_data( self::META_COMBINE_SKIPPED_WITH );
+			$order->save();
+		}
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
+	public static function handle_dismiss_combine_flag() {
+		if ( ! current_user_can( 'edit_shop_orders' ) ) {
+			wp_die( esc_html__( 'Unauthorized', 'fishotel' ), '', [ 'response' => 403 ] );
+		}
+		$order_id = isset( $_GET['order_id'] ) ? absint( wp_unslash( $_GET['order_id'] ) ) : 0;
+		check_admin_referer( self::ACTION_DISMISS_COMBINE_FLAG . '_' . $order_id );
+
+		$order    = wc_get_order( $order_id );
+		$redirect = $order instanceof WC_Order ? $order->get_edit_order_url() : admin_url();
+		if ( $order instanceof WC_Order ) {
+			$order->update_meta_data( self::META_COMBINE_SKIPPED_DISMISSED, '1' );
+			$order->add_order_note( __( 'Auto-combine mismatch flag dismissed.', 'fishotel' ) );
 			$order->save();
 		}
 		wp_safe_redirect( $redirect );

@@ -39,6 +39,8 @@ class FisHotel_Checkout_Reuse {
 		add_action( 'woocommerce_cart_calculate_fees', [ __CLASS__, 'maybe_notice' ], 20 );
 		// Themed styling for the combine notice.
 		add_action( 'wp_head', [ __CLASS__, 'notice_css' ] );
+		// Mark the piggyback relationship on the saved order (Piece 2b).
+		add_action( 'woocommerce_checkout_create_order', [ __CLASS__, 'mark_piggyback' ], 30, 2 );
 	}
 
 	/** True when the feature is switched off via constant or option. */
@@ -46,7 +48,29 @@ class FisHotel_Checkout_Reuse {
 		if ( defined( 'FISHOTEL_CHECKOUT_REUSE_OFF' ) && FISHOTEL_CHECKOUT_REUSE_OFF ) {
 			return true;
 		}
+		// Unified re-order kill switch also turns the piggyback off (Piece 2a/2b).
+		if ( defined( 'FISHOTEL_REORDER_CHECKOUT_LOCK_OFF' ) && FISHOTEL_REORDER_CHECKOUT_LOCK_OFF ) {
+			return true;
+		}
 		return '0' === (string) get_option( 'fishotel_checkout_reuse', '1' );
+	}
+
+	/**
+	 * The customer-facing source order this checkout piggybacks on. Prefers
+	 * the re-order lock's anchor (always a real customer order, never a
+	 * fulfillment entity); falls back to the matched reuse order.
+	 *
+	 * @return WC_Order|null
+	 */
+	private static function piggyback_source_order() {
+		if ( class_exists( 'FisHotel_Reorder_Checkout_Lock' ) ) {
+			$anchor = FisHotel_Reorder_Checkout_Lock::anchor_order();
+			if ( $anchor instanceof WC_Order ) {
+				return $anchor;
+			}
+		}
+		$state = self::reuse_state();
+		return ( 'match' === $state['state'] && $state['order'] instanceof WC_Order ) ? $state['order'] : null;
 	}
 
 	/**
@@ -195,13 +219,40 @@ class FisHotel_Checkout_Reuse {
 		if ( 'match' !== $state['state'] ) {
 			return $rates;
 		}
+		$source = self::piggyback_source_order();
+		$num    = $source instanceof WC_Order ? $source->get_order_number() : '';
 		foreach ( $rates as $rate ) {
-			if ( $rate instanceof WC_Shipping_Rate ) {
-				$rate->set_cost( 0 );
-				$rate->set_taxes( [] );
+			if ( ! $rate instanceof WC_Shipping_Rate ) {
+				continue;
+			}
+			$rate->set_cost( 0 );
+			$rate->set_taxes( [] );
+			// Suffix the label so the $0 line reads as a piggyback, not free
+			// shipping. Guard against double-append on repeat rate calcs.
+			if ( '' !== $num && false === strpos( (string) $rate->get_label(), '#' . $num ) ) {
+				$rate->set_label( $rate->get_label() . ' ' . sprintf(
+					/* translators: %s = existing order number */
+					__( '— Piggybacking on order #%s', 'fishotel' ),
+					$num
+				) );
 			}
 		}
 		return $rates;
+	}
+
+	/**
+	 * Record _fishotel_piggyback_of on the new order when it piggybacks on an
+	 * existing open order, giving admin a visible backlink (and a hook to
+	 * reverse the piggyback if the orders ultimately can't be combined).
+	 */
+	public static function mark_piggyback( $order, $data ) {
+		if ( self::disabled() || ! $order instanceof WC_Order ) {
+			return;
+		}
+		$source = self::piggyback_source_order();
+		if ( $source instanceof WC_Order ) {
+			$order->update_meta_data( '_fishotel_piggyback_of', $source->get_id() );
+		}
 	}
 
 	/** Add the combine / different-address notice at cart + checkout. */

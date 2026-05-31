@@ -265,16 +265,25 @@ class FisHotel_Checkout_Reuse {
 			return;
 		}
 
-		$state = self::reuse_state();
-		if ( 'match' === $state['state'] ) {
-			$num = $state['order'] instanceof WC_Order ? $state['order']->get_order_number() : '';
+		// When the checkout lock is active it forces this order's destination to
+		// the open order's address (see FisHotel_Reorder_Checkout_Lock), so the
+		// shipping IS combined regardless of what the customer's session address
+		// reads — never show the contradictory "different address" notice.
+		$source = self::piggyback_source_order();
+		if ( $source instanceof WC_Order ) {
 			$msg = '<span class="fishotel-combine-notice">' . sprintf(
 				/* translators: %s = existing order number */
 				esc_html__( '📦 Shipping combined. You have an unshipped order (#%s) shipping to the same address. We’ll ship both together — shipping charge removed.', 'fishotel' ),
-				esc_html( $num )
+				esc_html( $source->get_order_number() )
 			) . '</span>';
 			self::add_notice_once( $msg, 'notice' );
-		} elseif ( 'differ' === $state['state'] ) {
+			return;
+		}
+
+		// No lock / no match: only warn when there's an open order to a
+		// different address (lock off or kill switch on).
+		$state = self::reuse_state();
+		if ( 'differ' === $state['state'] ) {
 			self::add_notice_once(
 				esc_html__( 'You have an unshipped order shipping to a different address. Shipping applies normally on this order.', 'fishotel' ),
 				'notice'

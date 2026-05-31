@@ -48,9 +48,18 @@ class FisHotel_Reorder_Checkout_Lock {
 	];
 
 	public static function init() {
-		// Prime the session destination early so the first rate calc (and the
-		// reuse zeroing) already sees the match.
-		add_action( 'woocommerce_checkout_init', [ __CLASS__, 'prime_session_destination' ] );
+		// Force the shipping package destination to the open order's address so
+		// the rate calc (and the reuse zeroing in FisHotel_Checkout_Reuse) ships
+		// to — and matches on — that destination. Priority 9 so it runs before
+		// FisHotel_Checkout_Reuse::tag_packages (10) reads the destination.
+		//
+		// This replaces an earlier woocommerce_checkout_init session-prime that
+		// (a) ran AFTER WC had already built packages + pulled rates for the
+		// request, so woocommerce_package_rates never saw it, and (b) called
+		// WC()->customer->save(), which for a logged-in customer would overwrite
+		// their saved profile address. Filtering the package destination needs
+		// neither correct timing nor any customer mutation.
+		add_filter( 'woocommerce_cart_shipping_packages', [ __CLASS__, 'force_package_destination' ], 9 );
 		// Treat shipping separately from billing so a hold-for-pickup address
 		// (different from billing) is preserved through save.
 		add_filter( 'woocommerce_ship_to_different_address_checked', [ __CLASS__, 'force_ship_to_different' ] );
@@ -119,21 +128,54 @@ class FisHotel_Reorder_Checkout_Lock {
 		return $bill;
 	}
 
-	/** Prime the checkout session shipping address to the anchor destination. */
-	public static function prime_session_destination() {
+	/** Only act on cart/checkout requests (incl. their AJAX recalcs). */
+	private static function in_cart_or_checkout_context() {
+		if ( function_exists( 'is_checkout' ) && is_checkout() ) {
+			return true;
+		}
+		if ( function_exists( 'is_cart' ) && is_cart() ) {
+			return true;
+		}
+		if ( defined( 'WOOCOMMERCE_CHECKOUT' ) && WOOCOMMERCE_CHECKOUT ) {
+			return true;
+		}
+		if ( defined( 'WOOCOMMERCE_CART' ) && WOOCOMMERCE_CART ) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Rewrite every shipping package's destination to the open order's address.
+	 * This is what makes the new order calculate rates to — and match on — the
+	 * locked destination, so FisHotel_Checkout_Reuse zeros the shipping. No
+	 * WC()->customer mutation, so the customer's saved profile is untouched.
+	 *
+	 * @param array $packages
+	 * @return array
+	 */
+	public static function force_package_destination( $packages ) {
+		if ( ! self::in_cart_or_checkout_context() ) {
+			return $packages;
+		}
 		$order = self::anchor_order();
-		if ( ! $order instanceof WC_Order || ! WC()->customer ) {
-			return;
+		if ( ! $order instanceof WC_Order ) {
+			return $packages;
 		}
 		$ship = self::anchor_shipping( $order );
-		$c    = WC()->customer;
-		$c->set_shipping_country( (string) ( $ship['country'] ?? '' ) );
-		$c->set_shipping_state( (string) ( $ship['state'] ?? '' ) );
-		$c->set_shipping_postcode( (string) ( $ship['postcode'] ?? '' ) );
-		$c->set_shipping_city( (string) ( $ship['city'] ?? '' ) );
-		$c->set_shipping_address_1( (string) ( $ship['address_1'] ?? '' ) );
-		$c->set_shipping_address_2( (string) ( $ship['address_2'] ?? '' ) );
-		$c->save();
+		$dest = [
+			'country'   => (string) ( $ship['country'] ?? '' ),
+			'state'     => (string) ( $ship['state'] ?? '' ),
+			'postcode'  => (string) ( $ship['postcode'] ?? '' ),
+			'city'      => (string) ( $ship['city'] ?? '' ),
+			'address'   => (string) ( $ship['address_1'] ?? '' ),
+			'address_1' => (string) ( $ship['address_1'] ?? '' ),
+			'address_2' => (string) ( $ship['address_2'] ?? '' ),
+		];
+		foreach ( $packages as $i => $package ) {
+			$packages[ $i ]['destination'] = $dest;
+		}
+		return $packages;
 	}
 
 	/** Force "ship to a different address" on so shipping saves independently. */

@@ -15,7 +15,7 @@
  *
  * Slip layout per spec §7:
  *   - FisHotel logo + tagline header (dark band, gold rule).
- *   - Order #, order date, ship-by date.
+ *   - Order #, order date.
  *   - Recipient block (customer name + full shipping address).
  *   - Itemized list — ONLY ea-mode rows. Columns: Qty, Product, Size,
  *     EA SKU.
@@ -422,9 +422,9 @@ class FisHotel_Med_Packing_Slip {
 	}
 
 	/**
-	 * Short HTML cover note for the PDF email body. Order #, customer
-	 * name, and ship-by date mirror what build_slip_html() shows; the
-	 * full itemized slip lives in the attached PDF, not inline.
+	 * Short HTML cover note for the PDF email body. Order # and customer
+	 * name mirror what build_slip_html() shows; the full itemized slip
+	 * lives in the attached PDF, not inline.
 	 *
 	 * @param WC_Order $order
 	 * @return string
@@ -437,14 +437,11 @@ class FisHotel_Med_Packing_Slip {
 			$name = trim( $order->get_formatted_billing_full_name() );
 		}
 
-		$order_date = $order->get_date_created();
-		$ship_by    = $order_date ? $order_date->date_i18n( 'M j, Y' ) : '';
-
 		ob_start();
 		?>
 <p>Hi Dena,</p>
 <p>Attached is the FisHotel packing slip for <strong>Order #<?php echo esc_html( $order_number ); ?></strong>
-(<?php echo esc_html( $name ); ?>, ship by <?php echo esc_html( $ship_by ); ?>).</p>
+(<?php echo esc_html( $name ); ?>).</p>
 <p>Thank you!</p>
 <p style="color:#777;font-size:12px;">Order placed via fishotel.com — non-EA items
 on this order are fulfilled separately and are intentionally not on the attached slip.</p>
@@ -482,7 +479,6 @@ on this order are fulfilled separately and are intentionally not on the attached
 		$order_id    = $order->get_order_number();
 		$order_date  = $order->get_date_created();
 		$order_date  = $order_date ? $order_date->date_i18n( 'M j, Y' ) : '';
-		$ship_by     = $order_date; // Phase 1: ship-by = order date. Refine when scheduling is wired.
 
 		$name        = trim( $order->get_formatted_shipping_full_name() );
 		if ( $name === '' ) {
@@ -520,7 +516,7 @@ on this order are fulfilled separately and are intentionally not on the attached
 	.slip__doc { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #b07d3c; text-align: right; }
 	.slip__doc strong { display: block; font-size: 16px; color: #0f0f0f; margin-top: 4px; letter-spacing: 1px; }
 	.slip__meta { padding: 18px 28px; font-size: 13px; border-bottom: 1px solid #ece6d6; }
-	.slip__meta > div { display: inline-block; width: 32%; vertical-align: top; box-sizing: border-box; }
+	.slip__meta > div { display: inline-block; width: 48%; vertical-align: top; box-sizing: border-box; }
 	.slip__meta dt { text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px; color: #847d6c; margin-bottom: 2px; }
 	.slip__meta dd { margin: 0; font-size: 14px; color: #1a1a1a; }
 	.slip__recipient { padding: 18px 28px; border-bottom: 1px solid #ece6d6; }
@@ -579,7 +575,6 @@ on this order are fulfilled separately and are intentionally not on the attached
 		<dl class="slip__meta">
 			<div><dt>Order #</dt><dd><?php echo esc_html( $order_id ); ?></dd></div>
 			<div><dt>Order Date</dt><dd><?php echo esc_html( $order_date ); ?></dd></div>
-			<div><dt>Ship By</dt><dd><?php echo esc_html( $ship_by ); ?></dd></div>
 		</dl>
 
 		<section class="slip__recipient">

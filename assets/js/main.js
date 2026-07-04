@@ -610,6 +610,37 @@
         sync();
     }
 
+    // Checkout — "Use gift card balance" toggle wiring. WC Gift Cards renders
+    // its balance checkbox on `woocommerce_review_order_before_order_total`,
+    // which our Folio layout fires OUTSIDE #order_review (in form-checkout.php)
+    // so WC's update_order_review AJAX can't clone it into the refreshed table
+    // fragment. The plugin's own change→update_checkout binding is scoped to
+    // the order-review container, so once the checkbox lives outside it the
+    // toggle goes completely inert: flipping it fires no AJAX, the ledger
+    // totals freeze, and the payment section never re-evaluates. Because the
+    // checkbox never talks to the server, the WC session's "use balance" flag
+    // from page load is what gets used at submit regardless of what the box
+    // shows — a fully-covered $0 order gets stuck behind hidden gateways, or
+    // balance a customer unchecked gets consumed anyway.
+    //
+    // Re-wire it here (same pattern as the shipping toggle above): a delegated
+    // change handler on document.body triggers WC's update_checkout. That
+    // re-posts the checkbox state through update_order_review — letting the
+    // plugin sync the session flag in BOTH directions — and refreshes the
+    // review-order + payment fragments so totals, gateways, and the native
+    // place-order button re-render to match. Delegated on document.body so it
+    // keeps working across every fragment replacement.
+    function initGiftCardBalanceToggle() {
+        if (!$('form.checkout').length) return;
+        $(document.body).on(
+            'change',
+            '#use_gift_card_balance, input[id^="apply_gift_card_balance"]',
+            function() {
+                $(document.body).trigger('update_checkout');
+            }
+        );
+    }
+
     $(document).ready(function() {
         // Snapshot purchase state before initVariationButtons binds, and
         // before initVariationAutoSelect dispatches the auto-click so
@@ -630,6 +661,7 @@
         initTestimonialRotator();
         initArrivalCountdown();
         initShippingToggle();
+        initGiftCardBalanceToggle();
     });
 
 })(jQuery);

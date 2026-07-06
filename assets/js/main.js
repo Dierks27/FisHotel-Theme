@@ -641,6 +641,53 @@
         );
     }
 
+    // Checkout — suppress PPCP smart / express buttons when a gift card
+    // balance is applied. PPCP builds its smart-button PayPal order from the
+    // cart line-item breakdown, which does NOT include the WC Gift Cards
+    // deduction (a cart-total-level adjustment, not a line item / coupon /
+    // fee). So a partial-coverage smart-button checkout captures the FULL
+    // pre-gift-card total at PayPal while the balance is also debited — a
+    // real-money double-charge (order #34494). The standard place-order →
+    // PayPal redirect, by contrast, builds the PayPal order from the WC order
+    // and charges the correct post-gift-card total.
+    //
+    // When balance is applied we therefore hide PPCP's smart-button + Pay
+    // Later message containers (via the .fh-gc-balance-applied class →
+    // woocommerce.css) and force the native place-order button visible by
+    // stripping PPCP's `ppcp-hidden` class, routing the customer through the
+    // standard flow. Re-evaluated on every fragment refresh (updated_checkout)
+    // and on checkbox toggle, and paired with a server-side capture-amount
+    // guard (inc/gift-card-checkout.php) as defense in depth.
+    function initGiftCardSmartButtonGuard() {
+        var $form = $('form.checkout');
+        if (!$form.length) return;
+
+        function balanceApplied() {
+            var $box = $('#use_gift_card_balance, input[id^="apply_gift_card_balance"]');
+            return $box.length > 0 && $box.filter(':checked').length > 0;
+        }
+
+        function sync() {
+            var applied = balanceApplied();
+            $form.toggleClass('fh-gc-balance-applied', applied);
+            if (applied) {
+                // PPCP hides the native button behind `ppcp-hidden` when its
+                // smart buttons own the checkout; reveal it so the standard
+                // place-order flow is usable.
+                $('#place_order').removeClass('ppcp-hidden');
+            }
+        }
+
+        // Re-run after PPCP has re-rendered its buttons on fragment refresh.
+        $(document.body).on('updated_checkout', function() { setTimeout(sync, 0); });
+        $(document.body).on(
+            'change',
+            '#use_gift_card_balance, input[id^="apply_gift_card_balance"]',
+            sync
+        );
+        sync();
+    }
+
     $(document).ready(function() {
         // Snapshot purchase state before initVariationButtons binds, and
         // before initVariationAutoSelect dispatches the auto-click so
@@ -662,6 +709,7 @@
         initArrivalCountdown();
         initShippingToggle();
         initGiftCardBalanceToggle();
+        initGiftCardSmartButtonGuard();
     });
 
 })(jQuery);

@@ -2108,6 +2108,28 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   outline-offset: 2px;
 }
 
+/* ── Gift card balance applied → suppress PPCP smart / express buttons ──
+   When a gift card balance is applied (main.js adds .fh-gc-balance-applied
+   to the checkout form), the PPCP smart buttons build their PayPal order
+   from the cart line-item breakdown, which omits the gift-card deduction —
+   so they capture the full pre-gift-card total (double-charge, order
+   #34494). Hide those buttons and their Pay Later messaging and reveal the
+   native place-order button, routing payment through the standard
+   place-order → PayPal redirect that charges the correct post-gift-card
+   total. Scoped to the payment card so it can't affect other contexts. */
+.fh-gc-balance-applied .fh-checkout-payment .ppcp-button-container,
+.fh-gc-balance-applied .fh-checkout-payment .ppc-button-wrapper,
+.fh-gc-balance-applied .fh-checkout-payment [id^="ppc-button"],
+.fh-gc-balance-applied .fh-checkout-payment .ppcp-messages,
+.fh-gc-balance-applied .fh-checkout-payment [id^="ppcp-messages"],
+.fh-gc-balance-applied .fh-checkout-payment .ppcp-vaulted-paypal-details {
+  display: none !important;
+}
+.fh-gc-balance-applied #place_order,
+.fh-gc-balance-applied #place_order.ppcp-hidden {
+  display: block !important;
+}
+
 /* ── WC Gift Cards single-product form ──
    Gift-card products defer to the plugin's native add-to-cart form
    (single-product.php else branch). Scope everything under .fh-purchase

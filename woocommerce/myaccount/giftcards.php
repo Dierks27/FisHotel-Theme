@@ -17,9 +17,9 @@
  * @version 1.16.0
  *
  * FisHotel override: the ONLY change from the plugin default is the Code cell
- * below, which renders the full code plus a Copy button via
- * fishotel_giftcard_code_html() (see inc/giftcards-account.php). If the plugin
- * bumps this template's @version, reconcile this file against the new default.
+ * below, which renders the full (unmasked) code via fishotel_giftcard_code_html()
+ * (see inc/giftcards-account.php). If the plugin bumps this template's @version,
+ * reconcile this file against the new default.
  */
 
 // Exit if accessed directly.

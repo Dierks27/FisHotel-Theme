@@ -74,8 +74,8 @@ add_filter( 'gettext', function ( $translated, $text, $domain ) {
 }, 20, 3 );
 
 /**
- * Full code + Copy button markup. Shared between the Unclaimed section and the
- * plugin template override so the two Code cells render identically.
+ * Full-code markup. Shared between the Unclaimed section and the plugin
+ * template override so the two Code cells render identically.
  *
  * @param string $code Raw gift card code.
  * @return string HTML.
@@ -83,11 +83,8 @@ add_filter( 'gettext', function ( $translated, $text, $domain ) {
 function fishotel_giftcard_code_html( $code ) {
 	$code = (string) $code;
 	return sprintf(
-		'<span class="fh-giftcard-code"><code>%1$s</code><button type="button" class="fh-giftcard-copy" data-copy="%2$s" aria-label="%3$s">%4$s</button></span>',
-		esc_html( $code ),
-		esc_attr( $code ),
-		esc_attr__( 'Copy gift card code', 'fishotel' ),
-		esc_html__( 'Copy', 'fishotel' )
+		'<span class="fh-giftcard-code"><code>%1$s</code></span>',
+		esc_html( $code )
 	);
 }
 
@@ -241,11 +238,19 @@ function fishotel_giftcards_db_table() {
 	$resolved   = '';
 	$candidates = array();
 
-	// Prefer a name the plugin's own store object exposes.
+	// Prefer a name the plugin's own store object exposes. v2.7.x exposes the
+	// store on WC_GC()->db->cards; older builds used ->giftcards.
 	if ( function_exists( 'WC_GC' ) ) {
-		$gc = WC_GC();
-		if ( is_object( $gc ) && isset( $gc->db ) && isset( $gc->db->giftcards ) && is_object( $gc->db->giftcards ) ) {
-			$store = $gc->db->giftcards;
+		$gc    = WC_GC();
+		$store = null;
+		if ( is_object( $gc ) && isset( $gc->db ) ) {
+			if ( isset( $gc->db->cards ) && is_object( $gc->db->cards ) ) {
+				$store = $gc->db->cards;
+			} elseif ( isset( $gc->db->giftcards ) && is_object( $gc->db->giftcards ) ) {
+				$store = $gc->db->giftcards;
+			}
+		}
+		if ( $store ) {
 			foreach ( array( 'get_table_name', 'get_table' ) as $m ) {
 				if ( method_exists( $store, $m ) ) {
 					try {
@@ -266,7 +271,10 @@ function fishotel_giftcards_db_table() {
 		}
 	}
 
-	// Fall back to the plugin's known table names.
+	// Fall back to the plugin's known table names. Plugin v2.7.x uses
+	// {prefix}woocommerce_gc_cards (confirmed on the live install); the rest
+	// are historical/alternate names kept as fallbacks.
+	$candidates[] = $wpdb->prefix . 'woocommerce_gc_cards';
 	$candidates[] = $wpdb->prefix . 'wc_gc_giftcards';
 	$candidates[] = $wpdb->prefix . 'woocommerce_gc_giftcards';
 

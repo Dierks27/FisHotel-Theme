@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.18.13' );
+define( 'FISHOTEL_THEME_VERSION', '1.19.0' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -230,6 +230,7 @@ add_filter( 'woocommerce_gc_cart_contains_gift_card', '__return_false' );
 $includes = [
 	'/inc/account-icons.php',     // My Account inline-SVG icon set
 	'/inc/account-relabels.php',  // My Account labels, copy, page-header lookup
+	'/inc/giftcards-account.php', // Gift Cards tab: reveal codes, copy button, unclaimed section + redeem
 	'/inc/template-functions.php',
 	'/inc/template-tags.php',
 	'/inc/customizer.php',

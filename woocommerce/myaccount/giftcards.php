@@ -15,6 +15,11 @@
  * @see https://woocommerce.com/document/template-structure/
  * @package WooCommerce Gift Cards
  * @version 1.16.0
+ *
+ * FisHotel override: the ONLY change from the plugin default is the Code cell
+ * below, which renders the full code plus a Copy button via
+ * fishotel_giftcard_code_html() (see inc/giftcards-account.php). If the plugin
+ * bumps this template's @version, reconcile this file against the new default.
  */
 
 // Exit if accessed directly.
@@ -65,7 +70,13 @@ do_action( 'woocommerce_gc_before_account_giftcards', $has_giftcards ); ?>
 							<?php echo esc_html( date_i18n( wc_date_format(), $giftcard->get_date_redeemed() ) ); ?>
 						</td>
 						<td data-title="<?php esc_html_e( 'Code', 'woocommerce-gift-cards' ); ?>">
-							<?php echo wc_gc_mask_codes( 'account' ) ? esc_html( wc_gc_mask_code( $giftcard->get_code() ) ) : esc_html( $giftcard->get_code() ); ?>
+							<?php
+							if ( function_exists( 'fishotel_giftcard_code_html' ) ) {
+								echo fishotel_giftcard_code_html( $giftcard->get_code() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in helper.
+							} else {
+								echo wc_gc_mask_codes( 'account' ) ? esc_html( wc_gc_mask_code( $giftcard->get_code() ) ) : esc_html( $giftcard->get_code() );
+							}
+							?>
 						</td>
 						<td data-title="<?php esc_html_e( 'Available Balance', 'woocommerce-gift-cards' ); ?>">
 							<?php echo wp_kses_post( wc_price( $giftcard->get_balance() ) ); ?>

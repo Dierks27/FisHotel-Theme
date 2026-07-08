@@ -950,7 +950,7 @@ body.woocommerce-account { background: var(--fha-bg); }
 }
 
 /* ─────────────────────────────────────────
-   GIFT CARDS — reveal code + Copy button, Unclaimed section, redeem flash
+   GIFT CARDS — reveal code, Unclaimed section, redeem flash
    (inc/giftcards-account.php + woocommerce/myaccount/giftcards.php)
 ───────────────────────────────────────── */
 .fh-giftcard-code {
@@ -968,7 +968,6 @@ body.woocommerce-account { background: var(--fha-bg); }
 	border-radius: 3px;
 	font-size: 0.95em;
 }
-.fh-giftcard-copy,
 .fh-giftcard-redeem-btn {
 	font-family: 'Montserrat', sans-serif;
 	font-size: 0.7rem;
@@ -983,8 +982,6 @@ body.woocommerce-account { background: var(--fha-bg); }
 	display: inline-block;
 	transition: background 0.15s, color 0.15s;
 }
-.fh-giftcard-copy:hover,
-.fh-giftcard-copy.is-copied,
 .fh-giftcard-redeem-btn:hover {
 	background: var(--fh-gold, #c9963a);
 	color: #1c1c1c;

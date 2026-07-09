@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.19.1' );
+define( 'FISHOTEL_THEME_VERSION', '1.19.2' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -80,6 +80,12 @@ FisHotel_Date_Unlock_Metabox::init();
 // FISHOTEL_ADDRESS_PROPAGATION_OFF.
 require_once FISHOTEL_THEME_DIR . '/inc/customer/class-fishotel-address-propagation.php';
 FisHotel_Address_Propagation::init();
+// Quarantined Fish shipping-class safety net (v1.19.2) — auto-assign the
+// Premium class to a classless quarantined fish so a batch release can never
+// silently break checkout (the US table_rate method is keyed on shipping
+// class). Fills the empty state only; any manual override always wins.
+require_once FISHOTEL_THEME_DIR . '/inc/class-fishotel-quarantined-fish-shipping-class.php';
+FisHotel_Quarantined_Fish_Shipping_Class::init();
 // ─────────────────────────────────────────
 // THEME SETUP
 // ─────────────────────────────────────────

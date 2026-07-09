@@ -2119,7 +2119,14 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
    total. Scoped to the payment card so it can't affect other contexts. */
 .fh-gc-balance-applied .fh-checkout-payment .ppcp-button-container,
 .fh-gc-balance-applied .fh-checkout-payment .ppc-button-wrapper,
-.fh-gc-balance-applied .fh-checkout-payment [id^="ppc-button"],
+/* Enumerate express smart-button IDs specifically. Do NOT match
+   #ppc-button-ppcp-card-button-gateway — that's the inline card gateway's
+   button, not an express smart button, and hiding it breaks the CC flow. */
+.fh-gc-balance-applied .fh-checkout-payment #ppc-button-ppcp-gateway,
+.fh-gc-balance-applied .fh-checkout-payment #ppc-button-ppcp-googlepay,
+.fh-gc-balance-applied .fh-checkout-payment #ppc-button-ppcp-applepay,
+.fh-gc-balance-applied .fh-checkout-payment #ppc-button-ppcp-venmo,
+.fh-gc-balance-applied .fh-checkout-payment #ppc-button-ppcp-paylater,
 .fh-gc-balance-applied .fh-checkout-payment .ppcp-messages,
 .fh-gc-balance-applied .fh-checkout-payment [id^="ppcp-messages"],
 .fh-gc-balance-applied .fh-checkout-payment .ppcp-vaulted-paypal-details {

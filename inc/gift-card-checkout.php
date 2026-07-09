@@ -219,6 +219,15 @@ add_action( 'woocommerce_payment_complete', 'fishotel_gc_guard_capture_amount', 
  * @param string $new_status
  */
 function fishotel_gc_restore_on_payment_failure( $order_id, $old_status, $new_status ) {
+
+	// Guard 1: in-request static flag. Even if this hook fires twice within
+	// the same PHP request (HPOS + CPT compat can double-fire), we handle
+	// each order at most once per request.
+	static $handled = array();
+	if ( isset( $handled[ $order_id ] ) ) {
+		return;
+	}
+
 	$reversible = array( 'failed', 'cancelled', 'trash' );
 	if ( ! in_array( $new_status, $reversible, true ) ) {
 		return;
@@ -227,59 +236,93 @@ function fishotel_gc_restore_on_payment_failure( $order_id, $old_status, $new_st
 	if ( ! $order instanceof WC_Order ) {
 		return;
 	}
+
+	// Guard 2: persistent marker meta. Catches re-firing across requests.
 	if ( $order->get_meta( '_fishotel_gc_reversed' ) === 'yes' ) {
+		$handled[ $order_id ] = true;
 		return;
 	}
-	// Guard: only reverse if the order never reached a paid status.
-	// "completed", "processing", "on-hold" all imply we shouldn't roll back.
+
+	// Never roll back a debit for an order that already reached a paid /
+	// in-fulfillment status — the gift card genuinely paid for it.
 	if ( in_array( $old_status, array( 'completed', 'processing', 'on-hold', 'fulfillment' ), true ) ) {
+		$handled[ $order_id ] = true;
 		return;
 	}
 	if ( ! class_exists( 'WC_GC_Gift_Card' ) ) {
 		return;
 	}
 
-	// Iterate the activity log for this order to find `used`-type debits.
 	global $wpdb;
 	$activity_table = $wpdb->prefix . 'woocommerce_gc_activity';
+
+	// Bail quietly if the plugin's activity table isn't present.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $activity_table ) ) !== $activity_table ) {
+		return;
+	}
+
+	// ── Guard 3: aggregate by gc_id and SUM the amounts. Even if the plugin
+	//    logs multiple `used` rows for the same card on the same order (or a
+	//    later hook adds another), we credit each card exactly ONCE per
+	//    reversal cycle, and by the correct total.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT gc_id, amount FROM `$activity_table`
-		 WHERE object_id = %d AND type = %s",
+		"SELECT gc_id, SUM(amount) AS total_amount
+		 FROM `{$activity_table}`
+		 WHERE object_id = %d AND type = %s
+		 GROUP BY gc_id",
 		$order_id,
 		'used'
 	) );
 	if ( empty( $rows ) ) {
+		$handled[ $order_id ] = true;
 		return;
 	}
 
-	$any_credited = false;
+	// ── CRITICAL ORDERING: mark BEFORE crediting, not after.
+	//    If we mark after credit() and the hook re-fires while credit() is
+	//    still running (or between credit() and save()), the second fire
+	//    sees the marker unset and credits again. Marking first means the
+	//    second fire's persistent-marker check bails cleanly.
+	//    We also flip the in-request static NOW so any same-request re-fire
+	//    short-circuits at Guard 1.
+	$handled[ $order_id ] = true;
+	$order->update_meta_data( '_fishotel_gc_reversed', 'yes' );
+	$order->save();
+
+	$logger  = function_exists( 'wc_get_logger' ) ? wc_get_logger() : null;
+	$context = array( 'source' => 'fishotel-gift-card' );
+
 	foreach ( $rows as $row ) {
 		$gc = new WC_GC_Gift_Card( (int) $row->gc_id );
 		if ( ! $gc->get_id() ) {
 			continue;
 		}
-		$amt = (float) $row->amount;
+		$amt = (float) $row->total_amount;
 		if ( $amt <= 0 ) {
 			continue;
 		}
-		// credit() logs a 'refunded' activity row, matching how the plugin
-		// logs a customer refund. Same reversal semantics.
 		if ( $gc->credit( $amt, $order, true ) ) {
-			$any_credited = true;
 			$order->add_order_note( sprintf(
-				/* translators: 1: amount, 2: code, 3: old status, 4: new status */
+				/* translators: 1: amount, 2: gift card code, 3: old status, 4: new status */
 				__( 'FisHotel safeguard: reversed $%1$s debit on gift card %2$s (order transitioned %3$s → %4$s without payment).', 'fishotel' ),
 				number_format_i18n( $amt, 2 ),
 				$gc->get_code(),
 				$old_status,
 				$new_status
 			) );
+			if ( $logger ) {
+				$logger->warning( sprintf(
+					'Reversed $%s gift-card debit on order #%d (%s → %s, code %s).',
+					number_format_i18n( $amt, 2 ),
+					$order_id,
+					$old_status,
+					$new_status,
+					$gc->get_code()
+				), $context );
+			}
 		}
-	}
-
-	if ( $any_credited ) {
-		$order->update_meta_data( '_fishotel_gc_reversed', 'yes' );
-		$order->save();
 	}
 }
 add_action( 'woocommerce_order_status_changed', 'fishotel_gc_restore_on_payment_failure', 20, 3 );

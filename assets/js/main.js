@@ -675,19 +675,6 @@
                 // smart buttons own the checkout; reveal it so the standard
                 // place-order flow is usable.
                 $('#place_order').removeClass('ppcp-hidden');
-                // If a PPCP hosted-card gateway (server-side unset when a gift
-                // card is applied) is still the checked radio from before the
-                // card was applied, fall the selection back to the standard
-                // PayPal redirect gateway so the customer can't submit through
-                // the itemization-mismatch flow (orders #34494 / #34530).
-                var blocked = ['ppcp-card-button-gateway', 'ppcp-credit-card-gateway', 'ppcp-axo-gateway'];
-                var $selected = $('input[name="payment_method"]:checked');
-                if ($selected.length && blocked.indexOf($selected.val()) !== -1) {
-                    var $paypal = $('input[name="payment_method"][value="ppcp-gateway"]').first();
-                    if ($paypal.length) {
-                        $paypal.prop('checked', true).trigger('change');
-                    }
-                }
             }
         }
 

@@ -2130,16 +2130,6 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   display: block !important;
 }
 
-/* Hide PPCP's Debit & Credit Cards radio option in the payment methods
-   list when a gift card is applied. Server-side filter unsets the gateway
-   already, but if a stale fragment is still on screen this belt-and-
-   suspenders CSS keeps the option out of reach. */
-.fh-gc-balance-applied li.wc_payment_method.payment_method_ppcp-card-button-gateway,
-.fh-gc-balance-applied li.wc_payment_method.payment_method_ppcp-credit-card-gateway,
-.fh-gc-balance-applied li.wc_payment_method.payment_method_ppcp-axo-gateway {
-  display: none !important;
-}
-
 /* ── WC Gift Cards single-product form ──
    Gift-card products defer to the plugin's native add-to-cart form
    (single-product.php else branch). Scope everything under .fh-purchase

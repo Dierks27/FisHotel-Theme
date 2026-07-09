@@ -192,3 +192,223 @@ function fishotel_gc_guard_capture_amount( $order_id ) {
 	$order->update_status( 'on-hold', $note );
 }
 add_action( 'woocommerce_payment_complete', 'fishotel_gc_guard_capture_amount', 999 );
+
+/**
+ * True when a gift card balance is applied to the current cart.
+ *
+ * WC Gift Cards v2.7.x doesn't expose one documented session key to lean on,
+ * so this checks, in order of preference:
+ *   1. The plugin's public cart API (WC_GC()->cart) if it exposes an
+ *      applied-amount / using-balance method.
+ *   2. Known WC session key candidates observed in the wild.
+ *   3. The cart totals array — WC Gift Cards stores its deduction under a
+ *      `gift_cards_total`-style key, separate from `discount_total`, so this
+ *      does not false-positive on coupons.
+ *
+ * @return bool
+ */
+function fishotel_gc_balance_applied_now() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return false;
+	}
+
+	// 1. Plugin's public API (if available).
+	if ( function_exists( 'WC_GC' ) ) {
+		$gc = WC_GC();
+		if ( is_object( $gc ) && isset( $gc->cart ) && is_object( $gc->cart ) ) {
+			foreach ( [ 'get_applied_amount', 'get_used_amount', 'get_giftcards_total' ] as $m ) {
+				if ( method_exists( $gc->cart, $m ) && (float) $gc->cart->{$m}() > 0 ) {
+					return true;
+				}
+			}
+			foreach ( [ 'is_using_balance', 'has_applied_giftcards' ] as $m ) {
+				if ( method_exists( $gc->cart, $m ) && (bool) $gc->cart->{$m}() ) {
+					return true;
+				}
+			}
+		}
+	}
+
+	// 2. Session key candidates.
+	if ( WC()->session ) {
+		$candidates = apply_filters( 'fishotel_gc_session_key_candidates', [
+			'wc_gc_use_balance',
+			'wc_gc_applied_amount',
+			'wc_gc_giftcards_amount',
+			'wc_gc_applied_giftcards',
+		] );
+		foreach ( $candidates as $key ) {
+			$val = WC()->session->get( $key );
+			if ( is_numeric( $val ) && (float) $val > 0 ) {
+				return true;
+			}
+			if ( 'on' === $val || true === $val || '1' === $val ) {
+				return true;
+			}
+			if ( is_array( $val ) && ! empty( $val ) ) {
+				return true;
+			}
+		}
+	}
+
+	// 3. Cart totals delta.
+	$totals = WC()->cart->get_totals();
+	if ( is_array( $totals ) ) {
+		foreach ( [ 'gift_cards_total', 'giftcards_total', 'gift_card_total' ] as $k ) {
+			if ( isset( $totals[ $k ] ) && (float) $totals[ $k ] > 0 ) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Remove PPCP hosted-card gateways from the checkout gateway list when a
+ * gift card balance is applied. PPCP's Card / Advanced Card / Fastlane
+ * gateways all charge from PayPal's itemized purchase-unit breakdown, which
+ * omits WC Gift Cards' cart-total-level deduction — so a partial-coverage
+ * card checkout either double-charges (order #34494) or fails on return with
+ * "payment gateway currently unavailable", leaving the card debited but the
+ * order unpaid (order #34530).
+ *
+ * Server-side removal is authoritative: CSS-hiding alone leaves the gateway
+ * selectable for anyone past our JS/CSS. The standard PayPal redirect gateway
+ * (`ppcp-gateway`) stays available — it builds its purchase unit from the WC
+ * order total (post-gift-card) and captures correctly.
+ *
+ * @param array $gateways
+ * @return array
+ */
+function fishotel_gc_maybe_remove_ppcp_card_gateway( $gateways ) {
+	if ( ! is_array( $gateways ) ) {
+		return $gateways;
+	}
+	// Leave admin/order-pay screens alone (front-end wc-ajax recalcs set
+	// DOING_AJAX, so the live checkout still passes through).
+	if ( is_admin() && ! ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
+		return $gateways;
+	}
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return $gateways;
+	}
+	if ( ! fishotel_gc_balance_applied_now() ) {
+		return $gateways;
+	}
+
+	// PPCP hosted-card gateway IDs across recent PPCP versions. Allowlist so
+	// it's filterable if PPCP renames one.
+	$blocked = apply_filters( 'fishotel_gc_blocked_gateways', [
+		'ppcp-card-button-gateway', // "Debit & Credit Cards" (broke #34530).
+		'ppcp-credit-card-gateway', // Older Advanced Card Payments ID.
+		'ppcp-axo-gateway',         // Fastlane / Axo.
+	] );
+
+	foreach ( $blocked as $id ) {
+		if ( isset( $gateways[ $id ] ) ) {
+			unset( $gateways[ $id ] );
+		}
+	}
+	return $gateways;
+}
+add_filter( 'woocommerce_available_payment_gateways', 'fishotel_gc_maybe_remove_ppcp_card_gateway', 20 );
+
+/**
+ * Restore gift-card balance for cards debited on this order when it
+ * transitions to a non-completing state (failed, cancelled, trash) without
+ * ever reaching a paid status. WC Gift Cards debits at
+ * checkout_order_processed — BEFORE payment completes — so a gateway failure
+ * leaves the card drained and the plugin does not auto-reverse.
+ *
+ * Idempotent via the `_fishotel_gc_reversed` marker so re-transitioning the
+ * order can't double-credit.
+ *
+ * @param int    $order_id
+ * @param string $old_status
+ * @param string $new_status
+ */
+function fishotel_gc_restore_on_payment_failure( $order_id, $old_status, $new_status ) {
+	$reversible = [ 'failed', 'cancelled', 'trash' ];
+	if ( ! in_array( $new_status, $reversible, true ) ) {
+		return;
+	}
+	$order = wc_get_order( $order_id );
+	if ( ! $order instanceof WC_Order ) {
+		return;
+	}
+	if ( $order->get_meta( '_fishotel_gc_reversed' ) === 'yes' ) {
+		return;
+	}
+	// Never roll back a debit for an order that already reached a paid /
+	// in-fulfillment status — the gift card genuinely paid for it.
+	if ( in_array( $old_status, [ 'completed', 'processing', 'on-hold', 'fulfillment' ], true ) ) {
+		return;
+	}
+	if ( ! class_exists( 'WC_GC_Gift_Card' ) ) {
+		return;
+	}
+
+	global $wpdb;
+	$activity_table = $wpdb->prefix . 'woocommerce_gc_activity';
+
+	// Bail quietly if the plugin's activity table isn't present, so the query
+	// below never emits a dbDelta/notice on an unexpected schema.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $activity_table ) ) !== $activity_table ) {
+		return;
+	}
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT gc_id, amount FROM `{$activity_table}` WHERE object_id = %d AND type = %s",
+		$order_id,
+		'used'
+	) );
+	if ( empty( $rows ) ) {
+		return;
+	}
+
+	$logger  = function_exists( 'wc_get_logger' ) ? wc_get_logger() : null;
+	$context = [ 'source' => 'fishotel-gift-card' ];
+	$credited = false;
+
+	foreach ( $rows as $row ) {
+		$gc = new WC_GC_Gift_Card( (int) $row->gc_id );
+		if ( ! $gc->get_id() ) {
+			continue;
+		}
+		$amt = (float) $row->amount;
+		if ( $amt <= 0 ) {
+			continue;
+		}
+		// credit() logs a reversal activity row, matching a plugin refund.
+		if ( $gc->credit( $amt, $order, true ) ) {
+			$credited = true;
+			$order->add_order_note( sprintf(
+				/* translators: 1: amount, 2: gift card code, 3: old status, 4: new status */
+				__( 'FisHotel safeguard: reversed $%1$s debit on gift card %2$s (order transitioned %3$s → %4$s without payment).', 'fishotel' ),
+				number_format_i18n( $amt, 2 ),
+				$gc->get_code(),
+				$old_status,
+				$new_status
+			) );
+			if ( $logger ) {
+				$logger->warning( sprintf(
+					'Reversed $%s gift-card debit on order #%d (%s → %s, code %s).',
+					number_format_i18n( $amt, 2 ),
+					$order_id,
+					$old_status,
+					$new_status,
+					$gc->get_code()
+				), $context );
+			}
+		}
+	}
+
+	if ( $credited ) {
+		$order->update_meta_data( '_fishotel_gc_reversed', 'yes' );
+		$order->save();
+	}
+}
+add_action( 'woocommerce_order_status_changed', 'fishotel_gc_restore_on_payment_failure', 20, 3 );

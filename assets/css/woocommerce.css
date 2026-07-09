@@ -2129,6 +2129,18 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 .fh-gc-balance-applied #place_order.ppcp-hidden {
   display: block !important;
 }
+/* Hide PPCP's "Debit & Credit Cards" (and Advanced Card / Fastlane) radio
+   option in the payment-methods list when a gift card is applied. The
+   server-side woocommerce_available_payment_gateways filter already unsets
+   these gateways; this is belt-and-suspenders in case a stale fragment is
+   still on screen before the next update_checkout. Those card gateways build
+   their PayPal order from the itemized breakdown (no gift-card deduction),
+   which drained a card on a failed return in order #34530. */
+.fh-gc-balance-applied li.wc_payment_method.payment_method_ppcp-card-button-gateway,
+.fh-gc-balance-applied li.wc_payment_method.payment_method_ppcp-credit-card-gateway,
+.fh-gc-balance-applied li.wc_payment_method.payment_method_ppcp-axo-gateway {
+  display: none !important;
+}
 
 /* ── WC Gift Cards single-product form ──
    Gift-card products defer to the plugin's native add-to-cart form

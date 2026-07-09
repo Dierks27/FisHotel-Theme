@@ -675,6 +675,21 @@
                 // smart buttons own the checkout; reveal it so the standard
                 // place-order flow is usable.
                 $('#place_order').removeClass('ppcp-hidden');
+                // If a PPCP hosted-card gateway is currently selected, move the
+                // selection to the standard PayPal redirect gateway. The server
+                // already removes the card gateways from the list when balance
+                // is applied (woocommerce_available_payment_gateways), but a
+                // stale fragment could still show one selected — reselecting
+                // avoids submitting against a now-unavailable gateway (which is
+                // how order #34530 drained a card on a failed return).
+                var blocked = ['ppcp-card-button-gateway', 'ppcp-credit-card-gateway', 'ppcp-axo-gateway'];
+                var $selected = $('input[name="payment_method"]:checked');
+                if ($selected.length && blocked.indexOf($selected.val()) !== -1) {
+                    var $paypal = $('input[name="payment_method"][value="ppcp-gateway"]').first();
+                    if ($paypal.length) {
+                        $paypal.prop('checked', true).trigger('change');
+                    }
+                }
             }
         }
 

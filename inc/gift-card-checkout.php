@@ -211,8 +211,12 @@ add_action( 'woocommerce_payment_complete', 'fishotel_gc_guard_capture_amount', 
  * completes, so a payment-gateway failure leaves the card drained — the
  * plugin does not auto-reverse.
  *
- * Idempotent via a marker meta so re-transitioning the order doesn't
- * double-credit.
+ * Idempotent via an activity-row check: the plugin's own credit() call
+ * synchronously inserts a `refunded` row into the activity table, so any
+ * subsequent hook fire — same request or a separate PHP process — sees the
+ * refund already exists and skips the card. This replaces the earlier
+ * marker-meta approach, which didn't reliably persist to wp_wc_orders_meta
+ * on HPOS + CPT-sync installs (observed double-crediting order #34537).
  *
  * @param int    $order_id
  * @param string $old_status
@@ -220,9 +224,9 @@ add_action( 'woocommerce_payment_complete', 'fishotel_gc_guard_capture_amount', 
  */
 function fishotel_gc_restore_on_payment_failure( $order_id, $old_status, $new_status ) {
 
-	// Guard 1: in-request static flag. Even if this hook fires twice within
-	// the same PHP request (HPOS + CPT compat can double-fire), we handle
-	// each order at most once per request.
+	// Fast-path: in-request re-entry short-circuit. Correctness comes from
+	// the SQL NOT EXISTS check below, but this saves a query on the second
+	// fire when it lands in the same PHP request.
 	static $handled = array();
 	if ( isset( $handled[ $order_id ] ) ) {
 		return;
@@ -234,12 +238,6 @@ function fishotel_gc_restore_on_payment_failure( $order_id, $old_status, $new_st
 	}
 	$order = wc_get_order( $order_id );
 	if ( ! $order instanceof WC_Order ) {
-		return;
-	}
-
-	// Guard 2: persistent marker meta. Catches re-firing across requests.
-	if ( $order->get_meta( '_fishotel_gc_reversed' ) === 'yes' ) {
-		$handled[ $order_id ] = true;
 		return;
 	}
 
@@ -262,34 +260,35 @@ function fishotel_gc_restore_on_payment_failure( $order_id, $old_status, $new_st
 		return;
 	}
 
-	// ── Guard 3: aggregate by gc_id and SUM the amounts. Even if the plugin
-	//    logs multiple `used` rows for the same card on the same order (or a
-	//    later hook adds another), we credit each card exactly ONCE per
-	//    reversal cycle, and by the correct total.
+	// Only credit gift cards that were debited on this order AND have no
+	// 'refunded' row yet for it. The plugin's own credit() synchronously
+	// inserts a 'refunded' row, so a subsequent fire — whether same-request
+	// (caught by $handled above) or a separate request (marker meta didn't
+	// reliably persist to wp_wc_orders_meta on this install; observed on
+	// #34537) — sees the refund exists and returns 0 rows. Self-healing.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL
 	$rows = $wpdb->get_results( $wpdb->prepare(
 		"SELECT gc_id, SUM(amount) AS total_amount
-		 FROM `{$activity_table}`
+		 FROM `{$activity_table}` a
 		 WHERE object_id = %d AND type = %s
+		   AND NOT EXISTS (
+		     SELECT 1 FROM `{$activity_table}` r
+		     WHERE r.object_id = %d
+		       AND r.type = %s
+		       AND r.gc_id = a.gc_id
+		   )
 		 GROUP BY gc_id",
 		$order_id,
-		'used'
+		'used',
+		$order_id,
+		'refunded'
 	) );
 	if ( empty( $rows ) ) {
 		$handled[ $order_id ] = true;
 		return;
 	}
 
-	// ── CRITICAL ORDERING: mark BEFORE crediting, not after.
-	//    If we mark after credit() and the hook re-fires while credit() is
-	//    still running (or between credit() and save()), the second fire
-	//    sees the marker unset and credits again. Marking first means the
-	//    second fire's persistent-marker check bails cleanly.
-	//    We also flip the in-request static NOW so any same-request re-fire
-	//    short-circuits at Guard 1.
 	$handled[ $order_id ] = true;
-	$order->update_meta_data( '_fishotel_gc_reversed', 'yes' );
-	$order->save();
 
 	$logger  = function_exists( 'wc_get_logger' ) ? wc_get_logger() : null;
 	$context = array( 'source' => 'fishotel-gift-card' );

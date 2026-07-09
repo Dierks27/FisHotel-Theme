@@ -2118,7 +2118,6 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
    place-order → PayPal redirect that charges the correct post-gift-card
    total. Scoped to the payment card so it can't affect other contexts. */
 .fh-gc-balance-applied .fh-checkout-payment .ppcp-button-container,
-.fh-gc-balance-applied .fh-checkout-payment .ppc-button-wrapper,
 /* Enumerate express smart-button IDs specifically. Do NOT match
    #ppc-button-ppcp-card-button-gateway — that's the inline card gateway's
    button, not an express smart button, and hiding it breaks the CC flow. */

@@ -135,6 +135,14 @@ class FisHotel_Fulfillment {
 	const DELIVERY_COL           = 'fst_ship_date';
 
 	public static function init() {
+		// Fulfillment wrappers never touch stock — the source orders own it.
+		// Blocks both reduce (Processing/Completed) and restore (Cancelled/
+		// Refunded) so the wrapper is transparent to WC's stock system. Also
+		// protects fulfillments created before the _order_stock_reduced meta
+		// fix shipped.
+		add_filter( 'woocommerce_can_reduce_order_stock',  [ __CLASS__, 'skip_stock_for_fulfillment' ], 10, 2 );
+		add_filter( 'woocommerce_can_restore_order_stock', [ __CLASS__, 'skip_stock_for_fulfillment' ], 10, 2 );
+
 		// Custom order status (CPT + HPOS).
 		add_action( 'init', [ __CLASS__, 'register_status' ] );
 		add_filter( 'wc_order_statuses', [ __CLASS__, 'add_wc_status' ] );
@@ -270,6 +278,18 @@ class FisHotel_Fulfillment {
 		return $o ? '1' === (string) $o->get_meta( self::META_IS_FULFILLMENT ) : false;
 	}
 
+	/**
+	 * Fulfillment wrappers never touch stock — the source orders own that.
+	 * Blocks both reduce (on Processing/Completed) and restore (on Cancelled/
+	 * Refunded) so the wrapper is transparent to WC's stock system.
+	 */
+	public static function skip_stock_for_fulfillment( $can, $order ) {
+		if ( $order instanceof WC_Order && self::is_fulfillment( $order ) ) {
+			return false;
+		}
+		return $can;
+	}
+
 	public static function get_fulfillment( $order ) {
 		$o = self::to_order( $order );
 		if ( ! $o ) {
@@ -389,6 +409,10 @@ class FisHotel_Fulfillment {
 				$f->update_meta_data( self::META_SHIP_DATE, $earliest );
 			}
 			$f->set_status( self::STATUS_BARE );
+			// Stock is authoritatively tracked on the source orders — never on the
+			// fulfillment wrapper. Mark it reduced so WC skips it on every future
+			// transition (Processing, Completed, Cancelled, Refunded).
+			$f->update_meta_data( '_order_stock_reduced', 'yes' );
 			$f->save();
 			$ff_id = $f->get_id();
 

@@ -270,8 +270,16 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 							<span class="fh-cart-discount-row__icon" aria-hidden="true">+</span>
 						</summary>
 						<?php if ( wc_coupons_enabled() ) : ?>
-						<div class="fh-cart-discount-row__body">
-							<input type="text" name="coupon_code" class="fh-input fh-cart-coupon__input" placeholder="<?php esc_attr_e( 'Enter coupon code', 'fishotel' ); ?>">
+						<?php /* Two WC core cart.js contracts are REQUIRED here:
+						        1. id="coupon_code" — apply_coupon() reads the code via
+						           $('#coupon_code') (by ID, not name); without it an
+						           empty value is posted every time.
+						        2. class="coupon" on the wrapper — show_coupon_error()
+						           routes error notices to $text_field.closest('.coupon');
+						           without a .coupon ancestor "does not exist"/"expired"
+						           messages are silently dropped. */ ?>
+						<div class="fh-cart-discount-row__body coupon">
+							<input type="text" id="coupon_code" name="coupon_code" class="fh-input fh-cart-coupon__input" placeholder="<?php esc_attr_e( 'Enter coupon code', 'fishotel' ); ?>">
 							<button type="submit" name="apply_coupon" value="1" class="fh-btn fh-btn--ghost fh-cart-coupon__apply"><?php esc_html_e( 'Apply', 'fishotel' ); ?></button>
 						</div>
 						<?php endif; ?>

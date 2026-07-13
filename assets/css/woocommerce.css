@@ -1359,6 +1359,12 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 .fh-cart-coupon__apply { padding: 9px 16px; font-size: 11px; }
 
+/* cart.js appends its coupon error notice (class .coupon-error-notice
+   .woocommerce-error) after the input, inside the .coupon flex row. Let it
+   wrap to its own full-width line instead of squishing beside input+button. */
+.fh-cart-discount-row__body.coupon { flex-wrap: wrap; }
+.fh-cart-discount-row__body .coupon-error-notice { flex: 0 0 100%; margin: 8px 0 0; }
+
 /* Gift-card hint — points to the working checkout field (gift cards are
    redeemed at checkout, not via the cart coupon endpoint). */
 .fh-cart-giftcard-hint {

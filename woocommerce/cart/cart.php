@@ -154,11 +154,18 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 						<div class="fh-cart-item__controls">
 							<div class="fh-cart-qty">
 								<button type="button" class="fh-cart-qty__btn" data-action="dec" aria-label="<?php esc_attr_e( 'Decrease quantity', 'fishotel' ); ?>">−</button>
+								<?php /* Only emit `max` when there's a real stock limit.
+								        get_max_purchase_quantity() returns -1 for "no
+								        limit"; rendering max="-1" with min="0" fails HTML
+								        constraint validation permanently (max < min), so
+								        the browser silently blocks EVERY cart-form submit
+								        (qty auto-submit, coupon Apply) before cart.js sees
+								        it. Keep min="0" — WC uses qty 0 to remove an item. */ ?>
 								<input type="number"
 									name="cart[<?php echo esc_attr( $cart_item_key ); ?>][qty]"
 									value="<?php echo esc_attr( $cart_item['quantity'] ); ?>"
 									min="<?php echo esc_attr( $min_qty ); ?>"
-									max="<?php echo esc_attr( $max_qty ); ?>"
+									<?php echo $max_qty > 0 ? 'max="' . esc_attr( $max_qty ) . '"' : ''; ?>
 									class="fh-cart-qty__input"
 									inputmode="numeric">
 								<button type="button" class="fh-cart-qty__btn" data-action="inc" aria-label="<?php esc_attr_e( 'Increase quantity', 'fishotel' ); ?>">+</button>

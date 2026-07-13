@@ -62,6 +62,52 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 
 <div class="fh-cart-wrap fh-checkout-wrap">
 
+	<?php /* Returning customer + coupon accordions — collapsed by default,
+	        same pattern as cart's discount rows. WC's default top-of-page
+	        notices for both are unhooked in inc/woocommerce.php so they don't
+	        duplicate here.
+
+	        CRITICAL: this block lives OUTSIDE <form name="checkout"> below.
+	        form-coupon.php emits its own <form class="checkout_coupon">, and a
+	        <form> nested inside another <form> is invalid HTML — the browser
+	        silently drops the inner tag. When that happened the coupon Apply
+	        button (type=submit) became a submit button of the checkout form
+	        itself: clicking Apply placed the order and never applied the
+	        coupon. Keeping the accordions above the checkout form restores
+	        the standalone coupon <form> WC's checkout.js binds its
+	        apply_coupon AJAX to. */ ?>
+	<?php if ( $show_login_reminder || $show_coupon_form ) : ?>
+	<div class="fh-checkout-prompts">
+		<?php if ( $show_login_reminder ) : ?>
+		<details class="fh-cart-discount-row fh-checkout-accordion">
+			<summary>
+				<span><?php echo esc_html( $section_returning ); ?></span>
+				<span class="fh-cart-discount-row__icon" aria-hidden="true">+</span>
+			</summary>
+			<div class="fh-cart-discount-row__body fh-checkout-login-body">
+				<?php woocommerce_login_form( [
+					'redirect' => wc_get_checkout_url(),
+					'hidden'   => false,
+					'message'  => '',
+				] ); ?>
+			</div>
+		</details>
+		<?php endif; ?>
+
+		<?php if ( $show_coupon_form ) : ?>
+		<details class="fh-cart-discount-row fh-checkout-accordion">
+			<summary>
+				<span><?php echo esc_html( $section_coupon ); ?></span>
+				<span class="fh-cart-discount-row__icon" aria-hidden="true">+</span>
+			</summary>
+			<div class="fh-cart-discount-row__body fh-checkout-coupon-body">
+				<?php wc_get_template( 'checkout/form-coupon.php' ); ?>
+			</div>
+		</details>
+		<?php endif; ?>
+	</div>
+	<?php endif; ?>
+
 	<form name="checkout" method="post" class="checkout woocommerce-checkout fh-checkout-form"
 		action="<?php echo esc_url( wc_get_checkout_url() ); ?>" enctype="multipart/form-data">
 
@@ -69,42 +115,6 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 
 			<?php /* ── LEFT COLUMN ── */ ?>
 			<section class="fh-checkout-left">
-
-				<?php /* Returning customer + coupon accordions — collapsed by
-				        default, same pattern as cart's discount rows. WC's
-				        default top-of-page notices for both are unhooked in
-				        inc/woocommerce.php so they don't duplicate here. */ ?>
-				<?php if ( $show_login_reminder || $show_coupon_form ) : ?>
-				<div class="fh-checkout-prompts">
-					<?php if ( $show_login_reminder ) : ?>
-					<details class="fh-cart-discount-row fh-checkout-accordion">
-						<summary>
-							<span><?php echo esc_html( $section_returning ); ?></span>
-							<span class="fh-cart-discount-row__icon" aria-hidden="true">+</span>
-						</summary>
-						<div class="fh-cart-discount-row__body fh-checkout-login-body">
-							<?php woocommerce_login_form( [
-								'redirect' => wc_get_checkout_url(),
-								'hidden'   => false,
-								'message'  => '',
-							] ); ?>
-						</div>
-					</details>
-					<?php endif; ?>
-
-					<?php if ( $show_coupon_form ) : ?>
-					<details class="fh-cart-discount-row fh-checkout-accordion">
-						<summary>
-							<span><?php echo esc_html( $section_coupon ); ?></span>
-							<span class="fh-cart-discount-row__icon" aria-hidden="true">+</span>
-						</summary>
-						<div class="fh-cart-discount-row__body fh-checkout-coupon-body">
-							<?php wc_get_template( 'checkout/form-coupon.php' ); ?>
-						</div>
-					</details>
-					<?php endif; ?>
-				</div>
-				<?php endif; ?>
 
 				<?php /* Standard WC injection point — must fire BEFORE the
 				        billing card so plugins that prepend content to the

@@ -48,8 +48,15 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 
 		<div class="fh-cart-layout">
 
-			<?php /* ── LEFT CARD — RESERVATIONS ── */ ?>
-			<section class="fh-cart-card fh-cart-items">
+			<?php /* ── LEFT CARD — RESERVATIONS ──
+			        The `woocommerce-cart-form__contents` class is REQUIRED, not
+			        cosmetic: WC core cart.js bails out of its submit handler
+			        (`if ( 0 === $form.find('.woocommerce-cart-form__contents').length ) return;`)
+			        when no element carries it. Without this class every submit
+			        inside the cart form — qty stepper auto-submit and coupon
+			        Apply — is silently swallowed (no AJAX, no POST). cart.js
+			        only tests for the class's existence, so any wrapper qualifies. */ ?>
+			<section class="fh-cart-card fh-cart-items woocommerce-cart-form__contents">
 				<header class="fh-cart-card__header">
 					<span class="fh-cart-card__eyebrow"><?php esc_html_e( 'Checked In', 'fishotel' ); ?></span>
 					<span class="fh-cart-card__cols"><?php esc_html_e( 'Price · Qty · Total', 'fishotel' ); ?></span>
@@ -178,8 +185,15 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 				</footer>
 			</section>
 
-			<?php /* ── RIGHT CARD — ORDER TOTAL (sticky) ── */ ?>
-			<aside class="fh-cart-card fh-cart-totals">
+			<?php /* ── RIGHT CARD — ORDER TOTAL (sticky) ──
+			        The `cart_totals` class lets WC core cart.js refresh totals
+			        after its AJAX quantity update: update_cart_totals_div() does
+			        `$('.cart_totals').replaceWith( html_str )`. This container
+			        sits INSIDE .woocommerce-cart-form, so cart.js's update_wc_div
+			        replaces the whole form (totals included) with the re-rendered
+			        themed fragment first; the .cart_totals replace that follows
+			        is an identical no-op swap. Totals update live, no reload. */ ?>
+			<aside class="fh-cart-card fh-cart-totals cart_totals">
 				<header class="fh-cart-card__header">
 					<span class="fh-cart-card__eyebrow"><?php esc_html_e( 'Order Total', 'fishotel' ); ?></span>
 				</header>
@@ -255,20 +269,20 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 						</div>
 						<?php endif; ?>
 					</details>
-					<details class="fh-cart-discount-row">
-						<summary>
-							<span><?php esc_html_e( 'Have a gift card?', 'fishotel' ); ?></span>
-							<span class="fh-cart-discount-row__icon" aria-hidden="true">+</span>
-						</summary>
-						<div class="fh-cart-discount-row__body">
-							<?php /* Gift card support depends on a gift card plugin; until
-							         one is wired up, codes can still be applied via the
-							         standard coupon endpoint (most gift card plugins
-							         register codes as coupons under the hood). */ ?>
-							<input type="text" name="coupon_code" class="fh-input fh-cart-coupon__input" placeholder="<?php esc_attr_e( 'Enter gift card code', 'fishotel' ); ?>">
-							<button type="submit" name="apply_coupon" value="1" class="fh-btn fh-btn--ghost fh-cart-coupon__apply"><?php esc_html_e( 'Apply', 'fishotel' ); ?></button>
-						</div>
-					</details>
+					<?php /* Gift cards are redeemed at checkout via WC Gift Cards'
+					        native "Have a gift card?" field under Payment Method —
+					        NOT here. The old cart row posted gift card codes to the
+					        coupon endpoint (WC Gift Cards does not register codes as
+					        coupons), which dead-ended with `Coupon "…" does not
+					        exist!` and matched the customer "it says it didn't
+					        exist" reports. It also put a second name="coupon_code"
+					        input in the form, so the empty field overwrote a real
+					        coupon on submit. Replaced with a hint that points to the
+					        working checkout field; the cart form now contains
+					        exactly one name="coupon_code" input. */ ?>
+					<p class="fh-cart-giftcard-hint">
+						<?php esc_html_e( 'Have a gift card? You can apply it at checkout under Payment Method.', 'fishotel' ); ?>
+					</p>
 				</div>
 			</aside>
 

@@ -932,7 +932,8 @@ class FisHotel_Order_Fulfillment {
 			return;
 		}
 		$map = [
-			'combined'     => [ 'success', __( 'Orders combined.', 'fishotel' ) ],
+			'combined'           => [ 'success', __( 'Orders combined.', 'fishotel' ) ],
+			'combined_overnight' => [ 'warning', __( '⚠️ Orders combined — but a fish (overnight) order was folded into a source that only paid ground shipping. Overnight shipping may be under-collected; review and collect the difference or refund as needed.', 'fishotel' ) ],
 			'uncombined'   => [ 'success', __( 'Order uncombined.', 'fishotel' ) ],
 			'err_customer' => [ 'error', __( 'Those orders belong to different customers — cannot combine.', 'fishotel' ) ],
 			'err_chain'    => [ 'error', __( 'The target order is itself combined into another — chains are not allowed.', 'fishotel' ) ],
@@ -986,7 +987,37 @@ class FisHotel_Order_Fulfillment {
 
 		$ff       = wc_get_order( $ff_id );
 		$redirect = $ff instanceof WC_Order ? $ff->get_edit_order_url() : $redirect;
-		self::redirect_with_msg( $redirect, 'combined' );
+
+		// Bright-flag (do not block — admin judgment wins): mixing an order that
+		// ships overnight into a source whose paid shipping was ground-only is the
+		// same revenue hole the checkout piggyback guard closes. Warn on the
+		// resulting fulfillment so the difference can be collected or refunded.
+		$msg = self::combine_mixes_overnight_into_ground( $primary_id, $secondary_id ) ? 'combined_overnight' : 'combined';
+		self::redirect_with_msg( $redirect, $msg );
+	}
+
+	/**
+	 * True when the combine folds an overnight-shipping order (secondary) into a
+	 * source order (primary) that only ships ground — the manual-path analog of
+	 * the checkout piggyback guard. Uses the shared shipping-class predicate so
+	 * both paths agree on what "overnight" means. Fails safe to no-warning if the
+	 * predicate is unavailable (feature file not loaded).
+	 *
+	 * @param int $primary_id   The source order combined into.
+	 * @param int $secondary_id The order being folded in.
+	 * @return bool
+	 */
+	private static function combine_mixes_overnight_into_ground( $primary_id, $secondary_id ) {
+		if ( ! is_callable( [ 'FisHotel_Checkout_Reuse', 'order_can_host_overnight' ] ) ) {
+			return false;
+		}
+		$primary   = wc_get_order( $primary_id );
+		$secondary = wc_get_order( $secondary_id );
+		if ( ! $primary instanceof WC_Order || ! $secondary instanceof WC_Order ) {
+			return false;
+		}
+		return FisHotel_Checkout_Reuse::order_can_host_overnight( $secondary )
+			&& ! FisHotel_Checkout_Reuse::order_can_host_overnight( $primary );
 	}
 
 	/**

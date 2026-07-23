@@ -8,6 +8,17 @@
  * it into one fulfillment on payment, so it ships as one box). Different
  * address → shipping charges normally with a soft heads-up.
  *
+ * Shipping-class guard: a cart may only piggyback (get $0 shipping) onto a
+ * source order that is ALREADY shipping at a tier able to carry it. Live fish
+ * ship overnight in their own class (see fishotel_overnight_shipping_classes,
+ * default `premium`). A ground-only cart rides anything; a cart with any
+ * overnight item can only piggyback a source that already ships overnight.
+ * An overnight cart piggybacking a ground-only source resolves to the
+ * `incompatible` state — shipping is charged normally and no piggyback meta is
+ * written. Fail-safe direction: if a source item's product/class can't be
+ * determined, that order is treated as ground-only (charge the fish order —
+ * undercharging is the bug; an overcharge is refundable).
+ *
  * No auto-refund anywhere: anything that slips through is caught by the
  * bright-flag fallback on the fulfillment (see FisHotel_Fulfillment), which
  * is a manual, admin-confirmed refund.
@@ -55,6 +66,100 @@ class FisHotel_Checkout_Reuse {
 		return '0' === (string) get_option( 'fishotel_checkout_reuse', '1' );
 	}
 
+	// ─────────────────────────────────────────
+	// Shipping-class compatibility guard
+	// ─────────────────────────────────────────
+
+	/**
+	 * Overnight shipping-class slugs. Option-backed
+	 * (fishotel_overnight_shipping_classes, default `premium`) so the site
+	 * principle of "no hardcoded slugs in logic" holds and future overnight
+	 * classes can be added without a code change. Accepts a comma/space/
+	 * newline-separated string or an array; compared lowercased.
+	 *
+	 * @return string[]
+	 */
+	private static function overnight_classes() {
+		$raw  = get_option( 'fishotel_overnight_shipping_classes', 'premium' );
+		$list = is_array( $raw ) ? $raw : preg_split( '/[\s,]+/', (string) $raw );
+		$list = array_filter( array_map( static function ( $slug ) {
+			return strtolower( trim( (string) $slug ) );
+		}, (array) $list ) );
+		$list = array_values( array_unique( $list ) );
+		// Empty option → fall back to the default so the guard is never silently
+		// disabled (the kill switch is the intended way to turn the feature off).
+		return $list ? $list : [ 'premium' ];
+	}
+
+	/**
+	 * True when any current cart line ships in an overnight class. Reads the
+	 * shipping class off the cart item's product object so a variation resolves
+	 * to its own class (or the parent's when not overridden).
+	 *
+	 * @return bool
+	 */
+	private static function cart_requires_overnight() {
+		if ( ! function_exists( 'WC' ) || ! WC() || ! WC()->cart ) {
+			return false;
+		}
+		$overnight = self::overnight_classes();
+		foreach ( WC()->cart->get_cart() as $cart_item ) {
+			$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+			if ( ! $product instanceof WC_Product ) {
+				continue;
+			}
+			if ( in_array( strtolower( (string) $product->get_shipping_class() ), $overnight, true ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * True when the given order already ships at least one item in an overnight
+	 * class — i.e. it is a box that can host an overnight cart for free.
+	 *
+	 * Fail-safe: if an item's product is deleted or its class can't be read, the
+	 * item is skipped, so an order whose classes are all indeterminate reads as
+	 * ground-only (the new fish order then gets charged, not undercharged).
+	 *
+	 * @param WC_Order $order
+	 * @return bool
+	 */
+	public static function order_can_host_overnight( WC_Order $order ) {
+		$overnight = self::overnight_classes();
+		foreach ( $order->get_items() as $item ) {
+			if ( ! $item instanceof WC_Order_Item_Product ) {
+				continue;
+			}
+			$product = $item->get_product();
+			if ( ! $product instanceof WC_Product ) {
+				continue;
+			}
+			if ( in_array( strtolower( (string) $product->get_shipping_class() ), $overnight, true ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Shared compatibility predicate: may the current cart piggyback for free
+	 * onto this source order? A ground-only cart rides anything; an overnight
+	 * cart needs a source that already ships overnight. This is the single
+	 * predicate every path (zeroing, meta, notice) consults, and it is only ever
+	 * evaluated inside the per-request-cached reuse_state()/anchor lookups.
+	 *
+	 * @param WC_Order $order
+	 * @return bool
+	 */
+	private static function order_hosts_cart( WC_Order $order ) {
+		if ( ! self::cart_requires_overnight() ) {
+			return true;
+		}
+		return self::order_can_host_overnight( $order );
+	}
+
 	/**
 	 * The customer-facing source order this checkout piggybacks on. Prefers
 	 * the re-order lock's anchor (always a real customer order, never a
@@ -65,7 +170,10 @@ class FisHotel_Checkout_Reuse {
 	private static function piggyback_source_order() {
 		if ( class_exists( 'FisHotel_Reorder_Checkout_Lock' ) ) {
 			$anchor = FisHotel_Reorder_Checkout_Lock::anchor_order();
-			if ( $anchor instanceof WC_Order ) {
+			// Only host the piggyback if the anchor can carry this cart. An
+			// overnight cart on a ground-only anchor must fall through so it is
+			// neither zeroed nor stamped with the piggyback meta.
+			if ( $anchor instanceof WC_Order && self::order_hosts_cart( $anchor ) ) {
 				return $anchor;
 			}
 		}
@@ -74,11 +182,31 @@ class FisHotel_Checkout_Reuse {
 	}
 
 	/**
+	 * The same-address open order this cart is blocked from piggybacking on
+	 * because it can't host the cart's overnight items — used only for the
+	 * customer notice. Mirrors piggyback_source_order(): prefers the lock anchor
+	 * (whose address is forced onto this checkout), else the resolved state.
+	 * Returns null whenever a free piggyback is (or could be) available.
+	 *
+	 * @return WC_Order|null
+	 */
+	private static function incompatible_host_order() {
+		if ( class_exists( 'FisHotel_Reorder_Checkout_Lock' ) ) {
+			$anchor = FisHotel_Reorder_Checkout_Lock::anchor_order();
+			if ( $anchor instanceof WC_Order ) {
+				return self::order_hosts_cart( $anchor ) ? null : $anchor;
+			}
+		}
+		$state = self::reuse_state();
+		return ( 'incompatible' === $state['state'] && $state['order'] instanceof WC_Order ) ? $state['order'] : null;
+	}
+
+	/**
 	 * Resolve the reuse state for a destination.
 	 *
 	 * @param array|null $destination WC package destination, or null to read
 	 *                                the current customer's shipping address.
-	 * @return array{state:string,order:?WC_Order} state = match|differ|none
+	 * @return array{state:string,order:?WC_Order} state = match|incompatible|differ|none
 	 */
 	private static function reuse_state( $destination = null ) {
 		static $cache = [];
@@ -114,7 +242,8 @@ class FisHotel_Checkout_Reuse {
 			return $result;
 		}
 
-		$found_differ = null;
+		$found_differ       = null;
+		$found_incompatible = null;
 		foreach ( $existing as $order ) {
 			$order_hash = self::normalize_address( [
 				'address'  => $order->get_shipping_address_1(),
@@ -124,13 +253,31 @@ class FisHotel_Checkout_Reuse {
 				'country'  => $order->get_shipping_country(),
 			] );
 			if ( '' !== $dest_hash && $order_hash === $dest_hash ) {
-				$result = [ 'state' => 'match', 'order' => $order ];
-				$cache[ $key ] = $result;
-				return $result;
+				// Address matches — but it may only host a free piggyback if it
+				// already ships at a tier that can carry this cart.
+				if ( self::order_hosts_cart( $order ) ) {
+					$result = [ 'state' => 'match', 'order' => $order ];
+					$cache[ $key ] = $result;
+					return $result;
+				}
+				// Same address but can't host (e.g. ground-only order, fish
+				// cart). Remember it, but keep scanning — another open order
+				// (e.g. an open fish order) may still be able to host.
+				if ( null === $found_incompatible ) {
+					$found_incompatible = $order;
+				}
+				continue;
 			}
 			if ( null === $found_differ ) {
 				$found_differ = $order;
 			}
+		}
+
+		// Address-matched candidates existed but none could host this cart.
+		if ( null !== $found_incompatible ) {
+			$result = [ 'state' => 'incompatible', 'order' => $found_incompatible ];
+			$cache[ $key ] = $result;
+			return $result;
 		}
 
 		// Existing orders, but none to this destination.
@@ -277,6 +424,22 @@ class FisHotel_Checkout_Reuse {
 				esc_html( $source->get_order_number() )
 			) . '</span>';
 			self::add_notice_once( $msg, 'notice' );
+			return;
+		}
+
+		// Overnight cart blocked from piggybacking a ground-only open order:
+		// explain why fish can't share the existing box, so the shipping charge
+		// isn't a surprise.
+		$incompatible = self::incompatible_host_order();
+		if ( $incompatible instanceof WC_Order ) {
+			self::add_notice_once(
+				'<span class="fishotel-combine-notice">' . sprintf(
+					/* translators: %s = existing order number */
+					esc_html__( '🐠 Your live fish ship overnight in their own insulated box, so they can’t share shipping with order #%s. Shipping is charged normally on this order.', 'fishotel' ),
+					esc_html( $incompatible->get_order_number() )
+				) . '</span>',
+				'notice'
+			);
 			return;
 		}
 

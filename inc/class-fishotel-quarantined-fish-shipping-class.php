@@ -331,39 +331,51 @@ class FisHotel_Quarantined_Fish_Shipping_Class {
 			return;
 		}
 
-		$count = self::classless_fish_count();
+		$ids = self::classless_fish_ids();
+		$count = count( $ids );
 		if ( $count < 1 ) {
 			return;
 		}
 
+		$links = [];
+		foreach ( $ids as $product_id ) {
+			$links[] = sprintf(
+				'<a href="%s">%s</a> (ID %d)',
+				esc_url( get_edit_post_link( $product_id ) ),
+				esc_html( get_the_title( $product_id ) ),
+				$product_id
+			);
+		}
+
 		printf(
-			'<div class="notice notice-error"><p><strong>%s</strong> %s</p></div>',
+			'<div class="notice notice-error"><p><strong>%s</strong> %s: %s</p></div>',
 			esc_html__( 'FisHotel shipping safety net:', 'fishotel' ),
 			esc_html(
 				sprintf(
 					/* translators: %d: number of published quarantined fish with no shipping class. */
 					_n(
-						'%d published Quarantined Fish product has no shipping class and will return no shipping rate at checkout. Assign a shipping class now.',
-						'%d published Quarantined Fish products have no shipping class and will return no shipping rate at checkout. Assign a shipping class now.',
+						'%d published Quarantined Fish product has no shipping class and will return no shipping rate at checkout',
+						'%d published Quarantined Fish products have no shipping class and will return no shipping rate at checkout',
 						$count,
 						'fishotel'
 					),
 					$count
 				)
-			)
+			),
+			implode( ', ', $links )
 		);
 	}
 
 	/**
-	 * Number of published Quarantined Fish products with no shipping class.
+	 * IDs of published Quarantined Fish products with no shipping class.
 	 * Cached in a 1-hour transient.
 	 *
-	 * @return int
+	 * @return int[]
 	 */
-	private static function classless_fish_count() {
+	private static function classless_fish_ids() {
 		$cached = get_transient( self::TRIPWIRE_TRANSIENT );
-		if ( false !== $cached ) {
-			return (int) $cached;
+		if ( is_array( $cached ) ) {
+			return $cached;
 		}
 
 		$query = new WP_Query(
@@ -391,9 +403,19 @@ class FisHotel_Quarantined_Fish_Shipping_Class {
 			]
 		);
 
-		$count = (int) $query->post_count;
-		set_transient( self::TRIPWIRE_TRANSIENT, $count, HOUR_IN_SECONDS );
-		return $count;
+		$ids = array_map( 'intval', $query->posts );
+		set_transient( self::TRIPWIRE_TRANSIENT, $ids, HOUR_IN_SECONDS );
+		return $ids;
+	}
+
+	/**
+	 * Number of published Quarantined Fish products with no shipping class.
+	 * Backward-compatible wrapper around classless_fish_ids().
+	 *
+	 * @return int
+	 */
+	private static function classless_fish_count() {
+		return count( self::classless_fish_ids() );
 	}
 
 	/**

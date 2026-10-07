@@ -90,7 +90,7 @@ class FisHotel_Med_Product_Meta {
 				<p class="form-field">
 					<label for="_fishotel_dosing_anchor"><?php esc_html_e( 'Dosing calculator anchor', 'fishotel' ); ?></label>
 					<input type="text" id="_fishotel_dosing_anchor" name="_fishotel_dosing_anchor" value="<?php echo esc_attr( $dose_anchor ); ?>" placeholder="#praziquantel" style="width:100%;">
-					<span class="description"><?php esc_html_e( 'Use the calculator med id, e.g. #praziquantel or #copper_power; this also links the calculator and QT Scheduler back to this product. A longer anchor like #praziquantel-powder still matches as long as it starts with a med id. Override per medication under FisHotel Theme → Product Page → Tool Links.', 'fishotel' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Use the calculator med id, e.g. #praziquantel or #copper_power; this also links the calculator and QT Scheduler back to this product. A longer anchor like #praziquantel-powder or #praziquantel100g still matches as long as it starts with a med id (the longest matching id wins, so #fenbendazole_internal is not mistaken for #fenbendazole). Override per medication under FisHotel Theme → Product Page → Tool Links.', 'fishotel' ); ?></span>
 				</p>
 			</div>
 

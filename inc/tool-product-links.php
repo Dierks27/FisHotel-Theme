@@ -11,24 +11,43 @@
  * safe fallback, in this order (first hit wins):
  *
  *   (a) manual override  — option fh_tool_link_<med_id> (int product ID,
- *                          0 = auto). Amazon-mode products are allowed here:
- *                          an explicit choice is Jeff's call.
+ *                          0 = auto). Must be a published product in the
+ *                          Medications category tree (the pool the admin
+ *                          select offers); amazon-mode products are allowed
+ *                          here because an explicit choice is Jeff's call.
  *   (b) dosing anchor    — a published product whose _fishotel_dosing_anchor,
  *                          normalised (#praziquantel-powder → praziquantel_powder),
  *                          equals the med_id, else where the med_id is a
- *                          word-boundary prefix of it (unique match only).
- *   (c) SKU              — a small per-med candidate list (the five SKUs the
- *                          scheduler used to guess, plus med_id variants).
+ *                          plain prefix of it (longest med_id wins; a prefix
+ *                          hit must be unique across products).
+ *   (c) SKU              — wc_get_product_id_by_sku() over a small per-med
+ *                          candidate list (the five SKUs the scheduler used
+ *                          to guess, plus med_id variants).
  *   (d) title            — a published product in the Medications category
  *                          tree whose normalised title starts with the med's
- *                          normalised generic name; exactly one match only.
+ *                          normalised generic name; exactly one product may
+ *                          match, and the generic name must be unique in the
+ *                          seed (the two Fenbendazole entries share one, so
+ *                          they need an anchor or an override).
  *   (e) fallback         — the Medications category archive (or the shop).
  *
- * (b)–(d) never pick unpublished or amazon-mode products. The whole map is
- * cached in a transient for 12 hours and cleared whenever a product or an
- * fh_tool_link_* option changes. Resolution only runs where it is needed:
- * the two tool pages, a medication product page (reverse lookup) and the
- * FisHotel Settings → Product Page screen. Never on arbitrary requests.
+ * (b)–(d) never pick unpublished or amazon-mode products. Ambiguous matches
+ * are recorded so the settings screen can say why Auto found nothing.
+ *
+ * Product page → calculator (intentional deviation from the first spec):
+ * a product that resolves to a med links to ?med=<med_id>; a product whose
+ * anchor maps to a known med (e.g. an amazon-mode product Auto skips) also
+ * links to ?med=<med_id> rather than appending the anchor verbatim, because
+ * the calculator reads the hash as a category tab, not a med; only an
+ * anchor that maps to no med is appended verbatim.
+ *
+ * The whole map is cached in a transient for 12 hours and cleared whenever a
+ * product, its stock, an fh_tool_link_* option or the medication dataset
+ * changes. Resolution only runs where it is needed: the two tool pages, a
+ * medication product page (reverse lookup) and the FisHotel Settings →
+ * Product Page screen. The medication dataset itself (a ~90 KB
+ * non-autoloaded option) is only loaded on those pages and on non-AJAX admin
+ * requests, never on ordinary front-end requests.
  *
  * Depends on FisHotel_Medication_Data (inc/calculator) for the med catalog
  * and on inc/medication-store/helpers.php for fishotel_med_get_mode().
@@ -40,7 +59,7 @@ defined( 'ABSPATH' ) || exit;
 
 class FisHotel_Tool_Product_Links {
 
-	const TRANSIENT       = 'fishotel_tool_med_links_v1';
+	const TRANSIENT       = 'fishotel_tool_med_links_v2';
 	const TTL             = 12 * HOUR_IN_SECONDS;
 	const OPTION_PREFIX   = 'fh_tool_link_';
 	const FALLBACK_OPTION = 'fh_tool_link_fallback_url';
@@ -66,9 +85,10 @@ class FisHotel_Tool_Product_Links {
 		add_action( 'woocommerce_variation_set_stock',          [ __CLASS__, 'flush_cache' ] );
 		add_action( 'woocommerce_product_set_stock_status',     [ __CLASS__, 'flush_cache' ] );
 		add_action( 'woocommerce_variation_set_stock_status',   [ __CLASS__, 'flush_cache' ] );
-		// Cache invalidation — manual overrides. update_option() on a key
-		// that does not exist yet fires added_option, not updated_option,
-		// so both are needed.
+		// Cache invalidation — manual overrides and the medication dataset
+		// (the catalog is an input to the map: renamed / added meds must show
+		// up). update_option() on a key that does not exist yet fires
+		// added_option, not updated_option, so both are needed.
 		add_action( 'updated_option', [ __CLASS__, 'flush_cache_on_option' ] );
 		add_action( 'added_option',   [ __CLASS__, 'flush_cache_on_option' ] );
 		add_action( 'deleted_option', [ __CLASS__, 'flush_cache_on_option' ] );
@@ -94,6 +114,17 @@ class FisHotel_Tool_Product_Links {
 			$catalog[ (string) $med['med_id'] ] = isset( $med['name_generic'] ) ? (string) $med['name_generic'] : (string) $med['med_id'];
 		}
 		return $catalog;
+	}
+
+	/**
+	 * True on a regular (non-AJAX, non-cron) admin request — the only kind
+	 * that renders or saves the settings screen. The per-med option keys
+	 * are only enumerated there, so ordinary front-end requests (which call
+	 * FisHotel_Admin_Settings::defaults() for the tagline etc.) never load
+	 * the medication dataset.
+	 */
+	protected static function is_settings_request() {
+		return is_admin() && ! wp_doing_ajax() && ! wp_doing_cron();
 	}
 
 	// ─────────────────────────────────────────
@@ -128,17 +159,23 @@ class FisHotel_Tool_Product_Links {
 		return self::normalise( $name );
 	}
 
-	/** True when $needle is $haystack or a word-boundary ('_') prefix of it. */
-	protected static function is_prefix( $needle, $haystack ) {
+	/**
+	 * True when $needle is $haystack or a prefix of it. With $word_boundary
+	 * the next character must be '_' (used for titles, where
+	 * 'copper' must not claim 'coppersafe_8oz'); anchors use a plain
+	 * prefix because they are explicit intent ('#praziquantel100g').
+	 */
+	protected static function is_prefix( $needle, $haystack, $word_boundary = true ) {
 		if ( $needle === '' || $haystack === '' ) return false;
 		if ( $needle === $haystack ) return true;
 		$len = strlen( $needle );
-		return strncmp( $haystack, $needle, $len ) === 0 && substr( $haystack, $len, 1 ) === '_';
+		if ( strncmp( $haystack, $needle, $len ) !== 0 ) return false;
+		return ! $word_boundary || substr( $haystack, $len, 1 ) === '_';
 	}
 
 	/**
 	 * Map a normalised anchor to a med_id: exact match first, else the
-	 * longest med_id that is a word-boundary prefix. Returns '' when none.
+	 * longest med_id that is a prefix. Returns '' when none.
 	 */
 	public static function med_id_for_anchor( $normalised_anchor ) {
 		$catalog = self::catalog();
@@ -147,7 +184,7 @@ class FisHotel_Tool_Product_Links {
 
 		$best = '';
 		foreach ( array_keys( $catalog ) as $med_id ) {
-			if ( self::is_prefix( $med_id, $normalised_anchor ) && strlen( $med_id ) > strlen( $best ) ) {
+			if ( self::is_prefix( $med_id, $normalised_anchor, false ) && strlen( $med_id ) > strlen( $best ) ) {
 				$best = $med_id;
 			}
 		}
@@ -208,7 +245,8 @@ class FisHotel_Tool_Product_Links {
 		$list = isset( $known[ $med_id ] ) ? $known[ $med_id ] : [];
 		$list[] = $med_id;
 		$list[] = str_replace( '_', '-', $med_id );
-		// Compared case-insensitively (see lookup_skus), so no case variants.
+		// WC's SKU lookup compares with the table collation (case-insensitive
+		// on every stock WordPress install), so no case variants.
 		return array_values( array_unique( array_map( 'strtolower', $list ) ) );
 	}
 
@@ -216,7 +254,8 @@ class FisHotel_Tool_Product_Links {
 	 * Resolved map, memoised per request and cached in a transient.
 	 *
 	 * @return array med_id => [ product_id, url, name, source, in_stock,
-	 *                           auto_product_id, auto_source ]
+	 *                           auto_product_id, auto_source, auto_reason,
+	 *                           auto_candidates, override_ignored ]
 	 */
 	public static function links( $force = false ) {
 		if ( self::$memo !== null && ! $force ) return self::$memo;
@@ -230,16 +269,26 @@ class FisHotel_Tool_Product_Links {
 		}
 
 		self::$memo = self::resolve();
-		set_transient( self::TRANSIENT, [ 'links' => self::$memo, 'built' => time() ], self::TTL );
+		// An empty map means the medication dataset was missing (fresh
+		// staging copy, mid-reseed). Don't pin that for 12 hours.
+		if ( self::$memo ) {
+			set_transient( self::TRANSIENT, [ 'links' => self::$memo, 'built' => time() ], self::TTL );
+		}
 		return self::$memo;
 	}
 
-	/** Build the map from scratch. Runs ~3 queries plus product loads. */
+	/**
+	 * Build the map from scratch: one meta_query (anchors), one tax_query
+	 * (Medications-tree titles), plus cached SKU lookups for the meds the
+	 * anchors did not cover.
+	 */
 	protected static function resolve() {
 		$catalog = self::catalog();
-		$auto    = []; // med_id => [ 'product_id' => int, 'source' => anchor|sku|title ]
-
 		if ( empty( $catalog ) ) return [];
+
+		// med_id => [ product_id, source, reason, candidates ]. product_id 0
+		// with a reason means "Auto looked, but the match was ambiguous".
+		$auto = [];
 
 		// ── (b) anchors: one meta_query over published products ─────────
 		$anchor_ids = get_posts( [
@@ -274,32 +323,29 @@ class FisHotel_Tool_Product_Links {
 				$med_id = self::med_id_for_anchor( $norm );
 				if ( $med_id !== '' ) $prefix[ $med_id ][] = $pid;
 			}
-			foreach ( $catalog as $med_id => $_name ) {
+			foreach ( array_keys( $catalog ) as $med_id ) {
 				if ( ! empty( $exact[ $med_id ] ) ) {
 					// Exact anchors are explicit intent; when several carry
 					// the same one, prefer in-stock, then the lowest ID.
-					$auto[ $med_id ] = [ 'product_id' => self::pick_preferred( $exact[ $med_id ] ), 'source' => 'anchor' ];
-				} elseif ( ! empty( $prefix[ $med_id ] ) && count( $prefix[ $med_id ] ) === 1 ) {
-					$auto[ $med_id ] = [ 'product_id' => (int) $prefix[ $med_id ][0], 'source' => 'anchor' ];
+					$auto[ $med_id ] = self::auto_entry( self::pick_preferred( $exact[ $med_id ] ), 'anchor', count( $exact[ $med_id ] ) > 1 ? 'multi_anchor' : '', $exact[ $med_id ] );
+				} elseif ( ! empty( $prefix[ $med_id ] ) ) {
+					$auto[ $med_id ] = count( $prefix[ $med_id ] ) === 1
+						? self::auto_entry( (int) $prefix[ $med_id ][0], 'anchor' )
+						: self::auto_entry( 0, 'fallback', 'ambiguous_anchor', $prefix[ $med_id ] );
 				}
 			}
 		}
 
-		// ── (c) SKUs: one lookup over all candidates of unresolved meds ──
-		$unresolved = array_diff_key( $catalog, $auto );
-		if ( $unresolved ) {
-			$sku_to_med = [];
-			foreach ( array_keys( $unresolved ) as $med_id ) {
+		// ── (c) SKUs: wc_get_product_id_by_sku() per candidate, only for
+		//     meds the anchors did not settle (resolved or ambiguous) ──────
+		if ( function_exists( 'wc_get_product_id_by_sku' ) ) {
+			foreach ( array_keys( array_diff_key( $catalog, $auto ) ) as $med_id ) {
 				foreach ( self::sku_candidates( $med_id ) as $sku ) {
-					$sku_to_med[ $sku ] = $med_id;
+					$pid = self::product_id_by_sku( $sku );
+					if ( ! $pid || self::is_excluded_mode( $pid ) ) continue;
+					$auto[ $med_id ] = self::auto_entry( $pid, 'sku' );
+					break;
 				}
-			}
-			$hits = self::lookup_skus( array_keys( $sku_to_med ) ); // lowercase sku => product_id (parent for variations)
-			foreach ( $sku_to_med as $sku => $med_id ) {
-				if ( isset( $auto[ $med_id ] ) || empty( $hits[ $sku ] ) ) continue;
-				$pid = (int) $hits[ $sku ];
-				if ( self::is_excluded_mode( $pid ) ) continue;
-				$auto[ $med_id ] = [ 'product_id' => $pid, 'source' => 'sku' ];
 			}
 		}
 
@@ -328,15 +374,34 @@ class FisHotel_Tool_Product_Links {
 				$titles[ (int) $post->ID ] = self::normalise( $post->post_title );
 			}
 
-			foreach ( $unresolved as $med_id => $name_generic ) {
+			// Generic names shared by several meds (the two Fenbendazole
+			// entries) cannot be told apart by title: a single product would
+			// be claimed by both and the product page could only deep-link
+			// one of them. Leave those to the anchor / override.
+			$needles = [];
+			$sharers = []; // needle => [ med_id, ... ]
+			foreach ( $catalog as $med_id => $name_generic ) {
 				$needle = self::normalise_generic( $name_generic );
+				$needles[ $med_id ] = $needle;
+				if ( $needle !== '' ) $sharers[ $needle ][] = $med_id;
+			}
+
+			foreach ( array_keys( $unresolved ) as $med_id ) {
+				$needle = $needles[ $med_id ];
 				if ( $needle === '' ) continue;
 				$matches = [];
 				foreach ( $titles as $pid => $title ) {
 					if ( self::is_prefix( $needle, $title ) ) $matches[] = $pid;
 				}
-				if ( count( $matches ) === 1 ) {
-					$auto[ $med_id ] = [ 'product_id' => $matches[0], 'source' => 'title' ];
+				if ( ! $matches ) continue;
+
+				if ( count( $sharers[ $needle ] ) > 1 ) {
+					$others = array_values( array_diff( $sharers[ $needle ], [ $med_id ] ) );
+					$auto[ $med_id ] = self::auto_entry( 0, 'fallback', 'shared_name', $matches, $others );
+				} elseif ( count( $matches ) === 1 ) {
+					$auto[ $med_id ] = self::auto_entry( $matches[0], 'title' );
+				} else {
+					$auto[ $med_id ] = self::auto_entry( 0, 'fallback', 'ambiguous_title', $matches );
 				}
 			}
 		}
@@ -345,25 +410,38 @@ class FisHotel_Tool_Product_Links {
 		$fallback_url = self::fallback_url();
 		$links        = [];
 		foreach ( $catalog as $med_id => $name_generic ) {
+			$a     = isset( $auto[ $med_id ] ) ? $auto[ $med_id ] : self::auto_entry( 0, 'fallback' );
 			$entry = [
-				'product_id'      => 0,
-				'url'             => $fallback_url,
-				'name'            => $name_generic,
-				'source'          => 'fallback',
-				'in_stock'        => false,
-				'auto_product_id' => isset( $auto[ $med_id ] ) ? (int) $auto[ $med_id ]['product_id'] : 0,
-				'auto_source'     => isset( $auto[ $med_id ] ) ? $auto[ $med_id ]['source'] : 'fallback',
+				'product_id'       => 0,
+				'url'              => $fallback_url,
+				'name'             => $name_generic,
+				'source'           => 'fallback',
+				'in_stock'         => false,
+				'auto_product_id'  => $a['product_id'],
+				'auto_source'      => $a['source'],
+				'auto_reason'      => $a['reason'],
+				'auto_candidates'  => self::titles_for( $a['candidates'] ),
+				'auto_shared_with' => array_map( function ( $id ) use ( $catalog ) { return $catalog[ $id ]; }, $a['shared_with'] ),
+				'override_ignored' => false,
 			];
 
 			$override = absint( get_option( self::OPTION_PREFIX . $med_id, 0 ) );
 			$chosen   = 0;
 			$source   = 'fallback';
-			if ( $override && self::is_published_product( $override ) ) {
-				$chosen = $override;
-				$source = 'manual';
-			} elseif ( ! empty( $auto[ $med_id ] ) ) {
-				$chosen = (int) $auto[ $med_id ]['product_id'];
-				$source = $auto[ $med_id ]['source'];
+			if ( $override ) {
+				// Only the pool the select offers: published products in
+				// the Medications tree. Anything else (a hidden invoice
+				// product, a deleted ID) is ignored, never linked.
+				if ( self::is_override_candidate( $override ) ) {
+					$chosen = $override;
+					$source = 'manual';
+				} else {
+					$entry['override_ignored'] = true;
+				}
+			}
+			if ( ! $chosen && $a['product_id'] ) {
+				$chosen = (int) $a['product_id'];
+				$source = $a['source'];
 			}
 
 			if ( $chosen ) {
@@ -380,6 +458,27 @@ class FisHotel_Tool_Product_Links {
 		}
 
 		return $links;
+	}
+
+	/** Shape of one Auto result (see resolve()). */
+	protected static function auto_entry( $product_id, $source, $reason = '', array $candidates = [], array $shared_with = [] ) {
+		return [
+			'product_id'  => (int) $product_id,
+			'source'      => $source,
+			'reason'      => $reason,
+			'candidates'  => array_values( array_unique( array_map( 'intval', $candidates ) ) ),
+			'shared_with' => $shared_with,
+		];
+	}
+
+	/** product_id => title for a candidate list (stored so the admin can name them). */
+	protected static function titles_for( array $ids ) {
+		$out = [];
+		foreach ( $ids as $pid ) {
+			$post = get_post( $pid );
+			$out[ (int) $pid ] = $post ? (string) $post->post_title : '#' . (int) $pid;
+		}
+		return $out;
 	}
 
 	/** Prefer an in-stock product, then the lowest ID. */
@@ -404,48 +503,26 @@ class FisHotel_Tool_Product_Links {
 		return $post && $post->post_type === 'product' && $post->post_status === 'publish';
 	}
 
+	/** A manual override is valid only for a published Medications-tree product. */
+	protected static function is_override_candidate( $product_id ) {
+		$product_id = (int) $product_id;
+		if ( ! $product_id ) return false;
+		$options = self::product_options();
+		return isset( $options[ $product_id ] );
+	}
+
 	/**
-	 * One query: lowercase SKU => parent product ID for every candidate
-	 * that exists on a published product (or on a variation of one). Uses
-	 * the WC product meta lookup table like wc_get_product_id_by_sku()
-	 * does, so 50 candidates cost one round-trip instead of 50. Keys are
-	 * lowercased on both sides because MySQL's default collation matches
-	 * case-insensitively and returns the stored case, not the candidate's.
+	 * Parent product ID (variations resolve to their parent) for a SKU on a
+	 * published product, else 0. wc_get_product_id_by_sku() excludes only
+	 * trashed posts and caches per SKU.
 	 */
-	protected static function lookup_skus( array $skus ) {
-		global $wpdb;
-		$skus = array_values( array_filter( array_unique( array_map( 'strtolower', array_map( 'strval', $skus ) ) ) ) );
-		if ( ! $skus ) return [];
-
-		$placeholders = implode( ',', array_fill( 0, count( $skus ), '%s' ) );
-		$lookup       = ! empty( $wpdb->wc_product_meta_lookup ) ? $wpdb->wc_product_meta_lookup : '';
-
-		if ( $lookup ) {
-			$sql = "SELECT l.sku, l.product_id, p.post_type, p.post_parent, p.post_status
-				FROM {$lookup} l
-				INNER JOIN {$wpdb->posts} p ON p.ID = l.product_id
-				WHERE l.sku IN ({$placeholders})";
-		} else {
-			$sql = "SELECT pm.meta_value AS sku, pm.post_id AS product_id, p.post_type, p.post_parent, p.post_status
-				FROM {$wpdb->postmeta} pm
-				INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
-				WHERE pm.meta_key = '_sku' AND pm.meta_value IN ({$placeholders})";
+	protected static function product_id_by_sku( $sku ) {
+		$pid = (int) wc_get_product_id_by_sku( $sku );
+		if ( ! $pid ) return 0;
+		if ( get_post_type( $pid ) === 'product_variation' ) {
+			$pid = (int) wp_get_post_parent_id( $pid );
 		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- placeholders built above.
-		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $skus ) );
-		if ( ! $rows ) return [];
-
-		$out = [];
-		foreach ( $rows as $row ) {
-			$pid = (int) $row->product_id;
-			if ( $row->post_type === 'product_variation' ) {
-				$pid = (int) $row->post_parent;
-			}
-			if ( ! $pid || ! self::is_published_product( $pid ) ) continue;
-			$sku = strtolower( (string) $row->sku );
-			if ( ! isset( $out[ $sku ] ) ) $out[ $sku ] = $pid;
-		}
-		return $out;
+		return $pid && self::is_published_product( $pid ) ? $pid : 0;
 	}
 
 	// ─────────────────────────────────────────
@@ -532,7 +609,9 @@ class FisHotel_Tool_Product_Links {
 	}
 
 	public static function flush_cache_on_option( $option ) {
-		if ( strpos( (string) $option, self::OPTION_PREFIX ) === 0 ) {
+		$option   = (string) $option;
+		$data_key = class_exists( 'FisHotel_Medication_Data' ) ? FisHotel_Medication_Data::OPTION_KEY : 'fishotel_medication_data';
+		if ( strpos( $option, self::OPTION_PREFIX ) === 0 || $option === $data_key ) {
 			self::flush_cache();
 		}
 	}
@@ -541,9 +620,15 @@ class FisHotel_Tool_Product_Links {
 	// ADMIN (FisHotel Settings → Product Page → Tool Links)
 	// ─────────────────────────────────────────
 
-	/** Option defaults for every key this module owns. */
+	/**
+	 * Option defaults for every key this module owns. The per-med keys are
+	 * only enumerated on settings requests (see is_settings_request()):
+	 * nothing else reads them through FisHotel_Admin_Settings::get(), and
+	 * enumerating them costs a load of the medication dataset.
+	 */
 	public static function option_defaults() {
 		$defaults = [ self::FALLBACK_OPTION => '' ];
+		if ( ! self::is_settings_request() ) return $defaults;
 		foreach ( array_keys( self::catalog() ) as $med_id ) {
 			$defaults[ self::OPTION_PREFIX . $med_id ] = 0;
 		}
@@ -557,12 +642,13 @@ class FisHotel_Tool_Product_Links {
 				'label'       => 'Fallback shop URL',
 				'type'        => 'url',
 				'placeholder' => 'Leave blank for the Medications category',
-				'description' => 'Where "Browse medications" links go when a medication has no product yet. Blank = the Medications category archive.',
+				'description' => 'How these links work: each medication below is set to Auto, which picks the published product whose Dosing calculator anchor (Products → edit → FisHotel Medication tab) matches the med id, else a matching SKU, else a unique title match. Choose a product in a row only to override Auto. Amazon-mode products are skipped by Auto but allowed as an override. This URL is where "Browse medications" links go when a medication has no product: absolute or site-relative (e.g. /product-category/medications/); blank = the Medications category.',
 			],
 		];
+		if ( ! self::is_settings_request() ) return $fields;
 		foreach ( self::catalog() as $med_id => $name_generic ) {
 			$fields[ self::OPTION_PREFIX . $med_id ] = [
-				'label'  => $name_generic,
+				'label'  => esc_html( $name_generic ),
 				'type'   => 'product_select',
 				'med_id' => $med_id,
 			];
@@ -606,11 +692,12 @@ class FisHotel_Tool_Product_Links {
 		$current = absint( get_option( $key, 0 ) );
 		$options = self::product_options();
 
-		// A stale override (product deleted / unpublished) must stay
-		// visible so Jeff can see it and reset it to Auto.
+		// A stale override (product deleted / unpublished / outside the
+		// Medications tree) must stay visible so Jeff can see it and reset
+		// it to Auto.
 		if ( $current && ! isset( $options[ $current ] ) ) {
 			$post = get_post( $current );
-			$options[ $current ] = ( $post ? $post->post_title : 'Unknown product' ) . ' #' . $current . ' (not published)';
+			$options[ $current ] = ( $post ? $post->post_title : 'Unknown product' ) . ' #' . $current . ' (not a published Medications product)';
 		}
 
 		echo '<select name="' . esc_attr( $key ) . '" id="' . esc_attr( $key ) . '">';
@@ -628,25 +715,47 @@ class FisHotel_Tool_Product_Links {
 		$entry = isset( $links[ $med_id ] ) ? $links[ $med_id ] : null;
 		if ( ! $entry ) return;
 
-		if ( $entry['auto_product_id'] ) {
+		$status = self::auto_status_text( $med_id, $entry );
+		if ( $entry['source'] === 'manual' ) {
+			$status .= ' — override active: ' . $entry['name'];
+		} elseif ( ! empty( $entry['override_ignored'] ) ) {
+			$status .= ' — override ignored (not a published Medications product)';
+		}
+		if ( $entry['product_id'] && ! $entry['in_stock'] ) {
+			$status .= ' · out of stock';
+		}
+		echo ' <span class="description fh-tool-link-status" style="margin-left:8px;">' . esc_html( $status ) . '</span>';
+	}
+
+	/** The "Auto → …" sentence for one entry, naming ambiguous candidates. */
+	protected static function auto_status_text( $med_id, array $entry ) {
+		$candidates = isset( $entry['auto_candidates'] ) && is_array( $entry['auto_candidates'] ) ? $entry['auto_candidates'] : [];
+		$reason     = isset( $entry['auto_reason'] ) ? (string) $entry['auto_reason'] : '';
+		$names      = implode( ', ', $candidates );
+
+		if ( ! empty( $entry['auto_product_id'] ) ) {
 			$auto_post = get_post( $entry['auto_product_id'] );
 			$status    = sprintf(
 				'Auto → %s (matched by %s)',
 				$auto_post ? $auto_post->post_title : '#' . $entry['auto_product_id'],
 				$entry['auto_source']
 			);
-		} else {
-			$status = 'Auto → no product yet; links fall back to the Medications shop';
+			if ( $reason === 'multi_anchor' && count( $candidates ) > 1 ) {
+				$status .= sprintf( '; %d products carry this anchor (%s) — in-stock first, then the lowest ID', count( $candidates ), $names );
+			}
+			return $status;
 		}
-		if ( $entry['source'] === 'manual' ) {
-			$status .= ' — override active: ' . $entry['name'];
-		} elseif ( $current ) {
-			$status .= ' — override ignored (product not published)';
+
+		switch ( $reason ) {
+			case 'ambiguous_anchor':
+				return sprintf( 'Auto → %d products match by anchor prefix (%s); pick one above or give the right one the exact anchor #%s', count( $candidates ), $names, $med_id );
+			case 'ambiguous_title':
+				return sprintf( 'Auto → %d products match by title (%s); pick one above or set the dosing anchor #%s on the right product', count( $candidates ), $names, $med_id );
+			case 'shared_name':
+				$shared = ! empty( $entry['auto_shared_with'] ) ? implode( ', ', (array) $entry['auto_shared_with'] ) : 'another medication';
+				return sprintf( 'Auto → title match skipped: this name is shared with %s (found %s); set the dosing anchor #%s on the right product or pick one above', $shared, $names, $med_id );
 		}
-		if ( $entry['product_id'] && ! $entry['in_stock'] ) {
-			$status .= ' · out of stock';
-		}
-		echo ' <span class="description fh-tool-link-status" style="margin-left:8px;">' . esc_html( $status ) . '</span>';
+		return 'Auto → no product yet; links fall back to the Medications shop';
 	}
 }
 
@@ -689,27 +798,9 @@ function fishotel_tool_reverse_med_map() {
 	return FisHotel_Tool_Product_Links::reverse_map();
 }
 
-/** med_id a product resolves to, or '' when none. */
-function fishotel_tool_med_id_for_product( $product_id ) {
-	$map = FisHotel_Tool_Product_Links::reverse_map();
-	return isset( $map[ (int) $product_id ] ) ? $map[ (int) $product_id ] : '';
-}
-
 /** Calculator deep link for a product page ('' when nothing applies). */
 function fishotel_tool_calculator_link_for_product( $product_id ) {
 	return FisHotel_Tool_Product_Links::calculator_link_for_product( $product_id );
-}
-
-function fishotel_tool_calculator_url() {
-	return FisHotel_Tool_Product_Links::calculator_url();
-}
-
-function fishotel_tool_scheduler_url() {
-	return FisHotel_Tool_Product_Links::scheduler_url();
-}
-
-function fishotel_tool_fallback_url() {
-	return FisHotel_Tool_Product_Links::fallback_url();
 }
 
 /** Defaults for the admin settings framework (merged in defaults()). */

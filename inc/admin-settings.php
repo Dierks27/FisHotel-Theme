@@ -248,7 +248,9 @@ class FisHotel_Admin_Settings {
 
 		// Tool Links (calculator / QT Scheduler ↔ products) — one int per
 		// medication (0 = auto) plus the fallback URL. Owned by
-		// inc/tool-product-links.php.
+		// inc/tool-product-links.php, which only enumerates the per-med keys
+		// on admin screen requests so front-end calls to get() never load
+		// the medication dataset.
 		if ( function_exists( 'fishotel_tool_link_defaults' ) ) {
 			$defaults = array_merge( $defaults, fishotel_tool_link_defaults() );
 		}
@@ -1246,8 +1248,12 @@ JS;
 				esc_attr( $args['placeholder'] ?? '' )
 			);
 		} elseif ( $type === 'url' ) {
+			// Deliberately type="text": the browser's type="url" validation
+			// rejects site-relative paths (/product-category/medications/)
+			// and would block the whole page's submit. esc_url_raw on save
+			// accepts both forms.
 			printf(
-				'<input type="url" name="%s" value="%s" class="regular-text" placeholder="%s">',
+				'<input type="text" name="%s" value="%s" class="regular-text code" placeholder="%s">',
 				esc_attr( $key ),
 				esc_attr( $value ),
 				esc_attr( $args['placeholder'] ?? '' )

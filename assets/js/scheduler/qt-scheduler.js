@@ -134,36 +134,63 @@
 
   var FALLBACK_SHOP_URL = '/product-category/medications/';
 
-  function escAttr(str) {
+  function escHtml(str) {
     return String(str == null ? '' : str)
-      .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-      .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function escAttr(str) {
+    return escHtml(str).replace(/"/g, '&quot;');
   }
 
   /**
-   * Resolve where a med link should point. Returns { url, fallback, name }.
-   * fallback === true when no real product is known (older page cache
-   * without FISHOTEL_MED_LINKS, or the server resolved nothing) — the
-   * link then goes to the Medications shop and is styled accordingly.
+   * Resolve where a med link should point. Returns
+   * { url, fallback, name, outOfStock }. fallback === true when no real
+   * product is known (older page cache without FISHOTEL_MED_LINKS, or the
+   * server resolved nothing) — the link then goes to the Medications shop
+   * and is styled accordingly. outOfStock flags a resolved product that
+   * currently cannot be bought.
    */
   function medLinkTarget(medId) {
     var cfg = window.FISHOTEL_MED_LINKS || null;
     var fallbackUrl = (cfg && cfg.fallback_url) || FALLBACK_SHOP_URL;
     var entry = cfg && cfg.links && cfg.links[medId];
     if (entry && entry.url && entry.source !== 'fallback') {
-      return { url: entry.url, fallback: false, name: entry.name || '' };
+      return { url: entry.url, fallback: false, name: entry.name || '', outOfStock: entry.in_stock === false };
     }
-    return { url: fallbackUrl, fallback: true, name: '' };
+    return { url: fallbackUrl, fallback: true, name: '', outOfStock: false };
+  }
+
+  /**
+   * Classes, accessible name and title for a med link. The accessible name
+   * always contains the visible text (WCAG 2.5.3 Label in Name) so
+   * voice-control "click Copper Power" still works on fallback links.
+   */
+  function medLinkAttrs(target, visibleName) {
+    var cls = 'fst-med-link';
+    var label, title = '';
+    if (target.fallback) {
+      cls  += ' fst-med-link--fallback';
+      label = visibleName + ' — browse medications at FisHotel';
+    } else {
+      label = 'Buy ' + visibleName + ' at FisHotel';
+      if (target.outOfStock) {
+        cls  += ' fst-med-link--oos';
+        label += ' (currently out of stock)';
+        title  = 'Currently out of stock at FisHotel';
+      }
+    }
+    return { cls: cls, label: label, title: title };
   }
 
   function medLink(medId, displayName) {
     var info   = MED_SKU_MAP[medId] || { sku: medId, brand: displayName || medId };
     var name   = displayName || info.brand;
     var target = medLinkTarget(medId);
-    var cls    = 'fst-med-link' + (target.fallback ? ' fst-med-link--fallback' : '');
-    var label  = target.fallback ? 'Browse medications at FisHotel' : 'Buy ' + (target.name || info.brand) + ' at FisHotel';
-    return '<a class="' + cls + '" data-med-sku="' + escAttr(info.sku) + '" data-brand-name="' + escAttr(info.brand) +
-           '" href="' + escAttr(target.url) + '" aria-label="' + escAttr(label) + '">' + name + '</a>';
+    var attrs  = medLinkAttrs(target, name);
+    return '<a class="' + attrs.cls + '" data-med-sku="' + escAttr(info.sku) + '" data-brand-name="' + escAttr(info.brand) +
+           '" href="' + escAttr(target.url) + '" aria-label="' + escAttr(attrs.label) + '"' +
+           (attrs.title ? ' title="' + escAttr(attrs.title) + '"' : '') + '>' + escHtml(name) + '</a>';
   }
 
   // ============================================================================
@@ -1047,13 +1074,13 @@
       keyMeds.forEach(function (m) {
         var li = el('li');
         var target = medLinkTarget(m.med_id);
-        var a = el('a', 'fst-med-link' + (target.fallback ? ' fst-med-link--fallback' : ''));
+        var attrs  = medLinkAttrs(target, m.name);
+        var a = el('a', attrs.cls);
         a.setAttribute('data-med-sku', m.sku);
         a.setAttribute('data-brand-name', m.name);
         a.href = target.url;
-        a.setAttribute('aria-label', target.fallback
-          ? 'Browse medications at FisHotel'
-          : 'Buy ' + (target.name || m.name) + ' at FisHotel');
+        a.setAttribute('aria-label', attrs.label);
+        if (attrs.title) a.title = attrs.title;
         a.textContent = m.name;
         li.appendChild(a);
         ul.appendChild(li);

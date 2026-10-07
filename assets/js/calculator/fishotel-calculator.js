@@ -793,9 +793,17 @@
     var row = el('div', 'fh-qh-shoprow');
     var a = el('a');
     if (entry && entry.url && entry.source !== 'fallback') {
-      a.className = 'fh-qh-shoplink';
+      var name = entry.name || med.name_generic;
       a.href = entry.url;
-      a.textContent = 'Shop ' + (entry.name || med.name_generic) + ' at FisHotel →';
+      if (entry.in_stock === false) {
+        // Still link (the product page is the place to see it), but
+        // don't promise a purchase.
+        a.className = 'fh-qh-shoplink fh-qh-shoplink--oos';
+        a.textContent = name + ' at FisHotel (currently out of stock) →';
+      } else {
+        a.className = 'fh-qh-shoplink';
+        a.textContent = 'Shop ' + name + ' at FisHotel →';
+      }
     } else {
       a.className = 'fh-qh-shoplink fh-qh-shoplink--fallback';
       a.href = fallbackUrl;

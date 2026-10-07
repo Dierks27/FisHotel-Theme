@@ -70,10 +70,12 @@ class FisHotel_Med_Product_Display {
 		$url = fishotel_tool_calculator_link_for_product( $pid );
 		if ( $url === '' ) return;
 		?>
-		<a class="fishotel-med-calc-link" href="<?php echo esc_url( $url ); ?>">
-			<?php esc_html_e( 'Dose it with our Medication Calculator', 'fishotel' ); ?>
-			<span aria-hidden="true" class="fishotel-med-calc-link__arrow">&rarr;</span>
-		</a>
+		<p class="fishotel-med-calc">
+			<a class="fishotel-med-calc-link" href="<?php echo esc_url( $url ); ?>">
+				<?php esc_html_e( 'Dose it with our Medication Calculator', 'fishotel' ); ?>
+				<span aria-hidden="true" class="fishotel-med-calc-link__arrow">&rarr;</span>
+			</a>
+		</p>
 		<?php
 	}
 

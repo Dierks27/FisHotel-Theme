@@ -178,6 +178,10 @@ body.page-template-page-qt-scheduler { background: var(--fst-bg); }
 .fst-medsblock .fst-medlist li { font-size: 13px; }
 .fst-medsblock .fst-medlist a.fst-med-link { color: var(--fst-cream); text-decoration: none; padding: 4px 10px; border: 0.5px solid var(--fst-tint-strong); border-radius: 2px; transition: all 0.15s; }
 .fst-medsblock .fst-medlist a.fst-med-link:hover { border-color: var(--fst-gold); color: var(--fst-gold); }
+/* No product resolved yet — link goes to the Medications shop. Dimmer +
+   dashed so it reads as "browse", not "buy this exact item". */
+.fst-medsblock .fst-medlist a.fst-med-link--fallback { color: var(--fst-muted); border-style: dashed; }
+.fst-medsblock .fst-medlist a.fst-med-link--fallback:hover { color: var(--fst-gold); border-color: var(--fst-gold); }
 
 .fst-gear { margin-top: 14px; padding-top: 12px; border-top: 0.5px solid var(--fst-tint-med); }
 .fst-gear-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-dim); margin-bottom: 6px; }
@@ -222,6 +226,8 @@ details.fst-reminders[open] > summary::before { content: '▾ '; }
 .fst-day-action--warning { color: var(--fst-warn); }
 .fst-day-action a.fst-med-link { color: var(--fst-gold); text-decoration: underline; text-decoration-thickness: 0.5px; text-underline-offset: 2px; }
 .fst-day-action a.fst-med-link:hover { color: #e0b488; }
+.fst-day-action a.fst-med-link--fallback { color: var(--fst-muted); text-decoration-style: dashed; }
+.fst-day-action a.fst-med-link--fallback:hover { color: var(--fst-gold); }
 .fst-icon { flex-shrink: 0; width: 16px; text-align: center; color: var(--fst-gold); font-size: 12px; line-height: 1.5; }
 .fst-icon--water { color: var(--fst-teal); }
 .fst-icon--struct { color: var(--fst-amber); }

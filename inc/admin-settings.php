@@ -246,6 +246,13 @@ class FisHotel_Admin_Settings {
 			$defaults = array_merge( $defaults, fishotel_account_text_defaults() );
 		}
 
+		// Tool Links (calculator / QT Scheduler ↔ products) — one int per
+		// medication (0 = auto) plus the fallback URL. Owned by
+		// inc/tool-product-links.php.
+		if ( function_exists( 'fishotel_tool_link_defaults' ) ) {
+			$defaults = array_merge( $defaults, fishotel_tool_link_defaults() );
+		}
+
 		return $defaults;
 	}
 
@@ -782,6 +789,14 @@ JS;
 					'fh_default_habitat' => [ 'label' => 'Default Habitat & Behavior text', 'type' => 'textarea', 'description' => 'Shown when a product has no Habitat & Behavior custom field.' ],
 				],
 			],
+			// Tool Links — which product the Medication Dosing Calculator and
+			// the QT Scheduler link each medication to. Field list comes from
+			// inc/tool-product-links.php (one product_select per seed med).
+			'tool_links' => [
+				'page'   => 'fishotel-product',
+				'title'  => 'Tool Links (Calculator + QT Scheduler → Products)',
+				'fields' => function_exists( 'fishotel_tool_link_settings_fields' ) ? fishotel_tool_link_settings_fields() : [],
+			],
 			// Cart page — hero
 			'cart_hero' => [
 				'page'   => 'fishotel-cart',
@@ -1056,11 +1071,19 @@ JS;
 						'sanitize_callback' => 'wp_kses_post',
 						'default'           => self::defaults()[ $key ] ?? '',
 					] );
-				} elseif ( $field['type'] === 'image' ) {
+				} elseif ( $field['type'] === 'image' || $field['type'] === 'product_select' ) {
 					register_setting( $group, $key, [
 						'type'              => 'integer',
 						'sanitize_callback' => 'absint',
 						'default'           => 0,
+					] );
+				} elseif ( $field['type'] === 'url' ) {
+					// No preserve-on-empty here: blank is a meaningful value
+					// ("use the default URL"), so clearing must persist.
+					register_setting( $group, $key, [
+						'type'              => 'string',
+						'sanitize_callback' => 'esc_url_raw',
+						'default'           => self::defaults()[ $key ] ?? '',
 					] );
 				} elseif ( $field['type'] === 'placeholder_library' ) {
 					register_setting( $group, $key, [
@@ -1222,6 +1245,20 @@ JS;
 				esc_attr( $value ),
 				esc_attr( $args['placeholder'] ?? '' )
 			);
+		} elseif ( $type === 'url' ) {
+			printf(
+				'<input type="url" name="%s" value="%s" class="regular-text" placeholder="%s">',
+				esc_attr( $key ),
+				esc_attr( $value ),
+				esc_attr( $args['placeholder'] ?? '' )
+			);
+		} elseif ( $type === 'product_select' ) {
+			// Select of published Medications-tree products + read-only
+			// "Auto → …" status. Rendered by the owning module so the
+			// product query and link resolution only run on this screen.
+			if ( class_exists( 'FisHotel_Tool_Product_Links' ) ) {
+				FisHotel_Tool_Product_Links::render_product_select( $key, $args );
+			}
 		} elseif ( $type === 'number' ) {
 			printf(
 				'<input type="number" name="%s" value="%s" class="small-text" placeholder="%s"%s%s%s>',
@@ -1531,7 +1568,7 @@ JS;
 		$cards = [
 			'fishotel-homepage'     => [ 'title' => 'Homepage',      'desc' => 'Available Now count and homepage testimonials.' ],
 			'fishotel-shop'         => [ 'title' => 'Shop Page',     'desc' => 'Display mode and which categories to hide.' ],
-			'fishotel-product'      => [ 'title' => 'Product Page',  'desc' => 'QT certificate, trust strip, care guide defaults.' ],
+			'fishotel-product'      => [ 'title' => 'Product Page',  'desc' => 'QT certificate, trust strip, care guide defaults, calculator/scheduler tool links.' ],
 			'fishotel-account'      => [ 'title' => 'My Account',    'desc' => 'Page subtitles, greeting, empty states, login/register copy.' ],
 			'fishotel-faq'          => [ 'title' => 'FAQ Page',      'desc' => 'Concierge intro, quarantine stages, FAQ items.' ],
 			'fishotel-about'        => [ 'title' => 'About Page',    'desc' => "Founder's Edition masthead, headline, byline, body." ],

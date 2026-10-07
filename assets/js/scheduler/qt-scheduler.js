@@ -120,6 +120,10 @@
   // MED-LINK HELPER
   // ============================================================================
 
+  // Legacy SKU guesses — kept only as data-med-sku attributes (harmless).
+  // Real product URLs come from window.FISHOTEL_MED_LINKS, localised by
+  // inc/tool-product-links.php: { links: { med_id: { url, name, source,
+  // in_stock } }, fallback_url, calculator_url, scheduler_url }.
   var MED_SKU_MAP = {
     copper_power:         { sku: 'copper-power-2oz',         brand: 'Copper Power' },
     formalin_37:          { sku: 'formalin-37-pint',         brand: 'Formalin 37%' },
@@ -128,11 +132,38 @@
     chloroquine_phosphate:{ sku: 'chloroquine-phosphate-25g',brand: 'Chloroquine Phosphate' }
   };
 
+  var FALLBACK_SHOP_URL = '/product-category/medications/';
+
+  function escAttr(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /**
+   * Resolve where a med link should point. Returns { url, fallback, name }.
+   * fallback === true when no real product is known (older page cache
+   * without FISHOTEL_MED_LINKS, or the server resolved nothing) — the
+   * link then goes to the Medications shop and is styled accordingly.
+   */
+  function medLinkTarget(medId) {
+    var cfg = window.FISHOTEL_MED_LINKS || null;
+    var fallbackUrl = (cfg && cfg.fallback_url) || FALLBACK_SHOP_URL;
+    var entry = cfg && cfg.links && cfg.links[medId];
+    if (entry && entry.url && entry.source !== 'fallback') {
+      return { url: entry.url, fallback: false, name: entry.name || '' };
+    }
+    return { url: fallbackUrl, fallback: true, name: '' };
+  }
+
   function medLink(medId, displayName) {
-    var info = MED_SKU_MAP[medId] || { sku: medId, brand: displayName || medId };
-    var name = displayName || info.brand;
-    return '<a class="fst-med-link" data-med-sku="' + info.sku + '" data-brand-name="' + info.brand +
-           '" href="#" aria-label="Buy ' + info.brand + ' at FisHotel">' + name + '</a>';
+    var info   = MED_SKU_MAP[medId] || { sku: medId, brand: displayName || medId };
+    var name   = displayName || info.brand;
+    var target = medLinkTarget(medId);
+    var cls    = 'fst-med-link' + (target.fallback ? ' fst-med-link--fallback' : '');
+    var label  = target.fallback ? 'Browse medications at FisHotel' : 'Buy ' + (target.name || info.brand) + ' at FisHotel';
+    return '<a class="' + cls + '" data-med-sku="' + escAttr(info.sku) + '" data-brand-name="' + escAttr(info.brand) +
+           '" href="' + escAttr(target.url) + '" aria-label="' + escAttr(label) + '">' + name + '</a>';
   }
 
   // ============================================================================
@@ -1015,11 +1046,14 @@
       var ul = el('ul', 'fst-medlist');
       keyMeds.forEach(function (m) {
         var li = el('li');
-        var a = el('a', 'fst-med-link');
+        var target = medLinkTarget(m.med_id);
+        var a = el('a', 'fst-med-link' + (target.fallback ? ' fst-med-link--fallback' : ''));
         a.setAttribute('data-med-sku', m.sku);
         a.setAttribute('data-brand-name', m.name);
-        a.href = '#';
-        a.setAttribute('aria-label', 'Buy ' + m.name + ' at FisHotel');
+        a.href = target.url;
+        a.setAttribute('aria-label', target.fallback
+          ? 'Browse medications at FisHotel'
+          : 'Buy ' + (target.name || m.name) + ' at FisHotel');
         a.textContent = m.name;
         li.appendChild(a);
         ul.appendChild(li);

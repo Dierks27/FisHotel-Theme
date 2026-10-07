@@ -775,7 +775,34 @@
     var h = el('div', 'fh-qh-phead');
     h.appendChild(el('div', 'fh-qh-pname', med.name_generic));
     h.appendChild(el('div', 'fh-qh-ptag',  tag));
+    // Shop link lives inside the header so every render path (flat daily,
+    // ramp/hold, prazi, bath, chloroquine, generic) gets it for free.
+    h.appendChild(renderShopLink(med));
     return h;
+  }
+
+  /**
+   * "Shop <product> at FisHotel →" when the server resolved a real product
+   * for this med (window.FISHOTEL_MED_LINKS from inc/tool-product-links.php),
+   * else "Browse medications at FisHotel →" pointing at the Medications shop.
+   */
+  function renderShopLink(med) {
+    var cfg = window.FISHOTEL_MED_LINKS || null;
+    var fallbackUrl = (cfg && cfg.fallback_url) || '/product-category/medications/';
+    var entry = cfg && cfg.links && med && cfg.links[med.med_id];
+    var row = el('div', 'fh-qh-shoprow');
+    var a = el('a');
+    if (entry && entry.url && entry.source !== 'fallback') {
+      a.className = 'fh-qh-shoplink';
+      a.href = entry.url;
+      a.textContent = 'Shop ' + (entry.name || med.name_generic) + ' at FisHotel →';
+    } else {
+      a.className = 'fh-qh-shoplink fh-qh-shoplink--fallback';
+      a.href = fallbackUrl;
+      a.textContent = 'Browse medications at FisHotel →';
+    }
+    row.appendChild(a);
+    return row;
   }
 
   function renderSensitivityToggle(options, label, bindKey) {

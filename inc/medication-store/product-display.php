@@ -27,6 +27,10 @@ class FisHotel_Med_Product_Display {
 		// theme's own `woocommerce_before_single_product_summary` so
 		// the eyebrow renders in the purchase panel.
 		add_action( 'woocommerce_before_single_product_summary', [ __CLASS__, 'render_purchase_eyebrow' ], 15 );
+		// "Dose it with our Medication Calculator →" directly under the
+		// eyebrow (same hook, one priority later). Resolved by the
+		// tool-product-links module's reverse map / dosing anchor.
+		add_action( 'woocommerce_before_single_product_summary', [ __CLASS__, 'render_calculator_link' ], 16 );
 		// EA disclosure footer (mode = ea only).
 		add_action( 'woocommerce_after_add_to_cart_form', [ __CLASS__, 'render_ea_disclosure' ], 20 );
 		// Defensive: block server-side add-to-cart for amazon-mode meds.
@@ -48,6 +52,28 @@ class FisHotel_Med_Product_Display {
 		if ( $eyebrow === '' ) return;
 		?>
 		<div class="fishotel-med-eyebrow"><?php echo esc_html( $eyebrow ); ?></div>
+		<?php
+	}
+
+	/**
+	 * Echo the calculator deep link for a medication product. The URL is
+	 * ?med=<med_id> when the product resolves to a calculator medication
+	 * (reverse map or dosing anchor), else the raw dosing anchor appended
+	 * to the calculator URL. Silent when neither applies.
+	 */
+	public static function render_calculator_link() {
+		if ( ! is_product() ) return;
+		if ( ! function_exists( 'fishotel_tool_calculator_link_for_product' ) ) return;
+		$pid = get_queried_object_id();
+		if ( ! fishotel_med_is_med_product( $pid ) ) return;
+
+		$url = fishotel_tool_calculator_link_for_product( $pid );
+		if ( $url === '' ) return;
+		?>
+		<a class="fishotel-med-calc-link" href="<?php echo esc_url( $url ); ?>">
+			<?php esc_html_e( 'Dose it with our Medication Calculator', 'fishotel' ); ?>
+			<span aria-hidden="true" class="fishotel-med-calc-link__arrow">&rarr;</span>
+		</a>
 		<?php
 	}
 

@@ -79,6 +79,30 @@ body.page-template-page-quarantine-help { background: var(--fh-qh-bg); }
 .fh-qh-pname { font-family: var(--fh-qh-font-display); font-size: 24px; color: var(--fh-qh-cream); font-weight: 400; }
 .fh-qh-ptag { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); }
 
+/* "Shop <product> at FisHotel →" — its own full-width row under the
+   name/tag line; the anchor sizes to its text. Mirrors .fh-qh-actbtn
+   typography (gold, tracked caps). */
+.fh-qh-shoprow { flex-basis: 100%; margin-top: 2px; }
+.fh-qh-shoplink {
+  display: inline-block;
+  max-width: 100%;
+  padding: 4px 0;
+  font-family: var(--fh-qh-font-body);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 300;
+  color: var(--fh-qh-gold);
+  text-decoration: none;
+  border-bottom: 0.5px solid rgba(212,165,116,0.4);
+  transition: all 0.15s;
+}
+.fh-qh-shoplink:hover,
+.fh-qh-shoplink:focus { color: var(--fh-qh-cream); border-bottom-color: var(--fh-qh-gold); }
+.fh-qh-shoplink--fallback { color: var(--fh-qh-muted); border-bottom-style: dashed; }
+.fh-qh-shoplink--fallback:hover,
+.fh-qh-shoplink--fallback:focus { color: var(--fh-qh-gold); }
+
 /* ---- Sensitivity / protocol toggle ------------------------------------- */
 .fh-qh-sens { padding-bottom: 4px; border-bottom: 0.5px solid var(--fh-qh-tint-med); }
 .fh-qh-senslabel { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fh-qh-gold); margin-bottom: 10px; }

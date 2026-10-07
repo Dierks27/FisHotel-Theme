@@ -261,6 +261,7 @@ $includes = [
 	'/inc/compatibility-guide-backfill.php',     // Admin backfill tool for product → category meta
 	'/inc/bleach-calculator-bootstrap.php',      // /bleach-calculator/ template assignment
 	'/inc/bleach-calculator-enqueue.php',        // Conditional CSS/JS for the bleach calculator
+	'/inc/tool-product-links.php',               // Calculator / QT Scheduler ↔ medication product links (needs calculator + medication-store above)
 	'/inc/theme-updater.php',    // Self-updater via raw GitHub branch
 ];
 

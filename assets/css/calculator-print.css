@@ -7,7 +7,8 @@
   body, .fh-qh-page, .fh-qh-wrap { background: white !important; color: #111 !important; }
   header, footer, nav, .site-header, .site-footer, .site-navigation { display: none !important; }
   .fh-qh-tabs, .fh-qh-medgrid, .fh-qh-tankrow, .fh-qh-sens, .fh-qh-ppmrow,
-  .fh-qh-actions, .fh-qh-prazi-sliders, .fh-qh-prazi-ctrls { display: none !important; }
+  .fh-qh-actions, .fh-qh-prazi-sliders, .fh-qh-prazi-ctrls,
+  .fh-qh-shoprow, .fh-qh-shoplink { display: none !important; }
   .fh-qh-panel { border: 1px solid #999 !important; padding: 16px !important; }
   .fh-qh-eyebrow, .fh-qh-title, .fh-qh-intro, .fh-qh-pname, .fh-qh-ptag,
   .fh-qh-dosenum, .fh-qh-doseunit, .fh-qh-schedval, .fh-qh-schedlabel,

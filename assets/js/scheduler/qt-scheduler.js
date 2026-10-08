@@ -123,7 +123,10 @@
   // Legacy SKU guesses — kept only as data-med-sku attributes (harmless).
   // Real product URLs come from window.FISHOTEL_MED_LINKS, localised by
   // inc/tool-product-links.php: { links: { med_id: { url, name, source,
-  // in_stock } }, fallback_url, calculator_url, scheduler_url }.
+  // in_stock, mode } }, fallback_url, calculator_url, scheduler_url }.
+  // source 'none' = hidden (render the name as plain text, no anchor);
+  // mode 'amazon' = the product page holds a Buy-on-Amazon button, so the
+  // accessible name says "View", not "Buy".
   var MED_SKU_MAP = {
     copper_power:         { sku: 'copper-power-2oz',         brand: 'Copper Power' },
     formalin_37:          { sku: 'formalin-37-pint',         brand: 'Formalin 37%' },
@@ -145,20 +148,24 @@
 
   /**
    * Resolve where a med link should point. Returns
-   * { url, fallback, name, outOfStock }. fallback === true when no real
-   * product is known (older page cache without FISHOTEL_MED_LINKS, or the
-   * server resolved nothing) — the link then goes to the Medications shop
-   * and is styled accordingly. outOfStock flags a resolved product that
-   * currently cannot be bought.
+   * { url, fallback, hidden, name, outOfStock, mode }. hidden === true when
+   * the server says there is nothing to link (source 'none'): render plain
+   * text. fallback === true when no real product is known (older page cache
+   * without FISHOTEL_MED_LINKS, or the server resolved nothing) — the link
+   * then goes to the Medications shop and is styled accordingly. outOfStock
+   * flags a resolved product that currently cannot be bought.
    */
   function medLinkTarget(medId) {
     var cfg = window.FISHOTEL_MED_LINKS || null;
     var fallbackUrl = (cfg && cfg.fallback_url) || FALLBACK_SHOP_URL;
     var entry = cfg && cfg.links && cfg.links[medId];
-    if (entry && entry.url && entry.source !== 'fallback') {
-      return { url: entry.url, fallback: false, name: entry.name || '', outOfStock: entry.in_stock === false };
+    if (entry && entry.source === 'none') {
+      return { url: '', fallback: false, hidden: true, name: entry.name || '', outOfStock: false, mode: '' };
     }
-    return { url: fallbackUrl, fallback: true, name: '', outOfStock: false };
+    if (entry && entry.url && entry.source !== 'fallback') {
+      return { url: entry.url, fallback: false, hidden: false, name: entry.name || '', outOfStock: entry.in_stock === false, mode: entry.mode || '' };
+    }
+    return { url: fallbackUrl, fallback: true, hidden: false, name: '', outOfStock: false, mode: '' };
   }
 
   /**
@@ -173,7 +180,7 @@
       cls  += ' fst-med-link--fallback';
       label = visibleName + ' — browse medications at FisHotel';
     } else {
-      label = 'Buy ' + visibleName + ' at FisHotel';
+      label = (target.mode === 'amazon' ? 'View ' : 'Buy ') + visibleName + ' at FisHotel';
       if (target.outOfStock) {
         cls  += ' fst-med-link--oos';
         label += ' (currently out of stock)';
@@ -187,6 +194,9 @@
     var info   = MED_SKU_MAP[medId] || { sku: medId, brand: displayName || medId };
     var name   = displayName || info.brand;
     var target = medLinkTarget(medId);
+    if (target.hidden) {
+      return '<span class="fst-med-name">' + escHtml(name) + '</span>';
+    }
     var attrs  = medLinkAttrs(target, name);
     return '<a class="' + attrs.cls + '" data-med-sku="' + escAttr(info.sku) + '" data-brand-name="' + escAttr(info.brand) +
            '" href="' + escAttr(target.url) + '" aria-label="' + escAttr(attrs.label) + '"' +
@@ -1074,6 +1084,12 @@
       keyMeds.forEach(function (m) {
         var li = el('li');
         var target = medLinkTarget(m.med_id);
+        if (target.hidden) {
+          // Nothing to buy (protocol, or an admin "None" override): name only.
+          li.appendChild(el('span', 'fst-med-name', m.name));
+          ul.appendChild(li);
+          return;
+        }
         var attrs  = medLinkAttrs(target, m.name);
         var a = el('a', attrs.cls);
         a.setAttribute('data-med-sku', m.sku);

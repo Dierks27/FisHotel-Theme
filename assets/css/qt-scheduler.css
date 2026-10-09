@@ -184,6 +184,9 @@ body.page-template-page-qt-scheduler { background: var(--fst-bg); }
 .fst-medsblock .fst-medlist a.fst-med-link--oos { color: var(--fst-muted); border-style: dashed; }
 .fst-medsblock .fst-medlist a.fst-med-link--fallback:hover,
 .fst-medsblock .fst-medlist a.fst-med-link--oos:hover { color: var(--fst-gold); border-color: var(--fst-gold); }
+/* Nothing to buy (Hyposalinity, or an admin "None" override): the name
+   as plain text, same box as a link so the list stays aligned. */
+.fst-medsblock .fst-medlist .fst-med-name { color: var(--fst-cream); padding: 4px 10px; border: 0.5px solid transparent; }
 
 .fst-gear { margin-top: 14px; padding-top: 12px; border-top: 0.5px solid var(--fst-tint-med); }
 .fst-gear-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fst-dim); margin-bottom: 6px; }

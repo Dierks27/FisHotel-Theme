@@ -254,8 +254,8 @@ class FisHotel_Admin_Settings {
 		// Tool Links (calculator / QT Scheduler ↔ products) — one int per
 		// medication (0 = auto) plus the fallback URL. Owned by
 		// inc/tool-product-links.php, which only enumerates the per-med keys
-		// on admin screen requests so front-end calls to get() never load
-		// the medication dataset.
+		// on options.php saves and the Product Page screen so no other
+		// request (front end, Orders list…) loads the medication dataset.
 		if ( function_exists( 'fishotel_tool_link_defaults' ) ) {
 			$defaults = array_merge( $defaults, fishotel_tool_link_defaults() );
 		}
@@ -653,6 +653,8 @@ JS;
 		.fh-dash-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); transform: translateY(-1px); }
 		.fh-dash-card strong { font-size: 14px; color: #1d2327; }
 		.fh-dash-card span { font-size: 12px; color: #666; line-height: 1.45; }
+		.fh-section-description { max-width: 60em; }
+		.fh-tool-link-status { display: block; margin-top: 4px; max-width: 60em; }
 		';
 	}
 
@@ -801,9 +803,10 @@ JS;
 			// the QT Scheduler link each medication to. Field list comes from
 			// inc/tool-product-links.php (one product_select per seed med).
 			'tool_links' => [
-				'page'   => 'fishotel-product',
-				'title'  => 'Tool Links (Calculator + QT Scheduler → Products)',
-				'fields' => function_exists( 'fishotel_tool_link_settings_fields' ) ? fishotel_tool_link_settings_fields() : [],
+				'page'        => 'fishotel-product',
+				'title'       => 'Tool Links (Calculator + QT Scheduler → Products)',
+				'description' => function_exists( 'fishotel_tool_link_section_description' ) ? fishotel_tool_link_section_description() : '',
+				'fields'      => function_exists( 'fishotel_tool_link_settings_fields' ) ? fishotel_tool_link_settings_fields() : [],
 			],
 			// Cart page — hero
 			'cart_hero' => [
@@ -1049,10 +1052,15 @@ JS;
 		foreach ( self::sections() as $section_id => $section ) {
 			$group = self::group_for_page( $section['page'] );
 
+			// Optional section-level 'description' (plain text) renders
+			// between the heading and the first field.
+			$description = isset( $section['description'] ) ? trim( (string) $section['description'] ) : '';
 			add_settings_section(
 				'fh_section_' . $section_id,
 				$section['title'],
-				'__return_null',
+				$description === '' ? '__return_null' : function () use ( $description ) {
+					echo '<p class="description fh-section-description">' . esc_html( $description ) . '</p>';
+				},
 				$section['page']
 			);
 
@@ -1105,17 +1113,28 @@ JS;
 						'default'           => '',
 					] );
 				} elseif ( $field['type'] === 'product_select' ) {
+					// 0 = Auto, -1 = None (hide link), else a product ID —
+					// absint would turn -1 into 1, so the owning module
+					// sanitizes.
 					register_setting( $group, $key, [
 						'type'              => 'integer',
-						'sanitize_callback' => 'absint',
+						'sanitize_callback' => class_exists( 'FisHotel_Tool_Product_Links' )
+							? [ 'FisHotel_Tool_Product_Links', 'sanitize_override' ]
+							: 'intval',
 						'default'           => 0,
 					] );
 				} elseif ( $field['type'] === 'url' ) {
 					// No preserve-on-empty here: blank is a meaningful value
 					// ("use the default URL"), so clearing must persist.
+					// Trim first (esc_url_raw only ltrims, so a trailing
+					// space would be stored as %20) and prefix '/' on a bare
+					// path so esc_url_raw cannot turn
+					// 'product-category/medications' into http://product-category/…
 					register_setting( $group, $key, [
 						'type'              => 'string',
-						'sanitize_callback' => 'esc_url_raw',
+						'sanitize_callback' => class_exists( 'FisHotel_Tool_Product_Links' )
+							? [ 'FisHotel_Tool_Product_Links', 'sanitize_fallback_url' ]
+							: function ( $val ) { return (string) esc_url_raw( trim( (string) $val ) ); },
 						'default'           => self::defaults()[ $key ] ?? '',
 					] );
 				} elseif ( $field['type'] === 'placeholder_library' ) {

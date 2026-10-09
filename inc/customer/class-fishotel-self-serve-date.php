@@ -189,11 +189,14 @@ class FisHotel_Self_Serve_Date {
 		if ( 'yes' === (string) $order->get_meta( self::META_UNLOCK ) ) {
 			return true;
 		}
-		$ts = strtotime( $delivery );
-		if ( ! $ts ) {
+		// Local midnight of the delivery date (site timezone) so the 48h
+		// rule is measured against the same calendar get_available_dates()
+		// uses — strtotime() alone gave UTC midnight, ~5h early for Central.
+		$day = DateTimeImmutable::createFromFormat( '!Y-m-d', $delivery, wp_timezone() );
+		if ( ! $day ) {
 			return false;
 		}
-		$cutoff = $ts - ( self::CUTOFF_HOURS * HOUR_IN_SECONDS );
+		$cutoff = $day->getTimestamp() - ( self::CUTOFF_HOURS * HOUR_IN_SECONDS );
 		return time() < $cutoff;
 	}
 
@@ -276,15 +279,20 @@ class FisHotel_Self_Serve_Date {
 		$settings = function_exists( 'fishotel_get_allowed_shipping_settings' )
 			? fishotel_get_allowed_shipping_settings()
 			: [
-				'days'           => [ 'Tuesday', 'Wednesday', 'Thursday' ],
+				// Mirrors the Batch Plugin's own get_option() fallbacks.
+				'days'           => [ 'Monday', 'Tuesday', 'Wednesday' ],
 				'min_advance'    => 1,
-				'max_days_ahead' => 21,
-				'max_per_day'    => 0,
+				'max_days_ahead' => 30,
+				'max_per_day'    => 6,
 				'blocked_dates'  => [],
 			];
 
 		$out         = [];
-		$today       = strtotime( 'today' );
+		// "Today" in the SITE timezone (WP pins PHP's default zone to UTC, so
+		// strtotime('today') rolled over at 7pm Central and made the 48h
+		// cutoff ~53h). The Batch Plugin's checkout picker already works in
+		// America/Chicago; this keeps the two pickers on the same calendar.
+		$today       = new DateTimeImmutable( 'today', wp_timezone() );
 		$hour_cutoff = time() + ( self::CUTOFF_HOURS * HOUR_IN_SECONDS );
 		$min_advance = (int) $settings['min_advance'];
 		$max_ahead   = (int) $settings['max_days_ahead'];
@@ -293,12 +301,13 @@ class FisHotel_Self_Serve_Date {
 		$max_per_day = (int) $settings['max_per_day'];
 
 		for ( $i = 0; $i <= $max_ahead; $i++ ) {
-			$ts = strtotime( "+{$i} days", $today );
-			if ( ! $ts ) {
+			$day = $today->modify( "+{$i} days" );
+			if ( ! $day ) {
 				continue;
 			}
-			$date_str = date( 'Y-m-d', $ts );
-			$weekday  = date( 'l', $ts );
+			$ts       = $day->getTimestamp(); // local midnight as a real Unix timestamp
+			$date_str = $day->format( 'Y-m-d' );
+			$weekday  = $day->format( 'l' );
 			$is_current_slot = ( '' !== $current_date && $current_date === $date_str );
 
 			if ( $is_current_slot ) {
@@ -307,7 +316,7 @@ class FisHotel_Self_Serve_Date {
 				$count = self::count_orders_for_date( $date_str );
 				$out[] = [
 					'date'          => $date_str,
-					'label'         => date_i18n( 'l, F j', $ts ),
+					'label'         => wp_date( 'l, F j', $ts ),
 					'count'         => $count,
 					'is_current'    => true,
 					'capacity_full' => $max_per_day > 0 && $count >= $max_per_day,
@@ -338,7 +347,7 @@ class FisHotel_Self_Serve_Date {
 			}
 			$out[] = [
 				'date'          => $date_str,
-				'label'         => date_i18n( 'l, F j', $ts ),
+				'label'         => wp_date( 'l, F j', $ts ),
 				'count'         => $count,
 				'is_current'    => false,
 				'capacity_full' => false,
@@ -503,6 +512,13 @@ class FisHotel_Self_Serve_Date {
 					'' !== $current ? $current : __( '(unset)', 'fishotel' ),
 					$new_date
 				), false );
+				// Also refresh the source's pre-combine backup date: Delete
+				// Fulfillment (detach_source) restores that backup onto the
+				// source, which silently reverted the customer's confirmed
+				// change to the stale pre-combine date.
+				if ( '' !== (string) $sibling->get_meta( '_fishotel_fulfillment_orig_ship_date' ) ) {
+					$sibling->update_meta_data( '_fishotel_fulfillment_orig_ship_date', $new_date );
+				}
 				$sibling->save();
 			}
 		}

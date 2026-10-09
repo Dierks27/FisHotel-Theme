@@ -1,0 +1,23 @@
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE directories
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log
+
+# NOTE: vendor/ is intentionally NOT ignored — the site deploys by git pull
+# with no Composer step, so dompdf has to ship in the repo (see README).

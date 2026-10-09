@@ -18,8 +18,8 @@ You handle ALL code — PHP, CSS, JS, file edits. Claude.ai handles browser test
 
 ## Staging
 - **URL:** https://woocommerce-1611979-6343482.cloudwaysapps.com
-- **WP Admin:** jeff@fishotel.com / DwKAx9E34e  
-- **htpasswd:** fstrvwvmjq / ZkVkBVV2Ts
+- **WP Admin:** see password manager
+- **htpasswd:** see password manager
 - **PHP:** 8.2.30
 
 ## The Stack

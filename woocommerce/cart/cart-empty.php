@@ -26,10 +26,15 @@ $cta_url   = (string) FisHotel_Admin_Settings::get( 'fh_empty_cart_cta_url' );
 $sec_label = (string) FisHotel_Admin_Settings::get( 'fh_empty_cart_secondary_link_label' );
 $sec_url   = (string) FisHotel_Admin_Settings::get( 'fh_empty_cart_secondary_link_url' );
 
-// URL fields fall back to the WC shop permalink when empty so a fresh
-// install still produces working buttons without any admin setup.
+// URL fields fall back so a fresh install still produces working buttons
+// without any admin setup. The primary CTA ("View Available Fish") goes
+// straight to the Quarantined Fish grid — the WC shop page is the 3-tile
+// category landing, one click short of the fish. The secondary link
+// ("browse the foods · meds · merch") keeps the shop page.
 if ( $cta_url === '' ) {
-	$cta_url = (string) wc_get_page_permalink( 'shop' );
+	$cta_url = function_exists( 'fishotel_quarantined_fish_url' )
+		? fishotel_quarantined_fish_url()
+		: (string) wc_get_page_permalink( 'shop' );
 }
 if ( $sec_url === '' ) {
 	$sec_url = (string) wc_get_page_permalink( 'shop' );

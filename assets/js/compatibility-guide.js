@@ -149,7 +149,17 @@
 		if (!target) return null;
 		const complexes = data.cirrhilabrus.complexes;
 		for (const key of Object.keys(complexes)) {
-			const sp = complexes[key].species || [];
+			// Four complexes (lanceolatus, rubrimarginatus, temminckii,
+			// filamentosus) list their species under subGroups {A: [...], B: [...]}
+			// instead of a flat species[] — scan both or C. jordani / lineatus /
+			// rhomboidalis etc. never resolve.
+			let sp = (complexes[key].species || []).slice();
+			const groups = complexes[key].subGroups;
+			if (groups && typeof groups === 'object') {
+				for (const g of Object.keys(groups)) {
+					if (Array.isArray(groups[g])) sp = sp.concat(groups[g]);
+				}
+			}
 			for (const s of sp) {
 				if (normalizeCirrSci(s.sci) === target) {
 					return { key, complex: complexes[key], species: s };
@@ -159,17 +169,19 @@
 		return null;
 	}
 	function cirrhilabrusCheck(fishA, fishB, volume) {
-		const cA = findCirrComplex(fishA.sci);
-		const cB = findCirrComplex(fishB.sci);
-		if (!cA || !cB) return null; // can't resolve — fall back to category-level matrix
-
 		// Same species → not recommended (per spec test 6: 2 Lubbocki → N).
 		// Most Cirrhilabrus go terminal/territorial as adults; a bonded pair is
-		// the rare exception, not the default.
+		// the rare exception, not the default. Checked BEFORE the complex lookup
+		// so a species missing from cirrhilabrus.json still gets 'N' rather than
+		// the category-level 'O'.
 		if (fishA.sci && fishB.sci &&
 			normalizeCirrSci(fishA.sci) === normalizeCirrSci(fishB.sci)) {
 			return { v: 'N', note: 'Same species — single specimen only' };
 		}
+
+		const cA = findCirrComplex(fishA.sci);
+		const cB = findCirrComplex(fishB.sci);
+		if (!cA || !cB) return null; // can't resolve — fall back to category-level matrix
 
 		// Same complex → watch (data file has no sub-group field; W is the spec's ceiling)
 		if (cA.key === cB.key) {
@@ -458,9 +470,25 @@
 		const addBtn = $('[data-fh-modal-add]');
 		if (addBtn) addBtn.disabled = false;
 	}
+	// Element that had focus when the Add Fish dialog opened — focus goes
+	// back to it on close so keyboard users don't land at the top of the page.
+	let modalOpener = null;
+	function modalFocusables(modal) {
+		const panel = $('.fh-compat-modal__panel', modal) || modal;
+		return $$('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])', panel)
+			.filter((el) => !el.disabled && !el.closest('[hidden]') && el.offsetParent !== null
+				// A radio group is ONE tab stop (the checked radio, or the first
+				// when none is checked). Listing every radio made the unchecked
+				// "Considering" radio the trap's `last` on a fresh open (Add Fish
+				// is disabled then), so Tab from the checked "My Tank" radio never
+				// matched `last` and escaped to the page behind the backdrop.
+				&& (el.type !== 'radio' || el.checked
+					|| !panel.querySelector('input[type="radio"][name="' + el.name + '"]:checked')));
+	}
 	function openModal(zone) {
 		const modal = $('#fh-compat-modal');
 		if (!modal) return;
+		modalOpener = document.activeElement;
 		modal.classList.add('is-open');
 		modal.setAttribute('aria-hidden', 'false');
 		if (zone) {
@@ -473,13 +501,37 @@
 		if (search) search.value = '';
 		const results = $('[data-fh-search-results]');
 		if (results) results.innerHTML = '';
+		const focusTarget = $('.fh-compat-modal__tab', modal) || $('.fh-compat-modal__close', modal);
+		if (focusTarget) focusTarget.focus();
 	}
 	function closeModal() {
 		const modal = $('#fh-compat-modal');
 		if (!modal) return;
+		const wasOpen = modal.classList.contains('is-open');
 		modal.classList.remove('is-open');
 		modal.setAttribute('aria-hidden', 'true');
 		clearPick();
+		if (wasOpen && modalOpener && typeof modalOpener.focus === 'function' && document.body.contains(modalOpener)) {
+			modalOpener.focus();
+		}
+		modalOpener = null;
+	}
+	// Tab / Shift+Tab stay inside the open dialog's panel.
+	function trapModalTab(e) {
+		const modal = $('#fh-compat-modal');
+		if (!modal || !modal.classList.contains('is-open')) return;
+		const focusables = modalFocusables(modal);
+		if (!focusables.length) { e.preventDefault(); return; }
+		const first = focusables[0];
+		const last = focusables[focusables.length - 1];
+		const active = document.activeElement;
+		const inside = modal.contains(active);
+		if (e.shiftKey) {
+			if (!inside || active === first) { e.preventDefault(); last.focus(); }
+		} else if (!inside || active === last) {
+			e.preventDefault();
+			first.focus();
+		}
 	}
 	function switchTab(name) {
 		$$('.fh-compat-modal__tab').forEach(function (t) {
@@ -987,7 +1039,8 @@
 		});
 
 		document.addEventListener('keydown', function (e) {
-			if (e.key === 'Escape') closeModal();
+			if (e.key === 'Escape') { closeModal(); return; }
+			if (e.key === 'Tab') trapModalTab(e);
 		});
 
 		const search = $('#fh-compat-search-input');
@@ -1022,6 +1075,19 @@
 			data = await loadData();
 		} catch (err) {
 			if (window.console) console.error('FisHotel compatibility data load failed', err);
+			// attach() never runs, so every button is inert — say so on the page
+			// instead of leaving a silently dead guide. Inline styles because the
+			// notice must show even if the stylesheet is the thing that failed.
+			const host = $('.fh-compat__inner') || $('.fh-compat') || document.body;
+			if (host && !$('[data-fh-compat-error]')) {
+				const notice = document.createElement('div');
+				notice.setAttribute('data-fh-compat-error', '');
+				notice.setAttribute('role', 'alert');
+				notice.className = 'fh-compat-error';
+				notice.style.cssText = 'margin:16px 0;padding:14px 18px;border:1px solid #d46a5a;border-radius:6px;color:#d46a5a;font-size:14px;text-align:center;';
+				notice.textContent = 'The compatibility data could not be loaded, so the guide is not interactive right now. Please reload the page — if it keeps happening, let FisHotel know.';
+				host.insertBefore(notice, host.firstChild);
+			}
 			return;
 		}
 		renderCategoriesGrid();

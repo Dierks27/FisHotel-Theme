@@ -57,6 +57,16 @@ function fishotel_enqueue_calculator_assets() {
         'FISHOTEL_MEDS',
         FisHotel_Medication_Data::get_all()
     );
+
+    // Product links for the "Shop <med> at FisHotel" line under each panel
+    // header (resolved + cached by inc/tool-product-links.php).
+    if ( function_exists( 'fishotel_tool_links_for_js' ) ) {
+        wp_localize_script(
+            'fishotel-calculator',
+            'FISHOTEL_MED_LINKS',
+            fishotel_tool_links_for_js()
+        );
+    }
 }
 
 /* End Quarantine Help Calculator wiring */

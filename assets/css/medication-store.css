@@ -98,6 +98,40 @@ body.fishotel-med-modal-open { overflow: hidden; }
 	color: var(--fh-gold, #c9963a);
 	margin: 0 0 6px;
 }
+/* "Dose it with our Medication Calculator →" — sits directly under the
+   eyebrow, above the title. Same tracked-caps voice as the eyebrow, in
+   the body font so it reads as an action rather than a label. */
+.fishotel-med-calc { margin: 0 0 10px; }
+.fishotel-med-calc-link {
+	display: inline;
+	font-family: var(--fh-font, 'Montserrat', sans-serif);
+	font-size: 11px;
+	letter-spacing: 2px;
+	line-height: 2;
+	text-transform: uppercase;
+	color: var(--fh-gold, #c9963a);
+	/* text-decoration, not a border: the rule follows each line when the
+	   label wraps inside a 320px purchase panel on a phone. */
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-decoration-color: rgba(201, 150, 58, 0.35);
+	text-underline-offset: 4px;
+	transition: color 0.15s, text-decoration-color 0.15s;
+}
+.fishotel-med-calc-link:hover,
+.fishotel-med-calc-link:focus {
+	color: var(--fh-gold-lt, #deb96a);
+	text-decoration-color: var(--fh-gold-lt, #deb96a);
+}
+.fishotel-med-calc-link__arrow {
+	display: inline-block;
+	margin-left: 4px;
+	text-decoration: none;
+	transition: transform 0.15s;
+}
+.fishotel-med-calc-link:hover .fishotel-med-calc-link__arrow {
+	transform: translateX(3px);
+}
 .fishotel-med-ea-disclosure {
 	margin: 16px 0 0;
 	padding: 10px 14px;

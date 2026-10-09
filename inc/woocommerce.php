@@ -38,12 +38,16 @@ add_filter( 'woocommerce_default_catalog_orderby', function() { return 'title'; 
 // it, sorts with many tied rows (e.g. price-desc when most "Arriving Soon"
 // fish have no price) come back in arbitrary order, which differs between
 // the initial render and the Load More AJAX query. Runs for both queries
-// since both pass through get_catalog_ordering_args(). Price sorts already
-// carry a product_id tiebreaker in their own posts_clauses, and have an
-// empty 'orderby' here, so they're left untouched.
+// since both pass through get_catalog_ordering_args(). Price / popularity /
+// rating sorts are overridden by WC in posts_clauses (with their own
+// product_id tiebreaker), so appending here is harmless for them. Search
+// 'relevance' is skipped: WP only applies search relevance ordering when
+// orderby === 'relevance' exactly, so 'relevance ID' silently fell back to
+// ID DESC on product searches.
 add_filter( 'woocommerce_get_catalog_ordering_args', function( $args ) {
     if ( ! empty( $args['orderby'] )
         && is_string( $args['orderby'] )
+        && 'relevance' !== $args['orderby']
         && false === strpos( $args['orderby'], 'rand' )
         && ! preg_match( '/\bID\b/', $args['orderby'] ) ) {
         $args['orderby'] .= ' ID';
@@ -107,6 +111,59 @@ add_action( 'init', function () {
 	}
 	remove_action( 'woocommerce_cart_is_empty', 'wc_empty_cart_message', 10 );
 }, 20 );
+
+/*
+ * Checkout — billing phone is REQUIRED for LIVESTOCK orders only. UPS
+ * labels (Finiship) need a contact phone; a blank phone silently fell back
+ * to Jeff's own number on the label, so the carrier called him instead of
+ * the customer. Dry-goods carts (meds, food, gift cards, merch) get an
+ * OPTIONAL phone — Jeff's call: nobody phones about a box of flakes, so
+ * don't make that customer type a number.
+ *
+ * `required` is set explicitly BOTH ways rather than only flipped on.
+ * WooCommerce > Settings > Advanced > Checkout "Phone number field"
+ * defaults to Required, so deferring to that setting for dry-goods carts
+ * made the optional half of this rule a silent no-op. "Hidden" is still
+ * honoured: WC drops the field entirely and the isset() guard returns early.
+ *
+ * fishotel_cart_has_livestock() (inc/template-functions.php) reads the live
+ * cart: quarantined-fish products or an overnight shipping class, sticker
+ * giveaway lines ignored. WC runs this same filter when it validates the
+ * submitted form on woocommerce_checkout_process, so the asterisk at
+ * render time and the "required" error at submit time always agree.
+ */
+add_filter( 'woocommerce_checkout_fields', function ( $fields ) {
+	if ( ! isset( $fields['billing']['billing_phone'] ) || ! is_array( $fields['billing']['billing_phone'] ) ) {
+		return $fields;
+	}
+	if ( ! function_exists( 'fishotel_cart_has_livestock' ) ) {
+		return $fields; // Helper missing: leave WC's own setting alone.
+	}
+	$fields['billing']['billing_phone']['required'] = fishotel_cart_has_livestock();
+	return $fields;
+}, 20 );
+
+/*
+ * Chosen shipping rate for the first cart package, or null when nothing has
+ * been calculated yet. Lets the cart/checkout ledgers tell "$0.00 (free /
+ * repeat-customer piggyback)" apart from "not calculated yet" — both used
+ * to render as "Calculated at checkout" because they only tested the
+ * shipping total for > 0.
+ *
+ * @return WC_Shipping_Rate|null
+ */
+function fishotel_cart_chosen_shipping_rate() {
+	if ( ! function_exists( 'WC' ) || ! WC() || ! WC()->shipping() || ! WC()->session ) {
+		return null;
+	}
+	$packages = WC()->shipping()->get_packages();
+	$chosen   = (array) WC()->session->get( 'chosen_shipping_methods' );
+	if ( empty( $packages[0]['rates'] ) || empty( $chosen[0] ) ) {
+		return null;
+	}
+	$rate = isset( $packages[0]['rates'][ $chosen[0] ] ) ? $packages[0]['rates'][ $chosen[0] ] : null;
+	return $rate instanceof WC_Shipping_Rate ? $rate : null;
+}
 
 /*
  * Checkout — "Ship to a different address" defaults to UNCHECKED. The

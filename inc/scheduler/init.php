@@ -56,10 +56,23 @@ function fishotel_enqueue_qt_scheduler_assets() {
         'FISHOTEL_MEDS',
         FisHotel_Medication_Data::get_all()
     );
+
+    // Product links for the med links in the day cards + "Meds for this
+    // protocol" block (resolved + cached by inc/tool-product-links.php).
+    if ( function_exists( 'fishotel_tool_links_for_js' ) ) {
+        wp_localize_script(
+            'fishotel-qt-scheduler-data',
+            'FISHOTEL_MED_LINKS',
+            fishotel_tool_links_for_js()
+        );
+    }
 }
 
-// Bootstrap the /qt-scheduler/ page if it doesn't already exist.
-add_action( 'admin_init', 'fishotel_bootstrap_qt_scheduler_page' );
+// Bootstrap the /qt-scheduler/ page if it doesn't already exist. The shared
+// helper runs once per theme version on admin_init (never on AJAX / cron /
+// REST) and unconditionally on after_switch_theme — the forced re-run path.
+add_action( 'admin_init',         'fishotel_bootstrap_qt_scheduler_page' );
+add_action( 'after_switch_theme', 'fishotel_bootstrap_qt_scheduler_page' );
 function fishotel_bootstrap_qt_scheduler_page() {
     if ( function_exists( 'fishotel_bootstrap_template_page' ) ) {
         fishotel_bootstrap_template_page( 'qt-scheduler', 'page-qt-scheduler.php', 'QT Scheduler' );

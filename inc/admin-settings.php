@@ -202,6 +202,9 @@ class FisHotel_Admin_Settings {
 			'contacts_email_label'          => 'Write us',
 			'contacts_forum_url'            => 'https://humble.fish/community/forums/fishotel.41/',
 			'contacts_forum_label'          => 'Visit our Humble.Fish forum',
+			// Newsletter page — optional hero override (attachment ID). Blank
+			// = page-newsletter.php falls back to the uploaded Gazette art.
+			'fh_newsletter_hero_image'      => '',
 			// Cart Page — hero (global; per-cart subtitle copy lives in
 			// the preset seeds below)
 			'fh_cart_hero_eyebrow'             => 'GUEST SERVICES',
@@ -223,6 +226,8 @@ class FisHotel_Admin_Settings {
 			'fh_checkout_section_coupon'             => 'HAVE A COUPON CODE?',
 			'fh_checkout_section_guest_details'      => 'GUEST DETAILS',
 			'fh_checkout_section_delivery_details'   => 'DELIVERY DETAILS',
+			'fh_checkout_section_notes'              => 'DELIVERY DATE & NOTES',
+			'fh_checkout_section_notes_plain'        => 'ORDER NOTES',
 			'fh_checkout_section_payment'            => 'PAYMENT METHOD',
 			'fh_checkout_section_statement'          => 'ITEMIZED STATEMENT',
 			// Checkout Page — CTAs and labels
@@ -244,6 +249,15 @@ class FisHotel_Admin_Settings {
 		// (single source of truth, also read by the templates).
 		if ( function_exists( 'fishotel_account_text_defaults' ) ) {
 			$defaults = array_merge( $defaults, fishotel_account_text_defaults() );
+		}
+
+		// Tool Links (calculator / QT Scheduler ↔ products) — one int per
+		// medication (0 = auto) plus the fallback URL. Owned by
+		// inc/tool-product-links.php, which only enumerates the per-med keys
+		// on options.php saves and the Product Page screen so no other
+		// request (front end, Orders list…) loads the medication dataset.
+		if ( function_exists( 'fishotel_tool_link_defaults' ) ) {
+			$defaults = array_merge( $defaults, fishotel_tool_link_defaults() );
 		}
 
 		return $defaults;
@@ -429,6 +443,7 @@ class FisHotel_Admin_Settings {
 			'fishotel-faq'           => [ 'page_title' => 'FAQ Page',      'menu_title' => 'FAQ Page' ],
 			'fishotel-about'         => [ 'page_title' => 'About Page',    'menu_title' => 'About Page' ],
 			'fishotel-contacts'      => [ 'page_title' => 'Contacts Page', 'menu_title' => 'Contacts Page' ],
+			'fishotel-newsletter'    => [ 'page_title' => 'Newsletter Page', 'menu_title' => 'Newsletter Page' ],
 			'fishotel-placeholders'  => [ 'page_title' => 'Placeholders',  'menu_title' => 'Placeholders' ],
 			'fishotel-branding'      => [ 'page_title' => 'Branding',      'menu_title' => 'Branding' ],
 			'fishotel-tools'         => [
@@ -638,6 +653,8 @@ JS;
 		.fh-dash-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.08); transform: translateY(-1px); }
 		.fh-dash-card strong { font-size: 14px; color: #1d2327; }
 		.fh-dash-card span { font-size: 12px; color: #666; line-height: 1.45; }
+		.fh-section-description { max-width: 60em; }
+		.fh-tool-link-status { display: block; margin-top: 4px; max-width: 60em; }
 		';
 	}
 
@@ -782,6 +799,15 @@ JS;
 					'fh_default_habitat' => [ 'label' => 'Default Habitat & Behavior text', 'type' => 'textarea', 'description' => 'Shown when a product has no Habitat & Behavior custom field.' ],
 				],
 			],
+			// Tool Links — which product the Medication Dosing Calculator and
+			// the QT Scheduler link each medication to. Field list comes from
+			// inc/tool-product-links.php (one product_select per seed med).
+			'tool_links' => [
+				'page'        => 'fishotel-product',
+				'title'       => 'Tool Links (Calculator + QT Scheduler → Products)',
+				'description' => function_exists( 'fishotel_tool_link_section_description' ) ? fishotel_tool_link_section_description() : '',
+				'fields'      => function_exists( 'fishotel_tool_link_settings_fields' ) ? fishotel_tool_link_settings_fields() : [],
+			],
 			// Cart page — hero
 			'cart_hero' => [
 				'page'   => 'fishotel-cart',
@@ -824,6 +850,8 @@ JS;
 					'fh_checkout_section_coupon'           => [ 'label' => 'Coupon prompt',             'type' => 'text', 'placeholder' => 'HAVE A COUPON CODE?' ],
 					'fh_checkout_section_guest_details'    => [ 'label' => 'Guest details card',        'type' => 'text', 'placeholder' => 'GUEST DETAILS' ],
 					'fh_checkout_section_delivery_details' => [ 'label' => 'Delivery details card',     'type' => 'text', 'placeholder' => 'DELIVERY DETAILS' ],
+					'fh_checkout_section_notes'            => [ 'label' => 'Order notes card',          'type' => 'text', 'placeholder' => 'DELIVERY DATE & NOTES', 'description' => 'Heading over the order-notes textarea when the delivery-date picker (Batch plugin) is shown with it — fish in the cart, no reorder lock.' ],
+					'fh_checkout_section_notes_plain'      => [ 'label' => 'Order notes card (no date)', 'type' => 'text', 'placeholder' => 'ORDER NOTES', 'description' => 'Same card when no delivery-date picker rendered: medication / food / merch-only carts, or a reorder-locked checkout (the lock card shows the date).' ],
 					'fh_checkout_section_payment'          => [ 'label' => 'Payment method card',       'type' => 'text', 'placeholder' => 'PAYMENT METHOD' ],
 					'fh_checkout_section_statement'        => [ 'label' => 'Itemized statement card',   'type' => 'text', 'placeholder' => 'ITEMIZED STATEMENT' ],
 				],
@@ -942,6 +970,15 @@ JS;
 					'contacts_forum_label'        => [ 'label' => 'Forum link label',     'type' => 'text',     'placeholder' => 'Visit our Humble.Fish forum' ],
 				],
 			],
+			// Newsletter page — the template reads this via get(); an
+			// attachment ID wins, blank falls back to the uploaded Gazette art.
+			'newsletter' => [
+				'page'   => 'fishotel-newsletter',
+				'title'  => 'Newsletter Page',
+				'fields' => [
+					'fh_newsletter_hero_image' => [ 'label' => 'Gazette hero image', 'type' => 'image', 'description' => 'Leave blank to use the uploaded Gazette illustration' ],
+				],
+			],
 			// Placeholders page
 			'placeholders' => [
 				'page'   => 'fishotel-placeholders',
@@ -1015,10 +1052,15 @@ JS;
 		foreach ( self::sections() as $section_id => $section ) {
 			$group = self::group_for_page( $section['page'] );
 
+			// Optional section-level 'description' (plain text) renders
+			// between the heading and the first field.
+			$description = isset( $section['description'] ) ? trim( (string) $section['description'] ) : '';
 			add_settings_section(
 				'fh_section_' . $section_id,
 				$section['title'],
-				'__return_null',
+				$description === '' ? '__return_null' : function () use ( $description ) {
+					echo '<p class="description fh-section-description">' . esc_html( $description ) . '</p>';
+				},
 				$section['page']
 			);
 
@@ -1057,10 +1099,43 @@ JS;
 						'default'           => self::defaults()[ $key ] ?? '',
 					] );
 				} elseif ( $field['type'] === 'image' ) {
+					// The picker's hidden input posts "0" when nothing is
+					// chosen (or after Remove). Store '' for 0 / '0' / empty
+					// so templates can tell "unset" from a real attachment
+					// ID — a stored '0' otherwise reaches string branches as
+					// a bogus URL (page-newsletter rendered <img src="0">).
+					register_setting( $group, $key, [
+						'type'              => 'string',
+						'sanitize_callback' => function ( $val ) {
+							$id = absint( $val );
+							return $id > 0 ? $id : '';
+						},
+						'default'           => '',
+					] );
+				} elseif ( $field['type'] === 'product_select' ) {
+					// 0 = Auto, -1 = None (hide link), else a product ID —
+					// absint would turn -1 into 1, so the owning module
+					// sanitizes.
 					register_setting( $group, $key, [
 						'type'              => 'integer',
-						'sanitize_callback' => 'absint',
+						'sanitize_callback' => class_exists( 'FisHotel_Tool_Product_Links' )
+							? [ 'FisHotel_Tool_Product_Links', 'sanitize_override' ]
+							: 'intval',
 						'default'           => 0,
+					] );
+				} elseif ( $field['type'] === 'url' ) {
+					// No preserve-on-empty here: blank is a meaningful value
+					// ("use the default URL"), so clearing must persist.
+					// Trim first (esc_url_raw only ltrims, so a trailing
+					// space would be stored as %20) and prefix '/' on a bare
+					// path so esc_url_raw cannot turn
+					// 'product-category/medications' into http://product-category/…
+					register_setting( $group, $key, [
+						'type'              => 'string',
+						'sanitize_callback' => class_exists( 'FisHotel_Tool_Product_Links' )
+							? [ 'FisHotel_Tool_Product_Links', 'sanitize_fallback_url' ]
+							: function ( $val ) { return (string) esc_url_raw( trim( (string) $val ) ); },
+						'default'           => self::defaults()[ $key ] ?? '',
 					] );
 				} elseif ( $field['type'] === 'placeholder_library' ) {
 					register_setting( $group, $key, [
@@ -1105,14 +1180,21 @@ JS;
 					// sanitizer so an accidental empty POST (e.g. a future
 					// refactor that drops a field from the form HTML while
 					// the option is still registered) can no longer wipe
-					// stored copy. Select + checkbox pass empty through
-					// normally — unchecking a checkbox MUST persist.
+					// stored copy. Select passes empty through normally.
+					// Checkbox stores an explicit '0' / '1': an unchecked box
+					// posts nothing, and storing '' would let get() coerce it
+					// back to the '1' default — the box could never be turned
+					// off. '0' survives get()'s empty-string check.
 					$type        = $field['type'];
 					$is_textarea = ( $type === 'textarea' );
+					$is_checkbox = ( $type === 'checkbox' );
 					$preserve    = in_array( $type, [ 'text', 'textarea' ], true );
 					register_setting( $group, $key, [
 						'type'              => 'string',
-						'sanitize_callback' => function ( $val ) use ( $key, $is_textarea, $preserve ) {
+						'sanitize_callback' => function ( $val ) use ( $key, $is_textarea, $is_checkbox, $preserve ) {
+							if ( $is_checkbox ) {
+								return ( (string) $val === '1' ) ? '1' : '0';
+							}
 							$sanitized = $is_textarea
 								? sanitize_textarea_field( (string) $val )
 								: sanitize_text_field( (string) $val );
@@ -1222,6 +1304,24 @@ JS;
 				esc_attr( $value ),
 				esc_attr( $args['placeholder'] ?? '' )
 			);
+		} elseif ( $type === 'url' ) {
+			// Deliberately type="text": the browser's type="url" validation
+			// rejects site-relative paths (/product-category/medications/)
+			// and would block the whole page's submit. esc_url_raw on save
+			// accepts both forms.
+			printf(
+				'<input type="text" name="%s" value="%s" class="regular-text code" placeholder="%s">',
+				esc_attr( $key ),
+				esc_attr( $value ),
+				esc_attr( $args['placeholder'] ?? '' )
+			);
+		} elseif ( $type === 'product_select' ) {
+			// Select of published Medications-tree products + read-only
+			// "Auto → …" status. Rendered by the owning module so the
+			// product query and link resolution only run on this screen.
+			if ( class_exists( 'FisHotel_Tool_Product_Links' ) ) {
+				FisHotel_Tool_Product_Links::render_product_select( $key, $args );
+			}
 		} elseif ( $type === 'number' ) {
 			printf(
 				'<input type="number" name="%s" value="%s" class="small-text" placeholder="%s"%s%s%s>',
@@ -1531,11 +1631,12 @@ JS;
 		$cards = [
 			'fishotel-homepage'     => [ 'title' => 'Homepage',      'desc' => 'Available Now count and homepage testimonials.' ],
 			'fishotel-shop'         => [ 'title' => 'Shop Page',     'desc' => 'Display mode and which categories to hide.' ],
-			'fishotel-product'      => [ 'title' => 'Product Page',  'desc' => 'QT certificate, trust strip, care guide defaults.' ],
+			'fishotel-product'      => [ 'title' => 'Product Page',  'desc' => 'QT certificate, trust strip, care guide defaults, calculator/scheduler tool links.' ],
 			'fishotel-account'      => [ 'title' => 'My Account',    'desc' => 'Page subtitles, greeting, empty states, login/register copy.' ],
 			'fishotel-faq'          => [ 'title' => 'FAQ Page',      'desc' => 'Concierge intro, quarantine stages, FAQ items.' ],
 			'fishotel-about'        => [ 'title' => 'About Page',    'desc' => "Founder's Edition masthead, headline, byline, body." ],
 			'fishotel-contacts'     => [ 'title' => 'Contacts Page', 'desc' => 'Email, forum, location text and map image.' ],
+			'fishotel-newsletter'   => [ 'title' => 'Newsletter Page', 'desc' => 'Optional override for the Gazette hero illustration.' ],
 			'fishotel-placeholders' => [ 'title' => 'Placeholders',  'desc' => 'In-stock and Coming Soon placeholder libraries.' ],
 			'fishotel-branding'     => [ 'title' => 'Branding',      'desc' => 'Logo tagline and global brand variables.' ],
 			'fishotel-tools'        => [ 'title' => 'Tools',         'desc' => 'Theme update check, product migration, compat backfill.' ],

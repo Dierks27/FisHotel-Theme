@@ -765,6 +765,34 @@ h1, h2, h3, h4, h5 {
 .fh-fish-card__status--qt        { background: var(--fh-blue-bg);  color: var(--fh-blue);  border: 1px solid rgba(74,157,184,.3); }
 .fh-fish-card__status--reserved  { background: var(--fh-amber-bg); color: var(--fh-amber); border: 1px solid rgba(212,144,58,.3); }
 
+/* Card stock badge — same four states as the PDP .fh-stock-badge
+   (in-stock / low / last / soldout), sized as a pill in the image corner. */
+.fh-fish-card__stock {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  font-family: var(--fh-font);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  background: var(--fh-green-bg);
+  color: var(--fh-green);
+  border: 1px solid rgba(90, 170, 120, 0.3);
+}
+.fh-fish-card__stock[data-state="low"]     { background: var(--fh-amber-bg); color: var(--fh-amber); border-color: rgba(212, 144, 58, 0.3); }
+.fh-fish-card__stock[data-state="last"]    { background: var(--fh-red-bg);   color: var(--fh-red);   border-color: rgba(192, 90, 90, 0.3); }
+.fh-fish-card__stock[data-state="soldout"] { background: rgba(21, 21, 21, 0.88); color: var(--fh-text-3); border-color: var(--fh-border); }
+
+/* "Shop page display: Both" — the category tiles sit between the hero and
+   the product grid, so drop the landing-page min-height woocommerce.css
+   gives .fh-shop-categories. */
+.fh-shop-categories.fh-shop-categories--inline {
+  min-height: 0;
+  padding-bottom: 0;
+}
+
 .fh-fish-card__days {
   position: absolute;
   top: 10px;
@@ -879,6 +907,29 @@ h1, h2, h3, h4, h5 {
   display: block;
 }
 
+/* Hero zoom + thumbs are real <button>s so the lightbox is keyboard-
+   reachable; reset the UA button chrome, keep the existing look. */
+.fh-gallery__zoom {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+
+/* .fh-gallery__main clips overflow, so the hero ring sits inside. */
+.fh-gallery__zoom:focus-visible {
+  outline: 2px solid var(--fh-gold);
+  outline-offset: -3px;
+}
+
+.fh-gallery__thumb:focus-visible {
+  outline: 2px solid var(--fh-gold);
+  outline-offset: 2px;
+}
+
 .fh-gallery__badge-status {
   position: absolute;
   top: 14px;
@@ -942,6 +993,10 @@ h1, h2, h3, h4, h5 {
 }
 
 .fh-gallery__thumb {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: none;
   aspect-ratio: 1;
   border: 1px solid var(--fh-border);
   overflow: hidden;
@@ -1041,6 +1096,37 @@ h1, h2, h3, h4, h5 {
 .fh-btn--notify:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+/* Multi-variation PDP with no option chosen yet — WC's selection-needed
+   state (classes + aria-disabled only). The button stays clickable so the
+   click reveals .fh-purchase__hint instead of POSTing to a WC error. */
+.single_add_to_cart_button.wc-variation-selection-needed {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.fh-purchase__hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fh-amber);
+}
+
+.fh-purchase__hint[hidden] { display: none; }
+
+/* Not-purchasable PDP (no price etc.) — replaces badge + qty + button. */
+.fh-purchase__unavailable {
+  font-size: 13px;
+  color: var(--fh-text-3);
+  padding: 14px 0;
+  border-top: 1px solid var(--fh-border);
+  border-bottom: 1px solid var(--fh-border);
+  margin: 0 0 16px;
+}
+.fh-purchase__unavailable a {
+  color: var(--fh-gold-lt);
+  text-decoration: underline;
 }
 
 /* ─────────────────────────────────────────
@@ -1468,6 +1554,38 @@ h1, h2, h3, h4, h5 {
   color: var(--fh-text-2);
 }
 
+/* "Plan this fish's quarantine" — compact tool-link row under the Care Guide. */
+.fh-plan-qt {
+  background: var(--fh-bg);
+  border-top: 1px solid var(--fh-border);
+  padding: 28px var(--fh-page-pad);
+}
+.fh-plan-qt__inner {
+  max-width: var(--fh-max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+}
+.fh-plan-qt__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fh-gold);
+}
+.fh-plan-qt__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.fh-plan-qt__btn {
+  padding: 10px 20px;
+  font-size: 9px;
+}
+
 /* Related products — Also in Quarantine */
 .fh-related {
   background: var(--fh-bg-dk);
@@ -1680,6 +1798,13 @@ h1, h2, h3, h4, h5 {
   margin: 0 auto;
   padding: 64px var(--fh-page-pad) 48px;
   display: grid;
+  /* Brand + Navigate / Tools / Info / Community. Collapses to 2 cols at
+     1024px and 1 col at 768px below. footer.php adds --no-tools when no
+     tool page is published so the grid doesn't keep an empty track. */
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: 48px;
+}
+.site-footer__main--no-tools {
   grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 56px;
 }

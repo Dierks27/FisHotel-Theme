@@ -164,24 +164,30 @@ while ( have_posts() ) :
     <?php /* ── GALLERY ── */ ?>
     <div class="fh-gallery">
         <div class="fh-gallery__main">
+            <?php /* Real <button> so keyboard users get the lightbox too
+                    (Enter/Space fire click natively); main.js binds the
+                    click on .fh-gallery__main and it bubbles up from here. */ ?>
+            <button type="button" class="fh-gallery__zoom" aria-label="<?php esc_attr_e( 'Open image viewer', 'fishotel' ); ?>">
             <?php if ($main_img_id) : ?>
                 <?php echo wp_get_attachment_image($main_img_id, 'fishotel-product-hero', false, ['class' => '', 'id' => 'fh-main-img', 'alt' => get_the_title(), 'data-full' => esc_url(wp_get_attachment_url($main_img_id))]); ?>
             <?php else : ?>
                 <?php echo FisHotel_Placeholder_Library::render( $product_id, 'fishotel-product-hero', ['id' => 'fh-main-img', 'alt' => get_the_title()] ); ?>
             <?php endif; ?>
+            </button>
         </div>
 
         <?php if (!empty($gallery_ids)) : ?>
         <div class="fh-gallery__thumbs">
-            <?php if ($main_img_id) : ?>
-                <div class="fh-gallery__thumb active" data-full="<?php echo esc_url(wp_get_attachment_url($main_img_id)); ?>">
+            <?php $thumb_n = 0; ?>
+            <?php if ($main_img_id) : $thumb_n++; ?>
+                <button type="button" class="fh-gallery__thumb active" aria-current="true" aria-label="<?php echo esc_attr( sprintf( __( 'View image %d', 'fishotel' ), $thumb_n ) ); ?>" data-full="<?php echo esc_url(wp_get_attachment_url($main_img_id)); ?>">
                     <?php echo wp_get_attachment_image($main_img_id, 'fishotel-product-thumb', false, ['alt' => '']); ?>
-                </div>
+                </button>
             <?php endif;
-            foreach (array_slice($gallery_ids, 0, 3) as $gid) : ?>
-                <div class="fh-gallery__thumb" data-full="<?php echo esc_url(wp_get_attachment_url($gid)); ?>">
+            foreach (array_slice($gallery_ids, 0, 3) as $gid) : $thumb_n++; ?>
+                <button type="button" class="fh-gallery__thumb" aria-label="<?php echo esc_attr( sprintf( __( 'View image %d', 'fishotel' ), $thumb_n ) ); ?>" data-full="<?php echo esc_url(wp_get_attachment_url($gid)); ?>">
                     <?php echo wp_get_attachment_image($gid, 'fishotel-product-thumb', false, ['alt' => '']); ?>
-                </div>
+                </button>
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
@@ -291,9 +297,12 @@ while ( have_posts() ) :
         // the badge already shows the per-size detail before JS auto-selects.
         if ( $is_single_var ) {
             $v = $variations_data[0];
+            // WC returns max_qty '' for unmanaged stock; (int) '' is 0 which
+            // reads as "Sold Out". Treat '' as unlimited (-1), mirroring the
+            // max_qty guard in main.js found_variation.
             $stock_badge = fishotel_stock_badge_label(
                 ! empty( $v['is_in_stock'] ),
-                isset( $v['max_qty'] ) ? (int) $v['max_qty'] : -1
+                ( isset( $v['max_qty'] ) && '' !== $v['max_qty'] ) ? (int) $v['max_qty'] : -1
             );
         } else {
             $stock_badge = fishotel_stock_badge_label(
@@ -302,6 +311,21 @@ while ( have_posts() ) :
             );
         }
         $is_sold_out = ( $stock_badge['state'] === 'soldout' );
+
+        // Not purchasable at all (no price, unpublished, filtered out) is
+        // a different state from "sold out": WC would reject the add-to-
+        // cart POST, so rendering the stock badge + qty + button would
+        // only lead the customer into an error. Mirror WC core's own
+        // simple.php (which bails before the form when ! is_purchasable)
+        // and show a muted contact line instead. Coming Soon and Amazon-
+        // mode products never reach this branch.
+        $is_unavailable = in_array( $product->get_type(), array( 'simple', 'variable' ), true )
+            && ! $product->is_purchasable();
+
+        // Set true in the attribute loop below when any rendered attribute
+        // has no pre-selected value — drives the initial "choose an option"
+        // state of the Add to Cart button (main.js keeps it in sync after).
+        $needs_selection = false;
         ?>
 
         <?php /* Price — eyebrow slot is always rendered so layout doesn't
@@ -320,6 +344,11 @@ while ( have_posts() ) :
                 product-type template. */ ?>
         <?php if ( $is_gift_card ) : ?>
         <?php do_action( 'woocommerce_' . $product->get_type() . '_add_to_cart' ); ?>
+        <?php elseif ( $is_unavailable ) : ?>
+        <p class="fh-purchase__unavailable">
+            <?php esc_html_e( 'Currently unavailable —', 'fishotel' ); ?>
+            <a href="<?php echo esc_url( home_url( '/contacts/' ) ); ?>"><?php esc_html_e( 'contact us', 'fishotel' ); ?></a>
+        </p>
         <?php elseif ( in_array( $product->get_type(), array( 'simple', 'variable' ), true ) ) : ?>
         <?php do_action('woocommerce_before_add_to_cart_form'); ?>
         <form class="fh-purchase__form variations_form cart"
@@ -353,6 +382,9 @@ while ( have_posts() ) :
                     // alphabetic order on slugs produces the wrong sequence.
                     $options = fishotel_sort_variation_options( $options, $attr_name );
                     $selected_label = $selected !== '' ? fishotel_variation_option_label( $attr_name, $selected ) : '';
+                    if ( '' === (string) $selected ) {
+                        $needs_selection = true;
+                    }
                 ?>
                 <div class="fh-variation-group">
                     <div class="fh-variation-label">
@@ -457,16 +489,31 @@ while ( have_posts() ) :
                         Required: WC Gift Cards refuses cart submissions when
                         its fields aren't rendered ("required data is missing"). */ ?>
                 <?php do_action( 'woocommerce_before_add_to_cart_button' ); ?>
+                <?php
+                /* Multi-variation with nothing chosen yet: paint WC's own
+                   selection-needed state (classes + aria-disabled, NOT the
+                   disabled property) so the button stays clickable and the
+                   click surfaces the inline hint instead of a full POST.
+                   Single-variation products auto-select in main.js, so they
+                   skip this to avoid a disabled-looking flash before JS. */
+                $selection_needed = $is_multi_var && $needs_selection && ! $is_sold_out;
+                ?>
                 <button type="submit"
                         name="add-to-cart"
                         value="<?php echo esc_attr($product->get_id()); ?>"
-                        class="fh-btn fh-btn--gold fh-btn--full single_add_to_cart_button<?php echo $is_sold_out ? ' fh-btn--notify' : ''; ?>"
+                        class="fh-btn fh-btn--gold fh-btn--full single_add_to_cart_button<?php echo $is_sold_out ? ' fh-btn--notify' : ''; ?><?php echo $selection_needed ? ' disabled wc-variation-selection-needed' : ''; ?>"
                         data-fh-label-add="<?php echo esc_attr__( 'Add to Cart', 'fishotel' ); ?>"
                         data-fh-label-notify="<?php echo esc_attr__( 'Notify Me', 'fishotel' ); ?>"
-                        <?php disabled( $is_sold_out, true ); ?>>
+                        <?php disabled( $is_sold_out, true ); ?><?php echo $selection_needed ? ' aria-disabled="true"' : ''; ?>>
                     <?php echo $is_sold_out ? esc_html__( 'Notify Me', 'fishotel' ) : esc_html__( 'Add to Cart', 'fishotel' ); ?>
                 </button>
             </div>
+            <?php if ( $is_multi_var ) : ?>
+            <?php /* Inline "choose an option" hint — revealed by main.js when
+                    Add to Cart is clicked with no variation resolved. JS swaps
+                    in WC's own i18n_make_a_selection_text when available. */ ?>
+            <p class="fh-purchase__hint" role="alert" hidden><?php esc_html_e( 'Please choose your options above before adding to cart.', 'fishotel' ); ?></p>
+            <?php endif; ?>
 
             <?php /* Trust strip — content swaps by product category:
                     quarantined-fish gets the QT/live-arrival/Mon-Wed lines,
@@ -707,6 +754,41 @@ if ( ! $habitat && class_exists('FisHotel_Admin_Settings') ) {
     </div>
 </div>
 <?php endif; ?>
+
+<?php /* ── PLAN THIS FISH'S QUARANTINE — fish only. Links resolve by page
+        template (same helper as the footer Tools column) so renamed slugs
+        keep working; the row renders nothing when both pages are missing.
+        The scheduler link pre-fills its tank slider (?tank=<gal>) from the
+        numeric part of _fh_min_tank_size when the field has one. */ ?>
+<?php
+if ( $is_fish && function_exists( 'fishotel_tool_page_url' ) ) :
+    $plan_sched_url  = fishotel_tool_page_url( 'page-qt-scheduler.php', 'qt-scheduler' );
+    $plan_compat_url = fishotel_tool_page_url( 'page-compatibility-guide.php', 'compatibility-guide' );
+    if ( $plan_sched_url !== '' ) {
+        $plan_tank_raw = (string) get_post_meta( $product_id, '_fh_min_tank_size', true );
+        if ( preg_match( '/(\d+(?:\.\d+)?)/', $plan_tank_raw, $plan_m ) ) {
+            $plan_tank_gal = (int) round( (float) $plan_m[1] );
+            if ( $plan_tank_gal > 0 ) {
+                $plan_sched_url = add_query_arg( 'tank', $plan_tank_gal, $plan_sched_url );
+            }
+        }
+    }
+    if ( $plan_sched_url !== '' || $plan_compat_url !== '' ) :
+?>
+<div class="fh-plan-qt">
+    <div class="fh-plan-qt__inner">
+        <span class="fh-plan-qt__label"><?php esc_html_e( "Plan this fish's quarantine", 'fishotel' ); ?></span>
+        <div class="fh-plan-qt__links">
+            <?php if ( $plan_sched_url !== '' ) : ?>
+            <a href="<?php echo esc_url( $plan_sched_url ); ?>" class="fh-btn fh-btn--ghost fh-plan-qt__btn"><?php esc_html_e( 'Build a QT Schedule', 'fishotel' ); ?></a>
+            <?php endif; ?>
+            <?php if ( $plan_compat_url !== '' ) : ?>
+            <a href="<?php echo esc_url( $plan_compat_url ); ?>" class="fh-btn fh-btn--ghost fh-plan-qt__btn"><?php esc_html_e( 'Check Tank Compatibility', 'fishotel' ); ?></a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; endif; ?>
 
 <?php /* ── RELATED PRODUCTS — Also in Quarantine ── */ ?>
 <?php

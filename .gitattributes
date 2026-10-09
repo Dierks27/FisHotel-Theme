@@ -1,0 +1,13 @@
+# Keep documentation, tooling, tests and CI config out of GitHub zipballs.
+# The theme updater (inc/theme-updater.php) installs the raw zipball straight
+# into wp-content/themes, so anything not export-ignored lands on the live
+# site. Nothing below is loaded at runtime (docs/ and tools/ are referenced
+# only in comments / a WP-CLI usage note); style.css and every PHP/JS/CSS
+# asset stay in.
+*.md           export-ignore
+docs/          export-ignore
+tools/         export-ignore
+tests/         export-ignore
+.github/       export-ignore
+.gitignore     export-ignore
+.gitattributes export-ignore

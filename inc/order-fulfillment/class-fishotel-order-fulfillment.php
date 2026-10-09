@@ -940,6 +940,8 @@ class FisHotel_Order_Fulfillment {
 			'err_nested'   => [ 'error', __( 'That order already has combined orders of its own — cannot nest.', 'fishotel' ) ],
 			'err_status'   => [ 'error', __( 'Only processing or on-hold orders can be combined.', 'fishotel' ) ],
 			'err_generic'  => [ 'error', __( 'Could not combine those orders.', 'fishotel' ) ],
+			// Force-combine refused: the candidate (or its fulfillment) already shipped/closed.
+			'err_ff_closed' => [ 'error', __( 'Not combined — the other order (or its fulfillment) has already shipped or closed. The mismatch flag was cleared; this order stays standalone.', 'fishotel' ) ],
 		];
 		if ( ! isset( $map[ $msg ] ) ) {
 			return;

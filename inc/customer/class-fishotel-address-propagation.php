@@ -67,6 +67,16 @@ class FisHotel_Address_Propagation {
 			if ( function_exists( 'fishotel_order_has_shipped_line' ) && fishotel_order_has_shipped_line( $order ) ) {
 				continue;
 			}
+			// Same guard against REAL shipments: the Phase 1 line-status meta
+			// above is dormant since the v1.17.0 Shipments UI, so a partially
+			// shipped order (ShipTracker row exists, order still processing)
+			// would otherwise be rewritten to the new address along with its
+			// fulfillment. Note it so Jeff sees the mismatch.
+			if ( self::has_shipment_in_motion( $order ) ) {
+				$order->add_order_note( __( 'Shipping address NOT updated from My Account → Addresses: a shipment is already in motion for this order.', 'fishotel' ) );
+				$order->save();
+				continue;
+			}
 			// Already shipping here → nothing to do.
 			if ( self::order_ship_hash( $order ) === $new_hash ) {
 				continue;
@@ -101,6 +111,30 @@ class FisHotel_Address_Propagation {
 				'success'
 			);
 		}
+	}
+
+	/**
+	 * True when ShipTracker holds a shipment row for this order or, for a
+	 * source folded into a fulfillment, for that fulfillment (the box is
+	 * labelled from the fulfillment). Guarded so a missing/refactored
+	 * ShipTracker degrades to "no shipment" rather than fatalling.
+	 */
+	private static function has_shipment_in_motion( WC_Order $order ) {
+		if ( ! class_exists( 'FST_Shipment' ) || ! method_exists( 'FST_Shipment', 'get_by_order' ) ) {
+			return false;
+		}
+		$ids   = [ $order->get_id() ];
+		$ff_id = (int) $order->get_meta( '_fishotel_fulfilled_by_order' );
+		if ( $ff_id > 0 ) {
+			$ids[] = $ff_id;
+		}
+		foreach ( $ids as $id ) {
+			$rows = FST_Shipment::get_by_order( (int) $id );
+			if ( ! empty( $rows ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** When the source belongs to a fulfillment, mirror the address there too. */

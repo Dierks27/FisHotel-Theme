@@ -3,9 +3,10 @@
  * Bleach Calculator — page bootstrap.
  *
  * Ensures /bleach-calculator/ exists and is bound to the
- * page-bleach-calculator.php template. Idempotent on every admin_init —
- * same durable pattern used by compat-guide / about-us / contacts /
- * newsletter after the fix audit.
+ * page-bleach-calculator.php template. Idempotent; runs once per theme
+ * version on admin_init and unconditionally on after_switch_theme — same
+ * durable pattern used by compat-guide / about-us / contacts / newsletter
+ * after the fix audit.
  *
  * @package FisHotel
  */
@@ -13,6 +14,14 @@
 defined( 'ABSPATH' ) || exit;
 
 function fishotel_bootstrap_bleach_page() {
+	// admin_init: once per theme version, never on AJAX / cron / REST (see
+	// fishotel_should_run_bootstraps in functions.php). after_switch_theme
+	// stays the forced re-run path.
+	if ( 'admin_init' === current_action()
+		&& function_exists( 'fishotel_should_run_bootstraps' )
+		&& ! fishotel_should_run_bootstraps() ) {
+		return;
+	}
 	$slug     = 'bleach-calculator';
 	$template = 'page-bleach-calculator.php';
 	$title    = 'Bleach-Out Calculator';

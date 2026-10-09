@@ -243,7 +243,18 @@ function fishotel_gc_restore_on_payment_failure( $order_id, $old_status, $new_st
 
 	// Never roll back a debit for an order that already reached a paid /
 	// in-fulfillment status — the gift card genuinely paid for it.
-	if ( in_array( $old_status, array( 'completed', 'processing', 'on-hold', 'fulfillment' ), true ) ) {
+	//
+	// WHY on-hold is NOT in this list any more: on-hold is not a paid status.
+	// Orders flow pending → on-hold → failed/cancelled without any capture
+	// (PPCP pending/denied captures, the Batch Plugin's no-delivery-date
+	// hold, a manual hold), and treating the prior on-hold as "paid" left the
+	// customer's card debited. Payment is instead inferred from the order's
+	// paid date or from the capture guard above having reconciled a real
+	// gateway capture (it only runs on woocommerce_payment_complete).
+	$was_paid = in_array( $old_status, array( 'completed', 'processing', 'fulfillment' ), true )
+		|| $order->get_date_paid()
+		|| 'yes' === $order->get_meta( '_fishotel_capture_guard_done' );
+	if ( $was_paid ) {
 		$handled[ $order_id ] = true;
 		return;
 	}

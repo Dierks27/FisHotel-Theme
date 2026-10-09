@@ -96,19 +96,66 @@
     return tankGal * rate * deltaPpm;
   }
 
-  /** Formalin 37%: 1 ml per 10 gal. */
+  /**
+   * Pure per-gallon dose range for a med from FISHOTEL_MEDS
+   * (dose_pure_low/high_mg_per_gal — in whatever unit dose_unit_override
+   * names). Returns { low, high, mid } or null when the med or both
+   * fields are missing / non-positive, so callers fall back to their
+   * hard-coded literals instead of dosing 0.
+   */
+  function medDoseRange(id) {
+    var med = getMed(id);
+    if (!med) return null;
+    var lo = +med.dose_pure_low_mg_per_gal;
+    var hi = +med.dose_pure_high_mg_per_gal;
+    var hasLo = isFinite(lo) && lo > 0;
+    var hasHi = isFinite(hi) && hi > 0;
+    if (!hasLo && !hasHi) return null;
+    if (!hasLo) lo = hi;
+    if (!hasHi) hi = lo;
+    return { low: lo, high: hi, mid: (lo + hi) / 2 };
+  }
+
+  /** Short number for dose labels: 18.75 → "18.75", 25 → "25". */
+  function fmtRate(n) {
+    return String(+n.toFixed(3));
+  }
+
+  /** Formalin 37%: seed says 0.1 ml/gal (1 ml per 10 gal); literal is the fallback. */
+  function formalinMlPerGal() {
+    var med = getMed('formalin_37');
+    var r = (med && med.dose_unit_override === 'ml/gal') ? medDoseRange('formalin_37') : null;
+    return r ? r.mid : 0.1;
+  }
   function formalinMl(tankGal) {
-    return tankGal / 10;
+    return tankGal * formalinMlPerGal();
+  }
+  function formalinLabel() {
+    return '(' + fmtRate(formalinMlPerGal() * 10) + ' ml per 10 gal)';
   }
 
-  /** Metronidazole: 12.5–25 mg/gal pure. Use midpoint 18.75 mg/gal as the dose. */
+  /** Metronidazole: seed 12.5–25 mg/gal pure; dose the midpoint (18.75 fallback). */
+  function metroRange() {
+    return medDoseRange('metronidazole') || { low: 12.5, high: 25, mid: 18.75 };
+  }
   function metroDoseMg(tankGal) {
-    return tankGal * 18.75;
+    return tankGal * metroRange().mid;
+  }
+  function metroLabel() {
+    var r = metroRange();
+    return '(≈' + fmtRate(r.mid) + ' mg/gal, range ' + fmtRate(r.low) + '–' + fmtRate(r.high) + ')';
   }
 
-  /** Praziquantel: 9.5 mg/gal pure. */
+  /** Praziquantel: seed 9.5 mg/gal pure (fallback 9.5). */
+  function praziMgPerGal() {
+    var r = medDoseRange('praziquantel');
+    return r ? r.mid : 9.5;
+  }
   function praziDoseMg(tankGal) {
-    return tankGal * 9.5;
+    return tankGal * praziMgPerGal();
+  }
+  function praziLabel() {
+    return '(' + fmtRate(praziMgPerGal()) + ' mg/gal)';
   }
 
   /** Chloroquine phosphate: mgPerGal × tankGal. */
@@ -120,6 +167,13 @@
   // MED-LINK HELPER
   // ============================================================================
 
+  // Legacy SKU guesses — kept only as data-med-sku attributes (harmless).
+  // Real product URLs come from window.FISHOTEL_MED_LINKS, localised by
+  // inc/tool-product-links.php: { links: { med_id: { url, name, source,
+  // in_stock, mode } }, fallback_url, calculator_url, scheduler_url }.
+  // source 'none' = hidden (render the name as plain text, no anchor);
+  // mode 'amazon' = the product page holds a Buy-on-Amazon button, so the
+  // accessible name says "View", not "Buy".
   var MED_SKU_MAP = {
     copper_power:         { sku: 'copper-power-2oz',         brand: 'Copper Power' },
     formalin_37:          { sku: 'formalin-37-pint',         brand: 'Formalin 37%' },
@@ -128,11 +182,72 @@
     chloroquine_phosphate:{ sku: 'chloroquine-phosphate-25g',brand: 'Chloroquine Phosphate' }
   };
 
+  var FALLBACK_SHOP_URL = '/product-category/medications/';
+
+  function escHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function escAttr(str) {
+    return escHtml(str).replace(/"/g, '&quot;');
+  }
+
+  /**
+   * Resolve where a med link should point. Returns
+   * { url, fallback, hidden, name, outOfStock, mode }. hidden === true when
+   * the server says there is nothing to link (source 'none'): render plain
+   * text. fallback === true when no real product is known (older page cache
+   * without FISHOTEL_MED_LINKS, or the server resolved nothing) — the link
+   * then goes to the Medications shop and is styled accordingly. outOfStock
+   * flags a resolved product that currently cannot be bought.
+   */
+  function medLinkTarget(medId) {
+    var cfg = window.FISHOTEL_MED_LINKS || null;
+    var fallbackUrl = (cfg && cfg.fallback_url) || FALLBACK_SHOP_URL;
+    var entry = cfg && cfg.links && cfg.links[medId];
+    if (entry && entry.source === 'none') {
+      return { url: '', fallback: false, hidden: true, name: entry.name || '', outOfStock: false, mode: '' };
+    }
+    if (entry && entry.url && entry.source !== 'fallback') {
+      return { url: entry.url, fallback: false, hidden: false, name: entry.name || '', outOfStock: entry.in_stock === false, mode: entry.mode || '' };
+    }
+    return { url: fallbackUrl, fallback: true, hidden: false, name: '', outOfStock: false, mode: '' };
+  }
+
+  /**
+   * Classes, accessible name and title for a med link. The accessible name
+   * always contains the visible text (WCAG 2.5.3 Label in Name) so
+   * voice-control "click Copper Power" still works on fallback links.
+   */
+  function medLinkAttrs(target, visibleName) {
+    var cls = 'fst-med-link';
+    var label, title = '';
+    if (target.fallback) {
+      cls  += ' fst-med-link--fallback';
+      label = visibleName + ' — browse medications at FisHotel';
+    } else {
+      label = (target.mode === 'amazon' ? 'View ' : 'Buy ') + visibleName + ' at FisHotel';
+      if (target.outOfStock) {
+        cls  += ' fst-med-link--oos';
+        label += ' (currently out of stock)';
+        title  = 'Currently out of stock at FisHotel';
+      }
+    }
+    return { cls: cls, label: label, title: title };
+  }
+
   function medLink(medId, displayName) {
-    var info = MED_SKU_MAP[medId] || { sku: medId, brand: displayName || medId };
-    var name = displayName || info.brand;
-    return '<a class="fst-med-link" data-med-sku="' + info.sku + '" data-brand-name="' + info.brand +
-           '" href="#" aria-label="Buy ' + info.brand + ' at FisHotel">' + name + '</a>';
+    var info   = MED_SKU_MAP[medId] || { sku: medId, brand: displayName || medId };
+    var name   = displayName || info.brand;
+    var target = medLinkTarget(medId);
+    if (target.hidden) {
+      return '<span class="fst-med-name">' + escHtml(name) + '</span>';
+    }
+    var attrs  = medLinkAttrs(target, name);
+    return '<a class="' + attrs.cls + '" data-med-sku="' + escAttr(info.sku) + '" data-brand-name="' + escAttr(info.brand) +
+           '" href="' + escAttr(target.url) + '" aria-label="' + escAttr(attrs.label) + '"' +
+           (attrs.title ? ' title="' + escAttr(attrs.title) + '"' : '') + '>' + escHtml(name) + '</a>';
   }
 
   // ============================================================================
@@ -226,7 +341,7 @@
     var formalinDays = method.formalin_dose_days_count || 10;
     var fMl = formalinMl(state.tankGal);
     for (var fd = 1; fd <= formalinDays; fd++) {
-      var ftext = 'Dose ' + medLink('formalin_37') + ' — <strong>' + formatMl(fMl) + '</strong> (1 ml per 10 gal)';
+      var ftext = 'Dose ' + medLink('formalin_37') + ' — <strong>' + formatMl(fMl) + '</strong> ' + formalinLabel();
       if (fd === formalinDays) ftext += ' <em>(final formalin dose)</em>';
       entries.push({ day: fd, type: 'dose', medId: 'formalin_37', text: ftext });
     }
@@ -328,7 +443,7 @@
           text: '<strong>' + wcPct + '% water change</strong>, then retest + bump ' + medLink('copper_power') + ' to ' + dayTargetPpm.toFixed(2) + ' ppm.'
         });
       }
-      var mtext = 'Dose ' + medLink('metronidazole') + ' — <strong>' + metroFmt + '</strong> (≈18.75 mg/gal, range 12.5–25)';
+      var mtext = 'Dose ' + medLink('metronidazole') + ' — <strong>' + metroFmt + '</strong> ' + metroLabel();
       if (idx === metroDays.length - 1) mtext += ' <em>(final metro dose)</em>';
       entries.push({ day: md, type: 'dose', medId: 'metronidazole', text: mtext });
     });
@@ -338,7 +453,7 @@
       var prMg = praziDoseMg(state.tankGal);
       var prFmt = formatDoseMg(prMg);
       (method.prazi_offsets_days || [1, 8]).forEach(function (pd, i) {
-        var ptext = (i === 0 ? 'Dose ' : 'Redose ') + medLink('praziquantel') + ' — <strong>' + prFmt + '</strong> (9.5 mg/gal)';
+        var ptext = (i === 0 ? 'Dose ' : 'Redose ') + medLink('praziquantel') + ' — <strong>' + prFmt + '</strong> ' + praziLabel();
         entries.push({ day: pd, type: 'dose', medId: 'praziquantel', text: ptext });
       });
     }
@@ -425,7 +540,7 @@
       var prMg = praziDoseMg(state.tankGal);
       var prFmt = formatDoseMg(prMg);
       (method.prazi_offsets_days || [1, 8]).forEach(function (pd, i) {
-        var ptext = (i === 0 ? 'Dose ' : 'Redose ') + medLink('praziquantel') + ' — <strong>' + prFmt + '</strong> (9.5 mg/gal)';
+        var ptext = (i === 0 ? 'Dose ' : 'Redose ') + medLink('praziquantel') + ' — <strong>' + prFmt + '</strong> ' + praziLabel();
         entries.push({ day: pd, type: 'dose', medId: 'praziquantel', text: ptext });
       });
     }
@@ -497,7 +612,7 @@
           day: tDay,
           type: 'dose',
           medId: 'praziquantel',
-          text: 'Dose ' + medLink('praziquantel') + ' into Tank ' + toTank + ' — <strong>' + prFmt + '</strong> (9.5 mg/gal)'
+          text: 'Dose ' + medLink('praziquantel') + ' into Tank ' + toTank + ' — <strong>' + prFmt + '</strong> ' + praziLabel()
         });
       }
 
@@ -633,10 +748,11 @@
     if (!method) return;
     $configPanel.style.display = '';
 
-    // Header
+    // Header — live course length (ramp toggle changes it: 32/34/36D), not
+    // the static tile badge.
     var head = el('div', 'fst-config-head');
     head.appendChild(el('div', 'fst-config-title', method.name));
-    head.appendChild(el('div', 'fst-config-tag', method.duration_badge + ' · ' + (method.not_reef_safe ? 'Not reef safe' : 'Reef safe')));
+    head.appendChild(el('div', 'fst-config-tag', durationBadgeFor(method) + ' · ' + (method.not_reef_safe ? 'Not reef safe' : 'Reef safe')));
     $configPanel.appendChild(head);
 
     // Configurable params
@@ -664,8 +780,10 @@
       $configPanel.appendChild(addonWrap);
     }
 
-    // Soft conflicts
+    // Conflicts — 'warn'/'info' are advisory; 'block' (formalin ≥ 27°C)
+    // disables Generate so no schedule is produced for a contraindication.
     var fired = evaluateConflicts(method);
+    var hasBlock = hasBlockingConflict(fired);
     if (fired.length) {
       var cwrap = el('div', 'fst-conflicts');
       fired.forEach(function (c) {
@@ -681,9 +799,30 @@
     var btn = el('button', 'fst-generate-btn', 'Generate Schedule');
     btn.type = 'button';
     btn.id = 'fst-generate';
+    if (hasBlock) {
+      btn.disabled = true;
+      btn.title = 'Resolve the blocking conflict above before generating a schedule.';
+      btn.setAttribute('aria-disabled', 'true');
+    }
     btn.addEventListener('click', handleGenerate);
     btnRow.appendChild(btn);
     $configPanel.appendChild(btnRow);
+  }
+
+  function hasBlockingConflict(fired) {
+    return (fired || []).some(function (c) { return c.severity === 'block'; });
+  }
+
+  /**
+   * Course length as shown in the config header. Methods with a ramp_speed
+   * param compute it from the chosen ramp (ramp + hold + transfer + obs), the
+   * same arithmetic generateCopper* uses for totalDays; others keep the
+   * static duration_badge.
+   */
+  function durationBadgeFor(method) {
+    var hasRamp = (method.configurable_params || []).some(function (p) { return p.param_id === 'ramp_speed'; });
+    if (!hasRamp) return method.duration_badge;
+    return (rampDaysFor(method) + (method.therapeutic_hold_days || 0) + 1 + (method.observation_days || 0)) + 'D';
   }
 
   function renderParamToggle(method, paramDef) {
@@ -723,6 +862,13 @@
   function handleGenerate() {
     var method = getMethod(state.methodId);
     if (!method) return;
+    // Re-check here too: the button is disabled for 'block' conflicts, but a
+    // keyboard/script click or a stale panel must not produce a schedule.
+    if (hasBlockingConflict(evaluateConflicts(method))) {
+      state.lastSchedule = null;
+      renderOutput();
+      return;
+    }
     state.lastSchedule = generateSchedule(method);
     renderOutput();
     // Scroll output into view
@@ -742,6 +888,13 @@
     if (!state.lastSchedule || !state.methodId) return;
     var method = getMethod(state.methodId);
     if (!method) return;
+    // Temp raised into a 'block' conflict after generating → clear the
+    // on-screen schedule instead of silently re-rendering it.
+    if (hasBlockingConflict(evaluateConflicts(method))) {
+      state.lastSchedule = null;
+      renderOutput();
+      return;
+    }
     state.lastSchedule = generateSchedule(method);
     renderOutput();
   }
@@ -1015,11 +1168,20 @@
       var ul = el('ul', 'fst-medlist');
       keyMeds.forEach(function (m) {
         var li = el('li');
-        var a = el('a', 'fst-med-link');
+        var target = medLinkTarget(m.med_id);
+        if (target.hidden) {
+          // Nothing to buy (protocol, or an admin "None" override): name only.
+          li.appendChild(el('span', 'fst-med-name', m.name));
+          ul.appendChild(li);
+          return;
+        }
+        var attrs  = medLinkAttrs(target, m.name);
+        var a = el('a', attrs.cls);
         a.setAttribute('data-med-sku', m.sku);
         a.setAttribute('data-brand-name', m.name);
-        a.href = '#';
-        a.setAttribute('aria-label', 'Buy ' + m.name + ' at FisHotel');
+        a.href = target.url;
+        a.setAttribute('aria-label', attrs.label);
+        if (attrs.title) a.title = attrs.title;
         a.textContent = m.name;
         li.appendChild(a);
         ul.appendChild(li);
@@ -1085,23 +1247,40 @@
     return String(text).replace(/[\\;,]/g, function (ch) { return '\\' + ch; }).replace(/\r?\n/g, '\\n');
   }
 
-  /** RFC 5545 line folding at 75 octets — required for strict iCal compliance. */
-  function icsFold(line) {
-    var out = '';
-    var bytes = unescape(encodeURIComponent(line)); // approximate octet count
-    var i = 0;
-    var first = true;
-    while (i < bytes.length) {
-      var chunk = bytes.substr(i, first ? 75 : 74);
-      out += (first ? '' : '\r\n ') + decodeUtf8(chunk);
-      i += chunk.length;
-      first = false;
+  /** UTF-8 octet count of one character (or surrogate pair). */
+  function icsOctets(ch) {
+    try {
+      var enc = encodeURIComponent(ch);
+      return enc.indexOf('%') === -1 ? enc.length : enc.split('%').length - 1;
+    } catch (e) {
+      return 3; // lone surrogate — count it as a BMP char and move on
     }
-    return out;
   }
 
-  function decodeUtf8(s) {
-    try { return decodeURIComponent(escape(s)); } catch (e) { return s; }
+  /**
+   * RFC 5545 §3.1 line folding: 75 octets max per line, continuation lines
+   * start with a single space (so 74 octets of content). Walks CHARACTERS
+   * and measures their UTF-8 size — the old byte-string slice cut "—" / "≈"
+   * mid-sequence and produced mojibake for ~40% of tank sizes (e.g. 289 gal
+   * Cu+Metro Day 1). Surrogate pairs are kept together.
+   * Same helper lives in fishotel-calculator.js and bleach-calculator.js.
+   * Tests: `node tests/*.test.js` from the theme root.
+   */
+  function icsFold(line) {
+    var s = String(line == null ? '' : line);
+    var out = '', cur = '', curOctets = 0, limit = 75;
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      var code = s.charCodeAt(i);
+      if (code >= 0xD800 && code <= 0xDBFF && i + 1 < s.length) { ch += s.charAt(i + 1); i++; }
+      var n = icsOctets(ch);
+      if (curOctets + n > limit) {
+        out += cur + '\r\n ';
+        cur = ''; curOctets = 0; limit = 74;
+      }
+      cur += ch; curOctets += n;
+    }
+    return out + cur;
   }
 
   function stripHtml(html) {
@@ -1294,5 +1473,21 @@
     renderConfigPanel(); // hidden until method picked
     renderOutput();      // hidden until generated
   });
+
+  // Node-only export so tests/calculator-ics-fold.test.js can exercise the
+  // fold helper and tests/scheduler-dose-lookup.test.js the FISHOTEL_MEDS
+  // dose lookups; browsers have no `module` and skip this.
+  if (typeof module === 'object' && module && module.exports) {
+    module.exports = {
+      icsFold: icsFold,
+      icsEscape: icsEscape,
+      formalinMl: formalinMl,
+      formalinLabel: formalinLabel,
+      metroDoseMg: metroDoseMg,
+      metroLabel: metroLabel,
+      praziDoseMg: praziDoseMg,
+      praziLabel: praziLabel
+    };
+  }
 
 })();

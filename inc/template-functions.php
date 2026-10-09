@@ -42,6 +42,106 @@ function fishotel_get_hotel_data( $product_id = null ) {
 }
 
 /**
+ * URL of the Quarantined Fish category archive. The homepage / empty-cart
+ * "View Available Fish" CTAs used to send customers to the WC shop page,
+ * which (with "Shop page display: Categories") is the 3-tile landing page
+ * — one extra click away from the fish grid. Falls back to the shop
+ * permalink when the term is missing so the buttons always work. The
+ * header "Shop" nav is intentionally left on the shop page.
+ *
+ * @return string
+ */
+function fishotel_quarantined_fish_url() {
+    $link = get_term_link( 'quarantined-fish', 'product_cat' );
+    if ( is_string( $link ) && $link !== '' && ! is_wp_error( $link ) ) {
+        return $link;
+    }
+    return (string) wc_get_page_permalink( 'shop' );
+}
+
+/**
+ * Resolve the public URL of one of the theme's tool pages (Medication
+ * Dosing, QT Scheduler, Bleach Calculator, Build-a-Tank) by its page
+ * template, with a slug fallback. Resolving by `_wp_page_template` first
+ * matters because the live slugs don't match the template names (the
+ * dosing calculator lives at /medication-dosing/, not /quarantine-help/)
+ * and Jeff can rename a page without breaking the links.
+ *
+ * All four templates are fetched in ONE query the first time any of them
+ * is requested (per-request static), so the footer + PDP row cost a
+ * single cheap lookup per request. Deliberately NOT persisted in the
+ * object cache: with Redis/Memcached a renamed, unpublished or
+ * re-templated tool page kept its stale footer/PDP link for up to an hour
+ * and there is no save_post invalidation worth maintaining for one query.
+ * Only published pages resolve; returns '' when nothing matches so callers
+ * can skip the link entirely.
+ *
+ * @param string $template      Template file name, e.g. 'page-qt-scheduler.php'.
+ * @param string $fallback_slug Page slug to try when no page uses the template.
+ * @return string Permalink or '' when the page doesn't exist / isn't published.
+ */
+function fishotel_tool_page_url( $template, $fallback_slug = '' ) {
+    static $map = null;
+
+    $known = [
+        'page-quarantine-help.php',
+        'page-qt-scheduler.php',
+        'page-bleach-calculator.php',
+        'page-compatibility-guide.php',
+    ];
+
+    if ( $map === null ) {
+        $map = [];
+        $ids = get_posts( [
+            'post_type'              => 'page',
+            'post_status'            => 'publish',
+            'posts_per_page'         => 20,
+            'fields'                 => 'ids',
+            'orderby'                => 'ID',
+            'order'                  => 'ASC',
+            'no_found_rows'          => true,
+            'update_post_term_cache' => false,
+            'meta_query'             => [
+                [
+                    'key'     => '_wp_page_template',
+                    'value'   => $known,
+                    'compare' => 'IN',
+                ],
+            ],
+        ] );
+        foreach ( (array) $ids as $id ) {
+            $tpl = (string) get_post_meta( $id, '_wp_page_template', true );
+            // First (lowest ID) page per template wins — mirrors the
+            // bootstraps, which force the template onto a fixed page.
+            if ( $tpl !== '' && ! isset( $map[ $tpl ] ) ) {
+                $map[ $tpl ] = (int) $id;
+            }
+        }
+    }
+
+    $template = (string) $template;
+    if ( $template !== '' && ! empty( $map[ $template ] ) ) {
+        $url = get_permalink( $map[ $template ] );
+        if ( $url ) {
+            return $url;
+        }
+    }
+
+    $fallback_slug = (string) $fallback_slug;
+    if ( $fallback_slug !== '' ) {
+        $page = get_page_by_path( $fallback_slug, OBJECT, 'page' );
+        if ( $page && $page->post_status === 'publish' ) {
+            $url = get_permalink( $page );
+            if ( $url ) {
+                return $url;
+            }
+        }
+    }
+
+    return '';
+}
+
+/**
  * Resolve a `fh-tag--<modifier>` class from a tag slug. Empty string when
  * no rule matches (falls through to the muted gray default). Substring
  * matching mirrors the legacy fish-only resolver so existing slugs like
@@ -143,6 +243,34 @@ function fishotel_tag_modifier_class( $slug ) {
 }
 
 /**
+ * product_cat slugs of a product, memoised per product id for the request.
+ *
+ * Backs the category predicates below (quarantined fish / medication /
+ * food), which are asked several times per product on the PDP, the cart
+ * and every checkout AJAX refresh. get_the_terms() reads the object-term
+ * cache WP_Query primes for the loop (and fills it once otherwise), so a
+ * product costs at most one term query per request instead of one per
+ * predicate call via wp_get_post_terms().
+ *
+ * @param int $product_id Product post ID.
+ * @return string[] Slugs, [] when none / unknown product.
+ */
+function fishotel_product_cat_slugs( $product_id ) {
+    static $memo = [];
+    $product_id = (int) $product_id;
+    if ( ! $product_id ) {
+        return [];
+    }
+    if ( ! isset( $memo[ $product_id ] ) ) {
+        $terms = get_the_terms( $product_id, 'product_cat' );
+        $memo[ $product_id ] = ( is_array( $terms ) && ! is_wp_error( $terms ) )
+            ? array_values( wp_list_pluck( $terms, 'slug' ) )
+            : [];
+    }
+    return $memo[ $product_id ];
+}
+
+/**
  * True when the product is in the `quarantined-fish` category — the
  * single allowlist gate for fish-specific PDP UI (QT badge, trust
  * strip, "About This Species" data table, "About This Fish" prose
@@ -161,11 +289,79 @@ function fishotel_is_quarantined_fish( $product_id = null ) {
     if ( ! $product_id ) {
         return false;
     }
-    $cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
-    if ( is_wp_error( $cats ) || empty( $cats ) ) {
+    return in_array( 'quarantined-fish', fishotel_product_cat_slugs( $product_id ), true );
+}
+
+/**
+ * Overnight shipping-class slugs, lowercased. Reads the same option the
+ * reorder piggyback reads (fishotel_overnight_shipping_classes, default
+ * `premium`) with the same comma/space/newline parsing and the same
+ * never-empty fallback, so the two features agree on what "overnight" is.
+ *
+ * WHY a second reader: FisHotel_Checkout_Reuse::overnight_classes() is
+ * private to that class, and this list is also needed by template-level
+ * helpers (fishotel_cart_has_livestock). Keep the parsing in sync with it —
+ * or point the reuse class at this function.
+ *
+ * @return string[]
+ */
+function fishotel_overnight_shipping_classes() {
+    $raw  = get_option( 'fishotel_overnight_shipping_classes', 'premium' );
+    $list = is_array( $raw ) ? $raw : preg_split( '/[\s,]+/', (string) $raw );
+    $list = array_filter( array_map( static function ( $slug ) {
+        return strtolower( trim( (string) $slug ) );
+    }, (array) $list ) );
+    $list = array_values( array_unique( $list ) );
+    return $list ? $list : [ 'premium' ];
+}
+
+/**
+ * True when the current cart holds livestock: any cart line whose product
+ * (the PARENT id for variations — the category lives there) is in the
+ * quarantined-fish category OR ships in an overnight class. Sticker
+ * giveaway lines (Misc plugin, cart item data fh_sticker = free|extra)
+ * are skipped — they ride in whatever box ships and are never livestock.
+ *
+ * Drives the livestock-only checkout rules (billing phone required for the
+ * UPS label); dry-goods carts keep WC's defaults.
+ *
+ * Safe outside a front-end request: returns false when WC or its cart is
+ * not loaded (admin, REST, cron) instead of touching a null cart. Not
+ * memoised on purpose — the cart can change within one request (add-to-
+ * cart AJAX, coupon/gift-card removal) and the loop is in-memory anyway;
+ * fishotel_is_quarantined_fish() already caches the term lookups.
+ *
+ * @return bool
+ */
+function fishotel_cart_has_livestock() {
+    if ( ! function_exists( 'WC' ) || ! WC() || ! ( WC()->cart instanceof WC_Cart ) ) {
         return false;
     }
-    return in_array( 'quarantined-fish', $cats, true );
+    $overnight = fishotel_overnight_shipping_classes();
+    foreach ( WC()->cart->get_cart() as $cart_item ) {
+        if ( ! is_array( $cart_item ) || ! empty( $cart_item['fh_sticker'] ) ) {
+            continue;
+        }
+        $product = isset( $cart_item['data'] ) && $cart_item['data'] instanceof WC_Product
+            ? $cart_item['data']
+            : null;
+
+        // WC stores the parent product id on the line; fall back to the
+        // product object's parent (or itself for simple products).
+        $parent_id = ! empty( $cart_item['product_id'] ) ? (int) $cart_item['product_id'] : 0;
+        if ( ! $parent_id && $product ) {
+            $parent_id = $product->get_parent_id() ? (int) $product->get_parent_id() : (int) $product->get_id();
+        }
+        if ( $parent_id && fishotel_is_quarantined_fish( $parent_id ) ) {
+            return true;
+        }
+        // get_shipping_class() on a variation resolves to its own class or
+        // the parent's when not overridden — same read as the piggyback.
+        if ( $product && in_array( strtolower( (string) $product->get_shipping_class() ), $overnight, true ) ) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -233,6 +429,12 @@ function fishotel_pdp_display_tags( $tags, $product_id ) {
  * @return array{state:string,text:string}
  */
 function fishotel_stock_badge_label( $in_stock, $max_qty ) {
+    // WC's variation payload (get_available_variations → max_qty) uses ''
+    // for "no limit" where the product API uses -1. Treat '' as unlimited;
+    // a bare (int) cast turned it into 0 = "Sold Out" on in-stock variations.
+    if ( '' === $max_qty ) {
+        $max_qty = -1;
+    }
     $max_qty = (int) $max_qty;
     if ( ! $in_stock || $max_qty === 0 ) {
         return [ 'state' => 'soldout', 'text' => 'Sold Out' ];
@@ -423,12 +625,12 @@ function fishotel_is_medication_product( $product_id = null ) {
     if ( ! $product_id ) {
         return false;
     }
-    $cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
-    if ( is_wp_error( $cats ) || empty( $cats ) ) {
+    $cats = fishotel_product_cat_slugs( $product_id );
+    if ( empty( $cats ) ) {
         return false;
     }
     $med_slugs = [ 'medications', 'flakes', 'pellets', 'powders', 'liquid', 'antibacterial', 'antiparasitic', 'dewormer' ];
-    return (bool) array_intersect( $med_slugs, (array) $cats );
+    return (bool) array_intersect( $med_slugs, $cats );
 }
 
 /**
@@ -442,12 +644,12 @@ function fishotel_is_food_product( $product_id = null ) {
     if ( ! $product_id ) {
         return false;
     }
-    $cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
-    if ( is_wp_error( $cats ) || empty( $cats ) ) {
+    $cats = fishotel_product_cat_slugs( $product_id );
+    if ( empty( $cats ) ) {
         return false;
     }
     $food_slugs = [ 'freeze-dried-foods', 'fish-food', 'medicated-food' ];
-    return (bool) array_intersect( $food_slugs, (array) $cats );
+    return (bool) array_intersect( $food_slugs, $cats );
 }
 
 /**

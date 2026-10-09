@@ -5,6 +5,30 @@
  */
 get_header();
 if ( have_posts() ) : the_post(); endif;
+
+// Gazette hero image. Default is the live upload, built from the uploads
+// base URL so a relocated uploads dir / filtered baseurl still resolves
+// (the old markup hot-linked the Cloudways staging domain).
+// Optional override from FisHotel Settings: an attachment ID or a URL.
+$nl_upload   = wp_get_upload_dir();
+$nl_hero_src = trailingslashit( $nl_upload['baseurl'] ) . '2026/04/Newpaper.png';
+$nl_hero_opt = class_exists( 'FisHotel_Admin_Settings' )
+    ? FisHotel_Admin_Settings::get( 'fh_newsletter_hero_image' )
+    : '';
+$nl_hero_opt = is_scalar( $nl_hero_opt ) ? trim( (string) $nl_hero_opt ) : '';
+if ( is_numeric( $nl_hero_opt ) ) {
+    // Numeric = attachment ID. '' / '0' / non-positive means "unset" (the
+    // image picker posts "0" when nothing is chosen) — keep the default
+    // rather than treating it as a URL.
+    if ( (int) $nl_hero_opt > 0 ) {
+        $nl_hero_att = wp_get_attachment_image_url( (int) $nl_hero_opt, 'large' );
+        if ( $nl_hero_att ) {
+            $nl_hero_src = $nl_hero_att;
+        }
+    }
+} elseif ( $nl_hero_opt !== '' ) {
+    $nl_hero_src = $nl_hero_opt;
+}
 ?>
 
 <div class="page-hero">
@@ -23,7 +47,7 @@ if ( have_posts() ) : the_post(); endif;
 
         <!-- LEFT: Gazette image, tilted -->
         <div class="fh-nl-gazette">
-            <img src="https://woocommerce-1611979-6343482.cloudwaysapps.com/wp-content/uploads/2026/04/Newpaper.png"
+            <img src="<?php echo esc_url( $nl_hero_src ); ?>"
                  alt="The FisHotel Gazette"
                  class="fh-nl-gazette__img">
         </div>

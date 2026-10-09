@@ -806,19 +806,28 @@
         );
     }
 
-    // Checkout — suppress PPCP smart / express buttons when a gift card
-    // balance is applied. PPCP builds its smart-button PayPal order from the
-    // cart line-item breakdown, which does NOT include the WC Gift Cards
-    // deduction (a cart-total-level adjustment, not a line item / coupon /
-    // fee). So a partial-coverage smart-button checkout captures the FULL
-    // pre-gift-card total at PayPal while the balance is also debited — a
-    // real-money double-charge (order #34494). The standard place-order →
-    // PayPal redirect, by contrast, builds the PayPal order from the WC order
-    // and charges the correct post-gift-card total.
+    // Checkout — suppress PPCP smart / express buttons when ANY gift-card
+    // value is on the order: the account BALANCE checkbox is ticked OR a
+    // gift-card CODE has been applied to the cart. PPCP builds its
+    // smart-button PayPal order from the cart line-item breakdown, which does
+    // NOT include the WC Gift Cards deduction (a cart-total-level adjustment,
+    // not a line item / coupon / fee) — and that is true for both paths. So a
+    // partial-coverage smart-button checkout captures the FULL pre-gift-card
+    // total at PayPal while the card is also debited — a real-money
+    // double-charge (order #34494). The standard place-order → PayPal
+    // redirect, by contrast, builds the PayPal order from the WC order and
+    // charges the correct post-gift-card total.
     //
-    // When balance is applied we therefore hide PPCP's smart-button + Pay
-    // Later message containers (via the .fh-gc-balance-applied class →
-    // woocommerce.css) and force the native place-order button visible by
+    // Applied CODES are detected server-side: review-order.php emits a hidden
+    // `.fh-gc-applied` marker inside the review table whenever the plugin
+    // reports an applied card, and that table is re-rendered with every
+    // update_order_review fragment, so the marker appears/disappears as codes
+    // are applied/removed. The balance checkbox is still read live.
+    //
+    // When either is true we hide PPCP's smart-button + Pay Later message
+    // containers (via the .fh-gc-balance-applied class → woocommerce.css;
+    // the class name predates the code-path fix and is kept so the CSS
+    // stays untouched) and force the native place-order button visible by
     // stripping PPCP's `ppcp-hidden` class, routing the customer through the
     // standard flow. Re-evaluated on every fragment refresh (updated_checkout)
     // and on checkbox toggle, and paired with a server-side capture-amount
@@ -827,13 +836,16 @@
         var $form = $('form.checkout');
         if (!$form.length) return;
 
-        function balanceApplied() {
+        function giftCardApplied() {
+            // Code applied — marker from review-order.php.
+            if ($('.fh-gc-applied').length > 0) return true;
+            // Account balance — checkbox state.
             var $box = $('#use_gift_card_balance, input[id^="apply_gift_card_balance"]');
             return $box.length > 0 && $box.filter(':checked').length > 0;
         }
 
         function sync() {
-            var applied = balanceApplied();
+            var applied = giftCardApplied();
             $form.toggleClass('fh-gc-balance-applied', applied);
             if (applied) {
                 // PPCP hides the native button behind `ppcp-hidden` when its
@@ -843,7 +855,9 @@
             }
         }
 
-        // Re-run after PPCP has re-rendered its buttons on fragment refresh.
+        // Re-run after PPCP has re-rendered its buttons on fragment refresh —
+        // this is also what picks up the .fh-gc-applied marker after a code
+        // is applied or removed (both end in update_checkout → updated_checkout).
         $(document.body).on('updated_checkout', function() { setTimeout(sync, 0); });
         $(document.body).on(
             'change',

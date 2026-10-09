@@ -242,6 +242,7 @@ $includes = [
 	'/inc/woocommerce.php',
 	'/inc/gift-card-checkout.php', // Gift Card ↔ PPCP safeguards (smart-button suppression + capture guard)
 	'/inc/order-emails.php',     // FisHotel Delivery Date in transactional emails
+	'/inc/pdf-invoice.php',      // PDF Invoices & Packing Slips (WP Overnight): refund rows + marker, customer notes
 	'/inc/shop-load-more.php', // Shop archive Load More (AJAX) + enqueue
 	'/inc/hotel-data.php',       // FisHotel quarantine meta
 	'/inc/hotel-journal.php',    // Quarantine journal entries

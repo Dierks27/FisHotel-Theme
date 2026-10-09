@@ -12,9 +12,12 @@
  *     (woocommerce/myaccount/giftcards.php).
  *  3. Relabel the plugin's "Add a gift card?" / "Add to your account" strings.
  *  4. Render an "Unclaimed Gift Cards" section (above "Your Balance") listing
- *     cards the current user owns — as sender OR recipient — that haven't yet
- *     been claimed to their balance, each with a nonce'd Redeem button that
- *     runs WC_GC_Gift_Card::redeem().
+ *     cards the current user owns — as recipient, or as the buyer (sender
+ *     email match AND the card's order was placed by this account) — that
+ *     haven't yet been claimed to their balance, each with a nonce'd Redeem
+ *     button that runs WC_GC_Gift_Card::redeem(). Full codes are shown on
+ *     purpose (saves a support email); the ownership rule is what keeps
+ *     them private.
  *
  * Everything that reaches into plugin internals is guarded: a missing class,
  * accessor, DB table, or column degrades to "no section / keep masking"
@@ -195,8 +198,11 @@ add_action( 'woocommerce_gc_before_account_giftcards', function () {
  * Handle a Redeem-button click: nonce'd GET → WC_GC_Gift_Card::redeem().
  *
  * Runs on template_redirect so the redirect fires before any output. Ownership
- * is enforced here (current user must be the card's sender OR recipient by
- * email) so a guessed/forged gc_id can't claim someone else's card.
+ * is enforced here so a guessed/forged gc_id can't claim someone else's card:
+ * the current user must be the card's RECIPIENT by email, or its SENDER by
+ * email on a card whose purchase order was placed by this very account
+ * (fishotel_giftcard_order_owned_by). A sender-email match alone is not
+ * enough — that email is free text at purchase time.
  */
 add_action( 'template_redirect', function () {
 	if ( ! is_user_logged_in() ) {
@@ -226,12 +232,15 @@ add_action( 'template_redirect', function () {
 		exit;
 	}
 
-	// Ownership: current user must be sender OR recipient by email.
-	$me      = wp_get_current_user();
-	$my_mail = strtolower( (string) $me->user_email );
-	$sender  = strtolower( (string) $gc->get_sender_email() );
-	$recip   = strtolower( (string) $gc->get_recipient() );
-	if ( '' === $my_mail || ( $sender !== $my_mail && $recip !== $my_mail ) ) {
+	// Ownership: recipient by email, or sender by email whose own account
+	// placed the order the card was bought on. Same rule as the listing.
+	$me           = wp_get_current_user();
+	$my_mail      = strtolower( trim( (string) $me->user_email ) );
+	$sender       = strtolower( trim( (string) $gc->get_sender_email() ) );
+	$recip        = strtolower( trim( (string) $gc->get_recipient() ) );
+	$is_recipient = '' !== $my_mail && $recip === $my_mail;
+	$is_buyer     = '' !== $my_mail && $sender === $my_mail && fishotel_giftcard_order_owned_by( $gc, $me->ID );
+	if ( ! $is_recipient && ! $is_buyer ) {
 		wp_safe_redirect( add_query_arg( 'fh_gc_error', 'forbidden', $endpoint ) );
 		exit;
 	}
@@ -320,13 +329,65 @@ function fishotel_giftcards_db_table() {
 }
 
 /**
- * Gift cards the current user is entitled to claim: they are the sender OR
- * recipient (by email), the card is not yet linked to any account, is active,
- * unexpired, and carries a positive balance.
+ * Does this gift card's purchase order belong to the given account?
  *
- * Candidate IDs are pulled by email from the plugin table; final eligibility
- * is decided by WC_GC_Gift_Card::is_usable() so the plugin's own rules (active,
- * not expired, not redeemed, balance > 0) are authoritative.
+ * The sender-only entitlement rule: a card the viewer did NOT receive is
+ * theirs to list/redeem only when it was bought on an order placed by their
+ * account — WC_GC_Gift_Card::get_order_id() → wc_get_order() → customer id.
+ * A card whose sender_email merely matches (no order, a guest order, another
+ * customer's order, or an order id the plugin can't report) is NOT theirs:
+ * sender_email is free text at purchase time, so on its own it would let a
+ * shared or spoofed address list and claim somebody else's full code.
+ *
+ * Every plugin touch is guarded; any doubt returns false (excluded).
+ *
+ * @param WC_GC_Gift_Card $gc      Gift card (already instantiated).
+ * @param int             $user_id Account to test against.
+ * @return bool
+ */
+function fishotel_giftcard_order_owned_by( $gc, $user_id ) {
+	$user_id = (int) $user_id;
+	if ( ! $user_id || ! is_object( $gc ) || ! function_exists( 'wc_get_order' ) ) {
+		return false;
+	}
+
+	$order_id = 0;
+	try {
+		if ( method_exists( $gc, 'get_order_id' ) ) {
+			$order_id = (int) $gc->get_order_id();
+		} elseif ( isset( $gc->data ) && is_object( $gc->data ) && method_exists( $gc->data, 'get_order_id' ) ) {
+			// Older builds expose the getters on the wrapped data object only.
+			$order_id = (int) $gc->data->get_order_id();
+		}
+	} catch ( \Throwable $e ) {
+		return false;
+	}
+	if ( ! $order_id ) {
+		return false;
+	}
+
+	// WC_Order only — wc_get_order() also returns WC_Order_Refund for a refund
+	// id, which has no customer of its own.
+	$order = wc_get_order( $order_id );
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+	return (int) $order->get_customer_id() === $user_id;
+}
+
+/**
+ * Gift cards the current user is entitled to claim: they are the RECIPIENT
+ * (by email), or the SENDER (by email) on a card whose purchase order was
+ * placed by this account (fishotel_giftcard_order_owned_by); and the card is
+ * not yet linked to any account, is active, unexpired, and carries a positive
+ * balance. A sender-only match with no order, or another customer's order,
+ * is excluded — recipient matches are unaffected by that rule.
+ *
+ * Candidate IDs are pulled by email from the plugin table (recipient OR
+ * sender_email); the ownership rule and final eligibility are decided in PHP
+ * on the instantiated card, the latter by WC_GC_Gift_Card::is_usable() so the
+ * plugin's own rules (active, not expired, not redeemed, balance > 0) are
+ * authoritative.
  *
  * @return WC_GC_Gift_Card[]
  */
@@ -340,9 +401,10 @@ function fishotel_giftcards_unclaimed_for_current_user() {
 		return array();
 	}
 
-	$user  = wp_get_current_user();
-	$email = $user->user_email;
-	if ( '' === $email ) {
+	$user    = wp_get_current_user();
+	$email   = $user->user_email;
+	$my_mail = strtolower( trim( (string) $email ) );
+	if ( '' === $my_mail ) {
 		return array();
 	}
 
@@ -368,6 +430,12 @@ function fishotel_giftcards_unclaimed_for_current_user() {
 		}
 		// is_usable(): active && ! expired && ! redeemed && balance > 0.
 		if ( ! $gc->is_usable() ) {
+			continue;
+		}
+		// Not the recipient → this row got here on sender_email alone, so it
+		// must also be the buyer's own order (see fishotel_giftcard_order_owned_by).
+		$recip = strtolower( trim( (string) $gc->get_recipient() ) );
+		if ( $recip !== $my_mail && ! fishotel_giftcard_order_owned_by( $gc, $user->ID ) ) {
 			continue;
 		}
 		$cards[] = $gc;

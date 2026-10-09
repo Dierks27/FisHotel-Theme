@@ -42,6 +42,30 @@ $shipping_rate   = function_exists( 'fishotel_cart_chosen_shipping_rate' ) ? fis
 $noun            = function_exists( 'fishotel_cart_preset_noun' )
 	? fishotel_cart_preset_noun( $preset, $cart_count )
 	: ( $cart_count === 1 ? __( 'item', 'fishotel' ) : __( 'items', 'fishotel' ) );
+
+// Gift-card CODE applied to the cart (WooCommerce Gift Cards). Feeds the
+// hidden .fh-gc-applied marker in the Total row, which main.js's
+// initGiftCardSmartButtonGuard() reads to suppress PPCP's smart / express
+// buttons: those build the PayPal order from the cart line items and miss
+// the gift-card deduction, so a code applied at checkout left the
+// double-charge path (order #34494) open — the existing guard only saw the
+// account-BALANCE checkbox. Rendered here because this template is re-run
+// on every update_order_review fragment, so the marker tracks apply/remove.
+// Fails closed — any doubt about the plugin API means no marker (buttons
+// stay visible, exactly as before), never a fatal mid-fragment.
+$gc_applied = false;
+if ( function_exists( 'WC_GC' ) ) {
+	try {
+		$gc_plugin = WC_GC();
+		if ( is_object( $gc_plugin ) && isset( $gc_plugin->giftcards ) && is_object( $gc_plugin->giftcards )
+			&& method_exists( $gc_plugin->giftcards, 'get_applied_giftcards' ) ) {
+			$gc_applied_list = $gc_plugin->giftcards->get_applied_giftcards( 'cart' );
+			$gc_applied      = is_array( $gc_applied_list ) && ! empty( $gc_applied_list );
+		}
+	} catch ( \Throwable $e ) {
+		$gc_applied = false;
+	}
+}
 ?>
 <table class="shop_table woocommerce-checkout-review-order-table fh-statement-table">
 	<tbody>
@@ -237,7 +261,16 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 		<?php endif; ?>
 
 		<tr class="fh-statement-ledger__row fh-statement-ledger__total">
-			<td colspan="2" class="fh-statement-ledger__label"><?php esc_html_e( 'Total', 'fishotel' ); ?></td>
+			<td colspan="2" class="fh-statement-ledger__label">
+				<?php esc_html_e( 'Total', 'fishotel' ); ?>
+				<?php if ( $gc_applied ) : ?>
+					<?php /* Marker for main.js (see $gc_applied above). Lives INSIDE
+					        the table so the AJAX fragment swap carries it in and
+					        out; inside a <td> so it is valid table content. No
+					        `name` — it must never be POSTed with the checkout. */ ?>
+					<input type="hidden" class="fh-gc-applied" value="1">
+				<?php endif; ?>
+			</td>
 			<td class="fh-statement-ledger__value"><?php wc_cart_totals_order_total_html(); ?></td>
 		</tr>
 

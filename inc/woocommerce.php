@@ -113,14 +113,33 @@ add_action( 'init', function () {
 }, 20 );
 
 /*
- * Checkout — billing phone is REQUIRED. UPS labels (Finiship) need a
- * contact phone; a blank phone silently fell back to Jeff's own number on
- * the label, so the carrier called him instead of the customer.
+ * Checkout — billing phone is REQUIRED for LIVESTOCK orders only. UPS
+ * labels (Finiship) need a contact phone; a blank phone silently fell back
+ * to Jeff's own number on the label, so the carrier called him instead of
+ * the customer. Dry-goods carts (meds, food, gift cards, merch) get an
+ * OPTIONAL phone — Jeff's call: nobody phones about a box of flakes, so
+ * don't make that customer type a number.
+ *
+ * `required` is set explicitly BOTH ways rather than only flipped on.
+ * WooCommerce > Settings > Advanced > Checkout "Phone number field"
+ * defaults to Required, so deferring to that setting for dry-goods carts
+ * made the optional half of this rule a silent no-op. "Hidden" is still
+ * honoured: WC drops the field entirely and the isset() guard returns early.
+ *
+ * fishotel_cart_has_livestock() (inc/template-functions.php) reads the live
+ * cart: quarantined-fish products or an overnight shipping class, sticker
+ * giveaway lines ignored. WC runs this same filter when it validates the
+ * submitted form on woocommerce_checkout_process, so the asterisk at
+ * render time and the "required" error at submit time always agree.
  */
 add_filter( 'woocommerce_checkout_fields', function ( $fields ) {
-	if ( isset( $fields['billing']['billing_phone'] ) && is_array( $fields['billing']['billing_phone'] ) ) {
-		$fields['billing']['billing_phone']['required'] = true;
+	if ( ! isset( $fields['billing']['billing_phone'] ) || ! is_array( $fields['billing']['billing_phone'] ) ) {
+		return $fields;
 	}
+	if ( ! function_exists( 'fishotel_cart_has_livestock' ) ) {
+		return $fields; // Helper missing: leave WC's own setting alone.
+	}
+	$fields['billing']['billing_phone']['required'] = fishotel_cart_has_livestock();
 	return $fields;
 }, 20 );
 

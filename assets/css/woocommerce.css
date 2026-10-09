@@ -1098,6 +1098,48 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   margin: 0;
 }
 
+/* Fixed (read-only) quantity — sticker giveaway lines (Misc plugin), where
+   `woocommerce_cart_item_quantity` returns a locked number instead of the
+   stepper. cart.php wraps it as "×N"; same 28px box as .fh-cart-qty so the
+   Qty column stays aligned with the stepper rows above and below it. */
+.fh-cart-item__qty-fixed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--fh-border-md);
+  border-radius: 3px;
+  color: var(--fh-text-1);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* The plugin's sticker-front.css gives its locked number a 24px
+   inline-block box, which floats the digit away from the "×". Two-class
+   specificity wins regardless of stylesheet load order. */
+.fh-cart-item__qty-fixed .fh-sticker-qty-locked {
+  display: inline;
+  min-width: 0;
+}
+
+/* Visually hidden, still announced by screen readers. The theme does not
+   define WP's .screen-reader-text on the front end, so this is the one to
+   use for front-end labels. */
+.fh-sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .fh-cart-item__remove {
   font-size: 10px;
   font-weight: 600;
@@ -2039,15 +2081,18 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   outline-offset: 2px;
 }
 
-/* ── Gift card balance applied → suppress PPCP smart / express buttons ──
-   When a gift card balance is applied (main.js adds .fh-gc-balance-applied
-   to the checkout form), the PPCP smart buttons build their PayPal order
-   from the cart line-item breakdown, which omits the gift-card deduction —
-   so they capture the full pre-gift-card total (double-charge, order
-   #34494). Hide those buttons and their Pay Later messaging and reveal the
-   native place-order button, routing payment through the standard
-   place-order → PayPal redirect that charges the correct post-gift-card
-   total. Scoped to the payment card so it can't affect other contexts. */
+/* ── Gift card applied → suppress PPCP smart / express buttons ──
+   When any gift-card value is on the order — the account BALANCE checkbox
+   is ticked or a gift-card CODE is applied to the cart (main.js adds
+   .fh-gc-balance-applied to the checkout form for both; the class name
+   predates the code path) — the PPCP smart buttons build their PayPal
+   order from the cart line-item breakdown, which omits the gift-card
+   deduction — so they capture the full pre-gift-card total (double-charge,
+   order #34494). Hide those buttons and their Pay Later messaging and
+   reveal the native place-order button, routing payment through the
+   standard place-order → PayPal redirect that charges the correct
+   post-gift-card total. Scoped to the payment card so it can't affect
+   other contexts. */
 .fh-gc-balance-applied .fh-checkout-payment .ppcp-button-container,
 /* Enumerate express smart-button IDs specifically. Do NOT match
    #ppc-button-ppcp-card-button-gateway — that's the inline card gateway's

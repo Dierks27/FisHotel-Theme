@@ -293,6 +293,78 @@ function fishotel_is_quarantined_fish( $product_id = null ) {
 }
 
 /**
+ * Overnight shipping-class slugs, lowercased. Reads the same option the
+ * reorder piggyback reads (fishotel_overnight_shipping_classes, default
+ * `premium`) with the same comma/space/newline parsing and the same
+ * never-empty fallback, so the two features agree on what "overnight" is.
+ *
+ * WHY a second reader: FisHotel_Checkout_Reuse::overnight_classes() is
+ * private to that class, and this list is also needed by template-level
+ * helpers (fishotel_cart_has_livestock). Keep the parsing in sync with it —
+ * or point the reuse class at this function.
+ *
+ * @return string[]
+ */
+function fishotel_overnight_shipping_classes() {
+    $raw  = get_option( 'fishotel_overnight_shipping_classes', 'premium' );
+    $list = is_array( $raw ) ? $raw : preg_split( '/[\s,]+/', (string) $raw );
+    $list = array_filter( array_map( static function ( $slug ) {
+        return strtolower( trim( (string) $slug ) );
+    }, (array) $list ) );
+    $list = array_values( array_unique( $list ) );
+    return $list ? $list : [ 'premium' ];
+}
+
+/**
+ * True when the current cart holds livestock: any cart line whose product
+ * (the PARENT id for variations — the category lives there) is in the
+ * quarantined-fish category OR ships in an overnight class. Sticker
+ * giveaway lines (Misc plugin, cart item data fh_sticker = free|extra)
+ * are skipped — they ride in whatever box ships and are never livestock.
+ *
+ * Drives the livestock-only checkout rules (billing phone required for the
+ * UPS label); dry-goods carts keep WC's defaults.
+ *
+ * Safe outside a front-end request: returns false when WC or its cart is
+ * not loaded (admin, REST, cron) instead of touching a null cart. Not
+ * memoised on purpose — the cart can change within one request (add-to-
+ * cart AJAX, coupon/gift-card removal) and the loop is in-memory anyway;
+ * fishotel_is_quarantined_fish() already caches the term lookups.
+ *
+ * @return bool
+ */
+function fishotel_cart_has_livestock() {
+    if ( ! function_exists( 'WC' ) || ! WC() || ! ( WC()->cart instanceof WC_Cart ) ) {
+        return false;
+    }
+    $overnight = fishotel_overnight_shipping_classes();
+    foreach ( WC()->cart->get_cart() as $cart_item ) {
+        if ( ! is_array( $cart_item ) || ! empty( $cart_item['fh_sticker'] ) ) {
+            continue;
+        }
+        $product = isset( $cart_item['data'] ) && $cart_item['data'] instanceof WC_Product
+            ? $cart_item['data']
+            : null;
+
+        // WC stores the parent product id on the line; fall back to the
+        // product object's parent (or itself for simple products).
+        $parent_id = ! empty( $cart_item['product_id'] ) ? (int) $cart_item['product_id'] : 0;
+        if ( ! $parent_id && $product ) {
+            $parent_id = $product->get_parent_id() ? (int) $product->get_parent_id() : (int) $product->get_id();
+        }
+        if ( $parent_id && fishotel_is_quarantined_fish( $parent_id ) ) {
+            return true;
+        }
+        // get_shipping_class() on a variation resolves to its own class or
+        // the parent's when not overridden — same read as the piggyback.
+        if ( $product && in_array( strtolower( (string) $product->get_shipping_class() ), $overnight, true ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Filter the PDP top-of-page tag list. Drops:
  *   1. "Fish" (redundant on a fish product).
  *   2. Any tag whose name matches the genus of the product's scientific
@@ -357,6 +429,12 @@ function fishotel_pdp_display_tags( $tags, $product_id ) {
  * @return array{state:string,text:string}
  */
 function fishotel_stock_badge_label( $in_stock, $max_qty ) {
+    // WC's variation payload (get_available_variations → max_qty) uses ''
+    // for "no limit" where the product API uses -1. Treat '' as unlimited;
+    // a bare (int) cast turned it into 0 = "Sold Out" on in-stock variations.
+    if ( '' === $max_qty ) {
+        $max_qty = -1;
+    }
     $max_qty = (int) $max_qty;
     if ( ! $in_stock || $max_qty === 0 ) {
         return [ 'state' => 'soldout', 'text' => 'Sold Out' ];

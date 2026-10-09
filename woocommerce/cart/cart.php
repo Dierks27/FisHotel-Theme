@@ -217,7 +217,22 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 							</div>
 							<?php
 							$stepper_html = (string) ob_get_clean();
-							echo apply_filters( 'woocommerce_cart_item_quantity', $stepper_html, $cart_item_key, $cart_item ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- stepper markup is escaped above; filter contract matches WC core.
+							$qty_html     = (string) apply_filters( 'woocommerce_cart_item_quantity', $stepper_html, $cart_item_key, $cart_item );
+							if ( ! empty( $cart_item['fh_sticker'] ) && $qty_html !== $stepper_html ) {
+								/* Sticker giveaway lines (Misc plugin, fh_sticker = free|extra):
+								   the plugin's filter hands back a locked bare number in place
+								   of the stepper, which sat in the Qty column as an unlabeled
+								   digit. Wrap it in the same "×N" treatment the checkout
+								   statement uses, plus a screen-reader label; the plugin still
+								   owns the value. Only when the filter actually replaced the
+								   stepper — with the plugin inactive a persisted sticker line
+								   keeps the live stepper, and must not get a stray "×". */
+								$qty_html = '<span class="fh-cart-item__qty-fixed">'
+									. '<span class="fh-sr-only">' . esc_html__( 'Quantity', 'fishotel' ) . '</span>'
+									. '&times;' . $qty_html
+									. '</span>';
+							}
+							echo $qty_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- stepper markup is escaped above; filter contract matches WC core.
 							?>
 							<a href="<?php echo esc_url( $remove_url ); ?>" class="fh-cart-item__remove" data-product_id="<?php echo esc_attr( $product_id ); ?>">
 								<?php esc_html_e( 'Remove', 'fishotel' ); ?>

@@ -86,8 +86,12 @@ class FisHotel_Placeholder_Library {
 		} else {
 			// Opportunistic cleanup — once the release passes, drop the
 			// CS assignment so a future re-entry into Coming Soon picks
-			// fresh from the current library.
-			delete_post_meta( $product_id, self::PRODUCT_META_CS );
+			// fresh from the current library. Check first: delete_post_meta()
+			// always issues a SELECT even when there is nothing to delete,
+			// and this runs for every imageless card on every page view.
+			if ( get_post_meta( $product_id, self::PRODUCT_META_CS, true ) ) {
+				delete_post_meta( $product_id, self::PRODUCT_META_CS );
+			}
 		}
 		if ( ! $attachment_id ) {
 			$attachment_id = self::get_for_product( $product_id, 'default' );

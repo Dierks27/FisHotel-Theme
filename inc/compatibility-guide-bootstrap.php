@@ -15,6 +15,11 @@
 defined( 'ABSPATH' ) || exit;
 
 function fishotel_bootstrap_compat_template() {
+	// Skip admin-ajax / heartbeat — admin_init fires there too and the
+	// post + meta lookups are wasted on every poll.
+	if ( wp_doing_ajax() ) {
+		return;
+	}
 	$page_id = 6512;
 	if ( ! get_post( $page_id ) ) {
 		return; // page deleted — nothing to assign

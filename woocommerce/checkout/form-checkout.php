@@ -158,9 +158,28 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 				        checkouts. The FisHotel Batch Manager injects its
 				        delivery-date dropdown into `_after_order_notes`; if
 				        these hooks fired inside the hidden card the dropdown
-				        would render but never be visible. */ ?>
-				<?php do_action( 'woocommerce_before_order_notes', $checkout ); ?>
-				<?php do_action( 'woocommerce_after_order_notes', $checkout ); ?>
+				        would render but never be visible.
+
+				        This is the ONLY place the two hooks fire: our
+				        checkout/form-shipping.php override drops WC's
+				        `.woocommerce-additional-fields` block (which fired them
+				        a second time inside the shipping card and duplicated
+				        the required delivery-date <select>), so the order
+				        fields WC rendered there are rendered here instead,
+				        mirroring the stock template. */ ?>
+				<div class="woocommerce-additional-fields">
+					<?php do_action( 'woocommerce_before_order_notes', $checkout ); ?>
+
+					<?php if ( apply_filters( 'woocommerce_enable_order_notes_field', 'yes' === get_option( 'woocommerce_enable_order_comments', 'yes' ) ) ) : ?>
+						<div class="woocommerce-additional-fields__field-wrapper">
+							<?php foreach ( $checkout->get_checkout_fields( 'order' ) as $key => $field ) : ?>
+								<?php woocommerce_form_field( $key, $field, $checkout->get_value( $key ) ); ?>
+							<?php endforeach; ?>
+						</div>
+					<?php endif; ?>
+
+					<?php do_action( 'woocommerce_after_order_notes', $checkout ); ?>
+				</div>
 
 				<?php /* Customer details section close — fires after billing,
 				        shipping, and order-notes injection are all done.

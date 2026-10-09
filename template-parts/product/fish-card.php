@@ -20,23 +20,32 @@ if ( ! $product instanceof WC_Product ) {
     return;
 }
 
-$pid   = $product->get_id();
-$hotel = function_exists( 'fishotel_get_hotel_data' ) ? fishotel_get_hotel_data( $pid ) : [];
-$stage = $hotel['qt_stage'] ?? '';
-$days  = $hotel['days_in_qt'] ?? '';
+$pid = $product->get_id();
 
-if ( $stage === 'souvenir-shop' ) {
-    $status_class = 'fh-fish-card__status--available';
-} elseif ( in_array( $stage, array( 'treatment', 'checkin', 'observation' ), true ) ) {
-    $status_class = 'fh-fish-card__status--qt';
+// Stock badge — same states + copy as the PDP badge (fishotel_stock_badge_label)
+// so a card and its product page never disagree. This replaces the old
+// qt_stage status pill + "Days QT" chip, which read hotel-data keys that
+// FisHotel_Hotel_Data no longer defines and therefore never rendered.
+// Variable parents only use WC's synced stock status (in stock / sold
+// out): summing the variations would wc_get_product() every child of
+// every card (the Medications archive is all-variable, 50 per page) and
+// "Only 3 left" spread across three sizes misleads anyway. The PDP shows
+// the per-size count once a size is picked.
+$card_in_stock = $product->is_in_stock();
+if ( $product->is_type( 'variable' ) ) {
+    $card_max = $card_in_stock ? -1 : 0;
 } else {
-    $status_class = '';
+    $card_max = (int) $product->get_max_purchase_quantity();
 }
-if ( $stage === 'souvenir-shop' )    { $status_label = 'Available'; }
-elseif ( $stage === 'treatment' )    { $status_label = 'In Treatment'; }
-elseif ( $stage === 'observation' )  { $status_label = 'In QT'; }
-elseif ( $stage === 'checkin' )      { $status_label = 'Checked In'; }
-else                                 { $status_label = ''; }
+$stock_badge = function_exists( 'fishotel_stock_badge_label' )
+    ? fishotel_stock_badge_label( $card_in_stock, $card_max )
+    : [ 'state' => '', 'text' => '' ];
+// Not purchasable (no price, or an Amazon-mode med — amazon_is_not_purchasable
+// filters it false) → no badge. The PDP shows "Currently unavailable" or the
+// Amazon panel for these, so a green "Ready to Ship" pill would contradict it.
+if ( ! $product->is_purchasable() ) {
+    $stock_badge = [ 'state' => '', 'text' => '' ];
+}
 
 // Comma-separated product_cat slug list — the Medications dual-axis
 // filter JS reads this off each card to decide visibility.
@@ -54,16 +63,10 @@ $cs_release_ts = function_exists( 'fishotel_cs_release_ts' ) ? fishotel_cs_relea
             <?php fishotel_product_thumbnail( $pid, 'fishotel-product-card' ); ?>
             <?php do_action( 'woocommerce_before_shop_loop_item_title' ); ?>
             <?php fishotel_cs_render_card_badge( $pid ); ?>
-            <?php if ( $status_label && ! $cs_release_ts ) : ?>
-            <span class="fh-fish-card__status <?php echo esc_attr( $status_class ); ?>">
-                <?php echo esc_html( $status_label ); ?>
+            <?php if ( $stock_badge['text'] !== '' && ! $cs_release_ts ) : ?>
+            <span class="fh-fish-card__stock" data-state="<?php echo esc_attr( $stock_badge['state'] ); ?>">
+                <?php echo esc_html( $stock_badge['text'] ); ?>
             </span>
-            <?php endif; ?>
-            <?php if ( $days && ! $cs_release_ts ) : ?>
-            <div class="fh-fish-card__days">
-                <span class="fh-fish-card__days-num"><?php echo esc_html( $days ); ?></span>
-                <span class="fh-fish-card__days-label">Days QT</span>
-            </div>
             <?php endif; ?>
         </div>
         <div class="fh-fish-card__body">
@@ -75,9 +78,6 @@ $cs_release_ts = function_exists( 'fishotel_cs_release_ts' ) ? fishotel_cs_relea
                     <?php fishotel_cs_render_card_line( $pid ); ?>
                 <?php else : ?>
                     <span class="fh-fish-card__price"><?php echo $product->get_price_html(); ?></span>
-                    <?php if ( $days ) : ?>
-                    <span class="fh-fish-card__qt"><?php echo esc_html( $days ); ?> Days QT</span>
-                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>

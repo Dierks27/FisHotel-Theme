@@ -13,6 +13,11 @@
 defined( 'ABSPATH' ) || exit;
 
 function fishotel_bootstrap_bleach_page() {
+	// Skip admin-ajax / heartbeat — admin_init fires there too and the
+	// uncached page lookup is wasted on every poll.
+	if ( wp_doing_ajax() ) {
+		return;
+	}
 	$slug     = 'bleach-calculator';
 	$template = 'page-bleach-calculator.php';
 	$title    = 'Bleach-Out Calculator';

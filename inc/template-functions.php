@@ -42,6 +42,108 @@ function fishotel_get_hotel_data( $product_id = null ) {
 }
 
 /**
+ * URL of the Quarantined Fish category archive. The homepage / empty-cart
+ * "View Available Fish" CTAs used to send customers to the WC shop page,
+ * which (with "Shop page display: Categories") is the 3-tile landing page
+ * — one extra click away from the fish grid. Falls back to the shop
+ * permalink when the term is missing so the buttons always work. The
+ * header "Shop" nav is intentionally left on the shop page.
+ *
+ * @return string
+ */
+function fishotel_quarantined_fish_url() {
+    $link = get_term_link( 'quarantined-fish', 'product_cat' );
+    if ( is_string( $link ) && $link !== '' && ! is_wp_error( $link ) ) {
+        return $link;
+    }
+    return (string) wc_get_page_permalink( 'shop' );
+}
+
+/**
+ * Resolve the public URL of one of the theme's tool pages (Medication
+ * Dosing, QT Scheduler, Bleach Calculator, Build-a-Tank) by its page
+ * template, with a slug fallback. Resolving by `_wp_page_template` first
+ * matters because the live slugs don't match the template names (the
+ * dosing calculator lives at /medication-dosing/, not /quarantine-help/)
+ * and Jeff can rename a page without breaking the links.
+ *
+ * All four templates are fetched in ONE query the first time any of them
+ * is requested (static + object cache), so the footer + PDP row cost a
+ * single lookup per request. Only published pages resolve; returns ''
+ * when nothing matches so callers can skip the link entirely.
+ *
+ * @param string $template      Template file name, e.g. 'page-qt-scheduler.php'.
+ * @param string $fallback_slug Page slug to try when no page uses the template.
+ * @return string Permalink or '' when the page doesn't exist / isn't published.
+ */
+function fishotel_tool_page_url( $template, $fallback_slug = '' ) {
+    static $map = null;
+
+    $known = [
+        'page-quarantine-help.php',
+        'page-qt-scheduler.php',
+        'page-bleach-calculator.php',
+        'page-compatibility-guide.php',
+    ];
+
+    if ( $map === null ) {
+        $cached = wp_cache_get( 'fishotel_tool_page_map', 'fishotel' );
+        if ( is_array( $cached ) ) {
+            $map = $cached;
+        } else {
+            $map = [];
+            $ids = get_posts( [
+                'post_type'              => 'page',
+                'post_status'            => 'publish',
+                'posts_per_page'         => 20,
+                'fields'                 => 'ids',
+                'orderby'                => 'ID',
+                'order'                  => 'ASC',
+                'no_found_rows'          => true,
+                'update_post_term_cache' => false,
+                'meta_query'             => [
+                    [
+                        'key'     => '_wp_page_template',
+                        'value'   => $known,
+                        'compare' => 'IN',
+                    ],
+                ],
+            ] );
+            foreach ( (array) $ids as $id ) {
+                $tpl = (string) get_post_meta( $id, '_wp_page_template', true );
+                // First (lowest ID) page per template wins — mirrors the
+                // bootstraps, which force the template onto a fixed page.
+                if ( $tpl !== '' && ! isset( $map[ $tpl ] ) ) {
+                    $map[ $tpl ] = (int) $id;
+                }
+            }
+            wp_cache_set( 'fishotel_tool_page_map', $map, 'fishotel', HOUR_IN_SECONDS );
+        }
+    }
+
+    $template = (string) $template;
+    if ( $template !== '' && ! empty( $map[ $template ] ) ) {
+        $url = get_permalink( $map[ $template ] );
+        if ( $url ) {
+            return $url;
+        }
+    }
+
+    $fallback_slug = (string) $fallback_slug;
+    if ( $fallback_slug !== '' ) {
+        $page = get_page_by_path( $fallback_slug, OBJECT, 'page' );
+        if ( $page && $page->post_status === 'publish' ) {
+            $url = get_permalink( $page );
+            if ( $url ) {
+                return $url;
+            }
+        }
+    }
+
+    return '';
+}
+
+/**
  * Resolve a `fh-tag--<modifier>` class from a tag slug. Empty string when
  * no rule matches (falls through to the muted gray default). Substring
  * matching mirrors the legacy fish-only resolver so existing slugs like

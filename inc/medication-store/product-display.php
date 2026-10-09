@@ -84,7 +84,11 @@ class FisHotel_Med_Product_Display {
 		if ( ! is_product() ) return;
 		$pid = get_queried_object_id();
 		if ( ! fishotel_med_is_med_product( $pid ) ) return;
-		if ( fishotel_med_get_mode( $pid ) !== 'ea' ) return;
+		// Raw meta, NOT fishotel_med_get_mode(): the helper defaults an unset
+		// mode to 'ea', so an untagged Medications product would show
+		// "Fulfilled by EverythingAquatic" while every fulfillment path
+		// (slip, EA column, mixed-order split) treats it as non-EA.
+		if ( get_post_meta( $pid, '_fishotel_fulfillment', true ) !== 'ea' ) return;
 		// Tier 2 (Amazon-affiliate) products are never EA-fulfilled, so the
 		// disclosure copy would mislead. Belt-and-suspenders on top of the
 		// mode check above — covers any future hybrid product that ends up
@@ -134,7 +138,7 @@ class FisHotel_Med_Product_Display {
 	public static function block_amazon_atc( $valid, $product_id ) {
 		if ( ! $product_id ) return $valid;
 		if ( ! fishotel_med_is_med_product( $product_id ) ) return $valid;
-		if ( fishotel_med_get_mode( $product_id ) === 'amazon' ) {
+		if ( self::is_amazon_mode( $product_id ) ) {
 			wc_add_notice(
 				__( 'This medication is sold via Amazon — please use the Buy on Amazon button instead.', 'fishotel' ),
 				'error'
@@ -151,20 +155,49 @@ class FisHotel_Med_Product_Display {
 	 */
 	public static function amazon_is_not_purchasable( $purchasable, $product ) {
 		if ( ! $product instanceof WC_Product ) return $purchasable;
-		$pid = $product->get_id();
-		if ( ! fishotel_med_is_med_product( $pid ) ) return $purchasable;
-		// Variations: check the parent's mode.
-		if ( $product->get_type() === 'variation' ) {
-			$parent_id = $product->get_parent_id();
-			if ( fishotel_med_get_mode( $parent_id ) === 'amazon' ) {
-				return false;
-			}
-			return $purchasable;
-		}
-		if ( fishotel_med_get_mode( $pid ) === 'amazon' ) {
+		// Resolve variations to the parent BEFORE the Medications check:
+		// a variation carries no product_cat terms, so checking the
+		// variation's own ID returned early and left variations of an
+		// Amazon-mode variable product purchasable.
+		$lookup = $product->is_type( 'variation' ) ? (int) $product->get_parent_id() : (int) $product->get_id();
+		if ( ! $lookup || ! fishotel_med_is_med_product( $lookup ) ) return $purchasable;
+		if ( self::is_amazon_mode( $lookup ) ) {
 			return false;
 		}
 		return $purchasable;
+	}
+
+	/**
+	 * True when a medication product must be presented as Amazon-mode.
+	 *
+	 * WHY: mode === 'amazon' is the explicit switch, but a product that
+	 * carries an Amazon ASIN with no mode set (live example: Copper Power,
+	 * #33380 — ASIN, no price, mode unset so the helper defaults it to
+	 * 'ea') rendered "In Stock — Ready to Ship" + Add to Cart, and WC then
+	 * rejected the add with nowhere else to go. The template already
+	 * branches on fishotel_med_is_amazon_panel(), so widening the
+	 * predicate here fixes the PDP, the purchasable filter and the
+	 * add-to-cart block in one place. Callers must already have checked
+	 * fishotel_med_is_med_product().
+	 *
+	 * The ASIN fallback applies ONLY when the mode is unset: the save handler
+	 * keeps the ASIN when Jeff flips a med to EA/self (hybrid products keep
+	 * it for the affiliate alternative — see render_ea_disclosure), and an
+	 * explicit 'ea'/'self' choice must never be hijacked into Amazon-only.
+	 *
+	 * @param int $product_id Parent/simple product ID (never a variation).
+	 * @return bool
+	 */
+	public static function is_amazon_mode( $product_id ) {
+		$product_id = (int) $product_id;
+		if ( ! $product_id ) return false;
+		// Raw meta, not fishotel_med_get_mode(): the helper defaults unset to
+		// 'ea', which would hide the "mode never chosen" case we need here.
+		$raw = strtolower( trim( (string) get_post_meta( $product_id, '_fishotel_fulfillment', true ) ) );
+		if ( $raw === 'amazon' ) return true;
+		if ( $raw === 'ea' || $raw === 'self' ) return false;
+		return function_exists( 'fishotel_is_amazon_affiliate_product' )
+			&& fishotel_is_amazon_affiliate_product( $product_id );
 	}
 }
 
@@ -172,14 +205,16 @@ class FisHotel_Med_Product_Display {
  * Template helper — called from single-product.php to decide whether
  * to render the Amazon panel in place of the Add-to-Cart form.
  *
- * Returns true when the product is an amazon-mode medication. The
- * caller should then invoke fishotel_med_render_amazon_panel($product).
+ * Returns true when the product is an amazon-mode medication — explicit
+ * mode, OR an Amazon ASIN on a product whose mode was never set (see
+ * FisHotel_Med_Product_Display::is_amazon_mode() for why). The caller
+ * should then invoke fishotel_med_render_amazon_panel($product).
  */
 function fishotel_med_is_amazon_panel( $product ) {
 	if ( ! $product instanceof WC_Product ) return false;
 	$pid = $product->get_id();
 	if ( ! fishotel_med_is_med_product( $pid ) ) return false;
-	return fishotel_med_get_mode( $pid ) === 'amazon';
+	return FisHotel_Med_Product_Display::is_amazon_mode( $pid );
 }
 
 /** Render the Amazon CTA panel. Thin wrapper for use in templates. */

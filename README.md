@@ -18,45 +18,68 @@ Custom WordPress + WooCommerce theme for [fishotel.com](https://fishotel.com)
 ```
 fishotel-theme/
 ├── style.css              Theme declaration
-├── functions.php          Theme setup, WooCommerce support, asset loading
+├── functions.php          Theme setup, WooCommerce support, asset loading, module includes
 ├── index.php              Fallback template
-├── header.php             Site nav (centered logo, split left/right links)
-├── footer.php             Footer with 4-column layout
+├── header.php / footer.php  Site nav (centered logo, split left/right links) + 4-column footer
+├── front-page.php         Homepage
+├── archive-product.php    Shop + category grid (Load More, Coming Soon cards)
+├── page-*.php             About, Contacts, FAQ, Newsletter, Quarantine Help (dosing calculator),
+│                          QT Scheduler, Compatibility Guide, Bleach Calculator templates
 ├── inc/
-│   ├── hotel-data.php         ★ Quarantine meta fields (arrival, days, stage, health, treatments)
+│   ├── admin-settings.php     ★ FisHotel Theme admin pages (all editable copy + images)
+│   ├── hotel-data.php         ★ Product Data meta box (species info, care guide, notes)
 │   ├── hotel-journal.php      ★ Quarantine journal entries (repeatable)
 │   ├── variation-display.php  ★ Visual variation buttons (replaces WC dropdowns)
+│   ├── placeholder-library.php  Placeholder images for products without a photo
+│   ├── tool-product-links.php   Calculator / QT Scheduler → medication product links
+│   ├── theme-updater.php      Self-updater from the GitHub main branch
 │   ├── woocommerce.php        WooCommerce wrappers + hooks
 │   ├── template-functions.php Helper functions
-│   └── customizer.php         (TODO Phase 2)
-├── assets/
-│   ├── css/
-│   │   ├── main.css        ★ Full design system (tokens, components, responsive)
-│   │   └── woocommerce.css (TODO Phase 2)
-│   └── js/
-│       └── main.js         Variation buttons, gallery, mobile nav, qty
+│   ├── calculator/            Medication Dosing Calculator data + wiring
+│   ├── scheduler/             QT Scheduler wiring
+│   ├── medication-store/      Medication / food store (EA sync, pricing, packing slip)
+│   ├── order-fulfillment/     Split fulfillment, shipments meta box, checkout reuse
+│   ├── customer/              Self-serve delivery date, address propagation
+│   └── email/                 Consolidated shipping email
+├── parts/                 Compatibility Guide + Bleach Calculator template parts
 ├── template-parts/
-│   ├── header/
-│   ├── product/
-│   ├── shop/
-│   └── home/
-└── woocommerce/
-    ├── single-product.php  (TODO Phase 2)
-    └── loop/               (TODO Phase 2)
+│   └── product/fish-card.php
+├── woocommerce/
+│   ├── single-product.php
+│   ├── cart/ · checkout/ · myaccount/ · loop/
+├── assets/
+│   ├── css/               main.css ★ design system, woocommerce.css, per-page sheets
+│   └── js/                main.js, calculator/, scheduler/, per-page scripts
+├── tests/                 Headless unit tests (`node tests/*.test.js`)
+├── tools/                 One-off admin scripts (product field migration)
+├── docs/                  Specs; docs/archive/ holds the original planning documents
+├── vendor/                Composer deps (dompdf) — committed on purpose, see below
+└── .github/workflows/     Lint (php -l / node --check) on push + PR
 ```
+
+`vendor/` is intentionally committed: the site deploys by git pull on Cloudways with no
+Composer step, so dompdf (used for the EA packing-slip PDF) has to ship in the repo.
 
 ## ★ FisHotel Custom Features
 
-### Hotel Data Meta Fields (inc/hotel-data.php)
-Every WooCommerce product gets a "FisHotel — Hotel Data" meta box with:
-- **Check-In Date** — when the fish arrived
-- **Days In Quarantine** — auto-calculated from arrival date
-- **QT Stage** — Check-In / Observation / Treatment / Souvenir Shop / Flying Home
-- **Health Grade** — A / B / C / Pending
-- **Importer** — e.g. "EMark Aquatics (New York)"
-- **Foods Eating** — e.g. "Mysis, Nori, Pellets"
-- **Health Note** — short status message
-- **Treatments** — repeatable list with dates
+### Product Data Meta Fields (inc/hotel-data.php)
+Every WooCommerce product gets a "FisHotel — Product Data" meta box with three groups:
+
+**Species Info** (rendered as the species stat grid on the product page)
+- **Scientific Name** (`_fh_scientific_name`)
+- **Common Names** (`_fh_common_names`)
+- **Max Length** (`_fh_max_length`)
+- **Min Tank Size** (`_fh_min_tank_size`)
+- **Temperament** (`_fh_temperament`)
+- **Reef Safe** — radio: yes / no / with caution (`_fh_reef_safe`)
+- **Region** (`_fh_region`)
+
+**Care Guide (Fish Dossier)**
+- **Foods & Feeding** (`_fh_foods_feeding`) — falls back to the Care Guide default in FisHotel Settings
+- **Habitat & Behavior** (`_fh_habitat`) — same fallback
+
+**Notes** (not shown on website)
+- **Notes** (`_fh_notes`) — internal only
 
 ### Quarantine Journal (inc/hotel-journal.php)
 - Repeatable journal entries per product
@@ -72,9 +95,11 @@ Every WooCommerce product gets a "FisHotel — Hotel Data" meta box with:
 ## Build Phases
 
 - **Phase 1** ✅ Foundation — Design system, meta fields, variation display
-- **Phase 2** 🔄 Templates — header.php, single-product.php, archive-product.php
-- **Phase 3** — Journal CRUD UI, homepage, cart/checkout styling
-- **Phase 4** — Mobile polish, performance, go live
+- **Phase 2** ✅ Templates — header.php, single-product.php, archive-product.php, woocommerce.css
+- **Phase 3** ✅ Homepage, cart/checkout styling, admin settings pages
+- **Phase 4** 🔄 Mobile polish, performance, go live
+
+Current status and remaining work: see `FISHOTEL-PROJECT-STATUS.md`.
 
 ## Staging
 

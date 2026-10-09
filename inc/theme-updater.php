@@ -18,7 +18,9 @@ class FisHotel_Theme_Updater {
 	const REPO           = 'Dierks27/FisHotel-Theme';
 	const BRANCH         = 'main';
 	const TRANSIENT      = 'fishotel_update_check';
+	const TRANSIENT_FAIL = 'fishotel_update_check_fail'; // negative cache after an unreachable GitHub
 	const CHECK_INTERVAL = 43200; // 12 hours
+	const FAIL_INTERVAL  = 600;   // 10 minutes — retry failures sooner than a good result
 
 	/** Get the active theme's directory name (works regardless of folder naming) */
 	private static function get_slug() {
@@ -40,9 +42,16 @@ class FisHotel_Theme_Updater {
 		check_ajax_referer( 'fishotel_check_update' );
 
 		delete_transient( self::TRANSIENT );
+		delete_transient( self::TRANSIENT_FAIL );
 
 		$current_ver = self::get_current_version();
 		$remote_ver  = self::get_remote_version();
+
+		// false = GitHub unreachable. Say so instead of reporting a bogus
+		// "up to date … Remote: 0.0.0" success.
+		if ( false === $remote_ver ) {
+			wp_send_json_error( 'Could not reach GitHub to check for updates. Try again in a few minutes.' );
+		}
 
 		if ( version_compare( $remote_ver, $current_ver, '>' ) ) {
 			delete_site_transient( 'update_themes' );
@@ -82,11 +91,21 @@ class FisHotel_Theme_Updater {
 		return wp_remote_get( $url, $args );
 	}
 
-	/** Fetch remote version from raw style.css on main branch */
+	/**
+	 * Fetch remote version from raw style.css on main branch.
+	 *
+	 * Returns false when GitHub can't be reached or style.css has no
+	 * Version header. The failure is cached under its own short-lived key
+	 * (not the version transient) so a flaky request doesn't masquerade as
+	 * a real "0.0.0" release for the next hour.
+	 */
 	private static function get_remote_version() {
 		$cached = get_transient( self::TRANSIENT );
 		if ( false !== $cached ) {
 			return $cached;
+		}
+		if ( get_transient( self::TRANSIENT_FAIL ) ) {
+			return false;
 		}
 
 		$url = sprintf(
@@ -98,17 +117,17 @@ class FisHotel_Theme_Updater {
 		$response = self::remote_get( $url );
 
 		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
-			set_transient( self::TRANSIENT, '0.0.0', 3600 );
-			return '0.0.0';
+			set_transient( self::TRANSIENT_FAIL, 1, self::FAIL_INTERVAL );
+			return false;
 		}
 
 		$body = wp_remote_retrieve_body( $response );
 
-		if ( preg_match( '/Version:\s*(\S+)/i', $body, $m ) ) {
-			$version = $m[1];
-		} else {
-			$version = '0.0.0';
+		if ( ! preg_match( '/Version:\s*(\S+)/i', $body, $m ) ) {
+			set_transient( self::TRANSIENT_FAIL, 1, self::FAIL_INTERVAL );
+			return false;
 		}
+		$version = $m[1];
 
 		set_transient( self::TRANSIENT, $version, self::CHECK_INTERVAL );
 		return $version;
@@ -127,6 +146,11 @@ class FisHotel_Theme_Updater {
 		$slug        = self::get_slug();
 		$current_ver = self::get_current_version();
 		$remote_ver  = self::get_remote_version();
+
+		// Unreachable GitHub → leave the transient alone; nothing to offer.
+		if ( false === $remote_ver ) {
+			return $transient;
+		}
 
 		if ( $current_ver !== '0.0.0' && version_compare( $remote_ver, $current_ver, '>' ) ) {
 			$transient->response[ $slug ] = [
@@ -164,6 +188,10 @@ class FisHotel_Theme_Updater {
 
 		$theme      = wp_get_theme( $slug );
 		$remote_ver = self::get_remote_version();
+		// Can't reach GitHub → show the installed version rather than 0.0.0.
+		if ( false === $remote_ver ) {
+			$remote_ver = self::get_current_version();
+		}
 
 		return (object) [
 			'name'          => $theme->get( 'Name' ),

@@ -16,7 +16,11 @@ do_action( 'woocommerce_before_cart' );
 
 $kses_inline = [ 'em' => [], 'strong' => [], 'i' => [], 'b' => [] ];
 
-$cart_count = (int) WC()->cart->get_cart_contents_count();
+// Display count excludes sticker lines (Misc plugin giveaway, cart item data
+// fh_sticker) so "3 fish" stays 3 fish; WC's own contents count is untouched.
+$cart_count = function_exists( 'fishotel_cart_display_count' )
+	? fishotel_cart_display_count()
+	: (int) WC()->cart->get_cart_contents_count();
 // Cart-content-aware preset (default / fish / meds / food / merch).
 // Drives the subtitle, shipping line, trust strip, and the Subtotal
 // row's noun word.
@@ -141,6 +145,15 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 						<?php if ( $sci_name !== '' ) : ?>
 							<div class="fh-cart-item__sci"><?php echo esc_html( $sci_name ); ?></div>
 						<?php endif; ?>
+						<?php /* Cart item data (woocommerce_get_item_data): WC Gift
+						        Cards recipient/message, sticker "Free with fish
+						        order" labels, etc. The theme never printed it, so
+						        gift-card recipients were invisible until the order
+						        email. */ ?>
+						<?php $item_meta = wc_get_formatted_cart_item_data( $cart_item ); ?>
+						<?php if ( '' !== trim( (string) $item_meta ) ) : ?>
+							<div class="fh-cart-item__meta"><?php echo wp_kses_post( $item_meta ); ?></div>
+						<?php endif; ?>
 						<?php if ( $variation_pills || $is_fish_item ) : ?>
 						<div class="fh-cart-item__pills">
 							<?php foreach ( $variation_pills as $pill_val ) : ?>
@@ -210,6 +223,10 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 				$shipping_label   = fishotel_cart_preset_get( $preset, 'shipping_label' );
 				$shipping_subtext = fishotel_cart_preset_get( $preset, 'shipping_subtext' );
 				$shipping_total   = WC()->cart->get_shipping_total();
+				// A chosen $0 rate (Free class, repeat-customer piggyback) is a
+				// real price, not "not calculated yet" — only fall back to the
+				// placeholder when no rate has been resolved.
+				$shipping_rate    = function_exists( 'fishotel_cart_chosen_shipping_rate' ) ? fishotel_cart_chosen_shipping_rate() : null;
 				?>
 				<ul class="fh-cart-ledger">
 					<li class="fh-cart-ledger__row">
@@ -219,6 +236,17 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 						</span>
 						<span class="fh-cart-ledger__value"><?php echo wc_price( WC()->cart->get_subtotal() ); ?></span>
 					</li>
+					<?php /* Coupon + fee rows — without them Subtotal + Shipping +
+					        Tax ≠ Total and an applied coupon had no visible
+					        discount line (and no remove link; WC's coupon html
+					        carries the [Remove] link cart.js handles via AJAX).
+					        Mirrors review-order.php. */ ?>
+					<?php foreach ( WC()->cart->get_coupons() as $code => $coupon ) : ?>
+					<li class="fh-cart-ledger__row fh-cart-ledger__coupon">
+						<span class="fh-cart-ledger__label"><?php wc_cart_totals_coupon_label( $coupon ); ?></span>
+						<span class="fh-cart-ledger__value"><?php wc_cart_totals_coupon_html( $coupon ); ?></span>
+					</li>
+					<?php endforeach; ?>
 					<li class="fh-cart-ledger__row">
 						<span class="fh-cart-ledger__label">
 							<?php echo esc_html( $shipping_label ); ?>
@@ -227,11 +255,23 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 							<?php endif; ?>
 						</span>
 						<span class="fh-cart-ledger__value">
-							<?php echo $shipping_total > 0
-								? wc_price( $shipping_total )
-								: '<span class="fh-cart-ledger__placeholder">' . esc_html__( 'Calculated at checkout', 'fishotel' ) . '</span>'; ?>
+							<?php if ( $shipping_total > 0 ) : ?>
+								<?php echo wc_price( $shipping_total ); ?>
+							<?php elseif ( $shipping_rate ) : ?>
+								<?php echo wc_price( $shipping_rate->get_cost() ); ?>
+								<?php /* The rate label carries the "Piggybacking on order #N" suffix. */ ?>
+								<small class="fh-cart-ledger__sub"><?php echo esc_html( $shipping_rate->get_label() ); ?></small>
+							<?php else : ?>
+								<span class="fh-cart-ledger__placeholder"><?php esc_html_e( 'Calculated at checkout', 'fishotel' ); ?></span>
+							<?php endif; ?>
 						</span>
 					</li>
+					<?php foreach ( WC()->cart->get_fees() as $fee ) : ?>
+					<li class="fh-cart-ledger__row fh-cart-ledger__fee">
+						<span class="fh-cart-ledger__label"><?php echo esc_html( $fee->name ); ?></span>
+						<span class="fh-cart-ledger__value"><?php wc_cart_totals_fee_html( $fee ); ?></span>
+					</li>
+					<?php endforeach; ?>
 					<li class="fh-cart-ledger__row">
 						<span class="fh-cart-ledger__label">
 							<?php echo $billing_state

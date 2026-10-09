@@ -3,7 +3,14 @@
  * FisHotel — Homepage (front-page.php)
  * @package FisHotel
  */
-get_header(); ?>
+get_header();
+
+// Every fish CTA on this page goes straight to the Quarantined Fish grid
+// rather than the WC shop page (which is the 3-tile category landing).
+$fish_url = function_exists( 'fishotel_quarantined_fish_url' )
+    ? fishotel_quarantined_fish_url()
+    : get_permalink( wc_get_page_id( 'shop' ) );
+?>
 
 <?php /* ══════════════════════════════════════
    HERO — full-bleed, cinematic
@@ -20,7 +27,7 @@ get_header(); ?>
         </h1>
         <p class="fh-hero__subtitle">Every saltwater fish quarantined, observed, and treated before it ever reaches your tank. Because your reef deserves nothing less.</p>
         <div class="fh-hero__actions">
-            <a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>" class="fh-btn fh-btn--gold">View Available Fish</a>
+            <a href="<?php echo esc_url( $fish_url ); ?>" class="fh-btn fh-btn--gold">View Available Fish</a>
             <a href="<?php echo esc_url( home_url('/faq/') ); ?>" class="fh-btn fh-btn--ghost">Our Process</a>
         </div>
     </div>
@@ -78,50 +85,17 @@ $available_query = new WP_Query($available_args);
                 <span class="fh-eyebrow">Currently Checking Out</span>
                 <h2 class="fh-home-section-title" style="margin-top:8px;">Available <em>Now</em></h2>
             </div>
-            <a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>" class="fh-btn fh-btn--ghost" style="padding:10px 24px; font-size:9px;">View All Fish</a>
+            <a href="<?php echo esc_url( $fish_url ); ?>" class="fh-btn fh-btn--ghost" style="padding:10px 24px; font-size:9px;">View All Fish</a>
         </div>
         <div class="fh-product-grid" style="padding:0;">
+            <?php /* One card template for the homepage grid, the archive and
+                    Load More — the_post() sets up WC's $product global, which
+                    is all template-parts/product/fish-card.php needs. The old
+                    inline copy of the card markup drifted (dead "Days QT"
+                    chip, unconditional "Available" pill), so it was dropped. */ ?>
             <?php while ($available_query->have_posts()) : $available_query->the_post();
-                global $product;
-                $pid   = $product->get_ID();
-                $hotel = function_exists('fishotel_get_hotel_data') ? fishotel_get_hotel_data($pid) : [];
-                $days  = $hotel['days_in_qt'] ?? '';
-            ?>
-                <div class="fh-fish-card-wrap product">
-                    <?php do_action( 'woocommerce_before_shop_loop_item' ); ?>
-                    <a href="<?php the_permalink(); ?>" class="fh-fish-card">
-                        <div class="fh-fish-card__image">
-                            <?php fishotel_product_thumbnail( $pid, 'fishotel-product-card' ); ?>
-                            <?php do_action( 'woocommerce_before_shop_loop_item_title' ); ?>
-                            <?php fishotel_cs_render_card_badge( $pid ); ?>
-                            <?php $cs_release_ts = fishotel_cs_release_ts( $pid ); ?>
-                            <?php if ( ! $cs_release_ts ) : ?>
-                            <span class="fh-fish-card__status fh-fish-card__status--available">Available</span>
-                            <?php endif; ?>
-                            <?php if ($days && ! $cs_release_ts) : ?>
-                            <div class="fh-fish-card__days">
-                                <span class="fh-fish-card__days-num"><?php echo esc_html($days); ?></span>
-                                <span class="fh-fish-card__days-label">Days QT</span>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="fh-fish-card__body">
-                            <div class="fh-fish-card__name"><?php the_title(); ?></div>
-                            <?php do_action( 'woocommerce_after_shop_loop_item_title' ); ?>
-                            <div class="fh-fish-card__latin"><?php echo wp_kses_post($product->get_short_description()); ?></div>
-                            <div class="fh-fish-card__footer">
-                                <?php if ( $cs_release_ts ) : ?>
-                                    <?php fishotel_cs_render_card_line( $pid ); ?>
-                                <?php else : ?>
-                                    <span class="fh-fish-card__price"><?php echo $product->get_price_html(); ?></span>
-                                    <?php if ($days) : ?><span class="fh-fish-card__qt"><?php echo esc_html($days); ?> Days QT</span><?php endif; ?>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </a>
-                    <?php do_action( 'woocommerce_after_shop_loop_item' ); ?>
-                </div>
-            <?php endwhile; wp_reset_postdata(); ?>
+                get_template_part( 'template-parts/product/fish-card' );
+            endwhile; wp_reset_postdata(); ?>
         </div>
     </div>
 </section>
@@ -277,7 +251,7 @@ if ( $tm_count > 0 ) :
     <h2 class="fh-cta-title">Ready to check <em>your fish</em> in?</h2>
     <p class="fh-cta-sub">Browse current availability or get in touch about an upcoming arrival.</p>
     <div style="display:flex; gap:16px; justify-content:center; position:relative;">
-        <a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>" class="fh-btn fh-btn--gold">View Current Availability</a>
+        <a href="<?php echo esc_url( $fish_url ); ?>" class="fh-btn fh-btn--gold">View Current Availability</a>
         <a href="<?php echo esc_url( home_url('/newsletter/') ); ?>" class="fh-btn fh-btn--ghost">Get Arrival Notifications</a>
     </div>
 </section>

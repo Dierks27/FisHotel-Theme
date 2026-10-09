@@ -162,6 +162,14 @@ class FisHotel_Fulfillment {
 		// (now the order total, for the list column) doesn't double-count
 		// revenue already attributed to the source orders.
 		add_filter( 'woocommerce_analytics_excluded_order_statuses', [ __CLASS__, 'exclude_from_analytics' ] );
+		// The status exclusion above only holds while the fulfillment sits in
+		// wc-fulfillment; once auto-advanced to shipped/completed its stats row
+		// would be re-imported as a normal order. Pin the stats-row status so
+		// the wrapper stays excluded for life.
+		add_filter( 'woocommerce_analytics_update_order_stats_data', [ __CLASS__, 'pin_analytics_status' ], 10, 2 );
+		// One-time: stamp _recorded_sales on pre-existing open fulfillments so
+		// completing them doesn't bump product total_sales a second time.
+		add_action( 'admin_init', [ __CLASS__, 'maybe_backfill_recorded_sales' ] );
 
 		// "Scan for Combinable Orders" tool under the FisHotel Theme menu.
 		add_action( 'admin_menu', [ __CLASS__, 'register_scan_tool' ], 20 );
@@ -413,6 +421,10 @@ class FisHotel_Fulfillment {
 			// fulfillment wrapper. Mark it reduced so WC skips it on every future
 			// transition (Processing, Completed, Cancelled, Refunded).
 			$f->update_meta_data( '_order_stock_reduced', 'yes' );
+			// Same for product total_sales: the sources already counted their
+			// sales, so wc_update_total_sales_counts() must treat the wrapper as
+			// recorded or completing it bumps every product's sales a 2nd time.
+			$f->update_meta_data( '_recorded_sales', 'yes' );
 			$f->save();
 			$ff_id = $f->get_id();
 
@@ -445,6 +457,15 @@ class FisHotel_Fulfillment {
 		if ( ! $f instanceof WC_Order || ! self::is_fulfillment( $f ) ) {
 			return false;
 		}
+		// Only an OPEN fulfillment can take another box-mate. A source added to
+		// a shipped/completed fulfillment is hidden from the orders list and
+		// never advanced — it would silently fall out of the daily workflow.
+		if ( ! $f->has_status( self::STATUS_BARE ) ) {
+			if ( function_exists( 'wc_get_logger' ) ) {
+				wc_get_logger()->warning( sprintf( 'Fulfillment add_source refused: #FF-%d is %s, not open.', $f->get_id(), $f->get_status() ), [ 'source' => 'fishotel-fulfillment' ] );
+			}
+			return false;
+		}
 		if ( ! $o instanceof WC_Order || 'shop_order' !== $o->get_type() || self::is_fulfillment( $o ) || self::get_fulfillment( $o ) ) {
 			return false;
 		}
@@ -475,6 +496,33 @@ class FisHotel_Fulfillment {
 			$total = self::aggregate_total_from_ids( $sources );
 			$f->set_total( $total );
 			$f->update_meta_data( self::META_TOTAL, wc_format_decimal( $total ) );
+
+			// Delivery date: the box ships on the EARLIEST date any source
+			// customer chose (same rule create_fulfillment applies). Without
+			// this, a manually/force-combined order whose customer picked an
+			// earlier day silently inherits the fulfillment's later date.
+			// attach_source() clears the source's own date right after this,
+			// so decide here while it's still readable.
+			$src_date = (string) $o->get_meta( self::META_SHIP_DATE );
+			$ff_date  = (string) $f->get_meta( self::META_SHIP_DATE );
+			if ( '' !== $src_date && ( '' === $ff_date || strcmp( $src_date, $ff_date ) < 0 ) ) {
+				$f->update_meta_data( self::META_SHIP_DATE, $src_date );
+				$f->add_order_note( sprintf(
+					/* translators: 1: order number, 2: new date, 3: previous date or "none" */
+					__( 'Delivery date moved to %2$s — order #%1$s chose it (was %3$s).', 'fishotel' ),
+					$o->get_order_number(),
+					$src_date,
+					'' !== $ff_date ? $ff_date : __( 'none', 'fishotel' )
+				) );
+			} elseif ( '' !== $src_date && $src_date !== $ff_date ) {
+				$o->add_order_note( sprintf(
+					/* translators: 1: requested date, 2: fulfillment ID, 3: fulfillment date */
+					__( 'Requested delivery date %1$s superseded by fulfillment #FF-%2$d, which ships on %3$s.', 'fishotel' ),
+					$src_date,
+					(int) $f->get_id(),
+					$ff_date
+				) );
+			}
 			$f->save();
 
 			self::attach_source( $o, $f->get_id() );
@@ -797,15 +845,32 @@ class FisHotel_Fulfillment {
 		if ( ! $order instanceof WC_Order || ! self::is_fulfillment( $order ) ) {
 			return;
 		}
+		$skipped = [];
 		foreach ( self::get_sources( $order ) as $sid ) {
 			$src = wc_get_order( (int) $sid );
-			if ( $src instanceof WC_Order && ! $src->has_status( 'completed' ) ) {
-				$src->update_status( 'completed', sprintf(
-					/* translators: %d = fulfillment ID */
-					__( 'FisHotel: completed via fulfillment #FF-%d.', 'fishotel' ),
-					$order->get_id()
-				) );
+			if ( ! $src instanceof WC_Order || $src->has_status( 'completed' ) ) {
+				continue;
 			}
+			// Never resurrect a source that left the box. A cancelled/refunded/
+			// failed source flipped to completed would re-deduct its stock and
+			// email the customer a completion for an order they didn't get.
+			// Same exclusion list as advance_fulfillment_to_aggregate().
+			if ( $src->has_status( [ 'refunded', 'cancelled', 'failed' ] ) ) {
+				$skipped[] = (int) $sid;
+				continue;
+			}
+			$src->update_status( 'completed', sprintf(
+				/* translators: %d = fulfillment ID */
+				__( 'FisHotel: completed via fulfillment #FF-%d.', 'fishotel' ),
+				$order->get_id()
+			) );
+		}
+		if ( ! empty( $skipped ) ) {
+			$order->add_order_note( sprintf(
+				/* translators: %s = list of order numbers */
+				__( 'Completion not mirrored to %s (cancelled/refunded/failed sources are left as they are).', 'fishotel' ),
+				self::numbers_list( $skipped )
+			) );
 		}
 	}
 
@@ -877,7 +942,27 @@ class FisHotel_Fulfillment {
 			// Amount-only refund (no specific line items) → mirror as amount-only.
 			if ( empty( $refund_line_items ) ) {
 				$mirror_amount = abs( (float) $refund->get_amount() );
+				// The fulfillment total is item subtotals only — it never
+				// carried shipping or fees. A shipping/fee-only source refund
+				// (incl. the module's own duplicate-shipping banner flow) must
+				// not shrink the fulfillment's total/remaining; strip that
+				// portion and only mirror whatever is left.
+				$non_item = 0.0;
+				foreach ( $refund->get_items( [ 'shipping', 'fee' ] ) as $non_item_line ) {
+					$non_item += abs( (float) $non_item_line->get_total() ) + abs( (float) $non_item_line->get_total_tax() );
+				}
+				if ( $non_item > 0 ) {
+					$mirror_amount = round( $mirror_amount - $non_item, wc_get_price_decimals() );
+				}
 				if ( $mirror_amount <= 0 ) {
+					if ( $non_item > 0 ) {
+						$fulfillment->add_order_note( sprintf(
+							/* translators: 1: source order number, 2: refund ID */
+							__( 'Refund #%2$d on source #%1$s was shipping/fee only — not mirrored (this fulfillment carries no shipping).', 'fishotel' ),
+							$source->get_order_number(),
+							(int) $refund_id
+						) );
+					}
 					return;
 				}
 			}
@@ -1934,19 +2019,36 @@ class FisHotel_Fulfillment {
 			$cand_id   = (int) $order->get_meta( self::META_COMBINE_SKIPPED_WITH );
 			$candidate = wc_get_order( $cand_id );
 			if ( $candidate instanceof WC_Order && ! self::is_fulfillment( $order ) && ! self::get_fulfillment( $order ) ) {
+				// The flag may be days old: by now the candidate (or its
+				// fulfillment) may have shipped. Combining into a closed box
+				// would hide this order from the orders list for good, so
+				// refuse, clear the flag and say so instead.
 				$existing = self::get_fulfillment( $cand_id );
-				if ( $existing ) {
-					self::add_source( $existing, $order->get_id() );
+				$ff       = $existing ? wc_get_order( (int) $existing ) : null;
+				$closed   = $existing
+					? ( ! $ff instanceof WC_Order || ! $ff->has_status( self::STATUS_BARE ) )
+					: ! $candidate->has_status( [ 'processing', 'on-hold' ] );
+				if ( $closed ) {
+					$order->add_order_note( sprintf(
+						/* translators: %s = candidate order number */
+						__( 'Force combine refused: order #%s (or its fulfillment) has already shipped/closed. Flag cleared.', 'fishotel' ),
+						$candidate->get_order_number()
+					) );
+					$redirect = add_query_arg( 'fishotel_combine_msg', 'err_ff_closed', $redirect );
 				} else {
-					self::create_fulfillment( [ $cand_id, $order->get_id() ] );
+					if ( $existing ) {
+						self::add_source( $existing, $order->get_id() );
+					} else {
+						self::create_fulfillment( [ $cand_id, $order->get_id() ] );
+					}
+					$order->add_order_note( sprintf(
+						/* translators: %s = candidate order number */
+						__( 'Force-combined with order #%s by admin (address mismatch overridden).', 'fishotel' ),
+						$candidate->get_order_number()
+					) );
 				}
-				$order->add_order_note( sprintf(
-					/* translators: %s = candidate order number */
-					__( 'Force-combined with order #%s by admin (address mismatch overridden).', 'fishotel' ),
-					$candidate->get_order_number()
-				) );
 			}
-			// Clear the flag — resolved (combined) or moot.
+			// Clear the flag — resolved (combined), refused, or moot.
 			$order->delete_meta_data( self::META_COMBINE_SKIPPED_REASON );
 			$order->delete_meta_data( self::META_COMBINE_SKIPPED_WITH );
 			$order->save();
@@ -1980,6 +2082,16 @@ class FisHotel_Fulfillment {
 		return $columns;
 	}
 
+	/**
+	 * True when the requested orderby means "sort by delivery date". Accepts
+	 * the real column key plus the human alias `delivery_date`: Jeff's daily
+	 * routine opens the list with orderby=delivery_date&order=asc, which WC
+	 * otherwise ignores silently (falls back to date). Column id unchanged.
+	 */
+	private static function is_delivery_orderby( $orderby ) {
+		return in_array( (string) $orderby, [ self::DELIVERY_COL, 'delivery_date' ], true );
+	}
+
 	public static function sort_delivery_cpt( $query ) {
 		if ( ! is_admin() || ! $query->is_main_query() ) {
 			return;
@@ -1987,14 +2099,14 @@ class FisHotel_Fulfillment {
 		if ( 'shop_order' !== $query->get( 'post_type' ) ) {
 			return;
 		}
-		if ( self::DELIVERY_COL === $query->get( 'orderby' ) ) {
+		if ( self::is_delivery_orderby( $query->get( 'orderby' ) ) ) {
 			$query->set( 'meta_key', self::META_SHIP_DATE );
 			$query->set( 'orderby', 'meta_value' );
 		}
 	}
 
 	public static function sort_delivery_hpos( $args ) {
-		if ( isset( $args['orderby'] ) && self::DELIVERY_COL === $args['orderby'] ) {
+		if ( isset( $args['orderby'] ) && self::is_delivery_orderby( $args['orderby'] ) ) {
 			$args['meta_key'] = self::META_SHIP_DATE; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			$args['orderby']  = 'meta_value';
 		}
@@ -2095,6 +2207,61 @@ class FisHotel_Fulfillment {
 		$statuses[] = self::STATUS_BARE;
 		$statuses[] = self::STATUS;
 		return array_values( array_unique( $statuses ) );
+	}
+
+	/**
+	 * Force the wc_order_stats row of a fulfillment to the excluded
+	 * wc-fulfillment status regardless of the order's live status, so its
+	 * aggregated total, copied items and customer never count alongside the
+	 * source orders once it auto-advances to shipped/completed.
+	 *
+	 * @param array    $data  Row about to be written to wc_order_stats.
+	 * @param WC_Order $order
+	 * @return array
+	 */
+	public static function pin_analytics_status( $data, $order ) {
+		if ( is_array( $data ) && $order instanceof WC_Order && self::is_fulfillment( $order ) ) {
+			$data['status'] = self::STATUS;
+		}
+		return $data;
+	}
+
+	/**
+	 * One-time backfill: fulfillments created before _recorded_sales was
+	 * stamped at creation would bump product total_sales again on completion.
+	 * Only open ones (wc-fulfillment / wc-shipped) can still complete, so
+	 * only those are stamped. Version-gated + idempotent.
+	 */
+	public static function maybe_backfill_recorded_sales() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			return;
+		}
+		$flag = 'fishotel_fulfillment_recorded_sales_backfilled_v1';
+		if ( '1' === (string) get_option( $flag, '0' ) ) {
+			return;
+		}
+		try {
+			$ids = wc_get_orders( [
+				'limit'  => -1,
+				'status' => [ self::STATUS_BARE, 'shipped' ],
+				'return' => 'ids',
+			] );
+			foreach ( (array) $ids as $ff_id ) {
+				$f = wc_get_order( (int) $ff_id );
+				if ( ! $f instanceof WC_Order || ! self::is_fulfillment( $f ) ) {
+					continue;
+				}
+				if ( 'yes' !== (string) $f->get_meta( '_recorded_sales' ) ) {
+					$f->update_meta_data( '_recorded_sales', 'yes' );
+					$f->save_meta_data();
+				}
+			}
+		} catch ( \Throwable $e ) {
+			if ( function_exists( 'wc_get_logger' ) ) {
+				wc_get_logger()->error( 'Fulfillment recorded_sales backfill failed: ' . $e->getMessage(), [ 'source' => 'fishotel-fulfillment' ] );
+			}
+		}
+		update_option( $flag, '1', false );
 	}
 
 	/**

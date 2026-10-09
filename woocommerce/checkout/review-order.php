@@ -25,12 +25,20 @@ if ( ! $cart instanceof WC_Cart ) {
 	return;
 }
 
-$cart_count      = (int) $cart->get_cart_contents_count();
+// Display count excludes sticker lines (Misc plugin giveaway, cart item data
+// fh_sticker) so "3 fish" stays 3 fish; WC's own contents count is untouched.
+$cart_count      = function_exists( 'fishotel_cart_display_count' )
+	? fishotel_cart_display_count()
+	: (int) $cart->get_cart_contents_count();
 $preset          = function_exists( 'fishotel_cart_resolve_preset' ) ? fishotel_cart_resolve_preset() : 'default';
 $shipping_label  = function_exists( 'fishotel_cart_preset_get' ) ? (string) fishotel_cart_preset_get( $preset, 'shipping_label' )   : __( 'Shipping', 'fishotel' );
 $shipping_subtxt = function_exists( 'fishotel_cart_preset_get' ) ? (string) fishotel_cart_preset_get( $preset, 'shipping_subtext' ) : '';
 $billing_state   = WC()->customer ? WC()->customer->get_billing_state() : '';
 $shipping_total  = $cart->get_shipping_total();
+// A chosen $0 rate (Free class, repeat-customer piggyback) is a real price,
+// not "not calculated yet" — only fall back to the placeholder when no rate
+// has been resolved.
+$shipping_rate   = function_exists( 'fishotel_cart_chosen_shipping_rate' ) ? fishotel_cart_chosen_shipping_rate() : null;
 $noun            = function_exists( 'fishotel_cart_preset_noun' )
 	? fishotel_cart_preset_noun( $preset, $cart_count )
 	: ( $cart_count === 1 ? __( 'item', 'fishotel' ) : __( 'items', 'fishotel' ) );
@@ -103,6 +111,13 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 				<td class="fh-statement-item__thumb"><?php echo $thumb_html; ?></td>
 				<td class="fh-statement-item__body">
 					<div class="fh-statement-item__title"><?php echo wp_kses_post( $item_name ); ?></div>
+					<?php /* Cart item data (woocommerce_get_item_data): WC Gift Cards
+					        recipient/message, sticker labels, etc. — never shown
+					        by the theme before. */ ?>
+					<?php $item_meta = wc_get_formatted_cart_item_data( $cart_item ); ?>
+					<?php if ( '' !== trim( (string) $item_meta ) ) : ?>
+						<div class="fh-cart-item__meta"><?php echo wp_kses_post( $item_meta ); ?></div>
+					<?php endif; ?>
 					<?php if ( $variation_pills || $is_fish_item || $quantity > 0 ) : ?>
 					<div class="fh-statement-item__meta">
 						<?php foreach ( $variation_pills as $pill_val ) : ?>
@@ -151,6 +166,10 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 			<td class="fh-statement-ledger__value">
 				<?php if ( $shipping_total > 0 ) : ?>
 					<?php echo wc_price( $shipping_total ); ?>
+				<?php elseif ( $shipping_rate ) : ?>
+					<?php echo wc_price( $shipping_rate->get_cost() ); ?>
+					<?php /* The rate label carries the "Piggybacking on order #N" suffix. */ ?>
+					<small class="fh-statement-ledger__label-sub"><?php echo esc_html( $shipping_rate->get_label() ); ?></small>
 				<?php else : ?>
 					<span class="fh-cart-ledger__placeholder"><?php esc_html_e( 'Calculated at checkout', 'fishotel' ); ?></span>
 				<?php endif; ?>

@@ -123,8 +123,14 @@ add_action( 'woocommerce_gc_before_account_giftcards', function () {
 		return;
 	}
 
+	// The list includes cards the viewer BOUGHT for someone else (sender
+	// match). Redeeming one of those claims it to the buyer's balance and
+	// the intended recipient can no longer use the code — so foreign cards
+	// show the recipient and Redeem asks for confirmation.
+	$my_mail = strtolower( trim( (string) wp_get_current_user()->user_email ) );
+
 	echo '<h2>' . esc_html__( 'Unclaimed Gift Cards', 'fishotel' ) . '</h2>';
-	echo '<p class="fh-unclaimed-hint">' . esc_html__( "Cards linked to your name that haven't been added to your balance yet.", 'fishotel' ) . '</p>';
+	echo '<p class="fh-unclaimed-hint">' . esc_html__( "Cards sent to you, or bought by you, that haven't been added to a balance yet. Redeeming a card you bought for someone else adds it to YOUR balance and the recipient can no longer use it.", 'fishotel' ) . '</p>';
 	echo '<table class="woocommerce-orders-table woocommerce-giftcards-table fh-giftcards-unclaimed shop_table shop_table_responsive account-orders-table">';
 	echo '<thead><tr>';
 	echo '<th>' . esc_html__( 'Date', 'fishotel' ) . '</th>';
@@ -150,16 +156,34 @@ add_action( 'woocommerce_gc_before_account_giftcards', function () {
 			'fh_gc_nonce'
 		);
 
+		$recipient  = strtolower( trim( (string) $gc->get_recipient() ) );
+		$is_foreign = ( '' !== $recipient && $recipient !== $my_mail );
+
 		echo '<tr>';
 		echo '<td data-title="' . esc_attr__( 'Date', 'fishotel' ) . '">' .
 			( $created ? esc_html( date_i18n( wc_date_format(), $created ) ) : '&mdash;' ) . '</td>';
 		echo '<td data-title="' . esc_attr__( 'Code', 'fishotel' ) . '">' .
-			fishotel_giftcard_code_html( $code ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in helper.
+			fishotel_giftcard_code_html( $code ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in helper.
+		if ( $is_foreign ) {
+			echo '<br><small class="fh-giftcard-recipient">' . sprintf(
+				/* translators: %s = recipient email address */
+				esc_html__( 'Sent to %s', 'fishotel' ),
+				esc_html( $recipient )
+			) . '</small>';
+		}
+		echo '</td>';
 		echo '<td data-title="' . esc_attr__( 'Available Balance', 'fishotel' ) . '">' .
 			wp_kses_post( wc_price( $gc->get_balance() ) ) . '</td>';
 		echo '<td data-title="' . esc_attr__( 'Expires', 'fishotel' ) . '">' .
 			( $expires ? esc_html( date_i18n( wc_date_format(), $expires ) ) : esc_html__( 'Never', 'fishotel' ) ) . '</td>';
-		echo '<td><a class="fh-giftcard-redeem-btn" href="' . esc_url( $url ) . '">' .
+		$confirm = $is_foreign
+			? ' onclick="return confirm(' . esc_attr( wp_json_encode( sprintf(
+				/* translators: %s = recipient email address */
+				__( 'This card was sent to %s. Redeeming it adds the balance to YOUR account and the recipient will no longer be able to use it. Continue?', 'fishotel' ),
+				$recipient
+			) ) ) . ');"'
+			: '';
+		echo '<td><a class="fh-giftcard-redeem-btn" href="' . esc_url( $url ) . '"' . $confirm . '>' . // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $confirm is escaped above.
 			esc_html__( 'Redeem', 'fishotel' ) . '</a></td>';
 		echo '</tr>';
 	}

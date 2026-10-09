@@ -691,10 +691,11 @@
     if (!method) return;
     $configPanel.style.display = '';
 
-    // Header
+    // Header — live course length (ramp toggle changes it: 32/34/36D), not
+    // the static tile badge.
     var head = el('div', 'fst-config-head');
     head.appendChild(el('div', 'fst-config-title', method.name));
-    head.appendChild(el('div', 'fst-config-tag', method.duration_badge + ' · ' + (method.not_reef_safe ? 'Not reef safe' : 'Reef safe')));
+    head.appendChild(el('div', 'fst-config-tag', durationBadgeFor(method) + ' · ' + (method.not_reef_safe ? 'Not reef safe' : 'Reef safe')));
     $configPanel.appendChild(head);
 
     // Configurable params
@@ -722,8 +723,10 @@
       $configPanel.appendChild(addonWrap);
     }
 
-    // Soft conflicts
+    // Conflicts — 'warn'/'info' are advisory; 'block' (formalin ≥ 27°C)
+    // disables Generate so no schedule is produced for a contraindication.
     var fired = evaluateConflicts(method);
+    var hasBlock = hasBlockingConflict(fired);
     if (fired.length) {
       var cwrap = el('div', 'fst-conflicts');
       fired.forEach(function (c) {
@@ -739,9 +742,30 @@
     var btn = el('button', 'fst-generate-btn', 'Generate Schedule');
     btn.type = 'button';
     btn.id = 'fst-generate';
+    if (hasBlock) {
+      btn.disabled = true;
+      btn.title = 'Resolve the blocking conflict above before generating a schedule.';
+      btn.setAttribute('aria-disabled', 'true');
+    }
     btn.addEventListener('click', handleGenerate);
     btnRow.appendChild(btn);
     $configPanel.appendChild(btnRow);
+  }
+
+  function hasBlockingConflict(fired) {
+    return (fired || []).some(function (c) { return c.severity === 'block'; });
+  }
+
+  /**
+   * Course length as shown in the config header. Methods with a ramp_speed
+   * param compute it from the chosen ramp (ramp + hold + transfer + obs), the
+   * same arithmetic generateCopper* uses for totalDays; others keep the
+   * static duration_badge.
+   */
+  function durationBadgeFor(method) {
+    var hasRamp = (method.configurable_params || []).some(function (p) { return p.param_id === 'ramp_speed'; });
+    if (!hasRamp) return method.duration_badge;
+    return (rampDaysFor(method) + (method.therapeutic_hold_days || 0) + 1 + (method.observation_days || 0)) + 'D';
   }
 
   function renderParamToggle(method, paramDef) {
@@ -781,6 +805,13 @@
   function handleGenerate() {
     var method = getMethod(state.methodId);
     if (!method) return;
+    // Re-check here too: the button is disabled for 'block' conflicts, but a
+    // keyboard/script click or a stale panel must not produce a schedule.
+    if (hasBlockingConflict(evaluateConflicts(method))) {
+      state.lastSchedule = null;
+      renderOutput();
+      return;
+    }
     state.lastSchedule = generateSchedule(method);
     renderOutput();
     // Scroll output into view
@@ -800,6 +831,13 @@
     if (!state.lastSchedule || !state.methodId) return;
     var method = getMethod(state.methodId);
     if (!method) return;
+    // Temp raised into a 'block' conflict after generating → clear the
+    // on-screen schedule instead of silently re-rendering it.
+    if (hasBlockingConflict(evaluateConflicts(method))) {
+      state.lastSchedule = null;
+      renderOutput();
+      return;
+    }
     state.lastSchedule = generateSchedule(method);
     renderOutput();
   }
@@ -1146,23 +1184,40 @@
     return String(text).replace(/[\\;,]/g, function (ch) { return '\\' + ch; }).replace(/\r?\n/g, '\\n');
   }
 
-  /** RFC 5545 line folding at 75 octets — required for strict iCal compliance. */
-  function icsFold(line) {
-    var out = '';
-    var bytes = unescape(encodeURIComponent(line)); // approximate octet count
-    var i = 0;
-    var first = true;
-    while (i < bytes.length) {
-      var chunk = bytes.substr(i, first ? 75 : 74);
-      out += (first ? '' : '\r\n ') + decodeUtf8(chunk);
-      i += chunk.length;
-      first = false;
+  /** UTF-8 octet count of one character (or surrogate pair). */
+  function icsOctets(ch) {
+    try {
+      var enc = encodeURIComponent(ch);
+      return enc.indexOf('%') === -1 ? enc.length : enc.split('%').length - 1;
+    } catch (e) {
+      return 3; // lone surrogate — count it as a BMP char and move on
     }
-    return out;
   }
 
-  function decodeUtf8(s) {
-    try { return decodeURIComponent(escape(s)); } catch (e) { return s; }
+  /**
+   * RFC 5545 §3.1 line folding: 75 octets max per line, continuation lines
+   * start with a single space (so 74 octets of content). Walks CHARACTERS
+   * and measures their UTF-8 size — the old byte-string slice cut "—" / "≈"
+   * mid-sequence and produced mojibake for ~40% of tank sizes (e.g. 289 gal
+   * Cu+Metro Day 1). Surrogate pairs are kept together.
+   * Same helper lives in fishotel-calculator.js and bleach-calculator.js.
+   * Tests: `node tests/*.test.js` from the theme root.
+   */
+  function icsFold(line) {
+    var s = String(line == null ? '' : line);
+    var out = '', cur = '', curOctets = 0, limit = 75;
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      var code = s.charCodeAt(i);
+      if (code >= 0xD800 && code <= 0xDBFF && i + 1 < s.length) { ch += s.charAt(i + 1); i++; }
+      var n = icsOctets(ch);
+      if (curOctets + n > limit) {
+        out += cur + '\r\n ';
+        cur = ''; curOctets = 0; limit = 74;
+      }
+      cur += ch; curOctets += n;
+    }
+    return out + cur;
   }
 
   function stripHtml(html) {
@@ -1355,5 +1410,11 @@
     renderConfigPanel(); // hidden until method picked
     renderOutput();      // hidden until generated
   });
+
+  // Node-only export so tests/calculator-ics-fold.test.js can exercise the
+  // fold helper; browsers have no `module` and skip this.
+  if (typeof module === 'object' && module && module.exports) {
+    module.exports = { icsFold: icsFold, icsEscape: icsEscape };
+  }
 
 })();

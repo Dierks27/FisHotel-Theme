@@ -103,12 +103,57 @@ class FisHotel_Med_Packing_Slip {
 			}
 		}
 		if ( ! self::order_has_ea_items( $order ) ) {
+			// EA-mode lines with no EA SKU are silently non-EA everywhere
+			// (slip, EA column, mixed-order split). Name them here so the
+			// generic "No EA-mode items" message doesn't hide a missing SKU.
+			$missing = self::ea_items_missing_sku( $order );
+			if ( ! empty( $missing ) ) {
+				$links = [];
+				foreach ( $missing as $pid => $name ) {
+					$edit    = get_edit_post_link( (int) $pid, 'raw' );
+					$links[] = $edit
+						? '<a href="' . esc_url( $edit ) . '">' . esc_html( $name ) . '</a>'
+						: esc_html( $name );
+				}
+				echo '<p style="margin:0;color:#b32d2e;">';
+				printf(
+					/* translators: %s = comma-separated product names (linked to the product edit screen) */
+					wp_kses_post( __( 'EA-mode item(s) missing an EA SKU — add it on the product to include them on the slip: %s', 'fishotel' ) ),
+					implode( ', ', $links ) // Already escaped above.
+				);
+				echo '</p>';
+				return;
+			}
 			echo '<p style="margin:0;color:#666;font-style:italic;">'
 				. esc_html__( 'No EA-mode items in this order.', 'fishotel' )
 				. '</p>';
 			return;
 		}
 		self::render_order_actions( $order );
+	}
+
+	/**
+	 * EA-mode line items (raw _fishotel_fulfillment === 'ea') on the slip's
+	 * order set whose parent AND variation both lack an _fishotel_ea_sku —
+	 * i.e. items fishotel_is_ea_fulfilled_product() rejects for SKU reasons
+	 * only. Keyed by parent product ID => item name.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function ea_items_missing_sku( WC_Order $order ) {
+		$missing = [];
+		foreach ( self::slip_source_orders( $order ) as $src ) {
+			foreach ( $src->get_items( 'line_item' ) as $item ) {
+				if ( ! $item instanceof WC_Order_Item_Product ) continue;
+				$product_id   = (int) $item->get_product_id();
+				$variation_id = (int) $item->get_variation_id();
+				if ( ! $product_id ) continue;
+				if ( get_post_meta( $product_id, '_fishotel_fulfillment', true ) !== 'ea' ) continue;
+				if ( fishotel_is_ea_fulfilled_product( $product_id, $variation_id ) ) continue;
+				$missing[ $product_id ] = $item->get_name();
+			}
+		}
+		return $missing;
 	}
 
 	/**
@@ -130,6 +175,29 @@ class FisHotel_Med_Packing_Slip {
 
 		$dena = (string) FisHotel_Med_Settings::get( 'fishotel_ea_fulfillment_email' );
 		$slip_sent = isset( $_GET['fishotel_slip_sent'] ) ? (int) $_GET['fishotel_slip_sent'] : null;
+
+		// Orders whose slip was already auto-emailed (status → processing).
+		// WHY: auto-email fires per SOURCE order before the fulfillment
+		// exists, and the fulfillment never enters processing, so its box
+		// had no idea the same items already went to Dena — a manual
+		// "Email to Dena" from here re-sent them. Surface the sent orders
+		// and make the button ask first.
+		$already_sent = [];
+		if ( function_exists( 'fishotel_is_fulfillment' ) && fishotel_is_fulfillment( $order ) ) {
+			foreach ( fishotel_fulfillment_get_sources( $order ) as $sid ) {
+				$src = wc_get_order( (int) $sid );
+				if ( $src instanceof WC_Order && $src->get_meta( '_fishotel_med_slip_sent' ) === '1' ) {
+					$already_sent[] = '#' . $src->get_order_number();
+				}
+			}
+		} elseif ( $order->get_meta( '_fishotel_med_slip_sent' ) === '1' ) {
+			$already_sent[] = '#' . $order->get_order_number();
+		}
+		$confirm_msg = empty( $already_sent ) ? '' : sprintf(
+			/* translators: %s = comma-separated order numbers */
+			__( 'A packing slip was already auto-emailed to Dena for %s. Send another one?', 'fishotel' ),
+			implode( ', ', $already_sent )
+		);
 		?>
 		<div class="fishotel-med-slip-actions">
 			<?php if ( $slip_sent === 1 ) : ?>
@@ -137,11 +205,22 @@ class FisHotel_Med_Packing_Slip {
 			<?php elseif ( $slip_sent === 0 ) : ?>
 				<p class="notice notice-error" style="margin:0 0 10px;padding:6px 10px;"><?php esc_html_e( 'Packing slip email failed — see order notes.', 'fishotel' ); ?></p>
 			<?php endif; ?>
+			<?php if ( ! empty( $already_sent ) ) : ?>
+				<p style="margin:0 0 8px;color:#b07d3c;">
+					<?php
+					printf(
+						/* translators: %s = comma-separated order numbers */
+						esc_html__( 'Slip already auto-emailed for %s.', 'fishotel' ),
+						esc_html( implode( ', ', $already_sent ) )
+					);
+					?>
+				</p>
+			<?php endif; ?>
 			<p style="margin:0 0 8px;">
 				<a class="button button-primary" href="<?php echo esc_url( $view_url ); ?>" target="_blank">
 					<?php esc_html_e( 'Generate Slip', 'fishotel' ); ?>
 				</a>
-				<a class="button button-secondary" href="<?php echo esc_url( $email_url ); ?>">
+				<a class="button button-secondary" href="<?php echo esc_url( $email_url ); ?>"<?php if ( $confirm_msg !== '' ) : ?> onclick="return confirm(<?php echo esc_attr( wp_json_encode( $confirm_msg ) ); ?>);"<?php endif; ?>>
 					<?php esc_html_e( 'Email to Dena', 'fishotel' ); ?>
 				</a>
 			</p>
@@ -174,24 +253,52 @@ class FisHotel_Med_Packing_Slip {
 	}
 
 	/**
+	 * The orders whose line items feed this slip, in slip order.
+	 *
+	 *  - Phase 2.5 fulfillment: the LIVE source orders, skipping any that
+	 *    are cancelled / refunded / failed. WHY: the fulfillment's own
+	 *    copied line items are a one-time snapshot that nothing resyncs
+	 *    when a source is edited or cancelled, so a slip built from them
+	 *    told Dena to ship items that no longer exist on the source.
+	 *  - Otherwise: the order itself plus every Phase 2 secondary combined
+	 *    into it.
+	 *
+	 * @return WC_Order[]
+	 */
+	public static function slip_source_orders( WC_Order $order ) {
+		if ( function_exists( 'fishotel_is_fulfillment' ) && fishotel_is_fulfillment( $order ) ) {
+			$orders = [];
+			foreach ( fishotel_fulfillment_get_sources( $order ) as $sid ) {
+				$src = wc_get_order( (int) $sid );
+				if ( ! $src instanceof WC_Order ) continue;
+				if ( in_array( $src->get_status(), [ 'cancelled', 'refunded', 'failed' ], true ) ) continue;
+				$orders[] = $src;
+			}
+			return $orders;
+		}
+
+		$orders = [ $order ];
+		if ( function_exists( 'fishotel_order_get_secondaries' ) ) {
+			foreach ( fishotel_order_get_secondaries( $order->get_id() ) as $sid ) {
+				$secondary = wc_get_order( $sid );
+				if ( $secondary instanceof WC_Order ) {
+					$orders[] = $secondary;
+				}
+			}
+		}
+		return $orders;
+	}
+
+	/**
 	 * Yield EA-mode rows for an order plus every order combined into it
-	 * (Phase 2). On a standalone order this is just its own items.
+	 * (Phase 2), or — for a fulfillment — its live source orders. On a
+	 * standalone order this is just its own items.
 	 *
 	 * @return Generator<array>
 	 */
 	public static function collect_ea_items_combined( WC_Order $order ) {
-		foreach ( self::collect_ea_items( $order ) as $row ) {
-			yield $row;
-		}
-		if ( ! function_exists( 'fishotel_order_get_secondaries' ) ) {
-			return;
-		}
-		foreach ( fishotel_order_get_secondaries( $order->get_id() ) as $sid ) {
-			$secondary = wc_get_order( $sid );
-			if ( ! $secondary instanceof WC_Order ) {
-				continue;
-			}
-			foreach ( self::collect_ea_items( $secondary ) as $row ) {
+		foreach ( self::slip_source_orders( $order ) as $src ) {
+			foreach ( self::collect_ea_items( $src ) as $row ) {
 				yield $row;
 			}
 		}
@@ -234,6 +341,13 @@ class FisHotel_Med_Packing_Slip {
 			if ( ! $lookup_id ) continue;
 			if ( ! fishotel_is_ea_fulfilled_product( $lookup_id, $variation_id ) ) continue;
 
+			// Net of refunds: a slip generated after a partial refund must not
+			// tell Dena to ship the refunded units; a fully refunded line drops
+			// off entirely (which also makes order_has_ea_items() false when
+			// every EA line is refunded).
+			$qty = (int) $item->get_quantity() - abs( (int) $order->get_qty_refunded_for_item( (int) $item->get_id() ) );
+			if ( $qty <= 0 ) continue;
+
 			$size  = '';
 			$sku   = '';
 			$variation = $variation_id ? wc_get_product( $variation_id ) : null;
@@ -256,7 +370,7 @@ class FisHotel_Med_Packing_Slip {
 			}
 
 			yield [
-				'qty'     => (int) $item->get_quantity(),
+				'qty'     => $qty,
 				'name'    => $parent ? $parent->get_name() : $item->get_name(),
 				'size'    => $size,
 				'ea_sku'  => $sku,
@@ -337,6 +451,7 @@ class FisHotel_Med_Packing_Slip {
 			// works the same on Cloudways/staging/local. The finally block
 			// removes it regardless of how we exit.
 			$tmp_path = '';
+			$tmp_dir  = '';
 			try {
 				// Attachment name = basename of the temp file, so the temp
 				// file must be named exactly per spec: fishotel-ea-{n}.pdf.
@@ -344,7 +459,20 @@ class FisHotel_Med_Packing_Slip {
 				if ( $safe_number === '' ) {
 					$safe_number = (string) $order->get_id();
 				}
-				$tmp_path = trailingslashit( sys_get_temp_dir() ) . 'fishotel-ea-' . $safe_number . '.pdf';
+				// Stage inside a private, unguessable sub-directory rather than
+				// straight in the shared temp dir. WHY: the predictable path
+				// fishotel-ea-{n}.pdf plus a symlink-following
+				// file_put_contents() let another local user on a shared /tmp
+				// pre-plant a symlink and have us overwrite (or read) a file of
+				// their choosing. The basename is unchanged so the attachment
+				// name is still fishotel-ea-{n}.pdf.
+				$dir = trailingslashit( sys_get_temp_dir() ) . 'fishotel-' . wp_generate_password( 12, false );
+				if ( ! wp_mkdir_p( $dir ) ) {
+					throw new \RuntimeException( 'Failed to create temp dir for the PDF.' );
+				}
+				$tmp_dir = $dir;
+				@chmod( $dir, 0700 );
+				$tmp_path = trailingslashit( $dir ) . 'fishotel-ea-' . $safe_number . '.pdf';
 
 				if ( file_put_contents( $tmp_path, $pdf ) === false ) {
 					$tmp_path = '';
@@ -367,6 +495,9 @@ class FisHotel_Med_Packing_Slip {
 			} finally {
 				if ( $tmp_path !== '' && file_exists( $tmp_path ) ) {
 					@unlink( $tmp_path );
+				}
+				if ( $tmp_dir !== '' && is_dir( $tmp_dir ) ) {
+					@rmdir( $tmp_dir );
 				}
 			}
 		}

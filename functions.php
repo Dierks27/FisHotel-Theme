@@ -239,7 +239,6 @@ $includes = [
 	'/inc/giftcards-account.php', // Gift Cards tab: reveal codes, copy button, unclaimed section + redeem
 	'/inc/template-functions.php',
 	'/inc/template-tags.php',
-	'/inc/customizer.php',
 	'/inc/woocommerce.php',
 	'/inc/gift-card-checkout.php', // Gift Card ↔ PPCP safeguards (smart-button suppression + capture guard)
 	'/inc/order-emails.php',     // FisHotel Delivery Date in transactional emails
@@ -398,6 +397,12 @@ add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_about_assets' );
  * meta if it does but the binding is missing or wrong.
  */
 function fishotel_bootstrap_template_page( $slug, $template, $title ) {
+    // admin_init also fires on every admin-ajax + heartbeat request; the
+    // page lookups below are uncached, so only run them on real admin
+    // screen loads (the binding can't drift between two of those anyway).
+    if ( wp_doing_ajax() ) {
+        return;
+    }
     $page = get_page_by_path( $slug );
     if ( ! $page ) {
         $page_id = wp_insert_post( [

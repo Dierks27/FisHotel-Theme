@@ -259,7 +259,10 @@ class FisHotel_Med_Settings {
 	 */
 	public static function sanitize_secret_field( $val ) {
 		$val = is_string( $val ) ? trim( $val ) : '';
-		if ( $val === '' || preg_match( '/^\xE2\x80\xA2{4,}/', $val ) ) {
+		// The bullet is a 3-byte UTF-8 sequence; group it so {4,} repeats
+		// the whole character (a bare \xA2{4,} bound the quantifier to the
+		// last byte only and never matched a run of bullets).
+		if ( $val === '' || preg_match( '/^(?:\xE2\x80\xA2){4,}/', $val ) ) {
 			$filter = current_filter();
 			if ( $filter && strpos( $filter, 'sanitize_option_' ) === 0 ) {
 				$option = substr( $filter, strlen( 'sanitize_option_' ) );
@@ -282,7 +285,8 @@ class FisHotel_Med_Settings {
 	public static function preserve_masked_secret( $new_value, $old_value, $option ) {
 		if ( ! is_string( $new_value ) ) return $new_value;
 		if ( $new_value === '' ) return $old_value !== '' ? $old_value : $new_value;
-		if ( preg_match( '/^\xE2\x80\xA2{4,}/', $new_value ) ) {
+		// Grouped bullet — same fix as sanitize_secret_field().
+		if ( preg_match( '/^(?:\xE2\x80\xA2){4,}/', $new_value ) ) {
 			return $old_value;
 		}
 		return $new_value;

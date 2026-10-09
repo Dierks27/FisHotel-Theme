@@ -26,7 +26,9 @@
         name: 'Copper + Formalin QT',
         tagline: 'Aggressive intake — copper-class parasites + flukes',
         indication_summary: 'Aggressive intake. Ich, velvet, brook, uronema (copper) AND external flukes/monogeneans (formalin). Default 5-day ramp; 14-day therapeutic at 2.5 ppm Cu; transfer; 14-day clean observation.',
-        duration_badge: '34D',
+        // Tile badge is a range: the ramp toggle (3/5/7 d) makes the real
+        // course 32/34/36 d — the config header shows the exact figure.
+        duration_badge: '32–36D',
         is_default_recommendation: false,
         not_reef_safe: true,
         primary_med_ids: ['copper_power', 'formalin_37'],
@@ -88,7 +90,8 @@
         name: 'Copper + Metro QT',
         tagline: 'Routine intake — protozoans + internal flagellates',
         indication_summary: 'Routine intake. Covers ich, velvet, brook, uronema, plus internal flagellates and mild bacterial. Default Prazi add-on covers external flukes.',
-        duration_badge: '34D',
+        // Range for the same reason as Cu+Formalin (ramp toggle → 32/34/36 d).
+        duration_badge: '32–36D',
         is_default_recommendation: true,
         not_reef_safe: true,
         primary_med_ids: ['copper_power', 'metronidazole'],

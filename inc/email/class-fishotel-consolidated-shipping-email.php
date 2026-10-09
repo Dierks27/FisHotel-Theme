@@ -17,12 +17,15 @@
  * if ShipTracker is missing or refactored, the email falls back to a
  * minimal text body rather than failing entirely.
  *
- * Dedupe: per-tracking transient set on the first sibling that triggers
- * a consolidated send. Subsequent siblings hit the transient and are
- * suppressed without a second consolidated email. TTL is 1 hour — way
- * more than the milliseconds between sibling email triggers in practice,
- * but short enough that a real later transition (e.g. delivered) on the
- * same tracking gets its own consolidated email.
+ * Dedupe: per-tracking + per-status transient set on the first sibling
+ * that triggers a consolidated send. Subsequent siblings hit the
+ * transient and are suppressed without a second consolidated email. TTL
+ * is one week: the old 1-hour TTL equalled ShipTracker's default poll
+ * interval, so a sibling that transitioned one poll cycle later (e.g.
+ * after an admin per-row Re-check on only one sibling) resent the whole
+ * consolidated email. Because the key is status-scoped, a real later
+ * transition (e.g. delivered) on the same tracking still gets its own
+ * consolidated email.
  *
  * @package FisHotel
  */
@@ -33,7 +36,7 @@ class FisHotel_Consolidated_Shipping_Email {
 
 	const META_FULFILLED       = '_fishotel_fulfilled_by_order';
 	const TRANSIENT_PREFIX     = 'fhcse_';   // < 45 chars when joined with status+hash
-	const DEDUPE_TTL           = HOUR_IN_SECONDS;
+	const DEDUPE_TTL           = WEEK_IN_SECONDS;
 
 	public static function init() {
 		add_filter( 'fst_send_customer_email', [ __CLASS__, 'maybe_consolidate' ], 10, 4 );
@@ -84,11 +87,11 @@ class FisHotel_Consolidated_Shipping_Email {
 		}
 
 		// Find every sibling source order in this fulfillment that carries a
-		// shipment with the same tracking number.
-		$sources_with_same_tracking = self::find_siblings_with_tracking( $fulfillment, $tracking );
+		// shipment with the same tracking number (source id => shipment row).
+		$sibling_rows = self::find_siblings_with_tracking( $fulfillment, $tracking );
 
 		// Only one source → nothing to consolidate. Default email is correct.
-		if ( count( $sources_with_same_tracking ) <= 1 ) {
+		if ( count( $sibling_rows ) <= 1 ) {
 			return $should_send;
 		}
 
@@ -96,7 +99,7 @@ class FisHotel_Consolidated_Shipping_Email {
 		// billing email. Different customers in one fulfillment is a data-
 		// integrity edge case, but if it ever happens we shouldn't merge
 		// their emails into a single inbox.
-		if ( ! self::all_siblings_same_customer( $sources_with_same_tracking ) ) {
+		if ( ! self::all_siblings_same_customer( array_keys( $sibling_rows ) ) ) {
 			return $should_send;
 		}
 
@@ -105,16 +108,18 @@ class FisHotel_Consolidated_Shipping_Email {
 		// expire after DEDUPE_TTL.
 		set_transient( $transient_key, time(), self::DEDUPE_TTL );
 
-		self::send_consolidated_email( $order, $shipment, $new_status, $sources_with_same_tracking );
+		self::send_consolidated_email( $order, $shipment, $new_status, $sibling_rows );
 
 		return false; // suppress ShipTracker's per-source send
 	}
 
 	/**
-	 * Returns the source order IDs (within this fulfillment) that have at
-	 * least one shipment matching the given tracking number.
+	 * Returns the source orders (within this fulfillment) that have at
+	 * least one shipment matching the given tracking number, keyed by
+	 * source order ID with that matching shipment row as the value — the
+	 * row's line_item_ids tells render_body() which items are in THIS box.
 	 *
-	 * @return int[]
+	 * @return array<int,object> source_id => wp_fst_shipments row
 	 */
 	private static function find_siblings_with_tracking( WC_Order $fulfillment, $tracking ) {
 		$source_ids = function_exists( 'fishotel_fulfillment_get_sources' )
@@ -136,12 +141,47 @@ class FisHotel_Consolidated_Shipping_Email {
 			foreach ( $rows as $row ) {
 				$rt = isset( $row->tracking_number ) ? (string) $row->tracking_number : '';
 				if ( $rt === $tracking ) {
-					$out[] = (int) $sid;
+					$out[ (int) $sid ] = $row;
 					break;
 				}
 			}
 		}
-		return array_values( array_unique( $out ) );
+		return $out;
+	}
+
+	/**
+	 * Line items of $order that are in the given shipment row. A NULL/empty
+	 * line_item_ids (legacy rows, full-order boxes) means "all items", which
+	 * keeps the previous behaviour; an explicit list (partial / EA drop-ship
+	 * splits) narrows the email to what is actually in this box.
+	 *
+	 * @param WC_Order $order
+	 * @param object   $row   wp_fst_shipments row.
+	 * @return WC_Order_Item[]
+	 */
+	private static function items_in_shipment( WC_Order $order, $row ) {
+		$items = $order->get_items( 'line_item' );
+		$raw   = ( is_object( $row ) && isset( $row->line_item_ids ) ) ? $row->line_item_ids : null;
+		if ( empty( $raw ) ) {
+			return $items;
+		}
+		$ids = is_array( $raw ) ? $raw : json_decode( (string) $raw, true );
+		if ( ! is_array( $ids ) ) {
+			return $items;
+		}
+		$ids = array_filter( array_map( 'absint', $ids ) );
+		if ( empty( $ids ) ) {
+			return $items;
+		}
+		$subset = [];
+		foreach ( $items as $item_id => $item ) {
+			if ( in_array( (int) $item_id, $ids, true ) ) {
+				$subset[ $item_id ] = $item;
+			}
+		}
+		// A list that matches nothing on this order (stale ids) falls back to
+		// every item rather than emailing an empty box.
+		return ! empty( $subset ) ? $subset : $items;
 	}
 
 	/** Lowercase-trimmed billing emails match across every sibling. */
@@ -166,14 +206,16 @@ class FisHotel_Consolidated_Shipping_Email {
 	 * @param WC_Order $primary_order  Source order whose ShipTracker event triggered this filter.
 	 * @param object   $shipment       The wp_fst_shipments row.
 	 * @param string   $new_status     Shipment status, e.g. 'in_transit'.
-	 * @param int[]    $source_ids     All source orders sharing this tracking.
+	 * @param array    $sibling_rows   source_id => shipment row, for every source sharing this tracking.
 	 */
-	private static function send_consolidated_email( WC_Order $primary_order, $shipment, $new_status, array $source_ids ) {
+	private static function send_consolidated_email( WC_Order $primary_order, $shipment, $new_status, array $sibling_rows ) {
 		$source_orders = [];
-		foreach ( $source_ids as $sid ) {
+		$source_items  = [];
+		foreach ( $sibling_rows as $sid => $row ) {
 			$o = wc_get_order( (int) $sid );
 			if ( $o instanceof WC_Order ) {
-				$source_orders[] = $o;
+				$source_orders[]              = $o;
+				$source_items[ $o->get_id() ] = self::items_in_shipment( $o, $row );
 			}
 		}
 		if ( empty( $source_orders ) ) {
@@ -194,7 +236,7 @@ class FisHotel_Consolidated_Shipping_Email {
 			$verb
 		);
 
-		$body = self::render_body( $primary_order, $source_orders, $shipment, $new_status, $numbers_phrase, $verb );
+		$body = self::render_body( $primary_order, $source_orders, $shipment, $new_status, $numbers_phrase, $verb, $source_items );
 
 		wp_mail(
 			$to,
@@ -269,7 +311,12 @@ class FisHotel_Consolidated_Shipping_Email {
 		return is_string( $echoed ) ? $echoed : '';
 	}
 
-	private static function render_body( WC_Order $primary_order, array $source_orders, $shipment, $new_status, $numbers_phrase, $verb ) {
+	/**
+	 * @param array<int,WC_Order_Item[]> $source_items Items in THIS box per source order id
+	 *                                                 (from items_in_shipment); a missing
+	 *                                                 entry renders every item.
+	 */
+	private static function render_body( WC_Order $primary_order, array $source_orders, $shipment, $new_status, $numbers_phrase, $verb, array $source_items = [] ) {
 		$first_name = (string) $primary_order->get_billing_first_name();
 		$carrier    = isset( $shipment->carrier ) ? strtoupper( (string) $shipment->carrier ) : '';
 		$tracking   = isset( $shipment->tracking_number ) ? (string) $shipment->tracking_number : '';
@@ -277,7 +324,13 @@ class FisHotel_Consolidated_Shipping_Email {
 			? FisHotel_Shipments_Metabox::get_tracking_url( $shipment )
 			: '#';
 
-		$progress = self::call_fst_render( 'render_progress_bar', [ $shipment ] );
+		// FST_Email::render_progress_bar() takes the STATUS STRING, not the
+		// shipment row — passing the object threw a TypeError on PHP 8 (caught
+		// in call_fst_render) so the bar silently never rendered.
+		$bar_status = '' !== (string) $new_status
+			? (string) $new_status
+			: ( isset( $shipment->status ) ? (string) $shipment->status : '' );
+		$progress   = self::call_fst_render( 'render_progress_bar', [ $bar_status ] );
 
 		ob_start();
 		?>
@@ -323,7 +376,13 @@ class FisHotel_Consolidated_Shipping_Email {
 			</div>
 
 			<?php foreach ( $source_orders as $src ) :
-				$summary = self::call_fst_render( 'render_order_summary', [ $src ] );
+				// Only the items in this box (partial shipments), not every
+				// item on the order — matches the per-source ShipTracker email
+				// this consolidated one replaces.
+				$box_items = isset( $source_items[ $src->get_id() ] )
+					? $source_items[ $src->get_id() ]
+					: $src->get_items( 'line_item' );
+				$summary   = self::call_fst_render( 'render_order_summary', [ $src, $box_items ] );
 			?>
 				<div style="margin-top: 18px;">
 					<h3 style="margin: 0 0 8px; font-size: 16px;">
@@ -339,7 +398,7 @@ class FisHotel_Consolidated_Shipping_Email {
 						<?php echo $summary; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — ShipTracker-rendered HTML ?>
 					<?php else : ?>
 						<ul style="margin: 0; padding-left: 20px;">
-							<?php foreach ( $src->get_items( 'line_item' ) as $item ) : ?>
+							<?php foreach ( $box_items as $item ) : ?>
 								<li style="margin: 2px 0;"><?php echo esc_html( $item->get_name() ); ?> &times; <?php echo esc_html( (string) $item->get_quantity() ); ?></li>
 							<?php endforeach; ?>
 						</ul>

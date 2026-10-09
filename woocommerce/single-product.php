@@ -302,6 +302,16 @@ while ( have_posts() ) :
             );
         }
         $is_sold_out = ( $stock_badge['state'] === 'soldout' );
+
+        // Not purchasable at all (no price, unpublished, filtered out) is
+        // a different state from "sold out": WC would reject the add-to-
+        // cart POST, so rendering the stock badge + qty + button would
+        // only lead the customer into an error. Mirror WC core's own
+        // simple.php (which bails before the form when ! is_purchasable)
+        // and show a muted contact line instead. Coming Soon and Amazon-
+        // mode products never reach this branch.
+        $is_unavailable = in_array( $product->get_type(), array( 'simple', 'variable' ), true )
+            && ! $product->is_purchasable();
         ?>
 
         <?php /* Price — eyebrow slot is always rendered so layout doesn't
@@ -320,6 +330,11 @@ while ( have_posts() ) :
                 product-type template. */ ?>
         <?php if ( $is_gift_card ) : ?>
         <?php do_action( 'woocommerce_' . $product->get_type() . '_add_to_cart' ); ?>
+        <?php elseif ( $is_unavailable ) : ?>
+        <p class="fh-purchase__unavailable">
+            <?php esc_html_e( 'Currently unavailable —', 'fishotel' ); ?>
+            <a href="<?php echo esc_url( home_url( '/contacts/' ) ); ?>"><?php esc_html_e( 'contact us', 'fishotel' ); ?></a>
+        </p>
         <?php elseif ( in_array( $product->get_type(), array( 'simple', 'variable' ), true ) ) : ?>
         <?php do_action('woocommerce_before_add_to_cart_form'); ?>
         <form class="fh-purchase__form variations_form cart"
@@ -707,6 +722,41 @@ if ( ! $habitat && class_exists('FisHotel_Admin_Settings') ) {
     </div>
 </div>
 <?php endif; ?>
+
+<?php /* ── PLAN THIS FISH'S QUARANTINE — fish only. Links resolve by page
+        template (same helper as the footer Tools column) so renamed slugs
+        keep working; the row renders nothing when both pages are missing.
+        The scheduler link pre-fills its tank slider (?tank=<gal>) from the
+        numeric part of _fh_min_tank_size when the field has one. */ ?>
+<?php
+if ( $is_fish && function_exists( 'fishotel_tool_page_url' ) ) :
+    $plan_sched_url  = fishotel_tool_page_url( 'page-qt-scheduler.php', 'qt-scheduler' );
+    $plan_compat_url = fishotel_tool_page_url( 'page-compatibility-guide.php', 'compatibility-guide' );
+    if ( $plan_sched_url !== '' ) {
+        $plan_tank_raw = (string) get_post_meta( $product_id, '_fh_min_tank_size', true );
+        if ( preg_match( '/(\d+(?:\.\d+)?)/', $plan_tank_raw, $plan_m ) ) {
+            $plan_tank_gal = (int) round( (float) $plan_m[1] );
+            if ( $plan_tank_gal > 0 ) {
+                $plan_sched_url = add_query_arg( 'tank', $plan_tank_gal, $plan_sched_url );
+            }
+        }
+    }
+    if ( $plan_sched_url !== '' || $plan_compat_url !== '' ) :
+?>
+<div class="fh-plan-qt">
+    <div class="fh-plan-qt__inner">
+        <span class="fh-plan-qt__label"><?php esc_html_e( "Plan this fish's quarantine", 'fishotel' ); ?></span>
+        <div class="fh-plan-qt__links">
+            <?php if ( $plan_sched_url !== '' ) : ?>
+            <a href="<?php echo esc_url( $plan_sched_url ); ?>" class="fh-btn fh-btn--ghost fh-plan-qt__btn"><?php esc_html_e( 'Build a QT Schedule', 'fishotel' ); ?></a>
+            <?php endif; ?>
+            <?php if ( $plan_compat_url !== '' ) : ?>
+            <a href="<?php echo esc_url( $plan_compat_url ); ?>" class="fh-btn fh-btn--ghost fh-plan-qt__btn"><?php esc_html_e( 'Check Tank Compatibility', 'fishotel' ); ?></a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; endif; ?>
 
 <?php /* ── RELATED PRODUCTS — Also in Quarantine ── */ ?>
 <?php

@@ -1,5 +1,5 @@
 # FisHotel Theme — Project Status
-*Last updated: April 2026*
+*Last updated: October 2026*
 
 ---
 
@@ -10,8 +10,8 @@
 | **GitHub Repo** | https://github.com/Dierks27/FisHotel-Theme (private, branch: main) |
 | **Staging URL** | https://woocommerce-1611979-6343482.cloudwaysapps.com |
 | **Live URL** | https://fishotel.com (not yet deployed) |
-| **WP Admin** | jeff@fishotel.com / DwKAx9E34e |
-| **htpasswd** | fstrvwvmjq / ZkVkBVV2Ts |
+| **WP Admin** | see password manager |
+| **htpasswd** | see password manager |
 | **Deploy** | GitHub push → Cloudways → Deployment via GIT → Pull |
 | **Settings page URL** | /wp-admin/edit.php?post_type=product&page=fishotel-settings |
 | **Tools page URL** | /wp-admin/edit.php?post_type=product&page=fishotel-tools |
@@ -63,6 +63,10 @@ Everything admin-controlled, nothing hardcoded in theme:
 - **Trust Strip**: 3 editable trust items
 - **Branding**: Logo tagline
 - **Care Guide Defaults**: Default Foods & Feeding + Habitat textarea
+- **Tool Links** (Product Page): one product picker per medication (0 = auto-resolve) plus a fallback URL, so the Medication Dosing Calculator and QT Scheduler link each med to the right shop product (`inc/tool-product-links.php`).
+
+### Sticker Giveaway (FisHotel Misc Plugin)
+Lives in the companion `fishotel-misc-plugin`, not the theme: qualifying carts (Quarantined Fish by default, configurable categories and minimum subtotal) pick one free sticker at checkout from an admin-managed pool, with an optional paid add-on stepper, configured under FisHotel Tools.
 
 ### Shop Page (/shop/)
 - Shows 3 category tiles: Gift Cards, Merchandise, Quarantined Fish

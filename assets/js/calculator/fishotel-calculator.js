@@ -7,6 +7,8 @@
  * Mockup math + UX locked in over 7 Prazi iterations + final Copper. Don't
  * change formulas without re-verifying against Humblefish reference doses.
  *
+ * Tests: `node tests/*.test.js` from the theme root (ICS folding, data coverage).
+ *
  * @package fishotel-theme
  */
 (function () {
@@ -168,14 +170,20 @@
     var durDays = +med.duration_days  || 10;
     var wcPct   = (med.water_change_pct_before_dose == null) ? 25 : +med.water_change_pct_before_dose;
 
+    // Step the dose days by frequency_hours so 48h antibiotics (kanamycin,
+    // nitrofurazone, sulfa drugs) get Day 1/3/5/7/9 — not a dose every day.
+    // The "WC before each dose" marker follows the dose days (and is skipped
+    // entirely when the seed says no water change).
+    var step = Math.max(1, Math.round(freqHrs / 24));
     var doses = [];
-    for (var d = 1; d <= durDays; d++) doses.push(d);
+    for (var d = 1; d <= durDays; d += step) doses.push(d);
+    var waterChangeDays = wcPct > 0 ? doses.slice() : [];
 
     state.lastComputed = {
       medName: med.name_generic,
       doseLabel: formatted.value + ' ' + formatted.unit + ' per dose',
       doseDays: doses,
-      waterChangeDays: doses,
+      waterChangeDays: waterChangeDays,
       totalDays: durDays
     };
 
@@ -223,8 +231,8 @@
       { label: 'Water change',  value: wcPct + '%', sub: 'before each dose' }
     ]));
 
-    // Timeline — flat daily
-    root.appendChild(renderFlatDailyTimeline(durDays));
+    // Timeline — flat daily (dose / WC markers only on the stepped days)
+    root.appendChild(renderFlatDailyTimeline(durDays, doses, waterChangeDays));
 
     // KanaPlex under-dosing warning
     if (med.med_id === 'kanamycin_sulfate') {
@@ -267,13 +275,20 @@
     var totalDays = rampDays + holdDays;
     var perRamp   = dose.total / rampDays;
 
+    // Copper is only ADDED on ramp days; hold days are test-and-maintain, so
+    // the .ics gets "Dose N" for the ramp and a separate "Test Cu" event per
+    // hold day (not 19 "Dose" events for a 5+14 course).
     var doses = [];
-    for (var d = 1; d <= totalDays; d++) doses.push(d);
+    for (var d = 1; d <= rampDays; d++) doses.push(d);
+    var holdList = [];
+    for (var h = rampDays + 1; h <= totalDays; h++) holdList.push(h);
 
     state.lastComputed = {
       medName: med.name_generic,
       doseLabel: dose.display + ' total; ' + formatCopperAmount(perRamp, dose.unit) + '/day during ramp',
       doseDays: doses,
+      holdDays: holdList,
+      holdLabel: 'Hold at ' + therapeutic.toFixed(2) + ' ppm — test with a Hanna checker and bump back if drifted. No new dose unless the reading is low.',
       waterChangeDays: [totalDays],
       totalDays: totalDays
     };
@@ -732,6 +747,25 @@
         '<div class="fh-qh-doseswing">' + doseLow + ' ' + unit + '</div>';
       info.appendChild(right);
       root.appendChild(info);
+
+      // Calendar export for generic meds with a real course (metro, in-tank
+      // formalin/MB, fenbendazole internal). Without this, Save to Calendar
+      // exported whatever med was rendered before. Days step by
+      // frequency_hours like renderFlatDaily; no duration = no export.
+      var gDur = +med.duration_days || 0;
+      if (gDur > 0) {
+        var gStep = Math.max(1, Math.round((+med.frequency_hours || 24) / 24));
+        var gDoses = [];
+        for (var gd = 1; gd <= gDur; gd += gStep) gDoses.push(gd);
+        var gWc = +med.water_change_pct_before_dose || 0;
+        state.lastComputed = {
+          medName: med.name_generic,
+          doseLabel: totalVal + ' ' + totalUnit + ' per dose',
+          doseDays: gDoses,
+          waterChangeDays: gWc > 0 ? gDoses.slice() : [],
+          totalDays: gDur
+        };
+      }
     } else if (med.dose_label_value) {
       var info2 = el('div', 'fh-qh-doseblock');
       var right2 = el('div', 'fh-qh-doseinfo');
@@ -855,16 +889,20 @@
         computed = brandMeasuresNeeded(state.tankGal, pureMgPerGal, b.active_ingredient_pct, b.measure_weight_mg);
       }
 
+      // The seed stores the label dose under brand_label_dose on most records
+      // (manufacturer_label_dose on only a few) — read both or 15 of 22 brand
+      // boxes render a name with no dose text.
+      var labelDose = b.manufacturer_label_dose || b.brand_label_dose || '';
+
       if (b.fishotel_default && b.fishotel_default.dose) {
         box.appendChild(el('div', 'fh-qh-brandval', b.fishotel_default.dose));
         box.appendChild(el('div', 'fh-qh-brandsub', 'FisHotel default'));
       } else if (computed != null) {
         var unit = (b.measure_unit_label || 'measure') + (computed > 1.5 ? 's' : '');
         box.appendChild(el('div', 'fh-qh-brandval', computed.toFixed(2) + ' ' + unit));
-        var labelSub = b.manufacturer_label_dose || '';
-        if (labelSub) box.appendChild(el('div', 'fh-qh-brandsub', labelSub));
-      } else if (b.manufacturer_label_dose) {
-        box.appendChild(el('div', 'fh-qh-brandval', b.manufacturer_label_dose));
+        if (labelDose) box.appendChild(el('div', 'fh-qh-brandsub', labelDose));
+      } else if (labelDose) {
+        box.appendChild(el('div', 'fh-qh-brandval', labelDose));
       }
 
       if (b.ui_user_surface_note) {
@@ -1394,16 +1432,21 @@
     return div;
   }
 
-  function renderFlatDailyTimeline(days) {
+  // doseDays / waterChangeDays are 1-based day lists; when omitted every day
+  // gets both markers (the pre-frequency_hours behaviour).
+  function renderFlatDailyTimeline(days, doseDays, waterChangeDays) {
     var W = 580, H = 90, pad = 6, colW = (W - pad * 2) / days;
     var svg = '<svg width="100%" height="90" viewBox="0 0 580 90" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
     for (var d = 0; d < days; d++) {
       var x = pad + d * colW;
       var cx = x + colW / 2;
+      var dayNum = d + 1;
+      var hasDose = !doseDays        || doseDays.indexOf(dayNum)        !== -1;
+      var hasWc   = !waterChangeDays || waterChangeDays.indexOf(dayNum) !== -1;
       svg += '<rect x="' + (x + 1) + '" y="20" width="' + (colW - 2) + '" height="45" fill="rgba(212,165,116,0.08)" stroke="rgba(212,165,116,0.3)" stroke-width="0.5"/>';
-      svg += '<circle cx="' + cx + '" cy="35" r="3" fill="#6b8db8"/>'; // water change
-      svg += '<circle cx="' + cx + '" cy="52" r="4" fill="#d4a574"/>'; // dose
-      svg += '<text x="' + cx + '" y="82" text-anchor="middle" font-family="Josefin Sans,sans-serif" font-size="9" fill="#6b6058">D' + (d + 1) + '</text>';
+      if (hasWc)   svg += '<circle cx="' + cx + '" cy="35" r="3" fill="#6b8db8"/>'; // water change
+      if (hasDose) svg += '<circle cx="' + cx + '" cy="52" r="4" fill="#d4a574"/>'; // dose
+      svg += '<text x="' + cx + '" y="82" text-anchor="middle" font-family="Josefin Sans,sans-serif" font-size="9" fill="#6b6058">D' + dayNum + '</text>';
     }
     svg += '</svg>';
 
@@ -1500,6 +1543,11 @@
     var med = getMed(state.medId);
     if (!med) return;
 
+    // Each render owns the calendar payload. Renderers that have one set it
+    // below; the rest leave it null so Save to Calendar can't export the
+    // PREVIOUS medication's schedule (metro after copper, hypo after prazi…).
+    state.lastComputed = null;
+
     // Bath-mode routing: v1.3 treatment_type drives the renderer
     var tt = med.treatment_type || 'prolonged';
     var showBath = tt === 'bath' || (tt === 'both' && state.bathMode === 'bath');
@@ -1516,6 +1564,11 @@
       node = renderPrazi(med);
     } else if (med.med_id === 'chloroquine_phosphate' && Array.isArray(med.dosing_variants) && med.dosing_variants.length) {
       node = renderChloroquine(med);
+    } else if (med.dose_pure_low_mg_per_gal == null && med.dose_label_value) {
+      // Label-only meds (sulfa_tmp: "1/4 tsp per 10 gal", no pure mg/gal) —
+      // renderFlatDaily would print "0.0 mg per dose"; renderGeneric shows
+      // the label dose instead.
+      node = renderGeneric(med);
     } else if (cat === 'copper') {
       node = renderRampHold(med);
     } else if (cat === 'antibiotic') {
@@ -1617,12 +1670,19 @@
   }
 
   function selectMed(medId) {
+    var med = getMed(medId);
+    // Unknown id (bad ?med= deep link, stale tile) → fall back to Copper Power
+    // rather than blanking the panel with no tile highlighted.
+    if (!med && medId !== 'copper_power') {
+      med = getMed('copper_power');
+      if (med) medId = 'copper_power';
+    }
+    if (!med) return;
     // Reset per-med bath state on every med switch (default per task: prolonged for 'both')
     clearTimer();
     state.medId = medId;
     state.bathTier = null;
     state.cpVariant = null;
-    var med = getMed(medId);
     if (med) {
       state.bathMode = (med.treatment_type === 'bath') ? 'bath' : 'prolonged';
       // Copper: target_ppm and current_ppm are per-med — never carry a 2.5 ppm
@@ -1686,7 +1746,9 @@
 
   function handleIcs() {
     var c = state.lastComputed;
-    if (!c) { alert('Select a medication first.'); return; }
+    // null = the rendered med has no exportable course (hyposalinity, bath-
+    // only meds without a series, prazi with no fluke type ticked…).
+    if (!c) { alert('No calendar export is available for this medication.'); return; }
 
     if (c.mode === 'bath') {
       if (!c.bathCalendarEnabled) {
@@ -1714,6 +1776,40 @@
     return String(text).replace(/[\\;,]/g, function (ch) { return '\\' + ch; }).replace(/\n/g, '\\n');
   }
 
+  /** UTF-8 octet count of one character (or surrogate pair). */
+  function icsOctets(ch) {
+    try {
+      var enc = encodeURIComponent(ch);
+      return enc.indexOf('%') === -1 ? enc.length : enc.split('%').length - 1;
+    } catch (e) {
+      return 3; // lone surrogate — count it as a BMP char and move on
+    }
+  }
+
+  /**
+   * RFC 5545 §3.1 line folding: 75 octets max per line, continuation lines
+   * start with a single space (so 74 octets of content). Walks CHARACTERS
+   * and measures their UTF-8 size, so an em dash / middle dot is never split
+   * mid-sequence into mojibake. Surrogate pairs are kept together.
+   * Same helper lives in qt-scheduler.js and bleach-calculator.js — keep in sync.
+   */
+  function icsFold(line) {
+    var s = String(line == null ? '' : line);
+    var out = '', cur = '', curOctets = 0, limit = 75;
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      var code = s.charCodeAt(i);
+      if (code >= 0xD800 && code <= 0xDBFF && i + 1 < s.length) { ch += s.charAt(i + 1); i++; }
+      var n = icsOctets(ch);
+      if (curOctets + n > limit) {
+        out += cur + '\r\n ';
+        cur = ''; curOctets = 0; limit = 74;
+      }
+      cur += ch; curOctets += n;
+    }
+    return out + cur;
+  }
+
   function icsDownload(lines, filename) {
     lines.push('END:VCALENDAR');
     var blob = new Blob([lines.join('\r\n')], { type: 'text/calendar' });
@@ -1739,8 +1835,24 @@
         'DTSTAMP:' + icsFmt(new Date()),
         'DTSTART:' + icsFmt(dt),
         'DTEND:' + icsFmt(dt2),
-        'SUMMARY:' + icsEscape(c.medName + ' — Dose ' + (i + 1) + ' (' + state.tankGal + ' gal)'),
-        'DESCRIPTION:' + icsEscape(c.doseLabel),
+        icsFold('SUMMARY:' + icsEscape(c.medName + ' — Dose ' + (i + 1) + ' (' + state.tankGal + ' gal)')),
+        icsFold('DESCRIPTION:' + icsEscape(c.doseLabel)),
+        'END:VEVENT'
+      );
+    });
+
+    // Copper hold days: a "test, don't dose" reminder per day (renderRampHold).
+    (c.holdDays || []).forEach(function (day, i) {
+      var hdt = new Date(start.getTime() + (day - 1) * dayMs + 9 * 3600000);
+      var hdt2 = new Date(hdt.getTime() + 3600000);
+      lines.push(
+        'BEGIN:VEVENT',
+        'UID:' + Date.now() + '-h' + i + '@fishotel.com',
+        'DTSTAMP:' + icsFmt(new Date()),
+        'DTSTART:' + icsFmt(hdt),
+        'DTEND:' + icsFmt(hdt2),
+        icsFold('SUMMARY:' + icsEscape(c.medName + ' — Test Cu (Hanna) · hold day ' + (i + 1) + ' (' + state.tankGal + ' gal)')),
+        icsFold('DESCRIPTION:' + icsEscape(c.holdLabel || 'Hold day — test copper and bump back to target if drifted.')),
         'END:VEVENT'
       );
     });
@@ -1767,8 +1879,8 @@
         'DTSTAMP:' + icsFmt(new Date()),
         'DTSTART:' + icsFmt(dt),
         'DTEND:' + icsFmt(dt2),
-        'SUMMARY:' + icsEscape(summaryBase + ' — Session ' + (i + 1) + ' (' + state.tankGal + ' gal bath)'),
-        'DESCRIPTION:' + icsEscape(desc),
+        icsFold('SUMMARY:' + icsEscape(summaryBase + ' — Session ' + (i + 1) + ' (' + state.tankGal + ' gal bath)')),
+        icsFold('DESCRIPTION:' + icsEscape(desc)),
         'END:VEVENT'
       );
     });
@@ -1891,9 +2003,12 @@
     $printBtn.addEventListener('click', handlePrint);
     $icsBtn.addEventListener('click', handleIcs);
 
-    // Initial selection from query string or default
+    // Initial selection from query string or default. The PHP template does
+    // not validate ?med=; an unknown id must land on Copper Power, not an
+    // empty panel.
     var params = new URLSearchParams(window.location.search);
-    var initialMedId = params.get('med') || 'copper_power';
+    var requested = params.get('med');
+    var initialMedId = (requested && getMed(requested)) ? requested : 'copper_power';
     selectMed(initialMedId);
 
     // Hash deep-link runs AFTER selectMed so it overrides the category
@@ -1903,5 +2018,11 @@
 
     window.addEventListener('hashchange', activateTabFromHash);
   });
+
+  // Node-only export so tests/calculator-ics-fold.test.js can exercise the
+  // fold helper; browsers have no `module` and skip this.
+  if (typeof module === 'object' && module && module.exports) {
+    module.exports = { icsFold: icsFold, icsEscape: icsEscape };
+  }
 
 })();

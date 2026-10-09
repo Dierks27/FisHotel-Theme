@@ -294,16 +294,28 @@ class FisHotel_Med_Product_Meta {
 
 		update_post_meta( $variation_id, '_fishotel_wholesale', $wholesale );
 		update_post_meta( $variation_id, '_fishotel_ea_retail', $retail );
-		// size_index = $loop (0-based position), size_count = total
-		// number of variation rows on this submit. Recompute below.
-		update_post_meta( $variation_id, '_fishotel_size_index', (int) $loop );
 
-		$count = is_array( $wholesale_arr ) ? count( $wholesale_arr ) : 1;
+		// size_index / size_count come from the parent's full child list,
+		// NOT from $loop / count( $_POST[...] ). WHY: WC's variations panel
+		// only submits rows flagged .variation-needs-update and $loop is the
+		// per-page render index (15/page), so the POST count is "rows Jeff
+		// touched" and the index restarts on page 2 — editing one EA
+		// variation repriced it with the wrong multiplier. get_children()
+		// is ordered menu_order/ID like the panel and like
+		// FisHotel_Med_Pricing::recompute_for_product(), so both paths agree.
+		$parent_id = wp_get_post_parent_id( $variation_id );
+		$parent    = $parent_id ? wc_get_product( $parent_id ) : null;
+		$children  = $parent && $parent->is_type( 'variable' )
+			? array_map( 'intval', (array) $parent->get_children() )
+			: [];
+		$idx   = array_search( (int) $variation_id, $children, true );
+		$idx   = $idx === false ? (int) $loop : (int) $idx;
+		$count = max( 1, count( $children ) );
+		update_post_meta( $variation_id, '_fishotel_size_index', $idx );
 		update_post_meta( $variation_id, '_fishotel_size_count', $count );
 
 		// Update WC price meta as well (regular_price + price) so the
 		// product page renders the calculated FisHotel price.
-		$parent_id = wp_get_post_parent_id( $variation_id );
 		// No-parent fallback is '' rather than 'ea' for consistency with the
 		// opt-in fix above. This does NOT change EA pricing: a variation
 		// always has a parent (so the real mode comes from
@@ -315,7 +327,7 @@ class FisHotel_Med_Product_Meta {
 			$price = fishotel_calculate_med_price(
 				(float) $wholesale,
 				(float) $retail,
-				(int) $loop,
+				$idx,
 				$count
 			);
 			update_post_meta( $variation_id, '_regular_price', $price );

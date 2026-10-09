@@ -202,6 +202,9 @@ class FisHotel_Admin_Settings {
 			'contacts_email_label'          => 'Write us',
 			'contacts_forum_url'            => 'https://humble.fish/community/forums/fishotel.41/',
 			'contacts_forum_label'          => 'Visit our Humble.Fish forum',
+			// Newsletter page — optional hero override (attachment ID). Blank
+			// = page-newsletter.php falls back to the uploaded Gazette art.
+			'fh_newsletter_hero_image'      => '',
 			// Cart Page — hero (global; per-cart subtitle copy lives in
 			// the preset seeds below)
 			'fh_cart_hero_eyebrow'             => 'GUEST SERVICES',
@@ -438,6 +441,7 @@ class FisHotel_Admin_Settings {
 			'fishotel-faq'           => [ 'page_title' => 'FAQ Page',      'menu_title' => 'FAQ Page' ],
 			'fishotel-about'         => [ 'page_title' => 'About Page',    'menu_title' => 'About Page' ],
 			'fishotel-contacts'      => [ 'page_title' => 'Contacts Page', 'menu_title' => 'Contacts Page' ],
+			'fishotel-newsletter'    => [ 'page_title' => 'Newsletter Page', 'menu_title' => 'Newsletter Page' ],
 			'fishotel-placeholders'  => [ 'page_title' => 'Placeholders',  'menu_title' => 'Placeholders' ],
 			'fishotel-branding'      => [ 'page_title' => 'Branding',      'menu_title' => 'Branding' ],
 			'fishotel-tools'         => [
@@ -959,6 +963,15 @@ JS;
 					'contacts_forum_label'        => [ 'label' => 'Forum link label',     'type' => 'text',     'placeholder' => 'Visit our Humble.Fish forum' ],
 				],
 			],
+			// Newsletter page — the template reads this via get(); an
+			// attachment ID wins, blank falls back to the uploaded Gazette art.
+			'newsletter' => [
+				'page'   => 'fishotel-newsletter',
+				'title'  => 'Newsletter Page',
+				'fields' => [
+					'fh_newsletter_hero_image' => [ 'label' => 'Gazette hero image', 'type' => 'image', 'description' => 'Leave blank to use the uploaded Gazette illustration' ],
+				],
+			],
 			// Placeholders page
 			'placeholders' => [
 				'page'   => 'fishotel-placeholders',
@@ -1130,14 +1143,21 @@ JS;
 					// sanitizer so an accidental empty POST (e.g. a future
 					// refactor that drops a field from the form HTML while
 					// the option is still registered) can no longer wipe
-					// stored copy. Select + checkbox pass empty through
-					// normally — unchecking a checkbox MUST persist.
+					// stored copy. Select passes empty through normally.
+					// Checkbox stores an explicit '0' / '1': an unchecked box
+					// posts nothing, and storing '' would let get() coerce it
+					// back to the '1' default — the box could never be turned
+					// off. '0' survives get()'s empty-string check.
 					$type        = $field['type'];
 					$is_textarea = ( $type === 'textarea' );
+					$is_checkbox = ( $type === 'checkbox' );
 					$preserve    = in_array( $type, [ 'text', 'textarea' ], true );
 					register_setting( $group, $key, [
 						'type'              => 'string',
-						'sanitize_callback' => function ( $val ) use ( $key, $is_textarea, $preserve ) {
+						'sanitize_callback' => function ( $val ) use ( $key, $is_textarea, $is_checkbox, $preserve ) {
+							if ( $is_checkbox ) {
+								return ( (string) $val === '1' ) ? '1' : '0';
+							}
 							$sanitized = $is_textarea
 								? sanitize_textarea_field( (string) $val )
 								: sanitize_text_field( (string) $val );
@@ -1579,6 +1599,7 @@ JS;
 			'fishotel-faq'          => [ 'title' => 'FAQ Page',      'desc' => 'Concierge intro, quarantine stages, FAQ items.' ],
 			'fishotel-about'        => [ 'title' => 'About Page',    'desc' => "Founder's Edition masthead, headline, byline, body." ],
 			'fishotel-contacts'     => [ 'title' => 'Contacts Page', 'desc' => 'Email, forum, location text and map image.' ],
+			'fishotel-newsletter'   => [ 'title' => 'Newsletter Page', 'desc' => 'Optional override for the Gazette hero illustration.' ],
 			'fishotel-placeholders' => [ 'title' => 'Placeholders',  'desc' => 'In-stock and Coming Soon placeholder libraries.' ],
 			'fishotel-branding'     => [ 'title' => 'Branding',      'desc' => 'Logo tagline and global brand variables.' ],
 			'fishotel-tools'        => [ 'title' => 'Tools',         'desc' => 'Theme update check, product migration, compat backfill.' ],

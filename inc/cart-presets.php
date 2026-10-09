@@ -57,6 +57,13 @@ function fishotel_cart_resolve_preset() {
 	$slug_map = fishotel_cart_preset_slug_map();
 	$matched  = [];
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		// Sticker lines (Misc plugin giveaway, cart item data fh_sticker =
+		// free|extra) ride along in the fish box and must not steer the
+		// copy: a sticker in a merch-mapped category would otherwise turn a
+		// fish order into the `default` preset.
+		if ( ! empty( $cart_item['fh_sticker'] ) ) {
+			continue;
+		}
 		$product_id = isset( $cart_item['product_id'] ) ? (int) $cart_item['product_id'] : 0;
 		if ( ! $product_id ) {
 			continue;
@@ -75,6 +82,28 @@ function fishotel_cart_resolve_preset() {
 		return (string) array_key_first( $matched );
 	}
 	return 'default';
+}
+
+/**
+ * Cart item count for customer-facing labels ("Subtotal · 3 fish"), minus
+ * sticker lines (Misc plugin giveaway, cart item data fh_sticker). WC's
+ * get_cart_contents_count() is left alone — WooCommerce uses it for its
+ * own limits — so the subtraction lives here, for copy only.
+ *
+ * @return int
+ */
+function fishotel_cart_display_count() {
+	if ( ! function_exists( 'WC' ) || ! WC() || ! WC()->cart ) {
+		return 0;
+	}
+	$count = 0;
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		if ( ! empty( $cart_item['fh_sticker'] ) ) {
+			continue;
+		}
+		$count += isset( $cart_item['quantity'] ) ? (int) $cart_item['quantity'] : 0;
+	}
+	return $count;
 }
 
 /**

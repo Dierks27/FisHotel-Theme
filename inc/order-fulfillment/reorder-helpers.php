@@ -26,8 +26,9 @@ defined( 'ABSPATH' ) || exit;
  * guests (the caller decides, same precedence as auto-combine).
  *
  * Considers wc-processing and wc-on-hold orders. Excludes fulfillment
- * entities (_fishotel_is_fulfillment = '1') and orders whose every line item
- * is already shipped (_fishotel_line_status = 'shipped').
+ * entities (_fishotel_is_fulfillment = '1'), orders whose every line item
+ * is already shipped (_fishotel_line_status = 'shipped'), and orders that
+ * already have a ShipTracker shipment row (a box is in motion).
  *
  * @param int|string $customer_id_or_email
  * @return WC_Order|null
@@ -92,6 +93,14 @@ function fishotel_get_open_unshipped_orders_for_customer( $customer_id_or_email,
 		if ( fishotel_order_is_fully_shipped( $order ) ) {
 			continue;
 		}
+		// A ShipTracker shipment row means a box has already left for this
+		// order, even when the order is still wc-processing (e.g. a fully
+		// refunded line keeps ShipTracker's coverage check from ever
+		// auto-advancing it). Such an order must not anchor the checkout
+		// lock or the $0 piggyback — nothing can ride in a box that's gone.
+		if ( fishotel_order_has_shiptracker_shipment( $order ) ) {
+			continue;
+		}
 		$out[] = $order;
 	}
 	return $out;
@@ -115,6 +124,22 @@ function fishotel_order_is_fully_shipped( WC_Order $order ) {
 		}
 	}
 	return true;
+}
+
+/**
+ * True when ShipTracker holds at least one shipment row for the order.
+ * Guarded so the theme keeps working with the plugin deactivated (then no
+ * row can exist and the answer is simply "no").
+ *
+ * @param WC_Order $order
+ * @return bool
+ */
+function fishotel_order_has_shiptracker_shipment( WC_Order $order ) {
+	if ( ! class_exists( 'FST_Shipment' ) || ! method_exists( 'FST_Shipment', 'get_by_order' ) ) {
+		return false;
+	}
+	$rows = FST_Shipment::get_by_order( (int) $order->get_id() );
+	return is_array( $rows ) && ! empty( $rows );
 }
 
 /**

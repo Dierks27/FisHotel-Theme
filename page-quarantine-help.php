@@ -16,8 +16,9 @@ get_header();
 $medication_data = FisHotel_Medication_Data::get_all();
 $medications     = isset( $medication_data['medications'] ) ? $medication_data['medications'] : array();
 
-// Deep-link support: ?med=<med_id> and ?tank=<gal>
-$initial_med_id = isset( $_GET['med'] ) ? sanitize_text_field( wp_unslash( $_GET['med'] ) ) : 'copper_power';
+// Deep-link support: ?tank=<gal> is applied here; ?med=<med_id> is read and
+// validated by fishotel-calculator.js at boot (unknown ids fall back to
+// Copper Power), so PHP does not touch it.
 $initial_tank   = isset( $_GET['tank'] ) ? absint( $_GET['tank'] ) : 30;
 if ( $initial_tank < 3 )   { $initial_tank = 3; }
 if ( $initial_tank > 500 ) { $initial_tank = 500; }

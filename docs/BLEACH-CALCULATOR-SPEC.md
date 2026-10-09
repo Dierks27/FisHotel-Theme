@@ -87,7 +87,7 @@ Custom shows two number inputs: target ppm (50–2000) and contact minutes (5–
 Four steps in 2×2 grid on desktop:
 
 1. **Bleach Dose** — `{X} ml` with math line.
-2. **Contact Time** — `{N} min` + Start Timer (visual count-up bar, persists across reload).
+2. **Contact Time** — `{N} min` + Start Timer (visual count-up bar). The timer is deliberately **not** persisted — a reload resets it, so a stale timer from a previous teardown can never show as "still running".
 3. **Neutralize** — thiosulfate g OR Prime ml, with above-range warning.
 4. **Rinse** — 2–3 fresh-water rinses, test for zero ppm.
 
@@ -130,8 +130,8 @@ State (localStorage `fishotel_bleach_v1`):
   preset: 'between_qt_fish',       // 'between_qt_fish' | 'bleach_bomb' | 'custom'
   custom_target_ppm: 200,
   custom_contact_min: 30,
-  neutralizer: 'thiosulfate',      // 'thiosulfate' | 'prime'
-  timer_started_at: null
+  neutralizer: 'thiosulfate'       // 'thiosulfate' | 'prime'
+  // (no timer field — the timer lives in memory only and resets on reload)
 }
 ```
 
@@ -185,17 +185,17 @@ Adding the calculator to the Tools dropdown is a one-time WP-admin action (Appea
 
 ### Functional
 1. `/bleach-calculator/` renders with 75 gal, 8.25%, Between QT Fish, Sodium Thiosulfate.
-2. Defaults produce ~9 ml bleach, 30 min, ~5.5 g thiosulfate.
-3. Bleach Bomb → ~22 ml, 60 min, ~14 g.
-4. 12.5% concentration → bleach ml drops proportionally (~6 ml at 200 ppm).
+2. Defaults (75 gal) produce ~688 ml bleach, 30 min, ~420 g thiosulfate. *(Per-gallon: ~9.2 ml / ~5.6 g.)*
+3. Bleach Bomb (75 gal) → ~1720 ml, 60 min, ~1050 g.
+4. 12.5% concentration → bleach ml drops proportionally (~454 ml at 200 ppm, 75 gal).
 5. Liter unit converts correctly.
 6. Custom preset reveals ppm + contact_min fields.
 7. Prime at 200 ppm → out-of-range warning replaces ml number.
-8. Prime at 4 ppm → ~7.5 ml.
+8. Custom 50 ppm + Prime → ~37.5 ml (5× dose at 75 gal). *(The 1× tier at ≤4 ppm is unreachable: custom ppm is clamped to 50–2000 in both the markup and the JS.)*
 9. Timer fills, stop/reset works.
 10. Print Schedule opens dialog with checkbox layout.
 11. iCal downloads with 2 events.
-12. Reload preserves inputs; running timer resumes.
+12. Reload preserves inputs; the timer intentionally resets on reload (see §5).
 13. Tools dropdown lists Bleach Calculator between Medication Dosing and Compatibility Guide.
 
 ### Visual

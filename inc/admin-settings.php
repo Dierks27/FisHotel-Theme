@@ -226,6 +226,8 @@ class FisHotel_Admin_Settings {
 			'fh_checkout_section_coupon'             => 'HAVE A COUPON CODE?',
 			'fh_checkout_section_guest_details'      => 'GUEST DETAILS',
 			'fh_checkout_section_delivery_details'   => 'DELIVERY DETAILS',
+			'fh_checkout_section_notes'              => 'DELIVERY DATE & NOTES',
+			'fh_checkout_section_notes_plain'        => 'ORDER NOTES',
 			'fh_checkout_section_payment'            => 'PAYMENT METHOD',
 			'fh_checkout_section_statement'          => 'ITEMIZED STATEMENT',
 			// Checkout Page — CTAs and labels
@@ -845,6 +847,8 @@ JS;
 					'fh_checkout_section_coupon'           => [ 'label' => 'Coupon prompt',             'type' => 'text', 'placeholder' => 'HAVE A COUPON CODE?' ],
 					'fh_checkout_section_guest_details'    => [ 'label' => 'Guest details card',        'type' => 'text', 'placeholder' => 'GUEST DETAILS' ],
 					'fh_checkout_section_delivery_details' => [ 'label' => 'Delivery details card',     'type' => 'text', 'placeholder' => 'DELIVERY DETAILS' ],
+					'fh_checkout_section_notes'            => [ 'label' => 'Order notes card',          'type' => 'text', 'placeholder' => 'DELIVERY DATE & NOTES', 'description' => 'Heading over the order-notes textarea when the delivery-date picker (Batch plugin) is shown with it — fish in the cart, no reorder lock.' ],
+					'fh_checkout_section_notes_plain'      => [ 'label' => 'Order notes card (no date)', 'type' => 'text', 'placeholder' => 'ORDER NOTES', 'description' => 'Same card when no delivery-date picker rendered: medication / food / merch-only carts, or a reorder-locked checkout (the lock card shows the date).' ],
 					'fh_checkout_section_payment'          => [ 'label' => 'Payment method card',       'type' => 'text', 'placeholder' => 'PAYMENT METHOD' ],
 					'fh_checkout_section_statement'        => [ 'label' => 'Itemized statement card',   'type' => 'text', 'placeholder' => 'ITEMIZED STATEMENT' ],
 				],
@@ -1086,7 +1090,21 @@ JS;
 						'sanitize_callback' => 'wp_kses_post',
 						'default'           => self::defaults()[ $key ] ?? '',
 					] );
-				} elseif ( $field['type'] === 'image' || $field['type'] === 'product_select' ) {
+				} elseif ( $field['type'] === 'image' ) {
+					// The picker's hidden input posts "0" when nothing is
+					// chosen (or after Remove). Store '' for 0 / '0' / empty
+					// so templates can tell "unset" from a real attachment
+					// ID — a stored '0' otherwise reaches string branches as
+					// a bogus URL (page-newsletter rendered <img src="0">).
+					register_setting( $group, $key, [
+						'type'              => 'string',
+						'sanitize_callback' => function ( $val ) {
+							$id = absint( $val );
+							return $id > 0 ? $id : '';
+						},
+						'default'           => '',
+					] );
+				} elseif ( $field['type'] === 'product_select' ) {
 					register_setting( $group, $key, [
 						'type'              => 'integer',
 						'sanitize_callback' => 'absint',

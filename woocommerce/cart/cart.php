@@ -142,17 +142,42 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 								? '<a href="' . esc_url( $product_permalink ) . '">' . wp_kses_post( $item_name ) . '</a>'
 								: wp_kses_post( $item_name ); ?>
 						</h3>
-						<?php if ( $sci_name !== '' ) : ?>
+						<?php /* Sticker giveaway lines (Misc plugin, fh_sticker = free|extra)
+						        carry no scientific name / care text — skip the block. */ ?>
+						<?php if ( $sci_name !== '' && empty( $cart_item['fh_sticker'] ) ) : ?>
 							<div class="fh-cart-item__sci"><?php echo esc_html( $sci_name ); ?></div>
 						<?php endif; ?>
-						<?php /* Cart item data (woocommerce_get_item_data): WC Gift
-						        Cards recipient/message, sticker "Free with fish
-						        order" labels, etc. The theme never printed it, so
-						        gift-card recipients were invisible until the order
-						        email. */ ?>
-						<?php $item_meta = wc_get_formatted_cart_item_data( $cart_item ); ?>
-						<?php if ( '' !== trim( (string) $item_meta ) ) : ?>
-							<div class="fh-cart-item__meta"><?php echo wp_kses_post( $item_meta ); ?></div>
+						<?php /* Plugin-only cart item data (woocommerce_get_item_data):
+						        WC Gift Cards recipient/message, the Misc plugin's
+						        sticker label, etc. Filtered from an empty array
+						        on purpose — wc_get_formatted_cart_item_data()
+						        would also list the variation attributes, which
+						        the pills below already show (duplicated "Size"
+						        on 3+ attribute products). Mirrors WC's own
+						        hidden / key / display resolution. */ ?>
+						<?php
+						$extra_rows = [];
+						foreach ( (array) apply_filters( 'woocommerce_get_item_data', [], $cart_item ) as $data ) {
+							if ( ! is_array( $data ) || ! empty( $data['hidden'] ) ) {
+								continue;
+							}
+							$data_key     = ! empty( $data['key'] ) ? $data['key'] : ( isset( $data['name'] ) ? $data['name'] : '' );
+							$data_display = ! empty( $data['display'] ) ? $data['display'] : ( isset( $data['value'] ) ? $data['value'] : '' );
+							if ( '' === trim( (string) $data_display ) ) {
+								continue;
+							}
+							$extra_rows[] = [ 'key' => (string) $data_key, 'display' => (string) $data_display ];
+						}
+						?>
+						<?php if ( $extra_rows ) : ?>
+							<div class="fh-cart-item__meta">
+								<dl class="variation">
+									<?php foreach ( $extra_rows as $row ) : ?>
+										<?php if ( '' !== $row['key'] ) : ?><dt><?php echo esc_html( $row['key'] ); ?>:</dt><?php endif; ?>
+										<dd><?php echo wp_kses_post( $row['display'] ); ?></dd>
+									<?php endforeach; ?>
+								</dl>
+							</div>
 						<?php endif; ?>
 						<?php if ( $variation_pills || $is_fish_item ) : ?>
 						<div class="fh-cart-item__pills">
@@ -165,6 +190,13 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 						</div>
 						<?php endif; ?>
 						<div class="fh-cart-item__controls">
+							<?php
+							/* The stepper goes through WC's `woocommerce_cart_item_quantity`
+							   filter (same contract as the stock template) so plugins can
+							   swap it — the Misc plugin returns a fixed read-only quantity
+							   for its sticker giveaway lines. */
+							ob_start();
+							?>
 							<div class="fh-cart-qty">
 								<button type="button" class="fh-cart-qty__btn" data-action="dec" aria-label="<?php esc_attr_e( 'Decrease quantity', 'fishotel' ); ?>">−</button>
 								<?php /* Only emit `max` when there's a real stock limit.
@@ -183,6 +215,10 @@ $subtitle   = fishotel_cart_resolve_subtitle( $sub_tpl, $cart_count );
 									inputmode="numeric">
 								<button type="button" class="fh-cart-qty__btn" data-action="inc" aria-label="<?php esc_attr_e( 'Increase quantity', 'fishotel' ); ?>">+</button>
 							</div>
+							<?php
+							$stepper_html = (string) ob_get_clean();
+							echo apply_filters( 'woocommerce_cart_item_quantity', $stepper_html, $cart_item_key, $cart_item ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- stepper markup is escaped above; filter contract matches WC core.
+							?>
 							<a href="<?php echo esc_url( $remove_url ); ?>" class="fh-cart-item__remove" data-product_id="<?php echo esc_attr( $product_id ); ?>">
 								<?php esc_html_e( 'Remove', 'fishotel' ); ?>
 							</a>

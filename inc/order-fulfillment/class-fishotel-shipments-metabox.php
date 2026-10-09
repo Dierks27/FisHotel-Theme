@@ -405,7 +405,11 @@ class FisHotel_Shipments_Metabox {
 		return $url ? (string) $url : '#';
 	}
 
-	/** Instantiate the concrete FST_Carrier_* subclass for a carrier slug, or null. */
+	/**
+	 * Instantiate the concrete FST_Carrier_* subclass for a carrier slug, or
+	 * null. ShipTracker ships UPS + USPS only — it cannot poll, route or link
+	 * anything else, so the Add Shipment form offers just those (plus auto).
+	 */
 	private static function get_carrier_instance( $slug ) {
 		$slug = strtolower( trim( (string) $slug ) );
 		switch ( $slug ) {
@@ -413,8 +417,6 @@ class FisHotel_Shipments_Metabox {
 				return class_exists( 'FST_Carrier_UPS' ) ? new FST_Carrier_UPS() : null;
 			case 'usps':
 				return class_exists( 'FST_Carrier_USPS' ) ? new FST_Carrier_USPS() : null;
-			case 'fedex':
-				return class_exists( 'FST_Carrier_FedEx' ) ? new FST_Carrier_FedEx() : null;
 			default:
 				return null;
 		}

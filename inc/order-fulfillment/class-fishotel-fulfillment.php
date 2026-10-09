@@ -767,7 +767,10 @@ class FisHotel_Fulfillment {
 
 	/**
 	 * Other pre-ship orders for the same customer, excluding $order, any
-	 * fulfillment, and any already-fulfilled source. Newest first, capped.
+	 * fulfillment, any already-fulfilled source, and any order whose box
+	 * has already left per ShipTracker (same rule as the checkout lock /
+	 * piggyback — see fishotel_order_has_shiptracker_shipment()). Newest
+	 * first, capped.
 	 *
 	 * @return int[]
 	 */
@@ -800,6 +803,15 @@ class FisHotel_Fulfillment {
 		foreach ( array_keys( $found ) as $id ) {
 			if ( self::is_fulfillment( $id ) || self::get_fulfillment( $id ) ) {
 				continue;
+			}
+			// A box that already left can't host the new order — the lock
+			// and piggyback skip it, so auto-combine must too, or the customer
+			// pays shipping twice and still gets folded into the gone box.
+			if ( function_exists( 'fishotel_order_has_shiptracker_shipment' ) ) {
+				$candidate = wc_get_order( $id );
+				if ( $candidate instanceof WC_Order && fishotel_order_has_shiptracker_shipment( $candidate ) ) {
+					continue;
+				}
 			}
 			$out[] = $id;
 		}
@@ -1316,7 +1328,10 @@ class FisHotel_Fulfillment {
 			}
 			$status_prefixed = ( 0 === strpos( $key, 'wc-' ) ) ? $key : 'wc-' . $key;
 			if ( 'wc-processing' === $status_prefixed ) {
-				$count = self::processing_open_count();
+				// Same semantics as the menu badge; cached + busted on status
+				// change / fulfillment create / add_source, so the list no
+				// longer loads every processing order on each render.
+				$count = self::cached_open_count();
 			} else {
 				$count = isset( $visible[ $status_prefixed ] ) ? (int) $visible[ $status_prefixed ] : 0;
 			}

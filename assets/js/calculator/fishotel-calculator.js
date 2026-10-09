@@ -1701,7 +1701,9 @@
       setActiveTab(cat);
     }
     [].forEach.call($medButtons, function (b) {
-      b.classList.toggle('is-on', b.getAttribute('data-med-id') === medId);
+      var on = b.getAttribute('data-med-id') === medId;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
     rerenderPanel();
   }
@@ -1715,7 +1717,12 @@
   function setActiveTab(cat) {
     state.category = cat;
     [].forEach.call($tabs, function (t) {
-      t.classList.toggle('is-on', t.getAttribute('data-cat') === cat);
+      var on = t.getAttribute('data-cat') === cat;
+      t.classList.toggle('is-on', on);
+      // Expose the selection + roving tabindex (only the active tab is in
+      // the Tab order; arrows move between tabs — see the keydown in BOOT).
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
     });
     [].forEach.call($medButtons, function (b) {
       var show = b.getAttribute('data-cat') === cat;
@@ -1991,6 +1998,34 @@
         }
       });
     });
+
+    // Tablist keyboard support: ArrowLeft/ArrowRight step (wrapping),
+    // Home/End jump. Routed through the tab's click handler so the
+    // hash stays in sync exactly as a mouse click would.
+    var $tabsNav = document.querySelector('.fh-qh-tabs');
+    if ($tabsNav) {
+      $tabsNav.addEventListener('keydown', function (e) {
+        var k = e.key;
+        if (k !== 'ArrowLeft' && k !== 'ArrowRight' && k !== 'Home' && k !== 'End') return;
+        var list = [].slice.call($tabs);
+        if (!list.length) return;
+        var cur = list.indexOf(document.activeElement);
+        if (cur < 0) {
+          cur = 0;
+          for (var i = 0; i < list.length; i++) {
+            if (list[i].classList.contains('is-on')) { cur = i; break; }
+          }
+        }
+        var next = cur;
+        if (k === 'ArrowLeft')  next = (cur - 1 + list.length) % list.length;
+        if (k === 'ArrowRight') next = (cur + 1) % list.length;
+        if (k === 'Home')       next = 0;
+        if (k === 'End')        next = list.length - 1;
+        e.preventDefault();
+        list[next].focus();
+        list[next].click();
+      });
+    }
 
     [].forEach.call($medButtons, function (b) {
       b.addEventListener('click', function () {

@@ -470,9 +470,25 @@
 		const addBtn = $('[data-fh-modal-add]');
 		if (addBtn) addBtn.disabled = false;
 	}
+	// Element that had focus when the Add Fish dialog opened — focus goes
+	// back to it on close so keyboard users don't land at the top of the page.
+	let modalOpener = null;
+	function modalFocusables(modal) {
+		const panel = $('.fh-compat-modal__panel', modal) || modal;
+		return $$('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])', panel)
+			.filter((el) => !el.disabled && !el.closest('[hidden]') && el.offsetParent !== null
+				// A radio group is ONE tab stop (the checked radio, or the first
+				// when none is checked). Listing every radio made the unchecked
+				// "Considering" radio the trap's `last` on a fresh open (Add Fish
+				// is disabled then), so Tab from the checked "My Tank" radio never
+				// matched `last` and escaped to the page behind the backdrop.
+				&& (el.type !== 'radio' || el.checked
+					|| !panel.querySelector('input[type="radio"][name="' + el.name + '"]:checked')));
+	}
 	function openModal(zone) {
 		const modal = $('#fh-compat-modal');
 		if (!modal) return;
+		modalOpener = document.activeElement;
 		modal.classList.add('is-open');
 		modal.setAttribute('aria-hidden', 'false');
 		if (zone) {
@@ -485,13 +501,37 @@
 		if (search) search.value = '';
 		const results = $('[data-fh-search-results]');
 		if (results) results.innerHTML = '';
+		const focusTarget = $('.fh-compat-modal__tab', modal) || $('.fh-compat-modal__close', modal);
+		if (focusTarget) focusTarget.focus();
 	}
 	function closeModal() {
 		const modal = $('#fh-compat-modal');
 		if (!modal) return;
+		const wasOpen = modal.classList.contains('is-open');
 		modal.classList.remove('is-open');
 		modal.setAttribute('aria-hidden', 'true');
 		clearPick();
+		if (wasOpen && modalOpener && typeof modalOpener.focus === 'function' && document.body.contains(modalOpener)) {
+			modalOpener.focus();
+		}
+		modalOpener = null;
+	}
+	// Tab / Shift+Tab stay inside the open dialog's panel.
+	function trapModalTab(e) {
+		const modal = $('#fh-compat-modal');
+		if (!modal || !modal.classList.contains('is-open')) return;
+		const focusables = modalFocusables(modal);
+		if (!focusables.length) { e.preventDefault(); return; }
+		const first = focusables[0];
+		const last = focusables[focusables.length - 1];
+		const active = document.activeElement;
+		const inside = modal.contains(active);
+		if (e.shiftKey) {
+			if (!inside || active === first) { e.preventDefault(); last.focus(); }
+		} else if (!inside || active === last) {
+			e.preventDefault();
+			first.focus();
+		}
 	}
 	function switchTab(name) {
 		$$('.fh-compat-modal__tab').forEach(function (t) {
@@ -999,7 +1039,8 @@
 		});
 
 		document.addEventListener('keydown', function (e) {
-			if (e.key === 'Escape') closeModal();
+			if (e.key === 'Escape') { closeModal(); return; }
+			if (e.key === 'Tab') trapModalTab(e);
 		});
 
 		const search = $('#fh-compat-search-input');

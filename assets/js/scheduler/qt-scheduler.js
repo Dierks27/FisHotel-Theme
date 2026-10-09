@@ -96,19 +96,66 @@
     return tankGal * rate * deltaPpm;
   }
 
-  /** Formalin 37%: 1 ml per 10 gal. */
+  /**
+   * Pure per-gallon dose range for a med from FISHOTEL_MEDS
+   * (dose_pure_low/high_mg_per_gal — in whatever unit dose_unit_override
+   * names). Returns { low, high, mid } or null when the med or both
+   * fields are missing / non-positive, so callers fall back to their
+   * hard-coded literals instead of dosing 0.
+   */
+  function medDoseRange(id) {
+    var med = getMed(id);
+    if (!med) return null;
+    var lo = +med.dose_pure_low_mg_per_gal;
+    var hi = +med.dose_pure_high_mg_per_gal;
+    var hasLo = isFinite(lo) && lo > 0;
+    var hasHi = isFinite(hi) && hi > 0;
+    if (!hasLo && !hasHi) return null;
+    if (!hasLo) lo = hi;
+    if (!hasHi) hi = lo;
+    return { low: lo, high: hi, mid: (lo + hi) / 2 };
+  }
+
+  /** Short number for dose labels: 18.75 → "18.75", 25 → "25". */
+  function fmtRate(n) {
+    return String(+n.toFixed(3));
+  }
+
+  /** Formalin 37%: seed says 0.1 ml/gal (1 ml per 10 gal); literal is the fallback. */
+  function formalinMlPerGal() {
+    var med = getMed('formalin_37');
+    var r = (med && med.dose_unit_override === 'ml/gal') ? medDoseRange('formalin_37') : null;
+    return r ? r.mid : 0.1;
+  }
   function formalinMl(tankGal) {
-    return tankGal / 10;
+    return tankGal * formalinMlPerGal();
+  }
+  function formalinLabel() {
+    return '(' + fmtRate(formalinMlPerGal() * 10) + ' ml per 10 gal)';
   }
 
-  /** Metronidazole: 12.5–25 mg/gal pure. Use midpoint 18.75 mg/gal as the dose. */
+  /** Metronidazole: seed 12.5–25 mg/gal pure; dose the midpoint (18.75 fallback). */
+  function metroRange() {
+    return medDoseRange('metronidazole') || { low: 12.5, high: 25, mid: 18.75 };
+  }
   function metroDoseMg(tankGal) {
-    return tankGal * 18.75;
+    return tankGal * metroRange().mid;
+  }
+  function metroLabel() {
+    var r = metroRange();
+    return '(≈' + fmtRate(r.mid) + ' mg/gal, range ' + fmtRate(r.low) + '–' + fmtRate(r.high) + ')';
   }
 
-  /** Praziquantel: 9.5 mg/gal pure. */
+  /** Praziquantel: seed 9.5 mg/gal pure (fallback 9.5). */
+  function praziMgPerGal() {
+    var r = medDoseRange('praziquantel');
+    return r ? r.mid : 9.5;
+  }
   function praziDoseMg(tankGal) {
-    return tankGal * 9.5;
+    return tankGal * praziMgPerGal();
+  }
+  function praziLabel() {
+    return '(' + fmtRate(praziMgPerGal()) + ' mg/gal)';
   }
 
   /** Chloroquine phosphate: mgPerGal × tankGal. */
@@ -284,7 +331,7 @@
     var formalinDays = method.formalin_dose_days_count || 10;
     var fMl = formalinMl(state.tankGal);
     for (var fd = 1; fd <= formalinDays; fd++) {
-      var ftext = 'Dose ' + medLink('formalin_37') + ' — <strong>' + formatMl(fMl) + '</strong> (1 ml per 10 gal)';
+      var ftext = 'Dose ' + medLink('formalin_37') + ' — <strong>' + formatMl(fMl) + '</strong> ' + formalinLabel();
       if (fd === formalinDays) ftext += ' <em>(final formalin dose)</em>';
       entries.push({ day: fd, type: 'dose', medId: 'formalin_37', text: ftext });
     }
@@ -386,7 +433,7 @@
           text: '<strong>' + wcPct + '% water change</strong>, then retest + bump ' + medLink('copper_power') + ' to ' + dayTargetPpm.toFixed(2) + ' ppm.'
         });
       }
-      var mtext = 'Dose ' + medLink('metronidazole') + ' — <strong>' + metroFmt + '</strong> (≈18.75 mg/gal, range 12.5–25)';
+      var mtext = 'Dose ' + medLink('metronidazole') + ' — <strong>' + metroFmt + '</strong> ' + metroLabel();
       if (idx === metroDays.length - 1) mtext += ' <em>(final metro dose)</em>';
       entries.push({ day: md, type: 'dose', medId: 'metronidazole', text: mtext });
     });
@@ -396,7 +443,7 @@
       var prMg = praziDoseMg(state.tankGal);
       var prFmt = formatDoseMg(prMg);
       (method.prazi_offsets_days || [1, 8]).forEach(function (pd, i) {
-        var ptext = (i === 0 ? 'Dose ' : 'Redose ') + medLink('praziquantel') + ' — <strong>' + prFmt + '</strong> (9.5 mg/gal)';
+        var ptext = (i === 0 ? 'Dose ' : 'Redose ') + medLink('praziquantel') + ' — <strong>' + prFmt + '</strong> ' + praziLabel();
         entries.push({ day: pd, type: 'dose', medId: 'praziquantel', text: ptext });
       });
     }
@@ -483,7 +530,7 @@
       var prMg = praziDoseMg(state.tankGal);
       var prFmt = formatDoseMg(prMg);
       (method.prazi_offsets_days || [1, 8]).forEach(function (pd, i) {
-        var ptext = (i === 0 ? 'Dose ' : 'Redose ') + medLink('praziquantel') + ' — <strong>' + prFmt + '</strong> (9.5 mg/gal)';
+        var ptext = (i === 0 ? 'Dose ' : 'Redose ') + medLink('praziquantel') + ' — <strong>' + prFmt + '</strong> ' + praziLabel();
         entries.push({ day: pd, type: 'dose', medId: 'praziquantel', text: ptext });
       });
     }
@@ -555,7 +602,7 @@
           day: tDay,
           type: 'dose',
           medId: 'praziquantel',
-          text: 'Dose ' + medLink('praziquantel') + ' into Tank ' + toTank + ' — <strong>' + prFmt + '</strong> (9.5 mg/gal)'
+          text: 'Dose ' + medLink('praziquantel') + ' into Tank ' + toTank + ' — <strong>' + prFmt + '</strong> ' + praziLabel()
         });
       }
 
@@ -1412,9 +1459,19 @@
   });
 
   // Node-only export so tests/calculator-ics-fold.test.js can exercise the
-  // fold helper; browsers have no `module` and skip this.
+  // fold helper and tests/scheduler-dose-lookup.test.js the FISHOTEL_MEDS
+  // dose lookups; browsers have no `module` and skip this.
   if (typeof module === 'object' && module && module.exports) {
-    module.exports = { icsFold: icsFold, icsEscape: icsEscape };
+    module.exports = {
+      icsFold: icsFold,
+      icsEscape: icsEscape,
+      formalinMl: formalinMl,
+      formalinLabel: formalinLabel,
+      metroDoseMg: metroDoseMg,
+      metroLabel: metroLabel,
+      praziDoseMg: praziDoseMg,
+      praziLabel: praziLabel
+    };
   }
 
 })();

@@ -5,7 +5,7 @@
  */
 defined( 'ABSPATH' ) || exit;
 ?>
-<div class="fh-compat-modal" id="fh-compat-modal" aria-hidden="true" role="dialog" aria-labelledby="fh-compat-modal-title">
+<div class="fh-compat-modal" id="fh-compat-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="fh-compat-modal-title">
 	<div class="fh-compat-modal__backdrop" data-fh-modal-close></div>
 	<div class="fh-compat-modal__panel" role="document">
 

@@ -87,8 +87,11 @@ class FisHotel_Consolidated_Shipping_Email {
 		}
 
 		// Find every sibling source order in this fulfillment that carries a
-		// shipment with the same tracking number (source id => shipment row).
-		$sibling_rows = self::find_siblings_with_tracking( $fulfillment, $tracking );
+		// shipment with the same tracking number (source id => shipment row),
+		// minus siblings whose row says nothing of theirs is in this box.
+		$sibling_rows = self::drop_empty_box_siblings(
+			self::find_siblings_with_tracking( $fulfillment, $tracking )
+		);
 
 		// Only one source → nothing to consolidate. Default email is correct.
 		if ( count( $sibling_rows ) <= 1 ) {
@@ -149,11 +152,67 @@ class FisHotel_Consolidated_Shipping_Email {
 		return $out;
 	}
 
+	/** True when the row carries an explicit, non-empty line_item_ids list. */
+	private static function row_has_explicit_items( $row ) {
+		$raw = ( is_object( $row ) && isset( $row->line_item_ids ) ) ? $row->line_item_ids : null;
+		if ( empty( $raw ) ) {
+			return false;
+		}
+		$ids = is_array( $raw ) ? $raw : json_decode( (string) $raw, true );
+		return is_array( $ids ) && ! empty( array_filter( array_map( 'absint', $ids ) ) );
+	}
+
+	/**
+	 * ShipTracker >= 1.9.6 fan-out writes a NULL line_item_ids row for every
+	 * sibling source that has NOTHING in the box (the ticked items intersected
+	 * with that order's lines came out empty). So inside a group where at
+	 * least one row carries an explicit list, a NULL row that Phase 1 meta
+	 * can't reconcile to any item is an empty box — not "everything" — and
+	 * that sibling must not be named in the subject or listed in the body.
+	 * All-NULL groups (pre-1.9.6 legacy) keep the historical "covers
+	 * everything" reading, so old shipments still list every item.
+	 *
+	 * @param array<int,object> $sibling_rows source_id => wp_fst_shipments row
+	 * @return array<int,object> same shape, empty-box siblings removed.
+	 */
+	private static function drop_empty_box_siblings( array $sibling_rows ) {
+		$has_explicit = false;
+		foreach ( $sibling_rows as $row ) {
+			if ( self::row_has_explicit_items( $row ) ) {
+				$has_explicit = true;
+				break;
+			}
+		}
+		if ( ! $has_explicit ) {
+			return $sibling_rows; // legacy all-NULL group
+		}
+		$can_resolve = class_exists( 'FisHotel_Shipments_Metabox' )
+			&& method_exists( 'FisHotel_Shipments_Metabox', 'resolve_shipment_items' );
+		foreach ( $sibling_rows as $sid => $row ) {
+			if ( self::row_has_explicit_items( $row ) ) {
+				continue;
+			}
+			$resolved = $can_resolve ? FisHotel_Shipments_Metabox::resolve_shipment_items( $row ) : [];
+			if ( ! is_array( $resolved ) || empty( $resolved ) ) {
+				unset( $sibling_rows[ $sid ] );
+			}
+		}
+		return $sibling_rows;
+	}
+
 	/**
 	 * Line items of $order that are in the given shipment row. A NULL/empty
 	 * line_item_ids (legacy rows, full-order boxes) means "all items", which
 	 * keeps the previous behaviour; an explicit list (partial / EA drop-ship
-	 * splits) narrows the email to what is actually in this box.
+	 * splits) narrows the email to what is actually in this box. (NULL rows
+	 * that mean "nothing in the box" never reach here — see
+	 * drop_empty_box_siblings().)
+	 *
+	 * Delegates to FisHotel_Shipments_Metabox::resolve_shipment_items() when
+	 * available so the email and the Shipments meta box agree on what a row
+	 * covers (including its Phase 1 reconciliation of legacy NULL rows); its
+	 * [] answer means "covers everything", so every item is listed then. The
+	 * inline decode below is the fallback when that class isn't loaded.
 	 *
 	 * @param WC_Order $order
 	 * @param object   $row   wp_fst_shipments row.
@@ -161,6 +220,10 @@ class FisHotel_Consolidated_Shipping_Email {
 	 */
 	private static function items_in_shipment( WC_Order $order, $row ) {
 		$items = $order->get_items( 'line_item' );
+		if ( class_exists( 'FisHotel_Shipments_Metabox' ) && method_exists( 'FisHotel_Shipments_Metabox', 'resolve_shipment_items' ) ) {
+			$resolved = FisHotel_Shipments_Metabox::resolve_shipment_items( $row );
+			return ( is_array( $resolved ) && ! empty( $resolved ) ) ? $resolved : $items;
+		}
 		$raw   = ( is_object( $row ) && isset( $row->line_item_ids ) ) ? $row->line_item_ids : null;
 		if ( empty( $raw ) ) {
 			return $items;

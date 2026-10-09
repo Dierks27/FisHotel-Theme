@@ -104,6 +104,11 @@ class FisHotel_Checkout_Reuse {
 		}
 		$overnight = self::overnight_classes();
 		foreach ( WC()->cart->get_cart() as $cart_item ) {
+			// Sticker giveaway lines (Misc plugin, cart item data fh_sticker =
+			// free|extra) ride in whatever box ships — never overnight livestock.
+			if ( ! empty( $cart_item['fh_sticker'] ) ) {
+				continue;
+			}
 			$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
 			if ( ! $product instanceof WC_Product ) {
 				continue;

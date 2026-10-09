@@ -55,11 +55,15 @@ $categories = array(
             <?php
             $first = true;
             foreach ( $categories as $cat_key => $cat_label ) :
-                $classes = 'fh-qh-tab' . ( $first ? ' is-on' : '' );
+                $is_on   = $first;
+                $classes = 'fh-qh-tab' . ( $is_on ? ' is-on' : '' );
                 $first = false;
+                // Roving tabindex: only the selected tab is in the Tab order;
+                // Arrow/Home/End move between tabs (fishotel-calculator.js).
                 ?>
                 <button type="button" class="<?php echo esc_attr( $classes ); ?>"
-                        role="tab" aria-selected="false"
+                        role="tab" aria-selected="<?php echo $is_on ? 'true' : 'false'; ?>"
+                        tabindex="<?php echo $is_on ? '0' : '-1'; ?>"
                         data-cat="<?php echo esc_attr( $cat_key ); ?>">
                     <?php echo esc_html( $cat_label ); ?>
                 </button>
@@ -67,7 +71,7 @@ $categories = array(
         </nav>
 
         <!-- Medication picker grid (all meds, filtered via JS by active tab) -->
-        <div id="fh-qh-medgrid" class="fh-qh-medgrid" role="tablist" aria-label="Medication picker">
+        <div id="fh-qh-medgrid" class="fh-qh-medgrid" role="group" aria-label="Medication picker">
             <?php foreach ( $medications as $med ) :
                 $cat = isset( $med['category'] ) ? $med['category'] : 'misc';
                 // Map internal_dewormer category into misc for tab purposes (only ext shown)
@@ -78,6 +82,7 @@ $categories = array(
                 ?>
                 <button type="button"
                         class="fh-qh-med"
+                        aria-pressed="false"
                         data-med-id="<?php echo esc_attr( $med['med_id'] ); ?>"
                         data-cat="<?php echo esc_attr( $display_cat ); ?>">
                     <?php echo esc_html( $short ); ?>

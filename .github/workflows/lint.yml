@@ -3,9 +3,18 @@ name: Lint
 # Syntax-only gate: php -l on every tracked PHP file outside vendor/,
 # node --check on every JS file under assets/, plus the headless tests
 # in tests/ when present. Fails only on lint / syntax errors.
+#
+# push is limited to main so a PR branch runs once (via pull_request)
+# instead of twice per commit.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# Checkout only — never hand a write-capable GITHUB_TOKEN to third-party
+# actions for no reason.
+permissions:
+  contents: read
 
 jobs:
   lint:

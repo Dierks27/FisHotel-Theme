@@ -48,11 +48,12 @@ if ( ! $product->is_purchasable() ) {
 }
 
 // Comma-separated product_cat slug list — the Medications dual-axis
-// filter JS reads this off each card to decide visibility.
-$card_cat_slugs = wp_get_post_terms( $pid, 'product_cat', [ 'fields' => 'slugs' ] );
-$card_cat_attr  = ( ! is_wp_error( $card_cat_slugs ) && ! empty( $card_cat_slugs ) )
-    ? esc_attr( implode( ',', $card_cat_slugs ) )
-    : '';
+// filter JS reads this off each card to decide visibility. get_the_terms()
+// reads the object-term cache WP_Query already primed for the loop;
+// wp_get_post_terms() ran a fresh query per card (N+1).
+$card_terms     = get_the_terms( $pid, 'product_cat' );
+$card_cat_slugs = ( $card_terms && ! is_wp_error( $card_terms ) ) ? wp_list_pluck( $card_terms, 'slug' ) : [];
+$card_cat_attr  = $card_cat_slugs ? esc_attr( implode( ',', $card_cat_slugs ) ) : '';
 
 $cs_release_ts = function_exists( 'fishotel_cs_release_ts' ) ? fishotel_cs_release_ts( $pid ) : 0;
 ?>

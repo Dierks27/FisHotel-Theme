@@ -117,6 +117,86 @@
         }
     });
 
+    // Variation-selection guard. WC's add-to-cart-variation.js only toggles
+    // the button's selection-needed state through `.single_variation`
+    // show/hide events, which this custom form never renders — so on a
+    // multi-variation PDP the button stayed live with nothing chosen and
+    // the click did a full POST (reload + WC's "Please choose product
+    // options" notice). Bound AFTER the two handlers above so it sees the
+    // sold-out `disabled` property they set.
+    function variationSelectionNeeded($form) {
+        if (!$form.hasClass('variations_form')) return false;
+        var $selects = $form.find('select[data-attribute_name]');
+        if (!$selects.length) return false;
+        var missing = false;
+        $selects.each(function() {
+            if (!$(this).val()) { missing = true; return false; }
+        });
+        // WC only fills variation_id once an in-stock match resolves.
+        return missing || !$form.find('input[name="variation_id"]').val();
+    }
+
+    function toggleVariationHint($form, show) {
+        var $hint = $form.find('.fh-purchase__hint').first();
+        if (!$hint.length) return;
+        if (show) {
+            var params = window.wc_add_to_cart_variation_params;
+            if (params && params.i18n_make_a_selection_text) {
+                $hint.text(params.i18n_make_a_selection_text);
+            }
+        }
+        $hint.prop('hidden', !show);
+    }
+
+    function syncVariationSelectionState($form) {
+        var $cta = $form.find('.single_add_to_cart_button');
+        if (!$cta.length) return;
+        // Sold out owns the button (disabled property + Notify Me); never
+        // layer the selection-needed state on top of it. Classes + aria
+        // only, NOT the disabled property, so the click still lands and
+        // can surface the hint.
+        var needed = !$cta.prop('disabled') && variationSelectionNeeded($form);
+        $cta.toggleClass('disabled wc-variation-selection-needed', needed);
+        if (needed) {
+            $cta.attr('aria-disabled', 'true');
+        } else {
+            $cta.removeAttr('aria-disabled');
+            toggleVariationHint($form, false);
+        }
+    }
+
+    $(document).on('found_variation.wc-variation-form reset_data.wc-variation-form', '.fh-purchase__form', function() {
+        syncVariationSelectionState($(this));
+    });
+
+    function initVariationSelectionGuard() {
+        // Capture-phase listener: WC's own delegated click handler on the
+        // form window.alert()s the same message when the button carries
+        // `.disabled`; running first (and stopping propagation) swaps that
+        // for the inline hint. Only intercepts while a selection is needed.
+        document.addEventListener('click', function(e) {
+            var $btn = $(e.target).closest('.fh-purchase__form .single_add_to_cart_button');
+            if (!$btn.length || $btn.prop('disabled')) return;
+            var $form = $btn.closest('.fh-purchase__form');
+            if (!variationSelectionNeeded($form)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            toggleVariationHint($form, true);
+        }, true);
+
+        // Belt and braces: anything that reaches submit with no variation
+        // resolved (Enter in a field, a plugin's programmatic submit) stays
+        // on the page with the hint instead of round-tripping to WC's error.
+        $(document).on('submit', '.fh-purchase__form.variations_form', function(e) {
+            var $form = $(this);
+            if (!variationSelectionNeeded($form)) return;
+            e.preventDefault();
+            toggleVariationHint($form, true);
+        });
+
+        $('.fh-purchase__form').each(function() { syncVariationSelectionState($(this)); });
+    }
+
     // Snapshot each purchase panel's server-rendered state so reset_data
     // can restore the initial eyebrow / price / badge without a flicker.
     function snapshotInitialPurchaseState() {
@@ -262,8 +342,8 @@
 
         $(document).on('click', '.fh-gallery__thumb', function() {
             var $thumb = $(this);
-            $('.fh-gallery__thumb').removeClass('active');
-            $thumb.addClass('active');
+            $('.fh-gallery__thumb').removeClass('active').removeAttr('aria-current');
+            $thumb.addClass('active').attr('aria-current', 'true');
             showImage(fullSrc($thumb));
         });
 
@@ -314,10 +394,32 @@
             idx = (idx + step + srcs.length) % srcs.length;
             render();
         }
+        // Focus management: remember what opened the viewer (thumb / hero
+        // button), move focus inside on open, keep Tab cycling among the
+        // viewer's own buttons, and hand focus back on close.
+        var opener = document.activeElement;
+
         function close() {
             $box.remove();
             $(document).off('keydown.fhlightbox');
             $('body').css('overflow', '');
+            if (opener && typeof opener.focus === 'function' && $.contains(document.documentElement, opener)) {
+                opener.focus();
+            }
+        }
+
+        function trapTab(e) {
+            var controls = $box.find('button').get();
+            if (!controls.length) return;
+            var first = controls[0];
+            var last  = controls[controls.length - 1];
+            var active = document.activeElement;
+            var inside = $.contains($box[0], active);
+            if (e.shiftKey) {
+                if (!inside || active === first) { e.preventDefault(); last.focus(); }
+            } else if (!inside || active === last) {
+                e.preventDefault(); first.focus();
+            }
         }
 
         $box.on('click', '.fh-lightbox__close', close);
@@ -329,6 +431,7 @@
 
         $(document).on('keydown.fhlightbox', function(e) {
             if (e.key === 'Escape') close();
+            else if (e.key === 'Tab') trapTab(e);
             else if (multiple && e.key === 'ArrowLeft') go(-1);
             else if (multiple && e.key === 'ArrowRight') go(1);
         });
@@ -345,6 +448,68 @@
 
         render();
         $('body').css('overflow', 'hidden').append($box);
+        $box.find('.fh-lightbox__close').trigger('focus');
+    }
+
+    // Shop sort <select> — option values are full URLs (archive-product.php).
+    // Mouse / touch picks fire one `change`, so navigate right away. Keyboard
+    // stepping (arrows, Home/End, type-ahead letters) fires `change` on every
+    // step in a closed select, so for those wait for Enter or blur instead of
+    // loading a page per keypress — with a debounced fallback, because on
+    // macOS Chrome/Safari an arrow key OPENS the native popup and the Enter
+    // that commits inside it never reaches the page as a keydown (only as
+    // `change`), so without the fallback that path never navigated at all.
+    function initShopSort() {
+        var keyboardStepping = false;
+        var stepTimer = null;
+
+        function go(sel) {
+            var opt = sel.options[sel.selectedIndex];
+            // Unchanged from the server-rendered selection → nothing to do.
+            if (!opt || !opt.value || opt.defaultSelected) return;
+            window.location.href = opt.value;
+        }
+
+        $(document).on('keydown', '.fh-shop-sort', function(e) {
+            var k = e.key;
+            if (k === 'Enter') {
+                var sel = this;
+                keyboardStepping = false;
+                clearTimeout(stepTimer);
+                // Defer so the browser applies a highlighted option (open
+                // popup case) before we read the value.
+                setTimeout(function() { go(sel); }, 0);
+            } else if (!e.altKey && k !== 'F4' && k !== 'Tab' && k !== 'Escape' && k !== ' ' && k !== 'Shift' && k !== 'Alt' && k !== 'Control' && k !== 'Meta') {
+                // Alt+Arrow / F4 open the native list (Windows) rather than
+                // step it — the commit inside that list only fires `change`,
+                // which must navigate right away, so they don't arm the flag.
+                keyboardStepping = true;
+            }
+        });
+        $(document).on('mousedown touchstart', '.fh-shop-sort', function() {
+            keyboardStepping = false;
+        });
+        $(document).on('change', '.fh-shop-sort', function() {
+            var sel = this;
+            if (!keyboardStepping) { go(sel); return; }
+            // Keyboard stepping: collapse a run of steps into one load once
+            // the user pauses (Enter / blur still navigate immediately).
+            clearTimeout(stepTimer);
+            stepTimer = setTimeout(function() {
+                keyboardStepping = false;
+                go(sel);
+            }, 900);
+        });
+        $(document).on('blur', '.fh-shop-sort', function(e) {
+            clearTimeout(stepTimer);
+            if (!keyboardStepping) return;
+            keyboardStepping = false;
+            // Focus left for a link / button (the user clicked a card, Load
+            // More, a filter…): let that click navigate instead of racing it.
+            var to = e.originalEvent && e.originalEvent.relatedTarget;
+            if (to && $(to).closest('a,button').length) return;
+            go(this);
+        });
     }
 
     // Mobile nav — toggle drawer and manage ARIA
@@ -698,7 +863,11 @@
         initVariationButtons();
         initVariationAvailability();
         initVariationAutoSelect();
+        // After auto-select so a single-variation product is already
+        // resolved when the initial selection-state sync runs.
+        initVariationSelectionGuard();
         initGallery();
+        initShopSort();
         initMobileNav();
         initNavDropdowns();
         initQty();

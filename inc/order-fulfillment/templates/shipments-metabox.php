@@ -200,7 +200,6 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 				<option value="auto"><?php esc_html_e( 'Auto-detect', 'fishotel' ); ?></option>
 				<option value="ups">UPS</option>
 				<option value="usps">USPS</option>
-				<option value="fedex">FedEx</option>
 			</select>
 		</p>
 

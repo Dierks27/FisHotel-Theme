@@ -237,7 +237,9 @@ if ( $is_shop_root ) {
         </div>
         <?php endif; ?>
 
-        <select class="fh-shop-sort" onchange="window.location=this.value">
+        <?php /* Navigation on change lives in main.js (initShopSort) so
+                keyboard arrow-stepping doesn't trigger a page load per key. */ ?>
+        <select class="fh-shop-sort" aria-label="<?php esc_attr_e( 'Sort products', 'fishotel' ); ?>">
             <?php
             // Alphabetical is the default (no orderby param → title A→Z), so
             // it's the selected option on a fresh visit. Build option URLs

@@ -231,9 +231,20 @@ class FisHotel_Theme_Updater {
 		return $source;
 	}
 
-	/** Add auth header for GitHub API download requests */
+	/**
+	 * Add auth header for GitHub API download requests.
+	 *
+	 * Anchored to scheme https + host api.github.com + path prefix
+	 * /repos/<REPO>/ — the old unanchored substring match would have handed
+	 * the PAT to ANY outbound WP HTTP request whose URL merely contained the
+	 * repo path (e.g. an XML-RPC pingback target or a crafted oEmbed URL).
+	 */
 	public static function inject_auth_header( $parsed_args, $url ) {
-		if ( strpos( $url, 'api.github.com/repos/' . self::REPO ) === false ) {
+		$p = wp_parse_url( (string) $url );
+		if ( ! is_array( $p )
+			|| empty( $p['scheme'] ) || 'https' !== strtolower( $p['scheme'] )
+			|| empty( $p['host'] ) || 'api.github.com' !== strtolower( $p['host'] )
+			|| empty( $p['path'] ) || 0 !== strpos( $p['path'], '/repos/' . self::REPO . '/' ) ) {
 			return $parsed_args;
 		}
 

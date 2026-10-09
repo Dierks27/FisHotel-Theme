@@ -387,20 +387,61 @@ function fishotel_enqueue_about_assets() {
 add_action( 'wp_enqueue_scripts', 'fishotel_enqueue_about_assets' );
 
 /**
+ * Gate for the admin_init page/taxonomy bootstraps.
+ *
+ * admin_init fires on every wp-admin, admin-post and admin-ajax request;
+ * the seven bootstraps together cost ~45 small queries and re-create any
+ * page Jeff trashed on purpose. Nothing they assert can drift between two
+ * admin loads of the same theme build, so they only need to run ONCE per
+ * FISHOTEL_THEME_VERSION (option fishotel_bootstrap_v, autoloaded = zero
+ * extra queries on the skip path), and never on AJAX / cron / REST.
+ *
+ * The decision is memoised per request so every bootstrap on the same
+ * admin_init sees the same answer; the version stamp is written at the
+ * very end of that admin_init (see fishotel_mark_bootstraps_done), so a
+ * fatal inside one bootstrap leaves the stamp unset and the next admin
+ * load retries. after_switch_theme stays the forced re-run path — it
+ * never consults this gate.
+ *
+ * @return bool True when the bootstraps should run on this request.
+ */
+function fishotel_should_run_bootstraps() {
+    static $run = null;
+    if ( null !== $run ) {
+        return $run;
+    }
+    if ( wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+        $run = false;
+        return $run;
+    }
+    if ( (string) get_option( 'fishotel_bootstrap_v', '' ) === FISHOTEL_THEME_VERSION ) {
+        $run = false;
+        return $run;
+    }
+    $run = true;
+    // Stamp after every bootstrap hooked to this admin_init has run.
+    add_action( 'admin_init', 'fishotel_mark_bootstraps_done', PHP_INT_MAX );
+    return $run;
+}
+
+/** Record that the bootstraps ran for the current theme version. */
+function fishotel_mark_bootstraps_done() {
+    update_option( 'fishotel_bootstrap_v', FISHOTEL_THEME_VERSION, true );
+}
+
+/**
  * Generic page bootstrap: ensure a page exists at $slug and is bound to
  * $template. Durable against the case where the page already existed on
  * the default template (the symptom we hit on Contacts and Newsletter).
  *
- * Runs on admin_init — no option-flag gating, because update_post_meta
- * is idempotent and skipping when the meta is already correct is cheap.
- * Creates the page as a Draft if it doesn't exist; reasserts the template
- * meta if it does but the binding is missing or wrong.
+ * On admin_init it runs once per theme version (fishotel_should_run_bootstraps);
+ * from after_switch_theme — or a direct call — it always runs, so
+ * re-activating the theme remains the forced re-run path. Creates the page
+ * as a Draft if it doesn't exist; reasserts the template meta if it does
+ * but the binding is missing or wrong.
  */
 function fishotel_bootstrap_template_page( $slug, $template, $title ) {
-    // admin_init also fires on every admin-ajax + heartbeat request; the
-    // page lookups below are uncached, so only run them on real admin
-    // screen loads (the binding can't drift between two of those anyway).
-    if ( wp_doing_ajax() ) {
+    if ( 'admin_init' === current_action() && ! fishotel_should_run_bootstraps() ) {
         return;
     }
     $page = get_page_by_path( $slug );
@@ -430,6 +471,10 @@ function fishotel_bootstrap_newsletter_page(){ fishotel_bootstrap_template_page(
 add_action( 'admin_init', 'fishotel_bootstrap_about_page' );
 add_action( 'admin_init', 'fishotel_bootstrap_contacts_page' );
 add_action( 'admin_init', 'fishotel_bootstrap_newsletter_page' );
+// Forced re-run on theme (re)activation — bypasses the once-per-version gate.
+add_action( 'after_switch_theme', 'fishotel_bootstrap_about_page' );
+add_action( 'after_switch_theme', 'fishotel_bootstrap_contacts_page' );
+add_action( 'after_switch_theme', 'fishotel_bootstrap_newsletter_page' );
 
 // Live cart-count badge — WooCommerce swaps this fragment on AJAX add/remove,
 // so the count in the header updates without a page reload.

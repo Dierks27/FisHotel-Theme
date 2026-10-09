@@ -907,6 +907,29 @@ h1, h2, h3, h4, h5 {
   display: block;
 }
 
+/* Hero zoom + thumbs are real <button>s so the lightbox is keyboard-
+   reachable; reset the UA button chrome, keep the existing look. */
+.fh-gallery__zoom {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+
+/* .fh-gallery__main clips overflow, so the hero ring sits inside. */
+.fh-gallery__zoom:focus-visible {
+  outline: 2px solid var(--fh-gold);
+  outline-offset: -3px;
+}
+
+.fh-gallery__thumb:focus-visible {
+  outline: 2px solid var(--fh-gold);
+  outline-offset: 2px;
+}
+
 .fh-gallery__badge-status {
   position: absolute;
   top: 14px;
@@ -970,6 +993,10 @@ h1, h2, h3, h4, h5 {
 }
 
 .fh-gallery__thumb {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: none;
   aspect-ratio: 1;
   border: 1px solid var(--fh-border);
   overflow: hidden;
@@ -1070,6 +1097,23 @@ h1, h2, h3, h4, h5 {
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+/* Multi-variation PDP with no option chosen yet — WC's selection-needed
+   state (classes + aria-disabled only). The button stays clickable so the
+   click reveals .fh-purchase__hint instead of POSTing to a WC error. */
+.single_add_to_cart_button.wc-variation-selection-needed {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.fh-purchase__hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fh-amber);
+}
+
+.fh-purchase__hint[hidden] { display: none; }
 
 /* Not-purchasable PDP (no price etc.) — replaces badge + qty + button. */
 .fh-purchase__unavailable {

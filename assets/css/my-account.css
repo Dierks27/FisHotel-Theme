@@ -125,9 +125,10 @@ body.woocommerce-account { background: var(--fha-bg); }
 	border-radius: 2px;
 	padding: 28px 0 12px;
 	position: sticky;
-	/* Clear the announcer bar (--ancr-bar-height) so the concierge nav
-	   stays below the sticky header; falls back to 60px when absent. */
-	top: calc(60px + var(--ancr-bar-height, 0px));
+	/* Clear the 71px sticky compact header (+ the announcer bar via
+	   --ancr-bar-height) so the concierge nav never slides under it;
+	   same 84px offset as .fh-gallery / .fh-checkout-right. */
+	top: calc(84px + var(--ancr-bar-height, 0px));
 }
 .fh-account-nav__mobile-toggle { display: none; }
 
@@ -371,6 +372,20 @@ body.woocommerce-account { background: var(--fha-bg); }
 .fh-reslist__summary { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fha-cream-muted); }
 .fh-reslist__total { font-family: var(--fha-font-display); font-size: 18px; color: var(--fha-cream); }
 .fh-reslist__view { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fha-gold); white-space: nowrap; }
+/* View + Pay / Cancel (pending / failed orders) share the last grid cell */
+.fh-reslist__actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+.fh-reslist__action--cancel { color: var(--fha-cream-muted); }
+/* Pay / Cancel are real actions (Cancel releases the fish's stock hold), so
+   give them a >= 24px-tall bordered hit area instead of a 10px text link a
+   thumb aimed at VIEW can land on. */
+.fh-reslist__action--pay,
+.fh-reslist__action--cancel,
+.fh-orders-row__action--pay,
+.fh-orders-row__action--cancel { display: inline-block; padding: 8px 12px; border: 1px solid var(--fha-border); }
+.fh-reslist__action--pay:hover,
+.fh-reslist__action--cancel:hover,
+.fh-orders-row__action--pay:hover,
+.fh-orders-row__action--cancel:hover { border-color: var(--fha-gold); }
 
 .fh-lobby-actions {
 	margin-top: 32px;
@@ -439,6 +454,9 @@ body.woocommerce-account { background: var(--fha-bg); }
 	padding-bottom: 2px;
 }
 .fh-orders-row__view:hover { border-bottom-color: var(--fha-gold); }
+/* Pay / Cancel sit beside View on pending / failed orders */
+.fh-orders-row__view + .fh-orders-row__view { margin-left: 14px; }
+.fh-orders-row__action--cancel { color: var(--fha-cream-muted); }
 
 .fh-orders-table .col-delivery {
 	color: var(--fha-cream);
@@ -799,13 +817,14 @@ body.woocommerce-account { background: var(--fha-bg); }
 		gap: 8px 16px;
 	}
 	.fh-reslist__total,
-	.fh-reslist__view { grid-column: 2; justify-self: start; }
+	.fh-reslist__actions { grid-column: 2; justify-self: start; justify-content: flex-start; }
 
 	.fh-orders-table thead { display: none; }
 	.fh-orders-table tr { display: block; border-bottom: 1px solid var(--fha-border-soft); padding: 14px 0; }
 	.fh-orders-table td { display: flex; justify-content: space-between; gap: 16px; padding: 8px 4px; border: none; text-align: right; }
 	.fh-orders-table td::before { content: attr(data-title); color: var(--fha-gold); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; }
 	.fh-orders-table td.col-actions { justify-content: flex-end; }
+	.fh-orders-row__view + .fh-orders-row__view { margin-left: 0; } /* td gap handles spacing */
 }
 
 /* ─────────────────────────────────────────

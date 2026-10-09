@@ -111,12 +111,35 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 				<td class="fh-statement-item__thumb"><?php echo $thumb_html; ?></td>
 				<td class="fh-statement-item__body">
 					<div class="fh-statement-item__title"><?php echo wp_kses_post( $item_name ); ?></div>
-					<?php /* Cart item data (woocommerce_get_item_data): WC Gift Cards
-					        recipient/message, sticker labels, etc. — never shown
-					        by the theme before. */ ?>
-					<?php $item_meta = wc_get_formatted_cart_item_data( $cart_item ); ?>
-					<?php if ( '' !== trim( (string) $item_meta ) ) : ?>
-						<div class="fh-cart-item__meta"><?php echo wp_kses_post( $item_meta ); ?></div>
+					<?php /* Plugin-only cart item data (woocommerce_get_item_data): WC
+					        Gift Cards recipient/message, the Misc plugin's sticker
+					        label, etc. Filtered from an empty array on purpose —
+					        wc_get_formatted_cart_item_data() would also list the
+					        variation attributes the pills below already show.
+					        Mirrors WC's hidden / key / display resolution. */ ?>
+					<?php
+					$extra_rows = [];
+					foreach ( (array) apply_filters( 'woocommerce_get_item_data', [], $cart_item ) as $data ) {
+						if ( ! is_array( $data ) || ! empty( $data['hidden'] ) ) {
+							continue;
+						}
+						$data_key     = ! empty( $data['key'] ) ? $data['key'] : ( isset( $data['name'] ) ? $data['name'] : '' );
+						$data_display = ! empty( $data['display'] ) ? $data['display'] : ( isset( $data['value'] ) ? $data['value'] : '' );
+						if ( '' === trim( (string) $data_display ) ) {
+							continue;
+						}
+						$extra_rows[] = [ 'key' => (string) $data_key, 'display' => (string) $data_display ];
+					}
+					?>
+					<?php if ( $extra_rows ) : ?>
+						<div class="fh-cart-item__meta">
+							<dl class="variation">
+								<?php foreach ( $extra_rows as $row ) : ?>
+									<?php if ( '' !== $row['key'] ) : ?><dt><?php echo esc_html( $row['key'] ); ?>:</dt><?php endif; ?>
+									<dd><?php echo wp_kses_post( $row['display'] ); ?></dd>
+								<?php endforeach; ?>
+							</dl>
+						</div>
 					<?php endif; ?>
 					<?php if ( $variation_pills || $is_fish_item || $quantity > 0 ) : ?>
 					<div class="fh-statement-item__meta">

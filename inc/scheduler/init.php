@@ -68,14 +68,12 @@ function fishotel_enqueue_qt_scheduler_assets() {
     }
 }
 
-// Bootstrap the /qt-scheduler/ page if it doesn't already exist.
-add_action( 'admin_init', 'fishotel_bootstrap_qt_scheduler_page' );
+// Bootstrap the /qt-scheduler/ page if it doesn't already exist. The shared
+// helper runs once per theme version on admin_init (never on AJAX / cron /
+// REST) and unconditionally on after_switch_theme — the forced re-run path.
+add_action( 'admin_init',         'fishotel_bootstrap_qt_scheduler_page' );
+add_action( 'after_switch_theme', 'fishotel_bootstrap_qt_scheduler_page' );
 function fishotel_bootstrap_qt_scheduler_page() {
-    // Skip admin-ajax / heartbeat — same guard as the shared bootstrap in
-    // functions.php, kept here so this file stands on its own.
-    if ( wp_doing_ajax() ) {
-        return;
-    }
     if ( function_exists( 'fishotel_bootstrap_template_page' ) ) {
         fishotel_bootstrap_template_page( 'qt-scheduler', 'page-qt-scheduler.php', 'QT Scheduler' );
     }

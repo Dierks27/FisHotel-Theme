@@ -68,9 +68,13 @@ function fishotel_quarantined_fish_url() {
  * and Jeff can rename a page without breaking the links.
  *
  * All four templates are fetched in ONE query the first time any of them
- * is requested (static + object cache), so the footer + PDP row cost a
- * single lookup per request. Only published pages resolve; returns ''
- * when nothing matches so callers can skip the link entirely.
+ * is requested (per-request static), so the footer + PDP row cost a
+ * single cheap lookup per request. Deliberately NOT persisted in the
+ * object cache: with Redis/Memcached a renamed, unpublished or
+ * re-templated tool page kept its stale footer/PDP link for up to an hour
+ * and there is no save_post invalidation worth maintaining for one query.
+ * Only published pages resolve; returns '' when nothing matches so callers
+ * can skip the link entirely.
  *
  * @param string $template      Template file name, e.g. 'page-qt-scheduler.php'.
  * @param string $fallback_slug Page slug to try when no page uses the template.
@@ -87,37 +91,31 @@ function fishotel_tool_page_url( $template, $fallback_slug = '' ) {
     ];
 
     if ( $map === null ) {
-        $cached = wp_cache_get( 'fishotel_tool_page_map', 'fishotel' );
-        if ( is_array( $cached ) ) {
-            $map = $cached;
-        } else {
-            $map = [];
-            $ids = get_posts( [
-                'post_type'              => 'page',
-                'post_status'            => 'publish',
-                'posts_per_page'         => 20,
-                'fields'                 => 'ids',
-                'orderby'                => 'ID',
-                'order'                  => 'ASC',
-                'no_found_rows'          => true,
-                'update_post_term_cache' => false,
-                'meta_query'             => [
-                    [
-                        'key'     => '_wp_page_template',
-                        'value'   => $known,
-                        'compare' => 'IN',
-                    ],
+        $map = [];
+        $ids = get_posts( [
+            'post_type'              => 'page',
+            'post_status'            => 'publish',
+            'posts_per_page'         => 20,
+            'fields'                 => 'ids',
+            'orderby'                => 'ID',
+            'order'                  => 'ASC',
+            'no_found_rows'          => true,
+            'update_post_term_cache' => false,
+            'meta_query'             => [
+                [
+                    'key'     => '_wp_page_template',
+                    'value'   => $known,
+                    'compare' => 'IN',
                 ],
-            ] );
-            foreach ( (array) $ids as $id ) {
-                $tpl = (string) get_post_meta( $id, '_wp_page_template', true );
-                // First (lowest ID) page per template wins — mirrors the
-                // bootstraps, which force the template onto a fixed page.
-                if ( $tpl !== '' && ! isset( $map[ $tpl ] ) ) {
-                    $map[ $tpl ] = (int) $id;
-                }
+            ],
+        ] );
+        foreach ( (array) $ids as $id ) {
+            $tpl = (string) get_post_meta( $id, '_wp_page_template', true );
+            // First (lowest ID) page per template wins — mirrors the
+            // bootstraps, which force the template onto a fixed page.
+            if ( $tpl !== '' && ! isset( $map[ $tpl ] ) ) {
+                $map[ $tpl ] = (int) $id;
             }
-            wp_cache_set( 'fishotel_tool_page_map', $map, 'fishotel', HOUR_IN_SECONDS );
         }
     }
 
@@ -245,6 +243,34 @@ function fishotel_tag_modifier_class( $slug ) {
 }
 
 /**
+ * product_cat slugs of a product, memoised per product id for the request.
+ *
+ * Backs the category predicates below (quarantined fish / medication /
+ * food), which are asked several times per product on the PDP, the cart
+ * and every checkout AJAX refresh. get_the_terms() reads the object-term
+ * cache WP_Query primes for the loop (and fills it once otherwise), so a
+ * product costs at most one term query per request instead of one per
+ * predicate call via wp_get_post_terms().
+ *
+ * @param int $product_id Product post ID.
+ * @return string[] Slugs, [] when none / unknown product.
+ */
+function fishotel_product_cat_slugs( $product_id ) {
+    static $memo = [];
+    $product_id = (int) $product_id;
+    if ( ! $product_id ) {
+        return [];
+    }
+    if ( ! isset( $memo[ $product_id ] ) ) {
+        $terms = get_the_terms( $product_id, 'product_cat' );
+        $memo[ $product_id ] = ( is_array( $terms ) && ! is_wp_error( $terms ) )
+            ? array_values( wp_list_pluck( $terms, 'slug' ) )
+            : [];
+    }
+    return $memo[ $product_id ];
+}
+
+/**
  * True when the product is in the `quarantined-fish` category — the
  * single allowlist gate for fish-specific PDP UI (QT badge, trust
  * strip, "About This Species" data table, "About This Fish" prose
@@ -263,11 +289,7 @@ function fishotel_is_quarantined_fish( $product_id = null ) {
     if ( ! $product_id ) {
         return false;
     }
-    $cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
-    if ( is_wp_error( $cats ) || empty( $cats ) ) {
-        return false;
-    }
-    return in_array( 'quarantined-fish', $cats, true );
+    return in_array( 'quarantined-fish', fishotel_product_cat_slugs( $product_id ), true );
 }
 
 /**
@@ -525,12 +547,12 @@ function fishotel_is_medication_product( $product_id = null ) {
     if ( ! $product_id ) {
         return false;
     }
-    $cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
-    if ( is_wp_error( $cats ) || empty( $cats ) ) {
+    $cats = fishotel_product_cat_slugs( $product_id );
+    if ( empty( $cats ) ) {
         return false;
     }
     $med_slugs = [ 'medications', 'flakes', 'pellets', 'powders', 'liquid', 'antibacterial', 'antiparasitic', 'dewormer' ];
-    return (bool) array_intersect( $med_slugs, (array) $cats );
+    return (bool) array_intersect( $med_slugs, $cats );
 }
 
 /**
@@ -544,12 +566,12 @@ function fishotel_is_food_product( $product_id = null ) {
     if ( ! $product_id ) {
         return false;
     }
-    $cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
-    if ( is_wp_error( $cats ) || empty( $cats ) ) {
+    $cats = fishotel_product_cat_slugs( $product_id );
+    if ( empty( $cats ) ) {
         return false;
     }
     $food_slugs = [ 'freeze-dried-foods', 'fish-food', 'medicated-food' ];
-    return (bool) array_intersect( $food_slugs, (array) $cats );
+    return (bool) array_intersect( $food_slugs, $cats );
 }
 
 /**

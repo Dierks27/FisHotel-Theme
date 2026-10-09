@@ -76,6 +76,10 @@ $available_args = [
     ],
 ];
 $available_query = new WP_Query($available_args);
+// Custom WP_Query loops don't prime the thumbnail cache the way the main
+// query does — without this each card fetches its attachment post + meta
+// individually (~2 queries per card).
+update_post_thumbnail_cache( $available_query );
 ?>
 <?php if ($available_query->have_posts()) : ?>
 <section class="fh-section" style="padding-top:72px; padding-bottom:72px;">
@@ -250,7 +254,10 @@ if ( $tm_count > 0 ) :
 <section class="fh-cta-section">
     <h2 class="fh-cta-title">Ready to check <em>your fish</em> in?</h2>
     <p class="fh-cta-sub">Browse current availability or get in touch about an upcoming arrival.</p>
-    <div style="display:flex; gap:16px; justify-content:center; position:relative;">
+    <?php /* .fh-hero__actions wraps (flex-wrap) so the pair never overflows
+            the 320px content box on phones; home.css lifts it above the
+            section's ::before gradient. */ ?>
+    <div class="fh-hero__actions">
         <a href="<?php echo esc_url( $fish_url ); ?>" class="fh-btn fh-btn--gold">View Current Availability</a>
         <a href="<?php echo esc_url( home_url('/newsletter/') ); ?>" class="fh-btn fh-btn--ghost">Get Arrival Notifications</a>
     </div>

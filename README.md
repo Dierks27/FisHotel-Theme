@@ -37,7 +37,7 @@ fishotel-theme/
 │   ├── template-functions.php Helper functions
 │   ├── calculator/            Medication Dosing Calculator data + wiring
 │   ├── scheduler/             QT Scheduler wiring
-│   ├── medication-store/      Medication / food store (EA sync, pricing, packing slip)
+│   ├── medication-store/      Medication / food store (EA sync, pricing, packing slip, checkout terms record — see disclaimer.php docblock)
 │   ├── order-fulfillment/     Split fulfillment, shipments meta box, checkout reuse
 │   ├── customer/              Self-serve delivery date, address propagation
 │   └── email/                 Consolidated shipping email
@@ -91,6 +91,27 @@ Every WooCommerce product gets a "FisHotel — Product Data" meta box with three
 - Replaces WooCommerce dropdowns with button groups
 - Supports: Size, Sex, Phase, Color, and any custom attribute
 - Hidden `<select>` keeps WooCommerce JS working underneath
+
+### Medication Terms Record (inc/medication-store/terms-record.php + terms-display.php)
+When the cart holds a medication, checkout shows the required "ornamental use only" checkbox
+with a "Read the terms" link (opens the disclaimer in a read-only modal, or the Terms page when
+one is set). On order creation the full acceptance record is stored as `_fishotel_med_terms`
+order meta: timestamp (UTC + site time), IP, user agent, the exact checkbox text, terms version
+and hash, the medication lines in the cart and any extra acknowledgements. It shows on the admin
+order screen ("Medication terms" box — an order with meds and no record is flagged NOT RECORDED
+with a "Record manual acknowledgement" button for phone / admin-created orders; a fulfillment
+lists its source orders' records), in the processing / completed / invoice / new-order emails,
+on the WPO PDF invoice and packing slip, on the EA packing slip (date + version, no IP) and on
+My Account → view order.
+
+Settings (FisHotel Theme → Medication Store):
+- **Terms version** (`fishotel_med_terms_version`, default `2026-10`) — bump when the wording changes;
+  every order records the version it accepted.
+- **Terms page** (`fishotel_med_terms_page`) — optional public page containing `[fishotel_med_terms]`
+  (prints the body, version and checkbox label); the "Read the terms" links then go there.
+- **Extra checkout acknowledgement** — per-product textarea (`_fishotel_med_extra_ack`) on the
+  FisHotel Medication tab; each distinct text adds one more required checkbox at checkout
+  (e.g. chloroquine) and the accepted text is stored on the order.
 
 ## Build Phases
 

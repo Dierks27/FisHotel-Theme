@@ -629,6 +629,15 @@ on this order are fulfilled separately and are intentionally not on the attached
 		// full set of order numbers so Dena knows what shipped together.
 		$combined_numbers = self::combined_order_numbers( $order );
 
+		// C2: medication terms acceptance line(s) so EverythingAquatic sees
+		// the customer accepted the ornamental-use terms (one per source
+		// order on a fulfillment). Date + version only: the customer's IP
+		// stays on FisHotel's own documents, not on paperwork emailed to a
+		// third party.
+		$terms_lines = class_exists( 'FisHotel_Med_Terms_Display' )
+			? FisHotel_Med_Terms_Display::lines_for_order( $order, false )
+			: [];
+
 		ob_start();
 		?>
 <!doctype html>
@@ -661,6 +670,8 @@ on this order are fulfilled separately and are intentionally not on the attached
 	.slip__items td.size { color: #555; }
 	.slip__items td.sku { font-family: "Courier New", monospace; font-size: 13px; color: #555; }
 	.slip__empty { padding: 18px 28px; color: #b32d2e; font-style: italic; }
+	.slip__terms { padding: 12px 28px; border-top: 1px solid #ece6d6; font-size: 11px; color: #555; }
+	.slip__terms p { margin: 0 0 3px; }
 	.slip__footer { padding: 22px 28px; border-top: 2px solid #d4a574; background: #faf8f1; font-size: 12px; color: #555; }
 	.slip__footer p { margin: 0 0 4px; }
 	.slip__footer .note { font-size: 11px; color: #847d6c; }
@@ -742,6 +753,14 @@ on this order are fulfilled separately and are intentionally not on the attached
 				</table>
 			<?php endif; ?>
 		</section>
+
+		<?php if ( ! empty( $terms_lines ) ) : ?>
+		<section class="slip__terms">
+			<?php foreach ( $terms_lines as $terms_line ) : ?>
+				<p><?php echo esc_html( $terms_line ); ?></p>
+			<?php endforeach; ?>
+		</section>
+		<?php endif; ?>
 
 		<footer class="slip__footer">
 			<p><strong>Thank you for your order!</strong></p>

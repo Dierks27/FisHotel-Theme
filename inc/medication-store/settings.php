@@ -35,6 +35,8 @@ class FisHotel_Med_Settings {
 			'fishotel_med_disclaimer_body'    => '',
 			'fishotel_med_disclaimer_days'    => 30,
 			'fishotel_med_checkout_label'     => '',
+			'fishotel_med_terms_version'      => '2026-10',
+			'fishotel_med_terms_page'         => 0,
 			'fishotel_med_free_ship_threshold'=> 124.99,
 			'fishotel_med_ship_flat'          => 0.0,
 			'fishotel_med_auto_email_slip'    => 0,
@@ -71,6 +73,44 @@ class FisHotel_Med_Settings {
 	public static function get_checkout_label() {
 		$saved = (string) get_option( 'fishotel_med_checkout_label', '' );
 		return $saved !== '' ? $saved : self::default_checkout_label();
+	}
+
+	/**
+	 * Terms version recorded on every order (C2). Bumped by hand when the
+	 * disclaimer wording changes; defaults to '2026-10'.
+	 */
+	public static function get_terms_version() {
+		$saved = (string) get_option( 'fishotel_med_terms_version', '' );
+		if ( class_exists( 'FisHotel_Med_Terms' ) ) {
+			return FisHotel_Med_Terms::sanitize_version( $saved );
+		}
+		return $saved !== '' ? $saved : '2026-10';
+	}
+
+	/**
+	 * Public "Medication Terms" page URL when the Terms page setting points
+	 * at a published page, else '' (the "Read the terms" links then open
+	 * the modal in read-only mode instead).
+	 */
+	public static function get_terms_page_url() {
+		$page_id = (int) get_option( 'fishotel_med_terms_page', 0 );
+		if ( $page_id <= 0 ) {
+			return '';
+		}
+		if ( get_post_status( $page_id ) !== 'publish' ) {
+			return '';
+		}
+		$url = get_permalink( $page_id );
+		return is_string( $url ) ? $url : '';
+	}
+
+	/** Terms version sanitizer — short, printable, never empty. */
+	public static function sanitize_terms_version( $val ) {
+		if ( class_exists( 'FisHotel_Med_Terms' ) ) {
+			return FisHotel_Med_Terms::sanitize_version( $val );
+		}
+		$val = sanitize_text_field( (string) $val );
+		return $val !== '' ? $val : '2026-10';
 	}
 
 	public static function init() {
@@ -139,6 +179,16 @@ class FisHotel_Med_Settings {
 			'sanitize_callback' => 'sanitize_textarea_field',
 			'default'           => self::default_checkout_label(),
 		] );
+		register_setting( self::OPTION_GROUP, 'fishotel_med_terms_version', [
+			'type'              => 'string',
+			'sanitize_callback' => [ __CLASS__, 'sanitize_terms_version' ],
+			'default'           => '2026-10',
+		] );
+		register_setting( self::OPTION_GROUP, 'fishotel_med_terms_page', [
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+			'default'           => 0,
+		] );
 		register_setting( self::OPTION_GROUP, 'fishotel_med_free_ship_threshold', [
 			'type'              => 'number',
 			'sanitize_callback' => [ __CLASS__, 'sanitize_money' ],
@@ -181,6 +231,8 @@ class FisHotel_Med_Settings {
 			'fishotel_med_disclaimer_body'     => 'wp_kses_post',
 			'fishotel_med_disclaimer_days'     => [ __CLASS__, 'sanitize_disclaimer_days' ],
 			'fishotel_med_checkout_label'      => 'sanitize_textarea_field',
+			'fishotel_med_terms_version'       => [ __CLASS__, 'sanitize_terms_version' ],
+			'fishotel_med_terms_page'          => 'absint',
 			'fishotel_med_free_ship_threshold' => [ __CLASS__, 'sanitize_money' ],
 			'fishotel_med_ship_flat'           => [ __CLASS__, 'sanitize_money' ],
 			'fishotel_med_auto_email_slip'     => [ __CLASS__, 'sanitize_bool_flag' ],
@@ -328,6 +380,8 @@ class FisHotel_Med_Settings {
 		$body       = self::get_disclaimer_body();
 		$days       = (int) self::get( 'fishotel_med_disclaimer_days' );
 		$cb_label   = self::get_checkout_label();
+		$terms_ver  = self::get_terms_version();
+		$terms_page = (int) get_option( 'fishotel_med_terms_page', 0 );
 		$threshold  = (float) self::get( 'fishotel_med_free_ship_threshold' );
 		$flat       = (float) self::get( 'fishotel_med_ship_flat' );
 		$auto_slip  = (int) self::get( 'fishotel_med_auto_email_slip' );
@@ -453,7 +507,29 @@ class FisHotel_Med_Settings {
 								]
 							);
 							?>
-							<p class="description">Body of the entry modal shown on first visit to any Medications category page.</p>
+							<p class="description">Body of the entry modal shown on first visit to any Medications category page. The same text is what customers accept at checkout and what the <code>[fishotel_med_terms]</code> shortcode prints.</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="fishotel_med_terms_version">Terms version</label></th>
+						<td>
+							<input type="text" id="fishotel_med_terms_version" name="fishotel_med_terms_version" value="<?php echo esc_attr( $terms_ver ); ?>" class="regular-text" maxlength="32" placeholder="2026-10">
+							<p class="description">Bump this when you change the wording; every order records the version it accepted.</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="fishotel_med_terms_page">Terms page</label></th>
+						<td>
+							<?php
+							wp_dropdown_pages( [
+								'name'              => 'fishotel_med_terms_page',
+								'id'                => 'fishotel_med_terms_page',
+								'selected'          => $terms_page,
+								'show_option_none'  => '— Open the disclaimer modal instead —',
+								'option_none_value' => '0',
+							] );
+							?>
+							<p class="description">Optional public Medication Terms page. Create a page containing <code>[fishotel_med_terms]</code> (it prints the body, the version and the checkbox label) and pick it here; the "Read the terms" links at checkout and on My Account then go there instead of opening the modal.</p>
 						</td>
 					</tr>
 					<tr>
@@ -468,6 +544,14 @@ class FisHotel_Med_Settings {
 						<td>
 							<textarea id="fishotel_med_checkout_label" name="fishotel_med_checkout_label" rows="3" class="large-text"><?php echo esc_textarea( $cb_label ); ?></textarea>
 							<p class="description">Required-checkbox text shown above the place-order button when meds are in the cart.</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">Extra acknowledgement (per product)</th>
+						<td>
+							<p class="description" style="max-width:640px;">
+								Need a product called out on its own — chloroquine, for example? Open that product, go to the <strong>FisHotel Medication</strong> tab and fill in <strong>Extra checkout acknowledgement</strong>. Each distinct wording becomes one more required checkbox under the main one at checkout, prefixed with the product name(s) it applies to, and the accepted text is stored on the order alongside the main terms record.
+							</p>
 						</td>
 					</tr>
 				</table>

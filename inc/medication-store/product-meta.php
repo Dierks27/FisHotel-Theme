@@ -59,6 +59,8 @@ class FisHotel_Med_Product_Meta {
 		$ea_sku    = (string) get_post_meta( $pid, '_fishotel_ea_sku', true );
 		$asin      = (string) get_post_meta( $pid, '_fishotel_amazon_asin', true );
 		$dose_anchor = (string) get_post_meta( $pid, '_fishotel_dosing_anchor', true );
+		$extra_ack   = (string) get_post_meta( $pid, '_fishotel_med_extra_ack', true );
+		$is_med      = function_exists( 'fishotel_med_is_med_product' ) && fishotel_med_is_med_product( $pid );
 
 		$last_sync  = (int) get_post_meta( $pid, '_fishotel_ea_last_sync', true );
 		$sync_label = $last_sync ? sprintf(
@@ -92,6 +94,14 @@ class FisHotel_Med_Product_Meta {
 					<input type="text" id="_fishotel_dosing_anchor" name="_fishotel_dosing_anchor" value="<?php echo esc_attr( $dose_anchor ); ?>" placeholder="#praziquantel" style="width:100%;">
 					<span class="description"><?php esc_html_e( 'Use the calculator med id, e.g. #praziquantel or #copper_power; this also links the calculator and QT Scheduler back to this product. A longer anchor like #praziquantel-powder or #praziquantel100g still matches as long as it starts with a med id (the longest matching id wins, so #fenbendazole_internal is not mistaken for #fenbendazole). Override per medication under FisHotel Theme → Product Page → Tool Links.', 'fishotel' ); ?></span>
 				</p>
+
+				<?php if ( $is_med ) : ?>
+				<p class="form-field">
+					<label for="_fishotel_med_extra_ack"><?php esc_html_e( 'Extra checkout acknowledgement', 'fishotel' ); ?></label>
+					<textarea id="_fishotel_med_extra_ack" name="_fishotel_med_extra_ack" rows="3" style="width:100%;" placeholder="<?php esc_attr_e( 'I understand chloroquine phosphate is toxic to invertebrates and will only dose it in a fishless quarantine tank.', 'fishotel' ); ?>"><?php echo esc_textarea( $extra_ack ); ?></textarea>
+					<span class="description"><?php esc_html_e( 'Optional. When this product is in the cart, checkout shows one more required checkbox with this exact text (prefixed by the product name) under the main medication terms, and the accepted text is stored on the order. Products sharing the same wording share one checkbox. Leave blank for no extra acknowledgement.', 'fishotel' ); ?></span>
+				</p>
+				<?php endif; ?>
 			</div>
 
 			<div class="options_group fishotel-med-fields-ea">
@@ -229,6 +239,18 @@ class FisHotel_Med_Product_Meta {
 		$asin = substr( $asin, 0, 10 );
 		update_post_meta( $post_id, '_fishotel_amazon_asin',        $asin );
 		update_post_meta( $post_id, '_fishotel_dosing_anchor',      sanitize_text_field( wp_unslash( $_POST['_fishotel_dosing_anchor']      ?? '' ) ) );
+
+		// C2 — per-product extra checkout acknowledgement. The textarea only
+		// renders for medication products, so write the meta only when the
+		// field was actually submitted (a non-med save must not blank it).
+		if ( isset( $_POST['_fishotel_med_extra_ack'] ) ) {
+			$extra_ack = sanitize_textarea_field( wp_unslash( $_POST['_fishotel_med_extra_ack'] ) );
+			if ( trim( $extra_ack ) === '' ) {
+				delete_post_meta( $post_id, '_fishotel_med_extra_ack' );
+			} else {
+				update_post_meta( $post_id, '_fishotel_med_extra_ack', $extra_ack );
+			}
+		}
 
 		// Phase 3.6 — medication + food data fields driving the subtitle
 		// and the "About This Medication / Food" data table on the PDP.

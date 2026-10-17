@@ -199,3 +199,46 @@ body.fishotel-med-modal-open { overflow: hidden; }
 	height: 16px;
 	cursor: pointer;
 }
+.fishotel-med-checkout-ack__label--extra {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px dashed rgba(212, 165, 116, 0.35);
+}
+.fishotel-med-checkout-ack__terms {
+	margin: 6px 0 0 26px;
+	font-size: 12px;
+}
+.fishotel-med-terms-link {
+	color: var(--fh-gold, #c9963a);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.fishotel-med-terms-link:hover,
+.fishotel-med-terms-link:focus {
+	color: var(--fh-gold-lt, #deb96a);
+}
+/* Read-only modal (checkout "Read the terms"): version line + single Close. */
+.fishotel-med-modal__version {
+	margin: 14px 0 0;
+	font-size: 12px;
+	letter-spacing: 1px;
+	color: #a79b86;
+	text-align: right;
+}
+.fishotel-med-modal[data-mode="readonly"] .fishotel-med-modal__card {
+	max-height: calc(100vh - 48px);
+	overflow-y: auto;
+}
+/* My Account order view line. */
+.fishotel-med-terms-account {
+	margin: 14px 0 0;
+	font-size: 13px;
+	color: var(--fh-text-3, #a79b86);
+}
+/* [fishotel_med_terms] public page. */
+.fishotel-med-terms__label { margin-top: 18px; }
+.fishotel-med-terms__version {
+	font-size: 12px;
+	letter-spacing: 1px;
+	color: var(--fh-text-3, #a79b86);
+}

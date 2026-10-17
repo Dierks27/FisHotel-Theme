@@ -50,6 +50,31 @@
 	display: none;
 }
 
+/* Order screen — "Medication terms" box (C2). */
+.fishotel-med-terms-box__state {
+	margin: 0 0 8px;
+	padding: 6px 10px;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+	border-left: 3px solid #c9963a;
+	background: #f7f3e8;
+}
+.fishotel-med-terms-box__state--ok     { border-left-color: #2e7d32; background: #edf7ee; color: #1e5a22; }
+.fishotel-med-terms-box__state--legacy { border-left-color: #b07d3c; background: #faf3e6; color: #6b4a16; }
+.fishotel-med-terms-box__state--missing {
+	border-left-color: #b32d2e;
+	background: #fbeaea;
+	color: #b32d2e;
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
+}
+.fishotel-med-terms-box__table { width: 100%; border-collapse: collapse; margin: 0 0 8px; font-size: 12px; }
+.fishotel-med-terms-box__table th { text-align: left; font-weight: 600; padding: 2px 8px 2px 0; width: 38%; color: #555; vertical-align: top; }
+.fishotel-med-terms-box__table td { padding: 2px 0; word-break: break-word; }
+.fishotel-med-terms-box__label { margin: 0 0 6px; font-size: 12px; color: #333; }
+.fishotel-med-terms-box__list { margin: 0 0 8px 16px; font-size: 12px; list-style: disc; }
+.fishotel-med-terms-box__ua { margin: 6px 0 0; font-size: 11px; color: #888; word-break: break-all; }
+
 /* Sync button row */
 .fishotel-med-sync-btn {
 	margin-right: 10px !important;

@@ -36,6 +36,7 @@
  * Hooks used (all verified against plugin 5.16.4):
  *   - wpo_wcpdf_woocommerce_totals   ( array $totals, $order, string $type )
  *   - wpo_wcpdf_after_document_label ( string $type, $order )          [action]
+ *                                     (refund marker + C2 medication terms line)
  *   - wpo_wcpdf_order_item_data      ( array $data, $order, string $type )
  *   - wpo_wcpdf_shipping_notes       ( string $notes, $document )
  *   - wpo_wcpdf_customer_notes_title ( string $title, $document )
@@ -80,6 +81,36 @@ class FisHotel_PDF_Invoice {
 		// 5. Heading + boxed styling for the note, marker and refund rows.
 		add_filter( 'wpo_wcpdf_customer_notes_title', [ __CLASS__, 'customer_note_title' ], 10, 2 );
 		add_action( 'wpo_wcpdf_custom_styles', [ __CLASS__, 'custom_styles' ], 10, 2 );
+		// 6. Medication terms acceptance line under the document label (C2).
+		add_action( 'wpo_wcpdf_after_document_label', [ __CLASS__, 'medication_terms' ], 20, 2 );
+	}
+
+	// ── 6. Medication terms ──────────────────────────────────────────
+
+	/**
+	 * "Medication terms accepted <date> · IP <ip> · v<version>" under the
+	 * document label on invoices and packing slips, for orders that carry a
+	 * terms record (one line per source order on a fulfillment). The text
+	 * comes from the medication store's display helper; nothing prints when
+	 * that module or the record is absent.
+	 *
+	 * @param string $document_type
+	 * @param object $order
+	 */
+	public static function medication_terms( $document_type, $order ) {
+		if ( ! self::is_supported_type( $document_type ) || ! self::is_parent_order( $order ) ) {
+			return;
+		}
+		if ( ! class_exists( 'FisHotel_Med_Terms_Display' ) ) {
+			return;
+		}
+		$lines = FisHotel_Med_Terms_Display::lines_for_order( $order, true );
+		if ( empty( $lines ) ) {
+			return;
+		}
+		foreach ( $lines as $line ) {
+			echo '<div class="fishotel-med-terms-line">' . esc_html( $line ) . '</div>';
+		}
 	}
 
 	// ── 1. Totals ────────────────────────────────────────────────────
@@ -342,6 +373,7 @@ class FisHotel_PDF_Invoice {
 		echo "\n"
 			. '.fishotel-refund-marker { margin: 2mm 0 4mm; padding: 2mm 3mm; border: 2px solid #b00000; color: #b00000; font-size: 10pt; }' . "\n"
 			. '.fishotel-refund-marker strong { text-transform: uppercase; letter-spacing: 1px; }' . "\n"
+			. '.fishotel-med-terms-line { margin: 1mm 0 3mm; font-size: 8pt; color: #555555; }' . "\n"
 			. '.fishotel-refunded { color: #b00000; font-size: 85%; white-space: nowrap; }' . "\n"
 			. 'table.totals tr.order_total_gross th, table.totals tr.order_total_gross td { font-weight: normal; }' . "\n"
 			. '.customer-notes { border: 1px solid #333333; padding: 3mm 4mm; margin-top: 5mm; }' . "\n"

@@ -31,7 +31,9 @@ require_once FISHOTEL_MED_DIR . '/product-meta.php';
 require_once FISHOTEL_MED_DIR . '/pricing.php';
 require_once FISHOTEL_MED_DIR . '/ea-rest-client.php';
 require_once FISHOTEL_MED_DIR . '/stock-sync.php';
+require_once FISHOTEL_MED_DIR . '/terms-record.php';   // pure builder (no WP) — before disclaimer + settings use it
 require_once FISHOTEL_MED_DIR . '/disclaimer.php';
+require_once FISHOTEL_MED_DIR . '/terms-display.php';
 require_once FISHOTEL_MED_DIR . '/product-display.php';
 require_once FISHOTEL_MED_DIR . '/packing-slip.php';
 
@@ -41,6 +43,7 @@ FisHotel_Med_Product_Meta::init();
 FisHotel_Med_Pricing::init();
 FisHotel_Med_Stock_Sync::init();
 FisHotel_Med_Disclaimer::init();
+FisHotel_Med_Terms_Display::init();
 FisHotel_Med_Product_Display::init();
 FisHotel_Med_Packing_Slip::init();
 
@@ -78,6 +81,11 @@ function fishotel_med_enqueue_frontend() {
 		if ( fishotel_med_is_med_product( $pid ) ) {
 			$needs = true;
 		}
+	} elseif ( FisHotel_Med_Disclaimer::is_order_view_with_record() ) {
+		// My Account → view order / thank-you page: the "You accepted the
+		// medication terms" line carries a "Read the terms" link that opens
+		// the read-only modal when no public Terms page is set.
+		$needs = true;
 	} elseif ( ( function_exists( 'is_cart' ) && is_cart() )
 		|| ( function_exists( 'is_checkout' ) && is_checkout() ) ) {
 		if ( fishotel_med_cart_has_meds() ) {
@@ -111,6 +119,8 @@ function fishotel_med_enqueue_frontend() {
 		'declineLabel' => 'Decline',
 		'isArchive'    => fishotel_med_is_med_archive(),
 		'isMedPdp'     => is_product() && fishotel_med_is_med_product( get_queried_object_id() ),
+		'isCheckout'   => function_exists( 'is_checkout' ) && is_checkout(),
+		'closeLabel'   => __( 'Close', 'fishotel' ),
 	] );
 }
 add_action( 'wp_enqueue_scripts', 'fishotel_med_enqueue_frontend' );

@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.24.0' );
+define( 'FISHOTEL_THEME_VERSION', '1.25.0' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -243,6 +243,7 @@ $includes = [
 	'/inc/gift-card-checkout.php', // Gift Card ↔ PPCP safeguards (smart-button suppression + capture guard)
 	'/inc/order-emails.php',     // FisHotel Delivery Date in transactional emails
 	'/inc/pdf-invoice.php',      // PDF Invoices & Packing Slips (WP Overnight): refund rows + marker, customer notes
+	'/inc/invoice-lines.php',    // Invoice products → itemised fish lines + credit fees at checkout, purchase lock, backfill tool
 	'/inc/shop-load-more.php', // Shop archive Load More (AJAX) + enqueue
 	'/inc/hotel-data.php',       // FisHotel quarantine meta
 	'/inc/hotel-journal.php',    // Quarantine journal entries

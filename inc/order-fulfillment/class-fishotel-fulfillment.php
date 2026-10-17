@@ -555,10 +555,16 @@ class FisHotel_Fulfillment {
 			$new->set_tax_class( $item->get_tax_class() );
 			$new->set_subtotal( $item->get_subtotal() );
 			$new->set_total( $item->get_total() );
-			// Preserve variation attribute meta (e.g. "Size: 1oz") for display.
+			// Preserve variation attribute meta (e.g. "Size: 1oz") for display,
+			// plus the theme's hidden invoice-fish flags (theme 1.25+) so the
+			// Batch plugin's pick list reads the copied line like the source's.
+			$keep_hidden = class_exists( 'FisHotel_Invoice_Lines' ) ? FisHotel_Invoice_Lines::copied_item_meta_keys() : [];
 			foreach ( $item->get_meta_data() as $meta ) {
 				$data = $meta->get_data();
-				if ( isset( $data['key'], $data['value'] ) && 0 !== strpos( (string) $data['key'], '_' ) ) {
+				if ( ! isset( $data['key'], $data['value'] ) ) {
+					continue;
+				}
+				if ( 0 !== strpos( (string) $data['key'], '_' ) || in_array( (string) $data['key'], $keep_hidden, true ) ) {
 					$new->add_meta_data( $data['key'], $data['value'] );
 				}
 			}

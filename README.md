@@ -32,6 +32,7 @@ fishotel-theme/
 │   ├── variation-display.php  ★ Visual variation buttons (replaces WC dropdowns)
 │   ├── placeholder-library.php  Placeholder images for products without a photo
 │   ├── tool-product-links.php   Calculator / QT Scheduler → medication product links
+│   ├── invoice-lines.php      ★ Invoice products → itemised fish lines at checkout, purchase lock, backfill
 │   ├── theme-updater.php      Self-updater from the GitHub main branch
 │   ├── woocommerce.php        WooCommerce wrappers + hooks
 │   ├── template-functions.php Helper functions
@@ -112,6 +113,58 @@ Settings (FisHotel Theme → Medication Store):
 - **Extra checkout acknowledgement** — per-product textarea (`_fishotel_med_extra_ack`) on the
   FisHotel Medication tab; each distinct text adds one more required checkbox at checkout
   (e.g. chloroquine) and the accepted text is stored on the order.
+
+### Invoices become itemised orders (inc/invoice-lines.php)
+An invoice is a hidden product in the `invoices` category (or with "Invoice" in its name) whose
+description lists the fish — `Blue Tang x2 — $90`, `Firefish x1 — $12`, `Credit: lost Cleaner
+Wrasse — -$82` — and whose regular price is the total. The customer adds it by link and checks
+out normally. Since v1.25.0 the resulting order shows the fish, not the invoice:
+
+- **Cart / checkout:** an "Includes: Blue Tang × 2, Firefish × 1, Credit: lost Cleaner Wrasse"
+  row under the invoice; an invoice is sold individually (never twice in one cart).
+- **At checkout** (`woocommerce_checkout_create_order`, priority 20, i.e. after WooCommerce has
+  added the items, fees, shipping, taxes and coupons to the not-yet-saved order) every invoice
+  line is **expanded** into one line item per fish line (`Blue Tang × 2`, `Firefish × 1`, no
+  product behind them) and one negative fee per credit (`Credit: lost Cleaner Wrasse −$82.00`).
+  A coupon discount and every tax amount are split across the fish lines in proportion to their
+  subtotal, in whole cents (leftover cents go to the lines that lost most in rounding, the last
+  line first, so no line is ever discounted below zero or above its own subtotal), so the new rows
+  add up to exactly what the invoice line was. The order total, tax and coupon lines are never
+  recalculated — what the customer pays does not change.
+- **Fallback:** the invoice stays a single line when the item quantity is not 1, the description
+  has no fish lines, a fish line has no price, or the lines (fish qty × price plus credits) do not
+  add up to the line subtotal within a cent (so an invoice sold at a sale price, whose lines add
+  up to the regular price, stays one line). The line then carries a visible "Includes" meta with
+  the fish list and a hidden line snapshot. Either way the order gets a note: `Invoice jpreef
+  Invoice (7/3/26) (#123) itemised into 2 fish lines and 1 credit.` or `Invoice … kept as one
+  line: <reason>.`
+- **Paid orders stay in Processing:** WooCommerce would auto-complete a paid order whose lines have
+  no product; the theme keeps an itemised invoice order in Processing so it ships like any other.
+- **Lock after purchase:** when the order is paid / processing / completed the invoice product is
+  set out of stock and remembers the order (`_fh_invoice_order_id`). Adding it to a cart again
+  shows "This invoice was already paid on order #N. Contact us if you need a new one." until that
+  order is cancelled, failed or refunded; cancelling the order puts the invoice back in stock
+  (after a refund or failure it simply stays out of stock until you restock it by hand).
+- **Backfill:** FisHotel Theme → Tools → "Add fish lines to past invoice orders" ("Scan the next
+  100 orders" button) scans 100 orders per click (newest first, cursor in option
+  `fishotel_invoice_backfill_page`) and adds the "Includes" meta + line snapshot to invoice lines
+  on older orders — nothing else changes.
+- **Explicit lines:** product meta `_fh_invoice_lines` (JSON `[{"name","qty","price","kind","product_id"}]`,
+  kind `fish` | `credit` | `note`) wins over the description; a `product_id` makes the fish line
+  reference that product.
+
+Meta keys (shared with the Batch plugin's Ship Day pick list, which reads them):
+
+| Where | Key | Meaning |
+|-------|-----|---------|
+| fish line item | `_fh_invoice_fish` = 1, `_fh_invoice_product_id`, `_fh_invoice_title` | one fish of an invoice; the invoice product id / name |
+| credit fee item | `_fh_invoice_credit` = 1, `_fh_invoice_product_id` | an invoice credit (money only, never a pick row) |
+| invoice line kept whole | `Includes` (visible), `_fh_invoice_lines` (JSON), `_fh_invoice_product_id` | the fallback shape and the backfill shape |
+| invoice product | `_fh_invoice_order_id` | the order that paid for it (lock); `_fh_invoice_lines` optional line override |
+
+The parser (same grammar as the Batch plugin's `parse_invoice_lines()`, credits returned instead
+of skipped), the expand/fallback decision and the money split are pure PHP, tested by
+`php tests/invoice-lines-test.php`.
 
 ## Build Phases
 

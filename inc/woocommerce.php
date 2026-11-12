@@ -144,6 +144,22 @@ add_filter( 'woocommerce_checkout_fields', function ( $fields ) {
 }, 20 );
 
 /*
+ * WooCommerce's address-i18n.js re-applies the store-wide "Phone number
+ * field" setting to the phone row in the browser (label, star, "(optional)")
+ * every time the country field settles. With that setting on Optional a
+ * fish cart read "Phone (optional)" and then answered "Billing Phone is a
+ * required field." Taking the phone out of the script's field list leaves
+ * the row exactly as the server rendered it — the rule above. No country
+ * locale changes the phone field, so nothing else is lost.
+ */
+add_filter( 'woocommerce_country_locale_field_selectors', function ( $selectors ) {
+	if ( is_array( $selectors ) ) {
+		unset( $selectors['phone'] );
+	}
+	return $selectors;
+} );
+
+/*
  * Chosen shipping rate for the first cart package, or null when nothing has
  * been calculated yet. Lets the cart/checkout ledgers tell "$0.00 (free /
  * repeat-customer piggyback)" apart from "not calculated yet" — both used

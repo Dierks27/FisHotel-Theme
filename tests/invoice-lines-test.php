@@ -249,5 +249,18 @@ $rows  = FisHotel_Invoice_Lines::split_money( $lines, 110.0, 110.0, 0.0, 0.0, $n
 check( 'end to end: the example description itemises and balances', $d['expand'] && 3 === count( $rows ) && FisHotel_Invoice_Lines::rows_balance( $rows, 110.0, 110.0, 0.0, 0.0, $no_tax ) );
 check( 'end to end: a mispriced invoice falls back', 'mismatch' === FisHotel_Invoice_Lines::decide_expand( $lines, 1, 20.0 )['reason'] );
 
+// ── pending_hold_active() ───────────────────────────────────────────────
+echo "\npending_hold_active()\n";
+$now = 1794500000;
+check( 'unpaid order saved a minute ago holds the invoice',  true  === FisHotel_Invoice_Lines::pending_hold_active( 'pending', $now - 60, 60, $now ) );
+check( 'still held one second before the window ends',       true  === FisHotel_Invoice_Lines::pending_hold_active( 'pending', $now - 3599, 60, $now ) );
+check( 'released when the window is over',                   false === FisHotel_Invoice_Lines::pending_hold_active( 'pending', $now - 3600, 60, $now ) );
+check( 'a ten-minute window is ten minutes',                 false === FisHotel_Invoice_Lines::pending_hold_active( 'pending', $now - 601, 10, $now ) && true === FisHotel_Invoice_Lines::pending_hold_active( 'pending', $now - 599, 10, $now ) );
+check( 'no hold-stock minutes → no hold (as WooCommerce)',   false === FisHotel_Invoice_Lines::pending_hold_active( 'pending', $now - 60, 0, $now ) && false === FisHotel_Invoice_Lines::pending_hold_active( 'pending', $now - 60, '', $now ) );
+check( 'an order without a save time holds nothing',         false === FisHotel_Invoice_Lines::pending_hold_active( 'pending', 0, 60, $now ) );
+foreach ( [ 'on-hold', 'processing', 'completed', 'cancelled', 'failed', 'refunded', 'fulfillment' ] as $st ) {
+	check( "status $st is not a pending hold",                false === FisHotel_Invoice_Lines::pending_hold_active( $st, $now - 60, 60, $now ) );
+}
+
 echo "\n" . ( $failures ? "$failures FAILED\n" : "all passed\n" );
 exit( $failures ? 1 : 0 );

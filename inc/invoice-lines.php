@@ -36,7 +36,11 @@
  *      totals, tax lines and coupon lines set from the cart are not recomputed.
  *   5. Lock after purchase — the invoice product goes out of stock and stores
  *      its order id; adding it to a cart again is refused while that order is
- *      live. Cancelling the order releases it.
+ *      live. Cancelling the order releases it. An order that goes On hold
+ *      (payment still to arrive) locks the invoice the same way, and an
+ *      unpaid (Pending payment) order holds it for WooCommerce's "Hold stock"
+ *      minutes against every other shopper — what WooCommerce itself did
+ *      while the order still carried the invoice product as its line.
  *   6. Backfill — a Tools-page button stamps the "Includes" meta + a line
  *      snapshot onto invoice lines of past orders, 100 orders per click.
  *
@@ -44,7 +48,8 @@
  *   fish line  _fh_invoice_fish = 1, _fh_invoice_product_id, _fh_invoice_title
  *   credit fee _fh_invoice_credit = 1, _fh_invoice_product_id
  *   kept line  Includes (visible), _fh_invoice_lines (JSON), _fh_invoice_product_id
- *   product    _fh_invoice_order_id (lock); _fh_invoice_lines (optional JSON)
+ *   product    _fh_invoice_order_id (lock); _fh_invoice_pending_order_id
+ *              (the unpaid order checking it out); _fh_invoice_lines (optional JSON)
  *
  * Why the invoice item is converted IN PLACE rather than removed: at the
  * create_order hook every item is unsaved (id 0, keyed `new:line_items0`…).
@@ -77,6 +82,8 @@ class FisHotel_Invoice_Lines {
 	const META_LINES      = '_fh_invoice_lines';
 	/** Product meta: the order that bought this invoice (set on payment, cleared on cancel). */
 	const META_ORDER_ID   = '_fh_invoice_order_id';
+	/** Product meta: the unpaid (Pending payment) order that is checking this invoice out. */
+	const META_PENDING_ORDER_ID = '_fh_invoice_pending_order_id';
 	/** Visible item meta on an invoice line kept whole. */
 	const META_INCLUDES   = 'Includes';
 
@@ -120,11 +127,17 @@ class FisHotel_Invoice_Lines {
 		// 4. Order creation (after WC has added items / fees / shipping / taxes / coupons).
 		add_action( 'woocommerce_checkout_create_order',  [ __CLASS__, 'itemise_order' ], 20, 2 );
 		add_action( 'woocommerce_checkout_order_created', [ __CLASS__, 'flush_notes' ], 10, 1 );
+		// An itemised order has no line for the invoice product, so WooCommerce
+		// neither reserves it while the order is unpaid nor takes it out of stock
+		// when the order goes On hold. Do both here, or one invoice can be paid twice.
+		add_action( 'woocommerce_checkout_order_created', [ __CLASS__, 'hold_products' ], 10, 1 );
+		add_action( 'woocommerce_checkout_process',       [ __CLASS__, 'validate_checkout' ] );
 		// A product-less line does not count in WC_Order::needs_processing(), so a
 		// paid order made only of itemised fish would auto-complete; keep it processing.
 		add_filter( 'woocommerce_payment_complete_order_status', [ __CLASS__, 'keep_processing' ], 10, 3 );
 		// 5. Lock after purchase / release on cancel.
 		add_action( 'woocommerce_payment_complete',        [ __CLASS__, 'lock_products' ], 10, 1 );
+		add_action( 'woocommerce_order_status_on-hold',    [ __CLASS__, 'lock_products' ], 10, 1 );
 		add_action( 'woocommerce_order_status_processing', [ __CLASS__, 'lock_products' ], 10, 1 );
 		add_action( 'woocommerce_order_status_completed',  [ __CLASS__, 'lock_products' ], 10, 1 );
 		add_action( 'woocommerce_order_status_cancelled',  [ __CLASS__, 'unlock_products' ], 10, 1 );
@@ -154,6 +167,27 @@ class FisHotel_Invoice_Lines {
 			}
 		}
 		return (bool) preg_match( '/\bInvoice\b/i', (string) $name );
+	}
+
+	/**
+	 * Does an unpaid order still hold its invoice against other shoppers?
+	 * Only while it is Pending payment and was last saved less than the
+	 * store's "Hold stock (minutes)" ago — the window WooCommerce reserves
+	 * stock for an unpaid order. No minutes set = no hold, as in WooCommerce.
+	 *
+	 * @param string $status       Order status without the wc- prefix.
+	 * @param int    $last_saved   Unix time the order was last saved.
+	 * @param int    $hold_minutes WooCommerce's hold-stock minutes.
+	 * @param int    $now          Unix time now.
+	 * @return bool
+	 */
+	public static function pending_hold_active( $status, $last_saved, $hold_minutes, $now ) {
+		$last_saved   = (int) $last_saved;
+		$hold_minutes = (int) $hold_minutes;
+		if ( 'pending' !== (string) $status || $hold_minutes <= 0 || $last_saved <= 0 ) {
+			return false;
+		}
+		return ( (int) $now - $last_saved ) < $hold_minutes * 60;
 	}
 
 	/** Strip tags, decode entities, normalise whitespace (incl. nbsp). */
@@ -795,7 +829,7 @@ class FisHotel_Invoice_Lines {
 		return self::is_invoice_product( $product ) ? true : $sold_individually;
 	}
 
-	/** Refuse an invoice that a live order already paid for. */
+	/** Refuse an invoice that a live order already paid for, or that an unpaid order is checking out. */
 	public static function validate_add_to_cart( $passed, $product_id ) {
 		if ( ! $passed ) {
 			return $passed;
@@ -806,18 +840,79 @@ class FisHotel_Invoice_Lines {
 		}
 		$order_id = (int) self::invoice_parent( $product )->get_meta( self::META_ORDER_ID );
 		if ( $order_id <= 0 || ! self::order_holds_lock( $order_id ) ) {
+			if ( self::held_by_other_order( $product ) ) {
+				wc_add_notice( self::held_notice(), 'error' );
+				return false;
+			}
 			return $passed;
 		}
 		$order = wc_get_order( $order_id );
 		wc_add_notice(
 			sprintf(
-				/* translators: %s: order number */
-				__( 'This invoice was already paid on order #%s. Contact us if you need a new one.', 'fishotel' ),
+				$order->has_status( 'on-hold' )
+					/* translators: %s: order number */
+					? __( 'This invoice already has an order (#%s) that is waiting for its payment. Contact us if you need a new one.', 'fishotel' )
+					/* translators: %s: order number */
+					: __( 'This invoice was already paid on order #%s. Contact us if you need a new one.', 'fishotel' ),
 				$order->get_order_number()
 			),
 			'error'
 		);
 		return false;
+	}
+
+	/**
+	 * woocommerce_checkout_process: an invoice that was already in this cart
+	 * when another shopper's unpaid order took it cannot be ordered a second
+	 * time. (A paid or On-hold order needs no check here: the invoice is out
+	 * of stock by then and WooCommerce's own cart check refuses it.)
+	 */
+	public static function validate_checkout() {
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+			return;
+		}
+		foreach ( WC()->cart->get_cart() as $cart_item ) {
+			$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+			if ( $product instanceof WC_Product && self::is_invoice_product( $product ) && self::held_by_other_order( $product ) ) {
+				wc_add_notice( self::held_notice(), 'error' );
+				return;
+			}
+		}
+	}
+
+	/** The shopper-facing line for an invoice another unpaid order holds. */
+	private static function held_notice() {
+		return __( 'This invoice is being paid for on another order right now. Please try again in a little while, or contact us.', 'fishotel' );
+	}
+
+	/**
+	 * Is another shopper's unpaid order holding this invoice? Never true for
+	 * the order this session is itself trying to pay (a retry after a failed
+	 * or abandoned payment).
+	 */
+	private static function held_by_other_order( $product ) {
+		$parent = self::invoice_parent( $product );
+		if ( ! $parent ) {
+			return false;
+		}
+		$order_id = (int) $parent->get_meta( self::META_PENDING_ORDER_ID );
+		if ( $order_id <= 0 ) {
+			return false;
+		}
+		if ( function_exists( 'WC' ) && WC()->session && (int) WC()->session->get( 'order_awaiting_payment' ) === $order_id ) {
+			return false;
+		}
+		$order = wc_get_order( $order_id );
+		if ( ! $order instanceof WC_Order ) {
+			return false;
+		}
+		$saved = $order->get_date_modified() ? $order->get_date_modified() : $order->get_date_created();
+		return self::pending_hold_active(
+			$order->get_status(),
+			$saved ? $saved->getTimestamp() : 0,
+			(int) get_option( 'woocommerce_hold_stock_minutes', 60 ),
+			time()
+		);
 	}
 
 	/* ─────────────────────────────────────────────
@@ -1091,7 +1186,27 @@ class FisHotel_Invoice_Lines {
 	 *  Lock after purchase
 	 * ───────────────────────────────────────────── */
 
-	/** woocommerce_payment_complete / order_status_processing / order_status_completed. */
+	/**
+	 * woocommerce_checkout_order_created: the order exists and is unpaid —
+	 * note on each invoice it references that this order is checking it out
+	 * (see held_by_other_order()). Nothing is taken out of stock here, so a
+	 * shopper whose payment fails can simply try again.
+	 */
+	public static function hold_products( $order ) {
+		if ( ! $order instanceof WC_Order || ! $order->get_id() || self::is_fulfillment( $order ) ) {
+			return;
+		}
+		$order_id = (int) $order->get_id();
+		foreach ( self::referenced_invoice_products( $order ) as $product ) {
+			if ( (int) $product->get_meta( self::META_PENDING_ORDER_ID ) === $order_id ) {
+				continue;
+			}
+			$product->update_meta_data( self::META_PENDING_ORDER_ID, $order_id );
+			$product->save();
+		}
+	}
+
+	/** woocommerce_payment_complete / order_status_on-hold / order_status_processing / order_status_completed. */
 	public static function lock_products( $order_id ) {
 		$order = wc_get_order( $order_id );
 		if ( ! $order instanceof WC_Order || self::is_fulfillment( $order ) ) {

@@ -178,6 +178,132 @@
 	margin: 0 0 8px;
 }
 
+/* ── Label cost (ShipTracker v1.9.17+) ────────────── */
+.fhsm-cost {
+	margin: 6px 0 8px;
+	font-size: 12px;
+}
+.fhsm-cost-line {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+}
+.fhsm-cost-label,
+.fhsm-cost-detail {
+	color: #50575e;
+}
+.fhsm-cost-sep {
+	margin-right: 4px;
+}
+.fhsm-cost-none {
+	color: #996800;
+	font-style: italic;
+}
+.fhsm-cost-edit,
+.fhsm-cost-cancel {
+	font-size: 12px;
+}
+.fhsm-cost-shared,
+.fhsm-cost-same-box {
+	margin: 2px 0 0;
+	color: #646970;
+	font-style: italic;
+}
+.fhsm-cost-form {
+	margin-top: 8px;
+	padding: 10px 12px 2px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+}
+.fhsm-cost-form[hidden],
+.fhsm-source-hint[hidden] {
+	display: none;
+}
+.fhsm-cost-form-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin: 0 0 8px;
+}
+.fhsm-new-cost {
+	margin: 0 0 12px;
+	padding: 10px 12px 2px;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+}
+.fhsm-new-cost-heading {
+	margin: 0 0 8px;
+}
+.fhsm-new-cost-setup {
+	margin: 0 0 8px;
+}
+.fhsm-cost-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 0 14px;
+}
+.fhsm-cost-field {
+	margin: 0 0 10px;
+}
+.fhsm-cost-field label {
+	display: block;
+	margin-bottom: 3px;
+	font-weight: 600;
+}
+.fhsm-cost-field input[type="text"],
+.fhsm-cost-field select {
+	width: 100%;
+	max-width: 100%;
+}
+.fhsm-cost-field .fhsm-cost-dims {
+	margin-top: 4px;
+}
+.fhsm-cost-field-invalid input[type="text"],
+.fhsm-cost-field-invalid select {
+	border-color: #c1483a;
+	box-shadow: 0 0 0 1px #c1483a;
+}
+.fhsm-field-error {
+	display: block;
+	color: #c1483a;
+	font-size: 12px;
+}
+.fhsm-field-error:empty {
+	display: none;
+}
+.fhsm-source-hint {
+	display: block;
+	color: #646970;
+	font-size: 11px;
+}
+.fhsm-cost-totals {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 18px;
+	margin: 12px 0 0;
+	padding: 8px 10px;
+	background: #f0f6fc;
+	border-left: 3px solid #2271b1;
+	border-radius: 0 3px 3px 0;
+	font-size: 12px;
+}
+.fhsm-cost-totals-loss {
+	background: #fcf0f1;
+	border-left-color: #c1483a;
+}
+.fhsm-cost-diff-loss,
+.fhsm-cost-diff-loss strong {
+	color: #c1483a;
+}
+.fhsm-cost-missing {
+	color: #996800;
+}
+
 /* ── Messages ─────────────────────────────────────── */
 .fhsm-message {
 	margin-left: 10px;

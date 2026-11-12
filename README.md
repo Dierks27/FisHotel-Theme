@@ -39,7 +39,7 @@ fishotel-theme/
 │   ├── calculator/            Medication Dosing Calculator data + wiring
 │   ├── scheduler/             QT Scheduler wiring
 │   ├── medication-store/      Medication / food store (EA sync, pricing, packing slip, checkout terms record — see disclaimer.php docblock)
-│   ├── order-fulfillment/     Split fulfillment, shipments meta box, checkout reuse
+│   ├── order-fulfillment/     Split fulfillment, shipments meta box (+ what each box cost to ship), checkout reuse
 │   ├── customer/              Self-serve delivery date, address propagation
 │   └── email/                 Consolidated shipping email
 ├── parts/                 Compatibility Guide + Bleach Calculator template parts
@@ -51,7 +51,7 @@ fishotel-theme/
 ├── assets/
 │   ├── css/               main.css ★ design system, woocommerce.css, per-page sheets
 │   └── js/                main.js, calculator/, scheduler/, per-page scripts
-├── tests/                 Headless unit tests (`node tests/*.test.js`)
+├── tests/                 Headless unit tests (`node tests/*.test.js`, `php tests/*-test.php`)
 ├── tools/                 One-off admin scripts (product field migration)
 ├── docs/                  Specs; docs/archive/ holds the original planning documents
 ├── vendor/                Composer deps (dompdf) — committed on purpose, see below
@@ -165,6 +165,62 @@ Meta keys (shared with the Batch plugin's Ship Day pick list, which reads them):
 The parser (same grammar as the Batch plugin's `parse_invoice_lines()`, credits returned instead
 of skipped), the expand/fallback decision and the money split are pure PHP, tested by
 `php tests/invoice-lines-test.php`.
+
+### What each box cost to ship (inc/order-fulfillment/class-fishotel-shipment-cost.php)
+The price of a label is known the moment it is bought, so since v1.26.0 the Shipments box on the
+order screen records it with the tracking number and shows it against the shipping the customer
+paid. The data lives in ShipTracker (v1.9.17+, one cost per tracking number = one physical box);
+the theme only shows and posts it.
+
+- **Only when ShipTracker understands it.** Detected by capability, not version text:
+  `method_exists( 'FST_Shipment', 'get_order_boxes' )` (`FisHotel_Shipment_Cost::supported()`).
+  Against an older ShipTracker none of the below is rendered and Add Shipment posts exactly what
+  it always did.
+- **Add Shipment** gets four optional inputs above the button (no `name` attributes, like the
+  rest of the box): label cost `#fhsm-new-cost`; box size `#fhsm-new-box` — ShipTracker's standard
+  boxes by name with their size (value = the size, e.g. `10x10x10`) plus "Custom…" (value
+  `custom`), which reveals `#fhsm-new-dims` for a typed `LxWxH`; weight in lb `#fhsm-new-weight`;
+  and "Bought through" `#fhsm-new-source`, ShipTracker's label sources (e.g. Partner A,
+  Partner B), left out when that list is empty. They ride along with the existing
+  `fst_add_tracking` request as `label_cost`, `box_dims`, `box_weight`, `label_source` — only the
+  ones filled in. Both lists are edited under ShipTracker → Settings → Boxes & label costs; with
+  no standard boxes saved the size is simply typed.
+- **The last source used is remembered per browser** (`localStorage` key
+  `fishotelLastLabelSource`) and preselected with a "Same as last time" note. Labels are bought
+  wherever the rate is best, so that default never records itself: it is sent only together with
+  a cost, size or weight, or when it was picked in that page view.
+- **Existing shipments** show `Label cost $53.73 · Small (10x10x10) · 11 lb · Partner A` with an
+  Edit link, or `No cost recorded` with an Add link. The inline form saves through ShipTracker's
+  `fst_set_label_cost`: every field is sent, so an emptied field is cleared (a form without a
+  source dropdown does not send `label_source`, which leaves it alone). A box shared by several
+  orders says so — "One box for 2 orders (#201, #202) — this is the cost of the whole box" — and
+  on a fulfillment, where the box has one card per source order, the cost is shown on the first
+  card only. The cost is always read per box (`FST_Shipment::get_order_boxes()`), never from a
+  shipment row: the sibling rows of a shared box are empty.
+- **Under the list**, one line for the order on screen: `Shipping paid $45.00 · Label cost
+  recorded $53.73 · Difference -$8.73` (red when the labels cost more) and how many boxes have no
+  cost yet. Shipping paid is the order's shipping total excluding tax, less any shipping refunded
+  — the figure ShipTracker's Analytics report uses; a fulfillment adds up its source orders. A
+  box is counted once. A missing cost is never treated as 0: with none recorded there is no
+  difference, and while some boxes still lack one it reads "Difference so far"; a recorded
+  `0.00` is a cost. When a box is shared with an order that is not on screen, what that order
+  paid towards the box is included and named ("includes $25.00 paid on #201, in the same box");
+  if that order also went out in other boxes only its even share counts. Unlike the Analytics
+  report the line counts a box as soon as it has a tracking number, whatever its status.
+- **A value ShipTracker refuses** (an amount that is not 0 or more, a box size that is not three
+  sizes or a standard box name, a weight that is not above 0) is reported in ShipTracker's own
+  words next to the field; nothing is saved and nothing typed is lost. Enter in a cost field
+  never submits the order form around the box: on an existing shipment it saves the cost, in the
+  Add Shipment form it does nothing (adding a shipment emails the customer, so that stays a click).
+- **No writes in the theme.** Both AJAX actions belong to ShipTracker, which checks the
+  `fst_nonce` nonce and `manage_woocommerce`; everything printed is escaped and money goes
+  through `wc_price()`, summed in whole cents.
+
+The display maths (which card shows a shared box's cost, the totals line, the split of an
+order's shipping over its boxes) and the capability probe are tested by
+`php tests/shipment-cost-test.php`; what the form posts (untouched form, remembered source,
+cleared vs left alone, which field a ShipTracker message belongs to) by
+`node tests/admin-shipments.test.js`.
 
 ## Build Phases
 

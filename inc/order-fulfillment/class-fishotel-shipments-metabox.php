@@ -12,6 +12,14 @@
  * fulfillments, status transitions, and customer emails (subject + items
  * filtered per shipment).
  *
+ * v1.26.0: when the active ShipTracker records what a box cost to ship
+ * (v1.9.17+, detected by capability — FisHotel_Shipment_Cost::supported()),
+ * the form also sends the optional label_cost / box_dims / box_weight /
+ * label_source, each shipment shows its box's cost with an inline edit that
+ * posts to wp_ajax_fst_set_label_cost, and a line under the list compares
+ * the shipping paid with the label cost. Against an older ShipTracker none
+ * of that is rendered and the box behaves exactly as before.
+ *
  * Kill switch: define( 'FISHOTEL_NEW_SHIPMENTS_UI_OFF', true ) in wp-config.php
  * disables this UI and restores Phase 1 + the default ShipTracker widget.
  *
@@ -134,10 +142,285 @@ class FisHotel_Shipments_Metabox {
 		$legacy_shipments = self::resolve_phase1_legacy_shipments( $order, $is_fulfillment );
 		$covered_ids      = self::get_covered_item_ids( $order, $is_fulfillment );
 
+		// Label cost (ShipTracker v1.9.17+). Any failure here only hides the
+		// cost controls — the rest of the box must keep working.
+		$cost_supported = FisHotel_Shipment_Cost::supported();
+		$cost_boxes     = [];
+		$cost_sources   = [];
+		$cost_cards     = [];
+		$cost_summary   = null;
+		if ( $cost_supported ) {
+			try {
+				$view_order_ids = self::view_order_ids( $order, $is_fulfillment );
+				$order_boxes    = FisHotel_Shipment_Cost::order_boxes( $view_order_ids );
+				$cost_boxes     = FisHotel_Shipment_Cost::standard_boxes();
+				$cost_sources   = FisHotel_Shipment_Cost::label_sources();
+				$cost_cards     = FisHotel_Shipment_Cost::plan_cards( $shipments, $order_boxes );
+				$cost_summary   = FisHotel_Shipment_Cost::view_summary( $view_order_ids, $order_boxes );
+			} catch ( \Throwable $e ) {
+				$cost_supported = false;
+			}
+		}
+
 		$tpl = FISHOTEL_THEME_DIR . '/inc/order-fulfillment/templates/shipments-metabox.php';
 		if ( file_exists( $tpl ) ) {
 			include $tpl;
 		}
+	}
+
+	/**
+	 * The orders whose shipments this view lists: the order itself, or a
+	 * fulfillment's source orders (same set as resolve_shipments()).
+	 *
+	 * @return int[]
+	 */
+	public static function view_order_ids( WC_Order $order, $is_fulfillment ) {
+		if ( $is_fulfillment ) {
+			$source_ids = function_exists( 'fishotel_fulfillment_get_sources' )
+				? fishotel_fulfillment_get_sources( $order )
+				: [];
+			return array_values( array_filter( array_map( 'intval', (array) $source_ids ) ) );
+		}
+		return [ (int) $order->get_id() ];
+	}
+
+	/** A decimal amount as WooCommerce price markup, ready to echo. */
+	private static function money( $amount ) {
+		if ( function_exists( 'wc_price' ) ) {
+			return wp_kses_post( wc_price( $amount ) );
+		}
+		return esc_html( number_format( (float) $amount, 2, '.', ',' ) );
+	}
+
+	/** "#101, #102" for a list of order ids. */
+	private static function order_refs( array $order_ids ) {
+		$refs = [];
+		foreach ( $order_ids as $oid ) {
+			$refs[] = '#' . (int) $oid;
+		}
+		return implode( ', ', $refs );
+	}
+
+	/**
+	 * Print the four optional label cost inputs: cost, box size (a dropdown
+	 * of ShipTracker's standard boxes plus "Custom…", which reveals a free
+	 * LxWxH input), weight and where the label was bought (a dropdown of
+	 * ShipTracker's label sources, left out when that list is empty).
+	 *
+	 * The same markup serves the Add Shipment form (ids fhsm-new-cost,
+	 * fhsm-new-box, fhsm-new-dims, fhsm-new-weight, fhsm-new-source) and each
+	 * existing shipment's inline edit form; admin-shipments.js reads the
+	 * inputs by class from the enclosing .fhsm-cost-fields. Like the rest of
+	 * the box they deliberately carry no name attributes, so they are never
+	 * posted with the order form itself. autocomplete="off" keeps a browser
+	 * from putting the previous box's values back after the reload that
+	 * follows a save.
+	 *
+	 * @param string $prefix  Id prefix: "fhsm-new" or "fhsm-edit-{shipment id}".
+	 * @param array  $values  Recorded label_cost / box_dims / box_weight / label_source.
+	 * @param array  $boxes   FisHotel_Shipment_Cost::standard_boxes().
+	 * @param array  $sources FisHotel_Shipment_Cost::label_sources().
+	 */
+	public static function render_cost_fields( $prefix, array $values, array $boxes, array $sources ) {
+		$is_add = 'fhsm-new' === $prefix;
+		$cost   = isset( $values['label_cost'] ) ? (string) $values['label_cost'] : '';
+		$dims   = isset( $values['box_dims'] ) ? (string) $values['box_dims'] : '';
+		$weight = isset( $values['box_weight'] ) ? FisHotel_Shipment_Cost::trim_decimal( $values['box_weight'] ) : '';
+		$source = isset( $values['label_source'] ) ? (string) $values['label_source'] : '';
+
+		// No standard boxes saved yet: the size is typed, so the dropdown
+		// stays out of sight on "Custom…".
+		$choice     = empty( $boxes ) ? FisHotel_Shipment_Cost::CUSTOM_BOX : FisHotel_Shipment_Cost::box_choice( $dims, $boxes );
+		$is_custom  = FisHotel_Shipment_Cost::CUSTOM_BOX === $choice;
+		$has_source = ! empty( $sources ) || '' !== $source;
+		$currency   = function_exists( 'get_woocommerce_currency_symbol' ) ? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ) : '$';
+		?>
+		<div class="fhsm-cost-fields">
+			<p class="fhsm-cost-field" data-field="cost">
+				<label for="<?php echo esc_attr( $prefix . '-cost' ); ?>">
+					<?php
+					printf(
+						/* translators: %s currency symbol */
+						esc_html__( 'Label cost (%s):', 'fishotel' ),
+						esc_html( $currency )
+					);
+					?>
+				</label>
+				<input type="text" id="<?php echo esc_attr( $prefix . '-cost' ); ?>" class="fhsm-cost-amount" inputmode="decimal" autocomplete="off" placeholder="0.00" value="<?php echo esc_attr( $cost ); ?>">
+				<span class="fhsm-field-error" aria-live="polite"></span>
+			</p>
+			<p class="fhsm-cost-field" data-field="box">
+				<label for="<?php echo esc_attr( $prefix . ( empty( $boxes ) ? '-dims' : '-box' ) ); ?>"><?php esc_html_e( 'Box size:', 'fishotel' ); ?></label>
+				<select id="<?php echo esc_attr( $prefix . '-box' ); ?>" class="fhsm-cost-box" autocomplete="off"<?php echo empty( $boxes ) ? ' style="display:none;"' : ''; ?>>
+					<option value=""><?php esc_html_e( '— Not recorded —', 'fishotel' ); ?></option>
+					<?php
+					// Two standard boxes of the same size: only the first is preselected.
+					$preselected = false;
+					foreach ( $boxes as $standard_box ) :
+						$is_current  = ! $preselected && $standard_box['dims'] === $choice;
+						$preselected = $preselected || $is_current;
+						?>
+						<option value="<?php echo esc_attr( $standard_box['dims'] ); ?>" <?php selected( $is_current ); ?>>
+							<?php echo esc_html( $standard_box['name'] . ' (' . $standard_box['dims'] . ')' ); ?>
+						</option>
+					<?php endforeach; ?>
+					<option value="<?php echo esc_attr( FisHotel_Shipment_Cost::CUSTOM_BOX ); ?>" <?php selected( $is_custom ); ?>><?php esc_html_e( 'Custom…', 'fishotel' ); ?></option>
+				</select>
+				<input type="text" id="<?php echo esc_attr( $prefix . '-dims' ); ?>" class="fhsm-cost-dims" autocomplete="off"
+					placeholder="<?php esc_attr_e( 'L x W x H in inches, e.g. 10x10x10', 'fishotel' ); ?>"
+					aria-label="<?php esc_attr_e( 'Custom box size: length x width x height in inches', 'fishotel' ); ?>"
+					value="<?php echo esc_attr( $is_custom ? $dims : '' ); ?>"<?php echo $is_custom ? '' : ' style="display:none;"'; ?>>
+				<span class="fhsm-field-error" aria-live="polite"></span>
+			</p>
+			<p class="fhsm-cost-field" data-field="weight">
+				<label for="<?php echo esc_attr( $prefix . '-weight' ); ?>"><?php esc_html_e( 'Weight (lb):', 'fishotel' ); ?></label>
+				<input type="text" id="<?php echo esc_attr( $prefix . '-weight' ); ?>" class="fhsm-cost-weight" inputmode="decimal" autocomplete="off" value="<?php echo esc_attr( $weight ); ?>">
+				<span class="fhsm-field-error" aria-live="polite"></span>
+			</p>
+			<?php if ( $has_source ) : ?>
+				<p class="fhsm-cost-field" data-field="source">
+					<label for="<?php echo esc_attr( $prefix . '-source' ); ?>"><?php esc_html_e( 'Bought through:', 'fishotel' ); ?></label>
+					<select id="<?php echo esc_attr( $prefix . '-source' ); ?>" class="fhsm-cost-source" autocomplete="off">
+						<option value=""><?php esc_html_e( '— Not recorded —', 'fishotel' ); ?></option>
+						<?php foreach ( $sources as $saved_source ) : ?>
+							<option value="<?php echo esc_attr( $saved_source ); ?>" <?php selected( $saved_source, $source ); ?>><?php echo esc_html( $saved_source ); ?></option>
+						<?php endforeach; ?>
+						<?php if ( '' !== $source && ! in_array( $source, $sources, true ) ) : ?>
+							<?php // Recorded earlier as free text that is not on the list — keep it selectable. ?>
+							<option value="<?php echo esc_attr( $source ); ?>" selected><?php echo esc_html( $source ); ?></option>
+						<?php endif; ?>
+					</select>
+					<?php if ( $is_add ) : ?>
+						<span class="fhsm-source-hint" hidden><?php esc_html_e( 'Same as last time — change it if this label came from somewhere else.', 'fishotel' ); ?></span>
+					<?php endif; ?>
+				</p>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Print the label cost block of one shipment card: "Label cost $53.73 ·
+	 * 10x10x10 · Partner A" (or "No cost recorded" with an Add link) and the
+	 * inline form that saves through ShipTracker's fst_set_label_cost.
+	 *
+	 * A box shared by several orders says so, and when the view lists more
+	 * than one card for it (a fulfillment) only the first shows the cost.
+	 *
+	 * @param int   $shipment_id
+	 * @param array $card    FisHotel_Shipment_Cost::plan_cards() entry.
+	 * @param array $boxes   FisHotel_Shipment_Cost::standard_boxes().
+	 * @param array $sources FisHotel_Shipment_Cost::label_sources().
+	 */
+	public static function render_shipment_cost( $shipment_id, array $card, array $boxes, array $sources ) {
+		$shipment_id = (int) $shipment_id;
+		if ( empty( $card['primary'] ) ) {
+			echo '<p class="fhsm-cost fhsm-cost-same-box">' . esc_html__( 'Same box as the shipment above — its label cost is shown once.', 'fishotel' ) . '</p>';
+			return;
+		}
+
+		$box     = isset( $card['box'] ) && is_array( $card['box'] ) ? $card['box'] : [];
+		$about   = FisHotel_Shipment_Cost::describe_box( $box, $boxes );
+		$form_id = 'fhsm-edit-' . $shipment_id;
+		$orders  = isset( $card['order_ids'] ) && is_array( $card['order_ids'] ) ? $card['order_ids'] : [];
+		?>
+		<div class="fhsm-cost">
+			<p class="fhsm-cost-line">
+				<?php if ( null !== $about['cost'] ) : ?>
+					<span class="fhsm-cost-label"><?php esc_html_e( 'Label cost', 'fishotel' ); ?></span>
+					<strong class="fhsm-cost-value"><?php echo self::money( $about['cost'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in money(). ?></strong>
+				<?php else : ?>
+					<span class="fhsm-cost-none"><?php esc_html_e( 'No cost recorded', 'fishotel' ); ?></span>
+				<?php endif; ?>
+				<?php foreach ( $about['details'] as $detail ) : ?>
+					<span class="fhsm-cost-detail"><span class="fhsm-cost-sep" aria-hidden="true">&middot;</span> <?php echo esc_html( $detail ); ?></span>
+				<?php endforeach; ?>
+				<button type="button" class="button-link fhsm-cost-edit" aria-expanded="false" aria-controls="<?php echo esc_attr( $form_id ); ?>">
+					<?php echo null !== $about['cost'] ? esc_html__( 'Edit', 'fishotel' ) : esc_html__( 'Add', 'fishotel' ); ?>
+				</button>
+			</p>
+			<?php if ( count( $orders ) > 1 ) : ?>
+				<p class="fhsm-cost-shared">
+					<?php
+					printf(
+						/* translators: 1: number of orders, 2: list of order ids like "#101, #102" */
+						esc_html__( 'One box for %1$d orders (%2$s) — this is the cost of the whole box.', 'fishotel' ),
+						count( $orders ),
+						esc_html( self::order_refs( $orders ) )
+					);
+					?>
+				</p>
+			<?php endif; ?>
+			<div class="fhsm-cost-form" id="<?php echo esc_attr( $form_id ); ?>" hidden>
+				<?php self::render_cost_fields( $form_id, $box, $boxes, $sources ); ?>
+				<p class="fhsm-cost-form-actions">
+					<button type="button" class="button button-primary fhsm-cost-save" data-shipment-id="<?php echo esc_attr( $shipment_id ); ?>"><?php esc_html_e( 'Save label cost', 'fishotel' ); ?></button>
+					<button type="button" class="button-link fhsm-cost-cancel"><?php esc_html_e( 'Cancel', 'fishotel' ); ?></button>
+					<span class="fhsm-message fhsm-cost-message" aria-live="polite"></span>
+				</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Print the line under the shipments list: the shipping paid, the label
+	 * cost recorded, the difference (red when the labels cost more) and how
+	 * many boxes have no cost yet.
+	 *
+	 * @param array $summary FisHotel_Shipment_Cost::view_summary() result.
+	 */
+	public static function render_cost_summary( array $summary ) {
+		$missing = (int) $summary['boxes_without_cost'];
+		?>
+		<p class="fhsm-cost-totals<?php echo $summary['loss'] ? ' fhsm-cost-totals-loss' : ''; ?>">
+			<span class="fhsm-cost-total">
+				<?php esc_html_e( 'Shipping paid:', 'fishotel' ); ?>
+				<strong><?php echo self::money( $summary['paid'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in money(). ?></strong>
+				<?php if ( ! empty( $summary['other_order_ids'] ) ) : ?>
+					<small>
+						<?php
+						printf(
+							/* translators: 1: amount, 2: list of order ids like "#101, #102" */
+							esc_html__( '(includes %1$s paid on %2$s, in the same box)', 'fishotel' ),
+							self::money( $summary['paid_others'] ), // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in money().
+							esc_html( self::order_refs( $summary['other_order_ids'] ) )
+						);
+						?>
+					</small>
+				<?php endif; ?>
+			</span>
+			<span class="fhsm-cost-total">
+				<?php esc_html_e( 'Label cost recorded:', 'fishotel' ); ?>
+				<?php if ( null !== $summary['cost'] ) : ?>
+					<strong><?php echo self::money( $summary['cost'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in money(). ?></strong>
+				<?php else : ?>
+					<em><?php esc_html_e( 'none yet', 'fishotel' ); ?></em>
+				<?php endif; ?>
+			</span>
+			<?php if ( null !== $summary['difference'] ) : ?>
+				<span class="fhsm-cost-total fhsm-cost-diff<?php echo $summary['loss'] ? ' fhsm-cost-diff-loss' : ''; ?>">
+					<?php
+					// While a box still has no cost the difference is only what
+					// is left so far — a missing cost is never counted as 0.
+					echo $summary['complete'] ? esc_html__( 'Difference:', 'fishotel' ) : esc_html__( 'Difference so far:', 'fishotel' );
+					?>
+					<strong><?php echo ( (float) $summary['difference'] > 0 ? '+' : '' ) . self::money( $summary['difference'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in money(). ?></strong>
+				</span>
+			<?php endif; ?>
+			<?php if ( $missing > 0 ) : ?>
+				<span class="fhsm-cost-total fhsm-cost-missing">
+					<?php
+					printf(
+						/* translators: %d number of boxes */
+						esc_html( _n( '%d box has no cost yet', '%d boxes have no cost yet', $missing, 'fishotel' ) ),
+						(int) $missing
+					);
+					?>
+				</span>
+			<?php endif; ?>
+		</p>
+		<?php
 	}
 
 	/** Items to show grouped by source order. Standalone → just this order. */

@@ -9,6 +9,11 @@
  *   array    $shipments         FST_Shipment[] (or stdClass-like rows)
  *   array    $legacy_shipments  see resolve_phase1_legacy_shipments()
  *   int[]    $covered_ids
+ *   bool     $cost_supported   ShipTracker records label costs (v1.9.17+)
+ *   array    $cost_boxes       ShipTracker's standard boxes [ { name, dims } ]
+ *   string[] $cost_sources     ShipTracker's label sources
+ *   array    $cost_cards       shipment id => FisHotel_Shipment_Cost::plan_cards() entry
+ *   ?array   $cost_summary     FisHotel_Shipment_Cost::view_summary(), null when unsupported
  */
 defined( 'ABSPATH' ) || exit;
 
@@ -136,6 +141,9 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 					<?php else : ?>
 						<p class="fhsm-covers-all"><em><?php esc_html_e( 'Covers all items on this order.', 'fishotel' ); ?></em></p>
 					<?php endif; ?>
+					<?php if ( $cost_supported && isset( $cost_cards[ $ship_id ] ) ) : ?>
+						<?php FisHotel_Shipments_Metabox::render_shipment_cost( $ship_id, $cost_cards[ $ship_id ], $cost_boxes, $cost_sources ); ?>
+					<?php endif; ?>
 					<div class="fhsm-shipment-actions">
 						<button type="button" class="button fhsm-recheck" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>"><?php esc_html_e( 'Re-check', 'fishotel' ); ?></button>
 						<button type="button" class="button fhsm-remove" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>"><?php esc_html_e( 'Remove', 'fishotel' ); ?></button>
@@ -185,6 +193,10 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 				</p>
 			</div>
 		<?php endforeach; ?>
+
+		<?php if ( $cost_supported && is_array( $cost_summary ) ) : ?>
+			<?php FisHotel_Shipments_Metabox::render_cost_summary( $cost_summary ); ?>
+		<?php endif; ?>
 	</div>
 
 	<div class="fhsm-add-shipment">
@@ -297,6 +309,27 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 					<?php esc_html_e( 'Select all unshipped items', 'fishotel' ); ?>
 				</label>
 			</p>
+			<?php // Label cost — only when ShipTracker records it, and only when a shipment can be added. ?>
+			<?php if ( $cost_supported ) : ?>
+				<div class="fhsm-new-cost">
+					<p class="fhsm-new-cost-heading">
+						<strong><?php esc_html_e( 'What this box cost to ship', 'fishotel' ); ?></strong>
+						<span class="description"><?php esc_html_e( '(optional — it can be added later)', 'fishotel' ); ?></span>
+					</p>
+					<?php FisHotel_Shipments_Metabox::render_cost_fields( 'fhsm-new', [], $cost_boxes, $cost_sources ); ?>
+					<?php if ( empty( $cost_boxes ) || empty( $cost_sources ) ) : ?>
+						<p class="description fhsm-new-cost-setup">
+							<?php
+							printf(
+								/* translators: %s link to the ShipTracker settings tab */
+								esc_html__( 'Your standard boxes and the places you buy labels can be saved under %s, then picked here.', 'fishotel' ),
+								'<a href="' . esc_url( admin_url( 'admin.php?page=fst-settings&tab=boxes' ) ) . '">' . esc_html__( 'ShipTracker → Settings → Boxes & label costs', 'fishotel' ) . '</a>'
+							);
+							?>
+						</p>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
 			<p>
 				<button type="button" class="button button-primary" id="fhsm-save-shipment">
 					<?php esc_html_e( 'Add Shipment', 'fishotel' ); ?>

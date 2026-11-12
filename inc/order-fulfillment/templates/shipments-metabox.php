@@ -376,6 +376,17 @@ $packing_data = $has_packing
 							?>
 						</p>
 					<?php endif; ?>
+					<?php if ( $has_packing && empty( $packing['supplies'] ) ) : ?>
+						<p class="description fhsm-packing-setup">
+							<?php
+							printf(
+								/* translators: %s link to the ShipTracker settings tab */
+								esc_html__( 'Boxes, bags, heat and ice packs can be saved as supplies under %s — the packing of a box is then filled in here and counted down from your stock.', 'fishotel' ),
+								'<a href="' . esc_url( admin_url( 'admin.php?page=fst-settings&tab=boxes' ) ) . '">' . esc_html__( 'ShipTracker → Settings → Boxes & label costs', 'fishotel' ) . '</a>'
+							);
+							?>
+						</p>
+					<?php endif; ?>
 				</div>
 			<?php endif; ?>
 			<?php if ( 'label' !== $ship_mode ) : ?>

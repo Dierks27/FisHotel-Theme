@@ -239,7 +239,8 @@
 .fhsm-new-cost-heading {
 	margin: 0 0 8px;
 }
-.fhsm-new-cost-setup {
+.fhsm-new-cost-setup,
+.fhsm-packing-setup {
 	margin: 0 0 8px;
 }
 .fhsm-cost-fields {

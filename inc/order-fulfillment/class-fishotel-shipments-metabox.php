@@ -429,7 +429,7 @@ class FisHotel_Shipments_Metabox {
 			wp_send_json_error( __( 'ShipTracker cannot record this yet — update it first.', 'fishotel' ) );
 		}
 
-		$own_id = isset( $_POST['order_id'] ) ? absint( wp_unslash( $_POST['order_id'] ) ) : 0;
+		$own_id = isset( $_POST['order_id'] ) && is_scalar( $_POST['order_id'] ) ? absint( wp_unslash( $_POST['order_id'] ) ) : 0;
 		$typed  = isset( $_POST['with_order'] ) && is_scalar( $_POST['with_order'] ) ? sanitize_text_field( wp_unslash( $_POST['with_order'] ) ) : '';
 
 		$found = self::describe_host( FisHotel_Shipment_Cost::order_ref_id( $typed ), $own_id );

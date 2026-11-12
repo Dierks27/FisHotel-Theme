@@ -705,7 +705,8 @@ class FisHotel_Shipments_Metabox {
 	 * and the paper cost, and a running total. admin-shipments.js builds the
 	 * lines — from the record when there is one, else from ShipTracker's
 	 * usual packing for the box picked in the same form — and sends them as
-	 * `materials`. Like the rest of the box, no input here has a name.
+	 * `materials`. A line added through "Add supply…" also gets an input for
+	 * what one cost. Like the rest of the box, no input here has a name.
 	 *
 	 * @param string $prefix  Id prefix: "fhsm-new", "fhsm-edit-{shipment id}" or "fhsm-pickup".
 	 * @param string $kind    add (hidden until a box is picked), edit (closed until asked
@@ -762,6 +763,7 @@ class FisHotel_Shipments_Metabox {
 					<select id="<?php echo esc_attr( $prefix . '-supply' ); ?>" class="fhsm-packing-supply" autocomplete="off">
 						<option value=""><?php esc_html_e( 'Add supply…', 'fishotel' ); ?></option>
 					</select>
+					<span class="description"><?php esc_html_e( 'An added line has its own cost each: enter what it cost for this box (0 when it was free).', 'fishotel' ); ?></span>
 				</p>
 				<div class="fhsm-packing-flat">
 					<p class="fhsm-cost-field" data-field="foam">

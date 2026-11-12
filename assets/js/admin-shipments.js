@@ -14,9 +14,10 @@
  *     a box opens a block of lines — supply + quantity — with the foam and
  *     paper cost and a running total, filled from ShipTracker's usual
  *     packing for that box and this order. Changing the box or the ticked
- *     items re-fills only the lines that were not touched. It is sent as
- *     `materials` (a JSON string) with Add Shipment and with a shipment's
- *     inline form.
+ *     items re-fills only the lines that were not touched. A line added
+ *     through "Add supply…" also says what one cost (a custom box that was
+ *     paid for). It is sent as `materials` (a JSON string) with Add
+ *     Shipment and with a shipment's inline form.
  *   - How it went out (an order with no shipment): local pickup, with its
  *     own packing block, or "went in another order's box" with a lookup of
  *     that order → wp_ajax_fst_set_ship_mode.
@@ -218,13 +219,21 @@
 		return whole + '.' + ( frac % 10 ? ( frac < 10 ? '0' : '' ) + frac : frac / 10 );
 	}
 
-	/** A unit cost ("0.1100") as whole ten-thousandths of a dollar; 0 when it is not one. */
-	function toRate( value ) {
-		var m = /^(\d{0,6})(?:\.(\d{0,4}))?$/.exec( clean( value ) );
+	/**
+	 * A unit cost ("0.1100", "$4.50") as whole ten-thousandths of a dollar,
+	 * read the way ShipTracker reads it; null when it is not one.
+	 */
+	function parseRate( value ) {
+		var m = /^(\d{0,6})(?:\.(\d{0,4}))?$/.exec( clean( value ).replace( /^\$\s*/, '' ) );
 		if ( ! m || ( m[1] === '' && ! m[2] ) ) {
-			return 0;
+			return null;
 		}
 		return parseInt( m[1] || '0', 10 ) * 10000 + parseInt( ( ( m[2] || '' ) + '0000' ).slice( 0, 4 ), 10 );
+	}
+
+	/** A unit cost as whole ten-thousandths of a dollar; 0 when it is not one. */
+	function toRate( value ) {
+		return parseRate( value ) || 0;
 	}
 
 	/**
@@ -256,6 +265,15 @@
 	function rateText( value ) {
 		var rate = toRate( value );
 		return ( Math.floor( rate / 10000 ) + '.' + ( '0000' + ( rate % 10000 ) ).slice( -4 ) ).replace( /0{1,2}$/, '' );
+	}
+
+	/**
+	 * A unit cost for its input: short like rateText(), '' when there is
+	 * none. What is not a unit cost stays as typed, for ShipTracker to refuse.
+	 */
+	function rateInput( value ) {
+		value = clean( value );
+		return value === '' || parseRate( value ) === null ? value : rateText( value );
 	}
 
 	/** Quantity × unit cost in whole cents, rounded half up — ShipTracker's own sum. */
@@ -332,8 +350,14 @@
 	 * An untouched line that is in none of these is dropped — the previous
 	 * box's own supply, for one.
 	 *
+	 * A line of 4. that is in none of 1.–3. was added by hand (`added`, and
+	 * it stays so): its unit cost is the owner's to say — a custom box that
+	 * was paid for — and is kept exactly as given. Every other line is priced
+	 * by ShipTracker: at the unit cost it was recorded at, or at the supply's
+	 * price each when that is 0 (recorded before the supply had a price).
+	 *
 	 * @param {Object} o { supplies, usual, boxName, fish (hundredths or null), prev (rows) }
-	 * @return {Array} rows { id, name, unit, qty, rate, touched }
+	 * @return {Array} rows { id, name, unit, qty, rate, touched, added }
 	 */
 	function packingRows( o ) {
 		o = o || {};
@@ -341,19 +365,24 @@
 		var rows     = [];
 		var at       = {};
 
-		function put( id, qty, rate, touched, name, unit ) {
+		function put( id, qty, rate, touched, name, unit, byHand ) {
 			id = parseInt( id, 10 );
 			if ( ! ( id > 0 ) ) {
 				return;
 			}
 			var supply = findSupply( supplies, id );
+			var added  = !! touched && ( !! byHand || at[ id ] === undefined );
 			var row    = {
 				id:      id,
-				name:    supply ? supply.name : ( clean( name ) || '#' + id ),
-				unit:    supply ? supply.unit : ( clean( unit ) || 'each' ),
+				// The name and unit a line came with first: ShipTracker keeps
+				// a recorded line as it was recorded, whatever the supply is
+				// called now.
+				name:    clean( name ) || ( supply ? supply.name : '#' + id ),
+				unit:    clean( unit ) || ( supply ? supply.unit : 'each' ),
 				qty:     clean( qty ),
-				rate:    clean( rate ) || ( supply ? clean( supply.price_each ) : '' ),
-				touched: !! touched
+				rate:    added || toRate( rate ) ? clean( rate ) : ( supply ? clean( supply.price_each ) : '' ),
+				touched: !! touched,
+				added:   added
 			};
 			if ( at[ id ] === undefined ) {
 				at[ id ] = rows.length;
@@ -383,7 +412,7 @@
 
 		( o.prev || [] ).forEach( function ( row ) {
 			if ( row && row.touched ) {
-				put( row.id, row.qty, row.rate, true, row.name, row.unit );
+				put( row.id, row.qty, row.rate, true, row.name, row.unit, row.added );
 			}
 		} );
 
@@ -407,13 +436,22 @@
 	 * amounts, as typed. A line at 0 is left out (ShipTracker removes a
 	 * line sent with 0, and drops one that is not sent); a quantity that is
 	 * not a number is sent as it is, so ShipTracker refuses it by name.
+	 *
+	 * A line added by hand also says what one cost (`unit_cost`: what its
+	 * input holds, 0 when that is empty). No other line does — ShipTracker
+	 * prices those itself.
 	 */
 	function packingPayload( rows, foam, paper ) {
 		var lines = [];
 		( rows || [] ).forEach( function ( row ) {
-			if ( toHundredths( row.qty ) !== 0 ) {
-				lines.push( { supply_id: row.id, qty: clean( row.qty ) } );
+			if ( toHundredths( row.qty ) === 0 ) {
+				return;
 			}
+			var line = { supply_id: row.id, qty: clean( row.qty ) };
+			if ( row.added ) {
+				line.unit_cost = clean( row.rate ) || '0';
+			}
+			lines.push( line );
 		} );
 		return {
 			lines:      lines,
@@ -427,13 +465,19 @@
 		return ! payload || ( ! payload.lines.length && toCents( payload.foam_cost ) === 0 && toCents( payload.paper_cost ) === 0 );
 	}
 
-	/** What one line costs, for reading: "× $0.11 = $0.66". */
+	/**
+	 * What one line costs, for reading: "× $0.11 = $0.66". A line added by
+	 * hand shows its unit cost in an input, which leaves "= $4.50" to say.
+	 */
 	function costText( row, currency ) {
 		var qty  = toHundredths( row && row.qty );
 		var rate = toRate( row && row.rate );
 		currency = clean( currency ) || '$';
 		if ( qty === null ) {
 			return '';
+		}
+		if ( row && row.added ) {
+			return qty ? '= ' + currency + centsText( lineCents( qty, rate ) ) : '';
 		}
 		if ( ! rate ) {
 			return qty ? 'no price yet' : '';
@@ -564,6 +608,7 @@
 			toCents:          toCents,
 			centsText:        centsText,
 			rateText:         rateText,
+			rateInput:        rateInput,
 			lineCents:        lineCents,
 			supplyForRole:    supplyForRole,
 			usualFor:         usualFor,
@@ -766,13 +811,23 @@
 						.toggleClass( 'fhsm-packing-stock-low', !! ( supply.low || supply.recount_needed ) )
 						.text( stock ) );
 				}
+				var $cost = $( '<td class="fhsm-packing-cost"></td>' );
+				if ( row.added ) {
+					// A line added by hand: what one cost is typed here.
+					$cost.append(
+						$( '<span></span>' ).text( '× ' + ( clean( packingData.currency ) || '$' ) ),
+						$( '<input type="text" class="fhsm-packing-rate" inputmode="decimal" autocomplete="off" placeholder="0.00">' )
+							.attr( 'aria-label', row.name + ': cost each' ).val( rateInput( row.rate ) )
+					);
+				}
+				$cost.append( $( '<span class="fhsm-packing-cost-text"></span>' ) );
 				$( '<tr class="fhsm-packing-row"></tr>' ).attr( 'data-supply-id', row.id ).append(
 					$name,
 					$( '<td class="fhsm-packing-qty-cell"></td>' ).append(
 						$( '<input type="text" class="fhsm-packing-qty" inputmode="decimal" autocomplete="off">' ).attr( 'id', inputId ).val( row.qty ),
 						$( '<span class="fhsm-packing-unit"></span>' ).text( row.unit )
 					),
-					$( '<td class="fhsm-packing-cost"></td>' )
+					$cost
 				).appendTo( $tbody );
 				shown[ row.id ] = true;
 			} );
@@ -805,7 +860,7 @@
 
 			$p.find( '.fhsm-packing-row' ).each( function () {
 				var row = byId[ $( this ).attr( 'data-supply-id' ) ];
-				$( this ).find( '.fhsm-packing-cost' ).text( row ? costText( row, currency ) : '' );
+				$( this ).find( '.fhsm-packing-cost-text' ).text( row ? costText( row, currency ) : '' );
 			} );
 
 			// History has no weather note: only a block that follows the box.
@@ -892,6 +947,22 @@
 			}
 		} );
 
+		// What one cost, typed on a line that was added by hand.
+		$box.on( 'input change', '.fhsm-packing-rate', function () {
+			var $p    = $( this ).closest( '.fhsm-packing' );
+			var state = packingState( $p );
+			var id    = parseInt( $( this ).closest( '.fhsm-packing-row' ).attr( 'data-supply-id' ), 10 );
+			var value = $( this ).val();
+			$.each( state ? state.rows : [], function ( i, row ) {
+				if ( row.id === id ) {
+					row.rate = value;
+				}
+			} );
+			if ( state ) {
+				packingSums( $p );
+			}
+		} );
+
 		$box.on( 'input change', '.fhsm-packing-foam, .fhsm-packing-paper', function () {
 			var $p    = $( this ).closest( '.fhsm-packing' );
 			var state = packingState( $p );
@@ -902,7 +973,8 @@
 			packingSums( $p );
 		} );
 
-		// "Add supply…": one of it, ready to be changed.
+		// "Add supply…": one of it at the supply's price each, both ready to
+		// be changed — a custom box that was paid for has no usual price.
 		$box.on( 'change', '.fhsm-packing-supply', function () {
 			var $p     = $( this ).closest( '.fhsm-packing' );
 			var state  = packingState( $p );
@@ -910,7 +982,7 @@
 			if ( ! supply ) {
 				return;
 			}
-			state.rows.push( { id: parseInt( supply.id, 10 ), name: supply.name, unit: supply.unit, qty: '1', rate: clean( supply.price_each ), touched: true } );
+			state.rows.push( { id: parseInt( supply.id, 10 ), name: supply.name, unit: supply.unit, qty: '1', rate: clean( supply.price_each ), touched: true, added: true } );
 			packingDraw( $p );
 			$p.find( '.fhsm-packing-row' ).last().find( '.fhsm-packing-qty' ).trigger( 'focus' ).trigger( 'select' );
 		} );

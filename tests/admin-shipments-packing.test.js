@@ -5,7 +5,7 @@
  * dependencies, exits non-zero on failure.
  *
  * assets/js/admin-shipments.js exports its pure helpers:
- *   toHundredths / qtyText / toRate / toCents / centsText / rateText / lineCents
+ *   toHundredths / qtyText / toRate / toCents / centsText / rateText / rateInput / lineCents
  *   supplyForRole( supplies, role, boxName )
  *   usualFor( defaults, boxName )        → ShipTracker's usual packing for a box
  *   recordRows( record )                 → a recorded packing as (touched) rows
@@ -25,6 +25,9 @@
  * box supply; a recorded packing is kept as recorded; the running total is
  * ShipTracker's own sum (quantity × unit cost, half up, per line); a line
  * at 0 is not sent and a quantity that is not a number is sent as typed;
+ * a line added by hand carries its own unit cost and sends it (a custom box
+ * that was paid for), every other line is priced by ShipTracker — a line
+ * recorded at 0 takes the supply's price once there is one;
  * the weather note says when a pack was added because of the weather check;
  * a tracking number that is already a box with its packing recorded is
  * asked about first, and its record is not replaced.
@@ -38,7 +41,7 @@ var path = require('path');
 
 // The module must load without a DOM and without jQuery.
 var mod = require(path.join(__dirname, '..', 'assets/js/admin-shipments.js'));
-['toHundredths', 'qtyText', 'toRate', 'toCents', 'centsText', 'rateText', 'lineCents', 'supplyForRole', 'usualFor', 'recordRows',
+['toHundredths', 'qtyText', 'toRate', 'toCents', 'centsText', 'rateText', 'rateInput', 'lineCents', 'supplyForRole', 'usualFor', 'recordRows',
   'packingRows', 'packingTotal', 'packingPayload', 'packingIsEmpty', 'costText', 'stockText', 'sumFish', 'weatherNotes',
   'shipModeFields', 'sharesRecordedBox', 'sharedBoxQuestion', 'errorField'].forEach(function (name) {
   assert.strictEqual(typeof mod[name], 'function', name + ' exported');
@@ -108,6 +111,9 @@ same(mod.toRate('0.1100'), 1100, 'a unit cost in ten-thousandths');
 same(mod.toRate('12'), 120000, 'a whole unit cost');
 same(mod.toRate(null), 0, 'no price yet is 0');
 same(mod.toRate('abc'), 0, 'not a unit cost is 0');
+same(mod.toRate('$4.50'), 45000, 'a "$" in front is tolerated, as ShipTracker tolerates it');
+same(mod.toRate('$'), 0, '"$" alone is not a unit cost');
+same(mod.toRate('1,018.40'), 0, 'thousands separators are not (ShipTracker refuses them in a unit cost)');
 same(mod.toCents('1.80'), 180, 'an amount');
 same(mod.toCents('$1,018.4'), 101840, '"$" and thousands separators tolerated');
 same(mod.toCents('1.005'), 101, 'a third decimal rounds half up');
@@ -123,6 +129,13 @@ same(mod.centsText(0), '0.00', '0 → "0.00"');
 same(mod.rateText('0.1100'), '0.11', 'a unit cost reads with two decimals');
 same(mod.rateText('0.1319'), '0.1319', '… or four when it has them');
 same(mod.rateText('2.2000'), '2.20', 'trailing zeros beyond two are dropped');
+same(mod.rateInput('4.5000'), '4.50', 'a recorded unit cost is shown short in its input');
+same(mod.rateInput('0.1319'), '0.1319', '… with all the decimals it has');
+same(mod.rateInput('0.0000'), '0.00', 'a recorded 0 is shown as 0, not as empty');
+same(mod.rateInput('4.5'), '4.50', 'what was typed reads the same way');
+same(mod.rateInput(''), '', 'no unit cost: an empty input');
+same(mod.rateInput(null), '', 'a supply with no price yet: an empty input');
+same(mod.rateInput('four'), 'four', 'what is not a unit cost stays as typed, for ShipTracker to refuse');
 same(mod.lineCents(600, 1100), 66, '6 × $0.11 = $0.66');
 same(mod.lineCents(600, 1319), 79, '6 × $0.1319 = $0.7914 → $0.79');
 same(mod.lineCents(100, 1250), 13, '1 × $0.125 rounds half up to $0.13');
@@ -212,6 +225,11 @@ rows = mod.packingRows({ supplies: supplies, usual: null, boxName: 'Small', prev
 same(brief(rows), ['6:1*', '3:5*', '1:0', '2:0', '99:1*'], 'in the edit form: the record, plus the pack lines at 0');
 same(rows[1].rate, '0.1000', 'a recorded line keeps the unit cost it was recorded at, not today\'s price');
 same(rows[4].name + ' / ' + rows[4].rate, 'Old liner / 0.4000', 'a supply since removed from the list keeps its recorded name and cost');
+// The bag supply was renamed and is sold by the hundred now: the recorded line reads as it was recorded.
+var renamed = supplies.map(function (supply) { return supply.id === 3 ? { id: 3, name: 'Poly bag', unit: 'bag of 100', role: 'fish_bag', box_name: '', price_each: '9.0000', on_hand: '5', low: false, recount_needed: false } : supply; });
+rows = mod.packingRows({ supplies: renamed, usual: null, boxName: 'Small', prev: recorded });
+same(rows[1].name + ' / ' + rows[1].unit + ' / ' + rows[1].rate, 'Fish bag / each / 0.1000', 'a recorded line keeps the name and unit it was recorded with after its supply was renamed — as ShipTracker keeps them');
+same(mod.packingRows({ supplies: renamed, usual: null, boxName: 'Small', fish: 600 })[1].name, 'Poly bag', 'a line that is new takes the supply\'s name as it is now');
 same(mod.packingTotal(rows, record.foam_cost, record.paper_cost), 380, 'the total is the recorded one: 1.10 + 0.50 + 0.40 + 1.50 + 0.30');
 rows = mod.packingRows({ supplies: supplies, usual: null, boxName: 'Large', prev: rows });
 same(brief(rows), ['7:0', '3:5*', '1:0', '2:0', '6:1*', '99:1*'], 'changing the box of a recorded packing adds nothing by itself');
@@ -234,7 +252,7 @@ rows[1].qty = '';
 same(mod.packingPayload(rows, '', '').lines.length, 2, 'an emptied quantity removes the line');
 same(mod.packingPayload(rows, '', ''), { lines: [{ supply_id: 6, qty: '1' }, { supply_id: 1, qty: '1' }], foam_cost: '', paper_cost: '' }, 'emptied amounts are sent empty (ShipTracker reads them as 0.00)');
 same(mod.packingPayload([], 'abc', '0.40').foam_cost, 'abc', 'an amount is never cleaned up here — ShipTracker is the one validator');
-same(Object.keys(mod.packingPayload(rows, '1', '2').lines[0]), ['supply_id', 'qty'], 'no unit cost is sent: ShipTracker snapshots its own');
+same(Object.keys(mod.packingPayload(rows, '1', '2').lines[0]), ['supply_id', 'qty'], 'a line of the usual packing sends no unit cost: ShipTracker prices it');
 
 same(mod.packingIsEmpty(mod.packingPayload([], '', '')), true, 'no lines, no amounts: nothing to record');
 same(mod.packingIsEmpty(mod.packingPayload([{ id: 3, qty: '0' }], '0.00', '0')), true, 'zeros only: nothing to record');
@@ -242,6 +260,96 @@ same(mod.packingIsEmpty(mod.packingPayload([{ id: 3, qty: '1' }], '', '')), fals
 same(mod.packingIsEmpty(mod.packingPayload([], '1.80', '')), false, 'a foam amount is something');
 same(mod.packingIsEmpty(mod.packingPayload([], '', 'abc')), false, 'an amount that cannot be read is sent, so ShipTracker can say so');
 same(mod.packingIsEmpty(null), true, 'no block at all');
+
+// ── A line added by hand carries its own unit cost ─────────────────────
+// A supply for boxes that are not standard: no use, never bought, so no price.
+var withCustom = supplies.concat([{ id: 9, name: 'Custom box', unit: 'each', role: '', box_name: '', price_each: null, on_hand: null, low: false, recount_needed: false }]);
+/** The rows of a block as "id:qty@rate" (a trailing + marks a line added by hand). */
+function priced(rows) {
+  return rows.map(function (row) { return row.id + ':' + row.qty + '@' + row.rate + (row.added ? '+' : ''); });
+}
+// What "Add supply…" pushes: one of it, at the supply's price each.
+function picked(supply) { return { id: supply.id, name: supply.name, unit: supply.unit, qty: '1', rate: supply.price_each || '', touched: true, added: true }; }
+
+rows = mod.packingRows({ supplies: withCustom, usual: mod.usualFor(heat, ''), boxName: '', fish: 600 });
+same(rows.some(function (row) { return row.added; }), false, 'no line of the usual packing is "added"');
+rows.push(picked(withCustom[8]));
+same(mod.costText(rows[3], '$'), '= $0.00', 'a custom box picked from "Add supply…": no price yet, so it costs nothing until one is typed');
+rows[3].rate = '4.50';                                           // the owner paid 4.50 for this one
+same(mod.costText(rows[3], '$'), '= $4.50', 'the unit cost typed on the line is what it costs');
+same(mod.packingTotal(rows, '0.00', '0.00'), 576, 'and it is in the running total: 0.66 + 0.60 + 4.50');
+same(mod.packingPayload(rows, '0.00', '0.00').lines,
+  [{ supply_id: 3, qty: '6' }, { supply_id: 1, qty: '1' }, { supply_id: 9, qty: '1', unit_cost: '4.50' }],
+  'it is sent with its unit cost — the usual lines without one');
+rows[3].qty = '2';
+same(mod.costText(rows[3], '$') + ' / ' + mod.packingTotal(rows, '', ''), '= $9.00 / 1026', 'two of them');
+rows[3].qty = '0';
+same(mod.costText(rows[3], '$'), '', 'none of it: nothing to say');
+same(mod.packingPayload(rows, '', '').lines.length, 2, '… and the line is not sent');
+rows[3].qty = '1';
+rows[3].rate = '';
+same(mod.packingPayload(rows, '', '').lines[2], { supply_id: 9, qty: '1', unit_cost: '0' }, 'an emptied unit cost is sent as 0 — a box that was free');
+same(mod.packingTotal(rows, '', ''), 126, '… and adds nothing to the total');
+rows[3].rate = '$4.5';
+same(mod.packingTotal(rows, '', '') + ' / ' + mod.packingPayload(rows, '', '').lines[2].unit_cost, '576 / $4.5', 'a "$" typed in front counts the same and is sent as typed');
+rows[3].rate = 'four';
+same(mod.packingPayload(rows, '', '').lines[2].unit_cost, 'four', 'a unit cost that is not an amount is sent as typed, for ShipTracker to refuse by name');
+same(mod.packingTotal(rows, '', ''), 126, '… and counts as 0 in the total meanwhile');
+
+// A supply that has a price starts at it, and the price can be changed for this box.
+var tape = picked({ id: 8, name: 'Tape', unit: 'rolls', price_each: '3.0000' });
+same(mod.rateInput(tape.rate) + ' / ' + mod.costText(tape, '$'), '3.00 / = $3.00', 'an added line starts at the supply\'s price each');
+same(mod.packingPayload([tape], '', '').lines, [{ supply_id: 8, qty: '1', unit_cost: '3.0000' }], 'which is sent as it stands');
+
+// Through a box change an added line keeps its unit cost.
+rows[3].rate = '4.50';
+large = mod.packingRows({ supplies: withCustom, usual: mod.usualFor(heat, 'Large'), boxName: 'Large', fish: 600, prev: rows });
+same(priced(large), ['7:1@2.2000', '3:6@0.1100', '1:1@0.6000', '2:0@0.7500', '9:1@4.50+'], 'custom → Large: the added line stays, with the unit cost that was typed');
+// A standard box's own supply, added by hand to a custom box at what was paid: still the owner's line once that box is picked.
+rows = mod.packingRows({ supplies: withCustom, usual: mod.usualFor(heat, ''), boxName: '', fish: 600 });
+rows.push(picked(withCustom[5]));
+rows[3].rate = '0.50';
+same(priced(mod.packingRows({ supplies: withCustom, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: 600, prev: rows })),
+  ['6:1@0.50+', '3:6@0.1100', '1:1@0.6000', '2:0@0.7500'], 'a line added by hand stays added, and keeps its unit cost, when its supply becomes the box\'s own');
+// A box line the owner changed, kept beside another box: an added line at the price it had.
+rows = mod.packingRows({ supplies: withCustom, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: 600 });
+rows[0].qty = '2'; rows[0].touched = true;
+large = mod.packingRows({ supplies: withCustom, usual: mod.usualFor(heat, 'Large'), boxName: 'Large', fish: 600, prev: rows });
+same(priced(large)[4], '6:2@1.2500+', 'a touched box line kept beside the new box is an added line, at the price it had');
+same(mod.packingPayload(large, '', '').lines[3], { supply_id: 6, qty: '2', unit_cost: '1.2500' }, '… sent with it');
+
+// A recorded packing: an added line shows what it was recorded at, and sends it back as it is.
+var paidBox = {
+  lines: [
+    { supply_id: 3, name: 'Fish bag', role: 'fish_bag', unit: 'each', qty: '6', unit_cost: '0.1000', cost: '0.60' },
+    { supply_id: 9, name: 'Custom box', role: '', unit: 'each', qty: '1', unit_cost: '4.5000', cost: '4.50' }
+  ],
+  foam_cost: '0.00', paper_cost: '0.00', total: '5.10'
+};
+rows = mod.packingRows({ supplies: withCustom, usual: null, boxName: '', prev: mod.recordRows(paidBox) });
+same(priced(rows), ['3:6@0.1000', '1:0@0.6000', '2:0@0.7500', '9:1@4.5000+'], 'in the edit form: the recorded custom box is an added line');
+same(mod.rateInput(rows[3].rate) + ' / ' + mod.costText(rows[3], '$'), '4.50 / = $4.50', 'its input shows the 4.50 it was recorded at');
+same(mod.packingPayload(rows, '0.00', '0.00').lines, [{ supply_id: 3, qty: '6' }, { supply_id: 9, qty: '1', unit_cost: '4.5000' }], 'saved untouched: the recorded unit cost goes back as it is, the bags without one');
+same(mod.packingTotal(rows, '0.00', '0.00'), 510, 'the total is the recorded one');
+paidBox.lines[1].unit_cost = '0.0000';
+rows = mod.packingRows({ supplies: withCustom.slice(0, 8).concat([{ id: 9, name: 'Custom box', unit: 'each', role: '', price_each: '4.5000' }]), usual: null, boxName: '', prev: mod.recordRows(paidBox) });
+same(priced(rows)[3], '9:1@0.0000+', 'an added line recorded at 0 stays at 0, whatever the supply costs now — it was free');
+same(mod.rateInput(rows[3].rate) + ' / ' + mod.packingPayload(rows, '', '').lines[1].unit_cost, '0.00 / 0.0000', 'shown as 0 and sent as 0');
+
+// Every other recorded line is priced by ShipTracker — the block shows what a save will record.
+var early = {
+  lines: [
+    { supply_id: 6, name: 'Small box', role: 'box', unit: 'each', qty: '1', unit_cost: '1.1000', cost: '1.10' },
+    { supply_id: 3, name: 'Fish bag', role: 'fish_bag', unit: 'each', qty: '6', unit_cost: '0.0000', cost: '0.00' }
+  ],
+  foam_cost: '1.80', paper_cost: '0.40', total: '3.30'
+};
+rows = mod.packingRows({ supplies: supplies, usual: null, boxName: 'Small', prev: mod.recordRows(early) });
+same(priced(rows), ['6:1@1.1000', '3:6@0.1100', '1:0@0.6000', '2:0@0.7500'], 'bags recorded at 0 before their first purchase: the line takes today\'s price, the box line keeps the one it was recorded at');
+same(mod.costText(rows[1], '$') + ' / ' + mod.packingTotal(rows, early.foam_cost, early.paper_cost), '× $0.11 = $0.66 / 396', 'so the block says what saving will record: 1.10 + 0.66 + 1.80 + 0.40');
+same(mod.packingPayload(rows, '1.80', '0.40').lines, [{ supply_id: 6, qty: '1' }, { supply_id: 3, qty: '6' }], 'and no unit cost is sent for either');
+rows = mod.packingRows({ supplies: supplies.slice(0, 2).concat([{ id: 3, name: 'Fish bag', unit: 'each', role: 'fish_bag', price_each: null }]), usual: null, boxName: '', prev: mod.recordRows(early) });
+same(mod.costText(rows[0], '$'), 'no price yet', 'still no purchase logged for the bags: no price yet');
 
 // ── costText / stockText ───────────────────────────────────────────────
 same(mod.costText({ qty: '6', rate: '0.1100' }, '$'), '× $0.11 = $0.66', 'a line reads "× price = cost"');
@@ -316,4 +424,4 @@ same(mod.errorField('The label cost must be an amount of 0 or more, for example 
 same(mod.errorField('This order has a label of its own. Remove its tracking first.'), '', 'a ship mode refusal is not a field error');
 same(mod.errorField('Order #100 is a local pickup, so it has no box.'), '', '… nor is a refusal of the other order');
 
-console.log('admin-shipments-packing: OK (' + checks + ' checks — a box fills the block, a box change keeps what was touched, custom starts at 0, records stay as recorded, total = ShipTracker\'s sum, 0 lines not sent, weather note, ship mode fields)');
+console.log('admin-shipments-packing: OK (' + checks + ' checks — a box fills the block, a box change keeps what was touched, custom starts at 0, records stay as recorded, total = ShipTracker\'s sum, 0 lines not sent, an added line carries its unit cost, weather note, ship mode fields)');

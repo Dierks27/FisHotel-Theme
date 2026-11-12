@@ -239,6 +239,10 @@ materials of each box; the Shipments box shows and posts them. Still v1.26.0 of 
   added through "Add supply…" (`#fhsm-new-supply`; the supplies kept as foam and as paper are
   left out — they are the two amounts). Each line shows the price each and, for a counted
   supply, what is on hand.
+  - A line added through "Add supply…" has its own cost each, in an input
+    (`.fhsm-packing-rate`): it starts at the supply's price each — empty when the supply has
+    none — and what the input shows is what is recorded. That is where a custom box that was
+    paid for gets its price (`4.50`), and a free one its `0`. Left empty it is 0.
   - Fish bags = the fish of the items ticked (all unshipped items while none is ticked); a
     refunded fish is not bagged.
   - A note says when a pack is there because of the weather check: "Heat pack added: the weather
@@ -251,7 +255,9 @@ materials of each box; the Shipments box shows and posts them. Still v1.26.0 of 
   - A custom size starts with foam and paper at 0 and no box line.
   - It is sent with `fst_add_tracking` as `materials` — a JSON string
     `{"lines":[{"supply_id":6,"qty":"1"},…],"foam_cost":"1.80","paper_cost":"0.40"}`; lines at 0
-    are left out. With no box picked nothing is sent, as before. A block with nothing in it and
+    are left out. An added line also carries its `unit_cost`
+    (`{"supply_id":9,"qty":"1","unit_cost":"4.50"}`); every other line is priced by ShipTracker.
+    With no box picked nothing is sent, as before. A block with nothing in it and
     nothing touched (no supplies saved yet) is not sent either — a line then points at
     ShipTracker → Settings → Boxes & label costs, where supplies are saved.
   - A tracking number that is already a box with its packing recorded — another order went out
@@ -261,11 +267,15 @@ materials of each box; the Shipments box shows and posts them. Still v1.26.0 of 
     shipment card.
 - **Existing shipments** show the full cost — `Label $53.73 + materials $6.10 = $59.83 · Small
   (10x10x10) · …` — and what went in: `Packing: 1 × Small box · 6 × Fish bag · foam $1.80`. The
-  inline form holds the same block, filled from the record (a recorded line keeps the unit cost
-  it was recorded at; changing the box rewrites nothing by itself) and saved with
-  `fst_set_label_cost`. A box with no packing recorded says so; its block stays closed behind
-  "Add packing", so saving a label cost never records packing unseen (ShipTracker leaves
-  `materials` alone when it is not sent).
+  inline form holds the same block, filled from the record (a recorded line keeps the name,
+  the unit and the unit cost it was recorded with; changing the box rewrites nothing by itself)
+  and saved with `fst_set_label_cost`. Two things about the unit cost there: a line recorded
+  at 0 before its supply had a price shows the price each it now has, because ShipTracker
+  gives it that price when the box is saved; and an added line shows the cost each it was
+  recorded at in its input, which is sent back as it stands — so a box entered as free stays
+  free whatever the supply costs by then. A box with no packing recorded says so; its block
+  stays closed behind "Add packing", so saving a label cost never records packing unseen
+  (ShipTracker leaves `materials` alone when it is not sent).
 - **How it went out** (`.fhsm-ship-mode`, on an order with no shipment): `#fhsm-ship-mode` —
   "Shipped with a label" (the default; nothing is stored), "Local pickup" (with its own packing
   block: a bag per fish, no pack) or "Went in another order's box" (an order number,
@@ -285,7 +295,8 @@ materials of each box; the Shipments box shows and posts them. Still v1.26.0 of 
   named instead of shown as a loss: "Shipped free: this box cost $59.83". A box without a label
   cost still counts as "no cost yet"; its materials are named apart, never added on their own.
 - **A value ShipTracker refuses** (a quantity that is not 0 or more with at most 2 decimals, a
-  foam or paper amount, an unknown supply, an order that cannot carry another) is reported in
+  unit cost, a foam or paper amount, an unknown supply, an order that cannot carry another or
+  that carries others and so cannot be a local pickup) is reported in
   its own words — next to the packing lines, the foam or the paper field when it is about one.
 - **Two requests are the theme's own, both read-only** (nonce `fst_nonce`,
   `manage_woocommerce`): `wp_ajax_fishotel_ship_with_lookup`, the order lookup behind Find, and
@@ -296,8 +307,8 @@ materials of each box; the Shipments box shows and posts them. Still v1.26.0 of 
 The helpers behind it (supplies / materials as shown, full cost, the fish of a refunded line,
 ship mode, the rules for the order it went with, free shipping, a rider counted like a sharer)
 are tested by `php tests/shipment-packing-test.php`; the packing block (what a box fills in,
-what a box change keeps, the running total, what is sent, the weather note, the ship mode
-fields, when to ask about a box that is already recorded) by
+what a box change keeps, the running total, what is sent, the unit cost of an added line, the
+weather note, the ship mode fields, when to ask about a box that is already recorded) by
 `node tests/admin-shipments-packing.test.js`.
 
 ## Build Phases

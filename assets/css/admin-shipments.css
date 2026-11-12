@@ -375,6 +375,10 @@
 	color: #50575e;
 	white-space: nowrap;
 }
+.fhsm-packing-lines input.fhsm-packing-rate[type="text"] {
+	width: 64px;
+	margin: 0 5px 0 2px;
+}
 .fhsm-packing-add {
 	margin: 0 0 10px;
 }

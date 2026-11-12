@@ -243,6 +243,34 @@ class FisHotel_Med_Terms {
 		return $has_med_lines ? self::STATE_MISSING : self::STATE_NONE;
 	}
 
+	// ── Order notes ──────────────────────────────────────────────────
+
+	/**
+	 * The order-note lines for a checkout acceptance record: the main
+	 * acknowledgement and, when any, the extra ones. Empty for anything
+	 * that is not a checkout record (no medication in the cart, a manual
+	 * record — that one writes its own note). Plain text.
+	 *
+	 * @param mixed $record Value of the `_fishotel_med_terms` meta.
+	 * @return string[]
+	 */
+	public static function order_note_lines( $record ) {
+		if ( ! self::is_record( $record ) ) {
+			return [];
+		}
+		if ( isset( $record['source'] ) && $record['source'] === 'manual' ) {
+			return [];
+		}
+		$label = isset( $record['label'] ) ? (string) $record['label'] : '';
+		$lines = [ 'Medication disclaimer acknowledged: "' . $label . '"' ];
+
+		$extra = isset( $record['extra_acks'] ) && is_array( $record['extra_acks'] ) ? array_filter( array_map( 'strval', $record['extra_acks'] ), 'strlen' ) : [];
+		if ( ! empty( $extra ) ) {
+			$lines[] = 'Additional medication acknowledgement(s) accepted: ' . implode( ' | ', $extra );
+		}
+		return $lines;
+	}
+
 	// ── Display formatters ───────────────────────────────────────────
 
 	/**

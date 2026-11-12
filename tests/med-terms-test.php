@@ -179,5 +179,20 @@ check( 'manual line marks it', FisHotel_Med_Terms::format_line( $manual ) === 'M
 check( 'manual pdf line, no ip', FisHotel_Med_Terms::format_line( $manual, true ) === 'Medication terms accepted 2026-10-14 13:46 EDT · IP n/a · v2026-10 (recorded manually by Jeff)' );
 check( 'legacy timestamp formatter', FisHotel_Med_Terms::local_time_string( $ts, $tz ) === '2026-10-14 13:46 EDT' );
 
+echo "\norder notes\n";
+$notes = FisHotel_Med_Terms::order_note_lines( $record );
+check( 'main note quotes the label', isset( $notes[0] ) && $notes[0] === 'Medication disclaimer acknowledged: "' . $label . '"', isset( $notes[0] ) ? $notes[0] : 'none' );
+check( 'extra acks get a second note', count( $notes ) === 2 && $notes[1] === 'Additional medication acknowledgement(s) accepted: ' . implode( ' | ', $record['extra_acks'] ), isset( $notes[1] ) ? $notes[1] : 'none' );
+$two = $record;
+$two['extra_acks'] = [ 'First text.', '', 'Second text.' ];
+$two_notes = FisHotel_Med_Terms::order_note_lines( $two );
+check( 'several extra acks are joined', isset( $two_notes[1] ) && $two_notes[1] === 'Additional medication acknowledgement(s) accepted: First text. | Second text.', isset( $two_notes[1] ) ? $two_notes[1] : 'none' );
+$plain = $record;
+$plain['extra_acks'] = [];
+check( 'no extra acks → one note',    count( FisHotel_Med_Terms::order_note_lines( $plain ) ) === 1 );
+check( 'no record → no notes',        FisHotel_Med_Terms::order_note_lines( '' ) === [] && FisHotel_Med_Terms::order_note_lines( null ) === [] );
+check( 'malformed record → no notes', FisHotel_Med_Terms::order_note_lines( [ 'accepted' => true ] ) === [] );
+check( 'manual record → no notes',    FisHotel_Med_Terms::order_note_lines( $manual ) === [] );
+
 echo "\n" . ( $failures ? "$failures FAILED\n" : "all passed\n" );
 exit( $failures ? 1 : 0 );

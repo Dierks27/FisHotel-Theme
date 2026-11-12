@@ -138,6 +138,11 @@ class FisHotel_Checkout_Reuse {
 				continue;
 			}
 			$product = $item->get_product();
+			if ( ! $product instanceof WC_Product && class_exists( 'FisHotel_Invoice_Lines' ) ) {
+				// An itemised invoice fish line (theme 1.25+) has no product of
+				// its own; the box ships in the invoice product's class.
+				$product = FisHotel_Invoice_Lines::item_invoice_product( $item );
+			}
 			if ( ! $product instanceof WC_Product ) {
 				continue;
 			}

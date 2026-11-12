@@ -56,7 +56,9 @@ FisHotel_Checkout_Reuse::init();
 require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-reorder-checkout-lock.php';
 FisHotel_Reorder_Checkout_Lock::init();
 // Shipment cost (v1.26.0) — label cost / box size / label source on the
-// Shipments meta box, shown only when ShipTracker records them (v1.9.17+).
+// Shipments meta box, shown only when ShipTracker records them (v1.9.17+);
+// with ShipTracker v1.9.18+ also the packing of each box (materials) and
+// how an order without a label went out (local pickup / another order's box).
 require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-shipment-cost.php';
 // Unified Shipments meta box (v1.17.0) — replaces Phase 1 per-line UI + the
 // default ShipTracker sidebar widget. Kill switch: FISHOTEL_NEW_SHIPMENTS_UI_OFF.

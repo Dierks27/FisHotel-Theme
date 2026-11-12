@@ -14,12 +14,31 @@
  *   string[] $cost_sources     ShipTracker's label sources
  *   array    $cost_cards       shipment id => FisHotel_Shipment_Cost::plan_cards() entry
  *   ?array   $cost_summary     FisHotel_Shipment_Cost::view_summary(), null when unsupported
+ *   ?array   $packing          FisHotel_Shipments_Metabox::packing_view(); null when ShipTracker
+ *                              does not record packing (before its v1.9.18)
  */
 defined( 'ABSPATH' ) || exit;
 
 $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
+
+// "How it went out" is for an order with no shipment at all. A fulfillment
+// order carries no shipping of its own — what the customers paid is on its
+// source orders — so there it is marked on those.
+$has_packing    = $cost_supported && is_array( $packing );
+$no_shipments   = empty( $shipments ) && empty( $legacy_shipments );
+$show_ship_mode = $has_packing && $no_shipments && ! $is_fulfillment && class_exists( 'FST_Shipment' );
+$ship_mode      = $show_ship_mode ? $packing['ship_mode']['mode'] : 'label';
+
+// What admin-shipments.js fills the packing blocks from.
+$packing_data = $has_packing
+	? [
+		'supplies' => $packing['supplies'],
+		'defaults' => $packing['defaults'],
+		'currency' => function_exists( 'get_woocommerce_currency_symbol' ) ? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ) : '$',
+	]
+	: null;
 ?>
-<div class="fishotel-shipments-metabox">
+<div class="fishotel-shipments-metabox"<?php echo $has_packing ? ' data-packing="' . esc_attr( wp_json_encode( $packing_data ) ) . '"' : ''; ?>>
 
 	<?php if ( ! empty( $ea_items ) ) : ?>
 		<div class="fhsm-ea-panel">
@@ -82,8 +101,25 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 
 		<?php if ( ! class_exists( 'FST_Shipment' ) ) : ?>
 			<p class="fhsm-empty"><em><?php esc_html_e( 'ShipTracker plugin is not active — shipment data is unavailable.', 'fishotel' ); ?></em></p>
-		<?php elseif ( empty( $shipments ) && empty( $legacy_shipments ) ) : ?>
+		<?php elseif ( $show_ship_mode ) : ?>
+			<?php FisHotel_Shipments_Metabox::render_ship_mode( $order, $packing ); ?>
+		<?php elseif ( $no_shipments ) : ?>
 			<p class="fhsm-empty"><?php esc_html_e( 'No shipments yet.', 'fishotel' ); ?></p>
+			<?php if ( $has_packing && $is_fulfillment && ! empty( $items_by_source ) ) : ?>
+				<p class="description fhsm-ship-mode-sources">
+					<?php
+					$source_links = [];
+					foreach ( $items_by_source as $source_id => $group ) {
+						$source_links[] = '<a href="' . esc_url( $group['order']->get_edit_order_url() ) . '">#' . esc_html( $group['order']->get_order_number() ) . '</a>';
+					}
+					printf(
+						/* translators: %s list of linked source order numbers */
+						esc_html__( 'A local pickup, or fish that went in another order\'s box? Mark it on the source order, where the shipping was paid: %s.', 'fishotel' ),
+						implode( ', ', $source_links ) // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above.
+					);
+					?>
+				</p>
+			<?php endif; ?>
 		<?php endif; ?>
 
 		<?php foreach ( $shipments as $shipment ) : ?>
@@ -142,7 +178,7 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 						<p class="fhsm-covers-all"><em><?php esc_html_e( 'Covers all items on this order.', 'fishotel' ); ?></em></p>
 					<?php endif; ?>
 					<?php if ( $cost_supported && isset( $cost_cards[ $ship_id ] ) ) : ?>
-						<?php FisHotel_Shipments_Metabox::render_shipment_cost( $ship_id, $cost_cards[ $ship_id ], $cost_boxes, $cost_sources ); ?>
+						<?php FisHotel_Shipments_Metabox::render_shipment_cost( $ship_id, $cost_cards[ $ship_id ], $cost_boxes, $cost_sources, $has_packing && isset( $packing['cards'][ $ship_id ] ) ? $packing['cards'][ $ship_id ] : null ); ?>
 					<?php endif; ?>
 					<div class="fhsm-shipment-actions">
 						<button type="button" class="button fhsm-recheck" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>"><?php esc_html_e( 'Re-check', 'fishotel' ); ?></button>
@@ -194,7 +230,12 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 			</div>
 		<?php endforeach; ?>
 
-		<?php if ( $cost_supported && is_array( $cost_summary ) ) : ?>
+		<?php if ( $has_packing && ! empty( $packing['riders'] ) ) : ?>
+			<?php FisHotel_Shipments_Metabox::render_riders( $packing['riders'] ); ?>
+		<?php endif; ?>
+
+		<?php // A local pickup or an order that went in another box has its own line, printed with the mark. ?>
+		<?php if ( $cost_supported && is_array( $cost_summary ) && 'label' === $ship_mode ) : ?>
 			<?php FisHotel_Shipments_Metabox::render_cost_summary( $cost_summary ); ?>
 		<?php endif; ?>
 	</div>
@@ -274,6 +315,9 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 								value="<?php echo esc_attr( $item_id ); ?>"
 								data-source-id="<?php echo esc_attr( $source_id ); ?>"
 								data-available-qty="<?php echo esc_attr( (string) $available_qty ); ?>"
+								<?php if ( $has_packing ) : ?>
+									data-fish="<?php echo esc_attr( isset( $packing['item_fish'][ (int) $item_id ] ) ? $packing['item_fish'][ (int) $item_id ] : '0' ); ?>"
+								<?php endif; ?>
 								<?php disabled( $is_unavailable ); ?>>
 							<span class="fhsm-line-item-label">
 								<?php echo esc_html( $item->get_name() ); ?>
@@ -317,6 +361,10 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 						<span class="description"><?php esc_html_e( '(optional — it can be added later)', 'fishotel' ); ?></span>
 					</p>
 					<?php FisHotel_Shipments_Metabox::render_cost_fields( 'fhsm-new', [], $cost_boxes, $cost_sources ); ?>
+					<?php // Packing — opens once a box is picked, filled with what that box usually takes. ?>
+					<?php if ( $has_packing ) : ?>
+						<?php FisHotel_Shipments_Metabox::render_packing_block( 'fhsm-new', 'add', $packing['add'] ); ?>
+					<?php endif; ?>
 					<?php if ( empty( $cost_boxes ) || empty( $cost_sources ) ) : ?>
 						<p class="description fhsm-new-cost-setup">
 							<?php
@@ -329,6 +377,15 @@ $ea_items = FisHotel_Shipments_Metabox::get_ea_items( $items_by_source );
 						</p>
 					<?php endif; ?>
 				</div>
+			<?php endif; ?>
+			<?php if ( 'label' !== $ship_mode ) : ?>
+				<p class="description fhsm-ship-mode-ends">
+					<?php
+					echo 'local' === $ship_mode
+						? esc_html__( 'Adding a shipment takes the "Local pickup" mark (and its packing) off this order.', 'fishotel' )
+						: esc_html__( 'Adding a shipment takes the "Went in another order\'s box" mark off this order.', 'fishotel' );
+					?>
+				</p>
 			<?php endif; ?>
 			<p>
 				<button type="button" class="button button-primary" id="fhsm-save-shipment">

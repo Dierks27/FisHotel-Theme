@@ -304,6 +304,165 @@
 	color: #996800;
 }
 
+/* ── Packing (ShipTracker v1.9.18+) ───────────────── */
+.fhsm-packing {
+	margin: 0 0 10px;
+	padding: 10px 12px 2px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+}
+.fhsm-cost-form .fhsm-packing,
+.fhsm-ship-mode .fhsm-packing {
+	background: #f6f7f7;
+}
+.fhsm-packing[hidden],
+.fhsm-packing-body[hidden],
+.fhsm-packing-closed[hidden],
+.fhsm-packing-lines[hidden],
+.fhsm-packing-add[hidden],
+.fhsm-packing-notes[hidden] {
+	display: none;
+}
+.fhsm-packing-heading,
+.fhsm-packing-closed {
+	margin: 0 0 8px;
+}
+.fhsm-packing-closed {
+	color: #646970;
+}
+.fhsm-packing-lines {
+	width: 100%;
+	max-width: 560px;
+	margin: 0 0 6px;
+	border-collapse: collapse;
+}
+.fhsm-packing-lines th {
+	padding: 0 10px 4px 0;
+	text-align: left;
+	font-size: 11px;
+	font-weight: 600;
+	color: #646970;
+}
+.fhsm-packing-lines td {
+	padding: 2px 10px 4px 0;
+	vertical-align: middle;
+	font-size: 12px;
+}
+.fhsm-packing-lines .fhsm-packing-name label {
+	margin: 0;
+}
+.fhsm-packing-stock {
+	display: block;
+	color: #646970;
+	font-size: 11px;
+}
+.fhsm-packing-stock-low {
+	color: #996800;
+}
+.fhsm-packing-qty-cell {
+	white-space: nowrap;
+}
+.fhsm-packing-lines input.fhsm-packing-qty[type="text"] {
+	width: 70px;
+}
+.fhsm-packing-unit {
+	margin-left: 4px;
+	color: #646970;
+}
+.fhsm-packing-cost {
+	color: #50575e;
+	white-space: nowrap;
+}
+.fhsm-packing-add {
+	margin: 0 0 10px;
+}
+.fhsm-packing-flat {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: 0 14px;
+	max-width: 560px;
+}
+.fhsm-packing-notes {
+	margin: 0 0 8px;
+	padding: 6px 8px;
+	background: #fcf9e8;
+	border-left: 3px solid #dba617;
+	border-radius: 0 3px 3px 0;
+	font-size: 12px;
+}
+.fhsm-packing-foot {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 6px 16px;
+	margin: 0 0 8px;
+	font-size: 12px;
+}
+.fhsm-materials-line {
+	margin: 2px 0 0;
+	color: #50575e;
+}
+.fhsm-materials-none {
+	color: #646970;
+	font-style: italic;
+}
+.fhsm-riders {
+	margin: 10px 0 0;
+	font-size: 12px;
+	color: #50575e;
+}
+
+/* ── How it went out ──────────────────────────────── */
+.fhsm-ship-mode {
+	margin: 0 0 4px;
+}
+.fhsm-ship-mode-status {
+	margin: 0 0 4px;
+}
+.fhsm-ship-mode-when {
+	color: #646970;
+}
+.fhsm-ship-mode .fhsm-cost-totals {
+	margin-top: 6px;
+}
+.fhsm-ship-mode-pick {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+	margin: 10px 0 8px;
+}
+.fhsm-ship-mode-local[hidden],
+.fhsm-ship-mode-with[hidden],
+.fhsm-ship-mode-actions[hidden] {
+	display: none;
+}
+.fhsm-ship-mode-with .fhsm-cost-field input.fhsm-ship-with-order[type="text"] {
+	width: 140px;
+}
+.fhsm-ship-with-result {
+	margin: 0 0 8px;
+	font-size: 12px;
+	color: #50575e;
+}
+.fhsm-ship-with-result:empty {
+	display: none;
+}
+.fhsm-ship-with-problem {
+	color: #c1483a;
+}
+.fhsm-ship-mode-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 4px;
+}
+.fhsm-ship-mode-sources,
+.fhsm-ship-mode-ends {
+	margin: 0 0 8px;
+}
+
 /* ── Messages ─────────────────────────────────────── */
 .fhsm-message {
 	margin-left: 10px;

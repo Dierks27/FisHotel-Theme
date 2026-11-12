@@ -39,7 +39,7 @@ fishotel-theme/
 │   ├── calculator/            Medication Dosing Calculator data + wiring
 │   ├── scheduler/             QT Scheduler wiring
 │   ├── medication-store/      Medication / food store (EA sync, pricing, packing slip, checkout terms record — see disclaimer.php docblock)
-│   ├── order-fulfillment/     Split fulfillment, shipments meta box (+ what each box cost to ship), checkout reuse
+│   ├── order-fulfillment/     Split fulfillment, shipments meta box (+ what each box cost: label, packing; local pickups), checkout reuse
 │   ├── customer/              Self-serve delivery date, address propagation
 │   └── email/                 Consolidated shipping email
 ├── parts/                 Compatibility Guide + Bleach Calculator template parts
@@ -221,6 +221,75 @@ order's shipping over its boxes) and the capability probe are tested by
 `php tests/shipment-cost-test.php`; what the form posts (untouched form, remembered source,
 cleared vs left alone, which field a ShipTracker message belongs to) by
 `node tests/admin-shipments.test.js`.
+
+### Packing, and how an order went out (same files, ShipTracker v1.9.18+)
+A box costs more than its label: the box itself, a bag per fish, a heat pack or ice packs, foam,
+paper. ShipTracker v1.9.18 keeps the supplies (with a purchase log and stock) and records the
+materials of each box; the Shipments box shows and posts them. Still v1.26.0 of the theme.
+
+- **Only when ShipTracker understands it** (`FisHotel_Shipment_Cost::packing_supported()`):
+  `class_exists( 'FST_Supplies' )`, `method_exists( 'FST_Supplies', 'get_default_materials' )`
+  and `method_exists( 'FST_Order', 'set_ship_mode' )`. Against v1.9.17 the box is exactly the
+  label cost box described above; against anything older, the plain box.
+- **Add Shipment → "Packing".** Picking a box (`#fhsm-new-box`) opens `.fhsm-packing` under the
+  cost inputs, filled with ShipTracker's own defaults for that box and this order
+  (`FST_Supplies::get_default_materials()`): one line per supply with a quantity — the box
+  itself (when the standard box has a supply), fish bags, heat packs, ice packs — the foam cost
+  `#fhsm-new-foam`, the paper cost `#fhsm-new-paper` and a running total. Any other supply is
+  added through "Add supply…" (`#fhsm-new-supply`; the supplies kept as foam and as paper are
+  left out — they are the two amounts). Each line shows the price each and, for a counted
+  supply, what is on hand.
+  - Fish bags = the fish of the items ticked (all unshipped items while none is ticked); a
+    refunded fish is not bagged.
+  - A note says when a pack is there because of the weather check: "Heat pack added: the weather
+    check says Heat pack." / "Ice pack added (2): the weather check says Cooling packs." The
+    action comes from ShipTracker (`FST_Supplies::order_pack_action()`), which reads what the
+    FisHotel Misc plugin's Weather section noted on the order; with no weather data there is no
+    pack and no note.
+  - Changing the box (or the items ticked) re-fills only the lines, foam and paper the owner
+    has not touched. "Use the usual for this box" drops everything for the defaults.
+  - A custom size starts with foam and paper at 0 and no box line.
+  - It is sent with `fst_add_tracking` as `materials` — a JSON string
+    `{"lines":[{"supply_id":6,"qty":"1"},…],"foam_cost":"1.80","paper_cost":"0.40"}`; lines at 0
+    are left out. With no box picked nothing is sent, as before. A block with nothing in it and
+    nothing touched (no supplies saved yet) is not sent either.
+- **Existing shipments** show the full cost — `Label $53.73 + materials $6.10 = $59.83 · Small
+  (10x10x10) · …` — and what went in: `Packing: 1 × Small box · 6 × Fish bag · foam $1.80`. The
+  inline form holds the same block, filled from the record (a recorded line keeps the unit cost
+  it was recorded at; changing the box rewrites nothing by itself) and saved with
+  `fst_set_label_cost`. A box with no packing recorded says so; its block stays closed behind
+  "Add packing", so saving a label cost never records packing unseen (ShipTracker leaves
+  `materials` alone when it is not sent).
+- **How it went out** (`.fhsm-ship-mode`, on an order with no shipment): `#fhsm-ship-mode` —
+  "Shipped with a label" (the default; nothing is stored), "Local pickup" (with its own packing
+  block: a bag per fish, no pack) or "Went in another order's box" (an order number,
+  `#fhsm-ship-with`, with Find: the customer and the box or boxes found on that order). Saved
+  through ShipTracker's `fst_set_ship_mode`, which stores order meta only — no shipment, no
+  e-mail to the customer, no status change. The order then says it plainly ("Local pickup — no
+  label, so no label cost", "Went in the box of order #100"), the totals line is its own
+  (packing against shipping paid; "counted towards what the box of order #100 cost") and no
+  "no cost yet" is counted for it. Picking "Shipped with a label" again clears it; so does
+  adding a shipment. A fulfillment order carries no shipping of its own, so there the control
+  is left out and a line points at the source orders.
+- **The order that carried it** lists who went along ("Also in this order's box, with no label
+  of its own: #102") and counts what they paid for shipping towards the box, exactly like an
+  order sharing a fan-out box (`FisHotel_Shipment_Cost::rider_ids()` → `summarize()`).
+- **Under the list** the cost is the full cost once a box has packing — `Shipping paid $45.00 ·
+  Cost $59.83 (label $53.73 + materials $6.10) · Difference -$14.83` — and free shipping is
+  named instead of shown as a loss: "Shipped free: this box cost $59.83". A box without a label
+  cost still counts as "no cost yet"; its materials are named apart, never added on their own.
+- **A value ShipTracker refuses** (a quantity that is not 0 or more with at most 2 decimals, a
+  foam or paper amount, an unknown supply, an order that cannot carry another) is reported in
+  its own words — next to the packing lines, the foam or the paper field when it is about one.
+- **One request is the theme's own:** `wp_ajax_fishotel_ship_with_lookup`, the read-only order
+  lookup behind Find (nonce `fst_nonce`, `manage_woocommerce`). Everything else is posted to
+  ShipTracker, which checks the same nonce and capability.
+
+The helpers behind it (supplies / materials as shown, full cost, the fish of a refunded line,
+ship mode, the rules for the order it went with, free shipping, a rider counted like a sharer)
+are tested by `php tests/shipment-packing-test.php`; the packing block (what a box fills in,
+what a box change keeps, the running total, what is sent, the weather note, the ship mode
+fields) by `node tests/admin-shipments-packing.test.js`.
 
 ## Build Phases
 

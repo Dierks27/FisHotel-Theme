@@ -1010,6 +1010,53 @@ class FisHotel_Shipment_Cost {
 	}
 
 	/**
+	 * The box that already exists under a tracking number, if any: the
+	 * orders it is on and whether its packing is recorded. The Add Shipment
+	 * form asks before it sends packing, so that putting another order in
+	 * a box never replaces what was recorded for that box.
+	 *
+	 * @param string $tracking_number
+	 * @return array { exists, order_ids: int[], has_materials }
+	 */
+	public static function existing_box( $tracking_number ) {
+		$out = [
+			'exists'        => false,
+			'order_ids'     => [],
+			'has_materials' => false,
+		];
+		$tracking_number = is_scalar( $tracking_number ) && ! is_bool( $tracking_number ) ? trim( (string) $tracking_number ) : '';
+		if ( '' === $tracking_number || ! self::supported() || ! method_exists( 'FST_Shipment', 'get_box_cost' ) ) {
+			return $out;
+		}
+
+		try {
+			$box = FST_Shipment::get_box_cost( $tracking_number );
+		} catch ( \Throwable $e ) {
+			$box = null;
+		}
+		if ( ! is_array( $box ) ) {
+			return $out;
+		}
+
+		$out['exists'] = true;
+		foreach ( isset( $box['order_ids'] ) && is_array( $box['order_ids'] ) ? $box['order_ids'] : [] as $oid ) {
+			$oid = (int) $oid;
+			if ( $oid > 0 && ! in_array( $oid, $out['order_ids'], true ) ) {
+				$out['order_ids'][] = $oid;
+			}
+		}
+
+		if ( self::packing_supported() && method_exists( 'FST_Supplies', 'get_box_materials' ) ) {
+			try {
+				$out['has_materials'] = null !== FST_Supplies::get_box_materials( $tracking_number );
+			} catch ( \Throwable $e ) {
+				$out['has_materials'] = false;
+			}
+		}
+		return $out;
+	}
+
+	/**
 	 * How an order went out: with a label (the default), as a local pickup
 	 * or in another order's box.
 	 *

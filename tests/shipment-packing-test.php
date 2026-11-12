@@ -92,6 +92,7 @@ if ( isset( $argv[1] ) && '--label-cost-only' === $argv[1] ) {
 	check( 'fish_count() → 0',                             0.0 === FisHotel_Shipment_Cost::fish_count( new WC_Order() ) );
 	check( 'ship_mode() → label',                          'label' === FisHotel_Shipment_Cost::ship_mode( new WC_Order() )['mode'] );
 	check( 'rider_ids() → []',                             [] === FisHotel_Shipment_Cost::rider_ids( [ 101 ] ) );
+	check( 'existing_box(): no box API to ask → no box',   false === FisHotel_Shipment_Cost::existing_box( '1ZAAA' )['exists'] );
 	$d = FisHotel_Shipment_Cost::default_materials( 6, 'heat_pack' );
 	check( 'default_materials() → nothing usual',          [] === $d['boxes'] && '0.00' === $d['custom']['total'] );
 	$f = FisHotel_Shipment_Cost::full_cost( FisHotel_Shipment_Cost::order_boxes( [ 101 ] )[0] );
@@ -109,6 +110,7 @@ check( 'box_fish_count() → 0',         0.0 === FisHotel_Shipment_Cost::box_fis
 check( 'ship_mode() → label',          'label' === FisHotel_Shipment_Cost::ship_mode( null )['mode'] );
 check( 'rider_ids() → []',             [] === FisHotel_Shipment_Cost::rider_ids( [ 101 ] ) );
 check( 'host_order_ids() → []',        [] === FisHotel_Shipment_Cost::host_order_ids( null ) );
+check( 'existing_box() → no box',      [ 'exists' => false, 'order_ids' => [], 'has_materials' => false ] === FisHotel_Shipment_Cost::existing_box( '1ZAAA' ) );
 
 // ── clean_supplies() ────────────────────────────────────────────────────
 echo "clean_supplies()\n";
@@ -346,6 +348,18 @@ if ( ! class_exists( 'FST_Shipment' ) ) {
 			}
 			return $out;
 		}
+		public static function get_box_cost( $tracking_number ) {
+			if ( 'THROW' === $tracking_number ) {
+				throw new RuntimeException( 'shipments unavailable' );
+			}
+			$order_ids = [];
+			foreach ( self::$rows as $r ) {
+				if ( strtoupper( $r[2] ) === strtoupper( $tracking_number ) ) {
+					$order_ids[] = (string) $r[1];
+				}
+			}
+			return empty( $order_ids ) ? null : [ 'tracking_number' => $tracking_number, 'order_ids' => $order_ids ];
+		}
 		public static function get_order_boxes( $order_ids ) {
 			$boxes = [];
 			foreach ( (array) $order_ids as $order_id ) {
@@ -408,6 +422,17 @@ if ( ! class_exists( 'FST_Shipment' ) ) {
 				throw new RuntimeException( 'supplies unavailable' );
 			}
 			return $order instanceof WC_Order ? (string) $order->get_meta( '_fh_weather_action' ) : '';
+		}
+		public static function get_box_materials( $tracking_number ) {
+			if ( self::$throw ) {
+				throw new RuntimeException( 'supplies unavailable' );
+			}
+			foreach ( FST_Shipment::$rows as $r ) {
+				if ( strtoupper( $r[2] ) === strtoupper( $tracking_number ) && null !== $r[4] ) {
+					return [ 'lines' => [], 'foam_cost' => $r[4], 'paper_cost' => '0.00', 'total' => $r[4] ];
+				}
+			}
+			return null;
 		}
 		public static function fish_count( $order, $item_ids = null ) {
 			if ( self::$throw ) {
@@ -523,6 +548,13 @@ check( 'box_fish_count(): one order of it',  5.0 === FisHotel_Shipment_Cost::box
 check( 'box_fish_count(): its other box',    1.0 === FisHotel_Shipment_Cost::box_fish_count( '1ZHOST2', [ 100, 101 ] ) );
 check( 'box_fish_count(): an unknown box',   0.0 === FisHotel_Shipment_Cost::box_fish_count( '1ZNOPE', [ 100 ] ) );
 
+// Is a tracking number already a box — and is its packing on record?
+check( 'existing_box(): a box with its packing recorded, and the orders it is on', [ 'exists' => true, 'order_ids' => [ 100, 101 ], 'has_materials' => true ] === FisHotel_Shipment_Cost::existing_box( ' 1zhost ' ), json_encode( FisHotel_Shipment_Cost::existing_box( ' 1zhost ' ) ) );
+check( 'existing_box(): a box with no packing recorded',  [ 'exists' => true, 'order_ids' => [ 100 ], 'has_materials' => false ] === FisHotel_Shipment_Cost::existing_box( '1ZHOST2' ) );
+check( 'existing_box(): a tracking number nobody has',    [ 'exists' => false, 'order_ids' => [], 'has_materials' => false ] === FisHotel_Shipment_Cost::existing_box( '1ZNEW' ) );
+check( 'existing_box(): nothing typed, not text',         false === FisHotel_Shipment_Cost::existing_box( '' )['exists'] && false === FisHotel_Shipment_Cost::existing_box( [ '1ZHOST' ] )['exists'] );
+check( 'existing_box(): a failing read → no box',         false === FisHotel_Shipment_Cost::existing_box( 'THROW' )['exists'] );
+
 check( 'ship_mode(): an order with a label',       'label' === FisHotel_Shipment_Cost::ship_mode( $orders[100] )['mode'] );
 check( 'ship_mode(): a local pickup',              'local' === FisHotel_Shipment_Cost::ship_mode( $orders[103] )['mode'] );
 $s = FisHotel_Shipment_Cost::ship_mode( $orders[102] );
@@ -568,6 +600,7 @@ check( 'fulfillment view: both sources + the order that went with the fulfillmen
 FST_Supplies::$throw  = true;
 FST_Ship_Mode::$throw = true;
 check( 'a failing supplies read → [] / nothing usual / no action / 0 fish', [] === FisHotel_Shipment_Cost::supplies() && [] === FisHotel_Shipment_Cost::default_materials( 6, 'heat_pack' )['boxes'] && '' === FisHotel_Shipment_Cost::pack_action( $orders[100] ) && 0.0 === FisHotel_Shipment_Cost::fish_count( $orders[100] ) );
+check( 'a failing materials read → the box is there, its packing unknown', [ 'exists' => true, 'order_ids' => [ 201, 202 ], 'has_materials' => false ] === FisHotel_Shipment_Cost::existing_box( '1ZFF' ) );
 check( 'a failing ship mode read → label, no riders', 'label' === FisHotel_Shipment_Cost::ship_mode( $orders[103] )['mode'] && [] === FisHotel_Shipment_Cost::rider_ids( [ 100 ] ) );
 FST_Supplies::$throw  = false;
 FST_Ship_Mode::$throw = false;

@@ -252,7 +252,13 @@ materials of each box; the Shipments box shows and posts them. Still v1.26.0 of 
   - It is sent with `fst_add_tracking` as `materials` — a JSON string
     `{"lines":[{"supply_id":6,"qty":"1"},…],"foam_cost":"1.80","paper_cost":"0.40"}`; lines at 0
     are left out. With no box picked nothing is sent, as before. A block with nothing in it and
-    nothing touched (no supplies saved yet) is not sent either.
+    nothing touched (no supplies saved yet) is not sent either — a line then points at
+    ShipTracker → Settings → Boxes & label costs, where supplies are saved.
+  - A tracking number that is already a box with its packing recorded — another order went out
+    in it — is asked about first ("This tracking number is already a box on order #100 …"): the
+    order joins that box and the packing is not sent, because ShipTracker takes `materials` as
+    sent and would replace what the box has on record. This order's bags are then added on the
+    shipment card.
 - **Existing shipments** show the full cost — `Label $53.73 + materials $6.10 = $59.83 · Small
   (10x10x10) · …` — and what went in: `Packing: 1 × Small box · 6 × Fish bag · foam $1.80`. The
   inline form holds the same block, filled from the record (a recorded line keeps the unit cost
@@ -281,15 +287,18 @@ materials of each box; the Shipments box shows and posts them. Still v1.26.0 of 
 - **A value ShipTracker refuses** (a quantity that is not 0 or more with at most 2 decimals, a
   foam or paper amount, an unknown supply, an order that cannot carry another) is reported in
   its own words — next to the packing lines, the foam or the paper field when it is about one.
-- **One request is the theme's own:** `wp_ajax_fishotel_ship_with_lookup`, the read-only order
-  lookup behind Find (nonce `fst_nonce`, `manage_woocommerce`). Everything else is posted to
-  ShipTracker, which checks the same nonce and capability.
+- **Two requests are the theme's own, both read-only** (nonce `fst_nonce`,
+  `manage_woocommerce`): `wp_ajax_fishotel_ship_with_lookup`, the order lookup behind Find, and
+  `wp_ajax_fishotel_box_lookup`, "is this tracking number already a box with its packing
+  recorded?". Everything that writes is posted to ShipTracker, which checks the same nonce and
+  capability.
 
 The helpers behind it (supplies / materials as shown, full cost, the fish of a refunded line,
 ship mode, the rules for the order it went with, free shipping, a rider counted like a sharer)
 are tested by `php tests/shipment-packing-test.php`; the packing block (what a box fills in,
 what a box change keeps, the running total, what is sent, the weather note, the ship mode
-fields) by `node tests/admin-shipments-packing.test.js`.
+fields, when to ask about a box that is already recorded) by
+`node tests/admin-shipments-packing.test.js`.
 
 ## Build Phases
 

@@ -16,6 +16,7 @@
  *   costText( row, currency ) / stockText( supply ) / sumFish( values )
  *   weatherNotes( { action, label, rows, supplies } )
  *   shipModeFields( { mode, withOrder, materials } )
+ *   sharesRecordedBox( found, orderId ) / sharedBoxQuestion( orderIds )
  *   errorField( message )                → also 'foam' | 'paper' | 'packing'
  *
  * The rules they pin down: a box picked fills the block with what that box
@@ -24,7 +25,9 @@
  * box supply; a recorded packing is kept as recorded; the running total is
  * ShipTracker's own sum (quantity × unit cost, half up, per line); a line
  * at 0 is not sent and a quantity that is not a number is sent as typed;
- * the weather note says when a pack was added because of the weather check.
+ * the weather note says when a pack was added because of the weather check;
+ * a tracking number that is already a box with its packing recorded is
+ * asked about first, and its record is not replaced.
  *
  * @package fishotel-theme
  */
@@ -37,7 +40,7 @@ var path = require('path');
 var mod = require(path.join(__dirname, '..', 'assets/js/admin-shipments.js'));
 ['toHundredths', 'qtyText', 'toRate', 'toCents', 'centsText', 'rateText', 'lineCents', 'supplyForRole', 'usualFor', 'recordRows',
   'packingRows', 'packingTotal', 'packingPayload', 'packingIsEmpty', 'costText', 'stockText', 'sumFish', 'weatherNotes',
-  'shipModeFields', 'errorField'].forEach(function (name) {
+  'shipModeFields', 'sharesRecordedBox', 'sharedBoxQuestion', 'errorField'].forEach(function (name) {
   assert.strictEqual(typeof mod[name], 'function', name + ' exported');
 });
 
@@ -287,6 +290,19 @@ same(mod.shipModeFields({ mode: 'with_order', withOrder: '' }), { mode: 'with_or
 same(mod.shipModeFields({ mode: 'label', withOrder: '5', materials: { lines: [] } }), { mode: 'label' }, 'shipped with a label: clears the mark, nothing else');
 same(mod.shipModeFields({ mode: 'teleport' }), { mode: 'label' }, 'anything else is "label"');
 same(mod.shipModeFields(), { mode: 'label' }, 'nothing picked is "label"');
+
+// ── A tracking number that is already a box ────────────────────────────
+same(mod.sharesRecordedBox({ exists: true, order_ids: [100], has_materials: true }, '104'), true, 'another order\'s box with its packing recorded: ask first');
+same(mod.sharesRecordedBox({ exists: true, order_ids: ['201', '202'], has_materials: true }, 300), true, 'a fulfillment adding more of its sources\' items to a recorded box: ask first');
+same(mod.sharesRecordedBox({ exists: true, order_ids: [100], has_materials: false }, '104'), false, 'that box has no packing recorded: this order\'s packing may be sent');
+same(mod.sharesRecordedBox({ exists: false, order_ids: [], has_materials: false }, '104'), false, 'a new tracking number: nothing to ask');
+same(mod.sharesRecordedBox({ exists: true, order_ids: [100, 104], has_materials: true }, '104'), false, 'already on this very order: ShipTracker refuses the duplicate, no question');
+same(mod.sharesRecordedBox(null, '104'), false, 'the lookup gave nothing: nothing to ask');
+same(mod.sharesRecordedBox({ exists: true, has_materials: true }, '104'), true, 'no order list given: still someone else\'s box');
+var question = mod.sharedBoxQuestion([100, '102']);
+same(question.indexOf('This tracking number is already a box on order #100, #102, and its packing is recorded.') === 0, true, 'the question names the orders the box is on');
+same(/The packing on record is left as it is/.test(question) && /Add this order to that box\?$/.test(question), true, 'and says the record is kept');
+same(mod.sharedBoxQuestion([]).indexOf('This tracking number is already a box, and its packing is recorded.') === 0, true, 'no orders named when none are known');
 
 // ── errorField: ShipTracker's materials messages ───────────────────────
 same(mod.errorField('The foam cost must be an amount of 0 or more, for example 1.80.'), 'foam', 'foam message → foam field');

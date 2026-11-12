@@ -500,6 +500,35 @@
 	}
 
 	/**
+	 * Whether the Add Shipment form must ask before it adds: the tracking
+	 * number is already a box with its packing recorded, on other orders
+	 * only. (On this very order ShipTracker refuses the duplicate anyway.)
+	 *
+	 * @param {Object} found   { exists, order_ids, has_materials } or null
+	 * @param {*}      orderId The order on screen.
+	 */
+	function sharesRecordedBox( found, orderId ) {
+		if ( ! found || ! found.exists || ! found.has_materials ) {
+			return false;
+		}
+		var own = parseInt( orderId, 10 );
+		return ! ( found.order_ids || [] ).some( function ( id ) {
+			return parseInt( id, 10 ) === own;
+		} );
+	}
+
+	/** The question asked then: the packing on record stays as it is. */
+	function sharedBoxQuestion( orderIds ) {
+		var refs = ( orderIds || [] ).map( function ( id ) {
+			return '#' + parseInt( id, 10 );
+		} ).join( ', ' );
+		return 'This tracking number is already a box' + ( refs ? ' on order ' + refs : '' ) + ', and its packing is recorded.\n\n' +
+			'Adding it here puts this order in that same box. The packing on record is left as it is — ' +
+			'if this order put more into the box (its bags, for one), change it on the shipment afterwards.\n\n' +
+			'Add this order to that box?';
+	}
+
+	/**
 	 * What is posted to fst_set_ship_mode. `with_order_id` goes with "went
 	 * in another order's box" only; `materials` (a JSON string) with a
 	 * local pickup only, and only when its packing block was read.
@@ -547,6 +576,8 @@
 			stockText:        stockText,
 			sumFish:          sumFish,
 			weatherNotes:     weatherNotes,
+			sharesRecordedBox: sharesRecordedBox,
+			sharedBoxQuestion: sharedBoxQuestion,
 			shipModeFields:   shipModeFields
 		};
 	}
@@ -1144,40 +1175,70 @@
 
 			clearCostErrors( $newCost );
 			$btn.prop( 'disabled', true );
-			setMessage( $msg, 'Saving…', '' );
 
-			// $.ajax with traditional:false explicitly so line_item_ids
-			// serializes as line_item_ids[]=12&line_item_ids[]=34 — the form
-			// ShipTracker's $_POST['line_item_ids'] reader expects.
-			$.ajax( {
-				url:        window.ajaxurl,
-				method:     'POST',
-				traditional: false,
-				data:       $.extend( {
-					action:          'fst_add_tracking',
-					nonce:           nonce,
-					order_id:        orderId,
-					tracking_number: tracking,
-					carrier:         carrier,
-					line_item_ids:   itemIds
-				}, costFields )
-			} ).done( function ( response ) {
-				if ( response && response.success ) {
-					var msgText = ( response.data && response.data.message ) ? response.data.message : 'Shipment saved.';
-					rememberSource( browserStorage(), costFields.label_source );
-					setMessage( $msg, msgText, 'success' );
-					setTimeout( function () { window.location.reload(); }, 800 );
-				} else {
-					// Nothing was saved and nothing typed is cleared; a cost
-					// value ShipTracker refused is reported next to its field.
-					var err = responseError( response, 'Failed to save shipment.' );
-					setMessage( $msg, showCostError( $newCost, err ) ? 'Not saved — see the highlighted field above.' : err, 'error' );
+			function send() {
+				setMessage( $msg, 'Saving…', '' );
+
+				// $.ajax with traditional:false explicitly so line_item_ids
+				// serializes as line_item_ids[]=12&line_item_ids[]=34 — the form
+				// ShipTracker's $_POST['line_item_ids'] reader expects.
+				$.ajax( {
+					url:        window.ajaxurl,
+					method:     'POST',
+					traditional: false,
+					data:       $.extend( {
+						action:          'fst_add_tracking',
+						nonce:           nonce,
+						order_id:        orderId,
+						tracking_number: tracking,
+						carrier:         carrier,
+						line_item_ids:   itemIds
+					}, costFields )
+				} ).done( function ( response ) {
+					if ( response && response.success ) {
+						var msgText = ( response.data && response.data.message ) ? response.data.message : 'Shipment saved.';
+						rememberSource( browserStorage(), costFields.label_source );
+						setMessage( $msg, msgText, 'success' );
+						setTimeout( function () { window.location.reload(); }, 800 );
+					} else {
+						// Nothing was saved and nothing typed is cleared; a cost
+						// value ShipTracker refused is reported next to its field.
+						var err = responseError( response, 'Failed to save shipment.' );
+						setMessage( $msg, showCostError( $newCost, err ) ? 'Not saved — see the highlighted field above.' : err, 'error' );
+						$btn.prop( 'disabled', false );
+					}
+				} ).fail( function () {
+					setMessage( $msg, 'Network error — please retry.', 'error' );
 					$btn.prop( 'disabled', false );
+				} );
+			}
+
+			if ( ! costFields.materials ) {
+				send();
+				return;
+			}
+
+			// ShipTracker takes `materials` as sent. When the tracking number
+			// is already a box with its packing recorded — another order went
+			// out in it — this order joins that box and the record is kept:
+			// asked first, and then the packing is not sent.
+			setMessage( $msg, 'Checking…', '' );
+			$.post( window.ajaxurl, {
+				action:          'fishotel_box_lookup',
+				nonce:           nonce,
+				tracking_number: tracking
+			} ).done( function ( response ) {
+				var found = response && response.success ? response.data : null;
+				if ( sharesRecordedBox( found, orderId ) ) {
+					if ( ! window.confirm( sharedBoxQuestion( found.order_ids ) ) ) {
+						setMessage( $msg, '', '' );
+						$btn.prop( 'disabled', false );
+						return;
+					}
+					delete costFields.materials;
 				}
-			} ).fail( function () {
-				setMessage( $msg, 'Network error — please retry.', 'error' );
-				$btn.prop( 'disabled', false );
-			} );
+				send();
+			} ).fail( send );
 		} );
 
 		// ── Re-check ────────────────────────────────────────────────────

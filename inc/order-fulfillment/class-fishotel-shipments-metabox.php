@@ -28,9 +28,12 @@
  * shipment shows its materials and full cost (label + materials) and edits
  * them in the same inline form; and an order with no shipment gets "How it
  * went out": with a label, as a local pickup, or in another order's box —
- * saved through wp_ajax_fst_set_ship_mode. The only request the theme
- * answers itself is the read-only order lookup behind that last choice
- * (wp_ajax_fishotel_ship_with_lookup). Against ShipTracker v1.9.17 the box
+ * saved through wp_ajax_fst_set_ship_mode. The only requests the theme
+ * answers itself are two read-only lookups: the order behind that last
+ * choice (wp_ajax_fishotel_ship_with_lookup) and "is this tracking number
+ * already a box with its packing recorded?" (wp_ajax_fishotel_box_lookup),
+ * asked before packing is sent so a second order put in a box never
+ * replaces what the box has on record. Against ShipTracker v1.9.17 the box
  * is the v1.26.0 label cost box, unchanged.
  *
  * Kill switch: define( 'FISHOTEL_NEW_SHIPMENTS_UI_OFF', true ) in wp-config.php
@@ -56,6 +59,7 @@ class FisHotel_Shipments_Metabox {
 		add_action( 'add_meta_boxes_woocommerce_page_wc-orders', [ __CLASS__, 'hide_default_shiptracker_box' ], 35 );
 		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
 		add_action( 'wp_ajax_fishotel_ship_with_lookup', [ __CLASS__, 'ajax_ship_with_lookup' ] );
+		add_action( 'wp_ajax_fishotel_box_lookup', [ __CLASS__, 'ajax_box_lookup' ] );
 	}
 
 	public static function kill_switch_on() {
@@ -437,6 +441,25 @@ class FisHotel_Shipments_Metabox {
 			wp_send_json_error( $found['problem'] );
 		}
 		wp_send_json_success( $found );
+	}
+
+	/**
+	 * AJAX: is this tracking number already a box, with its packing
+	 * recorded? Read-only. The Add Shipment form asks before it sends
+	 * packing: ShipTracker takes `materials` as sent, so a second order put
+	 * in the same box would otherwise replace what the box has on record.
+	 *
+	 * POST: nonce (fst_nonce), tracking_number. Success data:
+	 * FisHotel_Shipment_Cost::existing_box().
+	 */
+	public static function ajax_box_lookup() {
+		check_ajax_referer( self::NONCE_ACTION, 'nonce' );
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( __( 'Permission denied', 'fishotel' ), 403 );
+		}
+
+		$tracking = isset( $_POST['tracking_number'] ) && is_scalar( $_POST['tracking_number'] ) ? sanitize_text_field( wp_unslash( $_POST['tracking_number'] ) ) : '';
+		wp_send_json_success( FisHotel_Shipment_Cost::existing_box( $tracking ) );
 	}
 
 	/** A decimal amount as WooCommerce price markup, ready to echo. */

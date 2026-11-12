@@ -140,11 +140,17 @@ out normally. Since v1.25.0 the resulting order shows the fish, not the invoice:
   line: <reason>.`
 - **Paid orders stay in Processing:** WooCommerce would auto-complete a paid order whose lines have
   no product; the theme keeps an itemised invoice order in Processing so it ships like any other.
-- **Lock after purchase:** when the order is paid / processing / completed the invoice product is
-  set out of stock and remembers the order (`_fh_invoice_order_id`). Adding it to a cart again
-  shows "This invoice was already paid on order #N. Contact us if you need a new one." until that
+- **Lock after purchase:** when the order is paid / on hold / processing / completed the invoice
+  product is set out of stock and remembers the order (`_fh_invoice_order_id`). Adding it to a
+  cart again shows "This invoice was already paid on order #N. Contact us if you need a new one."
+  (for an On-hold order: "…already has an order (#N) that is waiting for its payment…") until that
   order is cancelled, failed or refunded; cancelling the order puts the invoice back in stock
   (after a refund or failure it simply stays out of stock until you restock it by hand).
+- **Hold while unpaid (v1.25.1):** an order that is still Pending payment keeps the invoice away
+  from every other shopper for WooCommerce's "Hold stock (minutes)" (WooCommerce → Settings →
+  Products → Inventory; 60 by default, empty = no hold): "This invoice is being paid for on
+  another order right now…" on Add to cart and at Place order. The shopper who owns that unpaid
+  order can retry. The product records it as `_fh_invoice_pending_order_id`.
 - **Backfill:** FisHotel Theme → Tools → "Add fish lines to past invoice orders" ("Scan the next
   100 orders" button) scans 100 orders per click (newest first, cursor in option
   `fishotel_invoice_backfill_page`) and adds the "Includes" meta + line snapshot to invoice lines
@@ -160,7 +166,7 @@ Meta keys (shared with the Batch plugin's Ship Day pick list, which reads them):
 | fish line item | `_fh_invoice_fish` = 1, `_fh_invoice_product_id`, `_fh_invoice_title` | one fish of an invoice; the invoice product id / name |
 | credit fee item | `_fh_invoice_credit` = 1, `_fh_invoice_product_id` | an invoice credit (money only, never a pick row) |
 | invoice line kept whole | `Includes` (visible), `_fh_invoice_lines` (JSON), `_fh_invoice_product_id` | the fallback shape and the backfill shape |
-| invoice product | `_fh_invoice_order_id` | the order that paid for it (lock); `_fh_invoice_lines` optional line override |
+| invoice product | `_fh_invoice_order_id` | the order that paid for it (lock); `_fh_invoice_pending_order_id` the unpaid order checking it out; `_fh_invoice_lines` optional line override |
 
 The parser (same grammar as the Batch plugin's `parse_invoice_lines()`, credits returned instead
 of skipped), the expand/fallback decision and the money split are pure PHP, tested by

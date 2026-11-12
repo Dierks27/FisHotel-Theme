@@ -311,33 +311,35 @@ class FisHotel_Med_Disclaimer {
 	}
 
 	/**
-	 * Add an explicit acceptance line to the order's notes and store the
-	 * full terms record. The order is saved by WooCommerce right after this
-	 * hook, so no save() here.
+	 * Store the full terms record (and the two legacy keys) on the order.
+	 * The order is saved by WooCommerce right after this hook, so no save()
+	 * here — and no order notes either: the order has no id yet, so
+	 * WC_Order::add_order_note() would do nothing. add_order_notes() writes
+	 * them once the order is saved.
 	 */
 	public static function attach_order_note( $order, $data ) {
 		if ( ! $order instanceof WC_Order ) return;
 		if ( ! fishotel_med_cart_has_meds() ) return;
 
 		$label = FisHotel_Med_Settings::get_checkout_label();
-		$note  = sprintf(
-			/* translators: %s = checkbox label */
-			__( 'Medication disclaimer acknowledged: "%s"', 'fishotel' ),
-			wp_strip_all_tags( $label )
-		);
-		$order->add_order_note( $note );
 		$order->update_meta_data( FisHotel_Med_Terms::LEGACY_ACCEPTED_KEY, '1' );
 		$order->update_meta_data( FisHotel_Med_Terms::LEGACY_ACCEPTED_AT_KEY, time() );
 
 		$record = FisHotel_Med_Terms::build_record( self::gather_checkout_inputs( $order, $label ) );
 		$order->update_meta_data( FisHotel_Med_Terms::META_KEY, $record );
+	}
 
-		if ( ! empty( $record['extra_acks'] ) ) {
-			$order->add_order_note( sprintf(
-				/* translators: %s = the extra acknowledgement texts */
-				__( 'Additional medication acknowledgement(s) accepted: %s', 'fishotel' ),
-				implode( ' | ', $record['extra_acks'] )
-			) );
+	/**
+	 * Write the acceptance lines to the order's notes from the record
+	 * attach_order_note() stored. Runs on woocommerce_checkout_order_created,
+	 * when the order has an id. Orders without a record (no medication in
+	 * the cart) get nothing.
+	 */
+	public static function add_order_notes( $order ) {
+		if ( ! $order instanceof WC_Order || ! $order->get_id() ) return;
+
+		foreach ( FisHotel_Med_Terms::order_note_lines( $order->get_meta( FisHotel_Med_Terms::META_KEY ) ) as $note ) {
+			$order->add_order_note( $note );
 		}
 	}
 

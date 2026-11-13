@@ -195,7 +195,7 @@ class FisHotel_Med_Packing_Slip {
 		}
 		$confirm_msg = empty( $already_sent ) ? '' : sprintf(
 			/* translators: %s = comma-separated order numbers */
-			__( 'A packing slip was already auto-emailed to Dena for %s. Send another one?', 'fishotel' ),
+			__( 'A packing slip was already e-mailed to the supplier by itself for %s. Send another one?', 'fishotel' ),
 			implode( ', ', $already_sent )
 		);
 		?>
@@ -221,7 +221,7 @@ class FisHotel_Med_Packing_Slip {
 					<?php esc_html_e( 'Generate Slip', 'fishotel' ); ?>
 				</a>
 				<a class="button button-secondary" href="<?php echo esc_url( $email_url ); ?>"<?php if ( $confirm_msg !== '' ) : ?> onclick="return confirm(<?php echo esc_attr( wp_json_encode( $confirm_msg ) ); ?>);"<?php endif; ?>>
-					<?php esc_html_e( 'Email to Dena', 'fishotel' ); ?>
+					<?php esc_html_e( 'E-mail to the supplier', 'fishotel' ); ?>
 				</a>
 			</p>
 			<p class="description" style="margin:0;">

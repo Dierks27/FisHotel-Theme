@@ -419,8 +419,7 @@ class FisHotel_Med_Settings {
 									<?php echo $has_key ? 'hidden' : ''; ?>>
 							</div>
 							<p class="description">
-								WC REST API consumer key from EverythingAquatic.<br>
-								<strong>Not currently used</strong> — EA's REST API is wholesale-gated for this account and returns 403 on every list endpoint. Kept for future re-enablement if the gate lifts.
+								<strong>Not used at the moment</strong> — the supplier's site does not let this account read its product list. Kept in case that changes; leave it as it is.
 							</p>
 						</td>
 					</tr>
@@ -443,8 +442,7 @@ class FisHotel_Med_Settings {
 									<?php echo $has_secret ? 'hidden' : ''; ?>>
 							</div>
 							<p class="description">
-								WC REST API consumer secret. Sent as Basic Auth on every sync.<br>
-								<strong>Not currently used</strong> — see the note on the Consumer Key above.
+								<strong>Not used at the moment</strong> — see the note above.
 							</p>
 						</td>
 					</tr>
@@ -467,9 +465,9 @@ class FisHotel_Med_Settings {
 						<td>
 							<label>
 								<input type="checkbox" id="fishotel_med_auto_email_slip" name="fishotel_med_auto_email_slip" value="1" <?php checked( $auto_slip, 1 ); ?>>
-								Send to Dena automatically when an EA-mode order moves to Processing.
+								E-mail the packing slip to the supplier by itself when an order the supplier ships moves to Processing.
 							</label>
-							<p class="description">Phase 1 ships with this <strong>OFF</strong>. Flip ON once you've watched a few manual sends go through.</p>
+							<p class="description">Off to start with. Switch it on once you have watched a few slips you sent by hand go through.</p>
 						</td>
 					</tr>
 				</table>

@@ -431,7 +431,7 @@ class FisHotel_Admin_Settings {
 		return [
 			'fishotel-theme'         => [
 				'page_title' => 'FisHotel Theme',
-				'menu_title' => 'Dashboard',
+				'menu_title' => 'Theme home',
 				'render'     => 'render_dashboard',
 			],
 			'fishotel-homepage'      => [ 'page_title' => 'Homepage',      'menu_title' => 'Homepage' ],
@@ -663,7 +663,8 @@ JS;
 
 		// Top-level menu — uses the same slug as the Dashboard sub-page so
 		// add_submenu_page() with that slug renames the first child entry
-		// from "FisHotel Theme" to "Dashboard".
+		// from "FisHotel Theme" to "Theme home" (not "Dashboard": WordPress
+		// and FisHotel Tools each have one already).
 		add_menu_page(
 			'FisHotel Theme',
 			'FisHotel Theme',
@@ -1668,7 +1669,7 @@ JS;
 		}
 		?>
 		<div class="wrap">
-			<h1>FisHotel Tools</h1>
+			<h1>Theme tools</h1>
 
 			<?php if ( class_exists( 'FisHotel_Hotel_Data' ) ) : ?>
 				<?php FisHotel_Hotel_Data::render_tools_panels(); ?>

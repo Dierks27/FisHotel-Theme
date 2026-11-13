@@ -408,6 +408,13 @@ class FisHotel_Checkout_Reuse {
 			return;
 		}
 
+		// A cart that ships nothing (a wallet refill, a request fee) has no
+		// shipping charge to remove and nothing to put in the other order's box:
+		// "Shipping combined … shipping charge removed" would be untrue there.
+		if ( ! self::cart_ships_something() ) {
+			return;
+		}
+
 		// When the checkout lock is active it forces this order's destination to
 		// the open order's address (see FisHotel_Reorder_Checkout_Lock), so the
 		// shipping IS combined regardless of what the customer's session address
@@ -448,6 +455,19 @@ class FisHotel_Checkout_Reuse {
 				'notice'
 			);
 		}
+	}
+
+	/**
+	 * True when the current cart has at least one line that ships. Without a
+	 * readable cart the answer is true — the notices then behave as before.
+	 *
+	 * @return bool
+	 */
+	private static function cart_ships_something() {
+		if ( ! function_exists( 'WC' ) || ! WC() || ! is_object( WC()->cart ) || ! method_exists( WC()->cart, 'needs_shipping' ) ) {
+			return true;
+		}
+		return (bool) WC()->cart->needs_shipping();
 	}
 
 	/** Add a notice only if an identical one isn't already queued. */

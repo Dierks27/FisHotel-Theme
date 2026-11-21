@@ -92,6 +92,11 @@ Every WooCommerce product gets a "FisHotel — Product Data" meta box with three
 - Replaces WooCommerce dropdowns with button groups
 - Supports: Size, Sex, Phase, Color, and any custom attribute
 - Hidden `<select>` keeps WooCommerce JS working underneath
+- Since v1.26.1 the product page's gallery follows the picked variation (assets/js/main.js,
+  `variationImagePlan()`): a variation with a picture of its own shows it in the big image, and
+  its thumb becomes the active one when a thumb carries that picture. A variation that only has
+  the product's main image — every size of a fish — leaves the gallery where the customer put it.
+  Un-picking a variation takes its picture away again: the gallery goes back to how the page loaded.
 
 ### Medication Terms Record (inc/medication-store/terms-record.php + terms-display.php)
 When the cart holds a medication, checkout shows the required "ornamental use only" checkbox

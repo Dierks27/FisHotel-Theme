@@ -6,6 +6,102 @@
 (function($) {
     'use strict';
 
+    // ── Gallery follows the picked variation — the decision (pure) ──────
+    //
+    // The product page prints its own gallery (woocommerce/single-product.php),
+    // not WooCommerce's, so WooCommerce's own picture swap finds nothing to
+    // change and the hero never followed the variation. variationImagePlan()
+    // decides what a picked variation does to the gallery; the DOM part is
+    // applyVariationImage(), next to initGallery(). The decision is exported
+    // for `node tests/gallery-variation.test.js`.
+
+    // Same picture? Both sides are attachment URLs from wp_get_attachment_url()
+    // — one printed by the template (data-full), one sent in WooCommerce's
+    // variation data — so compare them without scheme and query string: a
+    // http/https difference or a cache-buster must not split a match.
+    function sameImageUrl(a, b) {
+        function norm(u) {
+            return String(u == null ? '' : u)
+                .replace(/^\s+|\s+$/g, '')
+                .replace(/[?#].*$/, '')
+                .replace(/^https?:/i, '');
+        }
+        var x = norm(a);
+        return x !== '' && x === norm(b);
+    }
+
+    // What a picked variation does to the gallery.
+    //
+    //   image             variation.image as WooCommerce sends it (url,
+    //                     full_src, src, srcset, sizes, alt, title)
+    //   mainFull          full-size URL of the product's main image ('' when
+    //                     the hero is a placeholder)
+    //   thumbFulls        the thumbs' data-full URLs, in order ([] without thumbs)
+    //   variationShowing  true while the gallery shows a picture because of
+    //                     an earlier variation pick
+    //
+    // Returns one of:
+    //   { action: 'none' }               leave the gallery alone
+    //   { action: 'restore' }            back to what the page showed when it loaded
+    //   { action: 'thumb', index: n }    thumb n becomes the active one, as if clicked
+    //   { action: 'hero', src, alt }     no thumb carries the picture: hero only
+    //
+    // Why 'none' exists: WooCommerce hands a variation with no picture of its
+    // own the PARENT's image. Nearly every fish in the shop varies by size
+    // only, so following every pick would throw a customer who is looking at
+    // the third thumb back to the first picture each time a size is chosen.
+    // The gallery therefore follows a variation only when its picture differs
+    // from the product's main image, or when the gallery is already showing a
+    // variation's picture — then the main image is the place to go back to.
+    function variationImagePlan(image, mainFull, thumbFulls, variationShowing) {
+        var thumbs = thumbFulls || [];
+        // URLs that name the variation's picture at full size. `url` comes
+        // from the same function as data-full; `full_src` is WooCommerce's
+        // "full" size and is the same file unless a filter changed it.
+        var names = [];
+        if (image) {
+            if (image.url) names.push(image.url);
+            if (image.full_src) names.push(image.full_src);
+            if (!names.length && image.src) names.push(image.src);
+        }
+        // No picture at all (neither the variation nor the product has one).
+        if (!names.length) return { action: variationShowing ? 'restore' : 'none' };
+
+        function isPicture(url) {
+            for (var n = 0; n < names.length; n++) {
+                if (sameImageUrl(names[n], url)) return true;
+            }
+            return false;
+        }
+
+        // The product's main image: the picture of a variation that has none
+        // of its own (see above).
+        if (isPicture(mainFull)) return { action: variationShowing ? 'restore' : 'none' };
+
+        for (var i = 0; i < thumbs.length; i++) {
+            if (isPicture(thumbs[i])) return { action: 'thumb', index: i };
+        }
+
+        // Hero only, with the full-size file — what a thumb click shows too.
+        // Not WooCommerce's single size with its srcset: its `sizes` goes by
+        // the picture's width, and the hero is a square the picture COVERS,
+        // so a wide picture would be stretched soft. The alt is the image's
+        // own only when it is not WooCommerce's fallback to the attachment
+        // title (usually the file name) — '' means "keep the product's name".
+        return {
+            action: 'hero',
+            src:    image.full_src || image.url || image.src,
+            alt:    image.alt && image.alt !== image.title ? String(image.alt) : ''
+        };
+    }
+
+    // Browsers have no `module` and skip this; node has no jQuery and no
+    // document, and stops here.
+    if (typeof module === 'object' && module && module.exports) {
+        module.exports = { variationImagePlan: variationImagePlan };
+    }
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
     // Variation button selectors — sync visual buttons with WooCommerce
     // hidden selects. The visible "— X selected" label uses the button's
     // text content (term display name) rather than data-value (slug) so
@@ -169,6 +265,23 @@
         syncVariationSelectionState($(this));
     });
 
+    // The gallery follows the picked variation. Bound at IIFE time like the
+    // handlers above, for the same reason: the first found_variation of a
+    // product with default attributes must not be missed. Works the same
+    // when WooCommerce loads variations by AJAX — found_variation carries
+    // the same `image`.
+    $(document).on('found_variation.wc-variation-form', '.fh-purchase__form', function(event, variation) {
+        applyVariationImage($(this), variation);
+    });
+
+    // Un-picking ("Clear", an attribute back to "Choose…", no match): a
+    // variation's picture goes away with the variation. A thumb the customer
+    // chose on their own stays.
+    $(document).on('reset_data.wc-variation-form', '.fh-purchase__form', function() {
+        var g = formGallery($(this));
+        if (g && g.variationShowing) restoreGallery(g);
+    });
+
     function initVariationSelectionGuard() {
         // Capture-phase listener: WC's own delegated click handler on the
         // form window.alert()s the same message when the button carries
@@ -319,46 +432,159 @@
         $('.fh-purchase__form').each(function() { recompute($(this)); });
     }
 
+    // Gallery state, shared by initGallery() and the variation handlers.
+    // Those handlers are bound at IIFE time and the first found_variation of
+    // a product with default attributes can arrive before initGallery() has
+    // run, so the snapshot of the server-rendered hero is taken on first
+    // use, whoever asks first — always before anything has been swapped.
+    var galleryState = null;
+    function gallery() {
+        if (galleryState) return galleryState;
+        var $main = $('.fh-gallery__main');
+        if (!$main.length) return null;
+        var $img = $main.find('img').first();
+        var $thumbs = $('.fh-gallery__thumb');
+        galleryState = {
+            $img: $img,
+            // What the page showed when it loaded.
+            initial: {
+                src:    $img.attr('src'),
+                srcset: $img.attr('srcset'),
+                sizes:  $img.attr('sizes'),
+                alt:    $img.attr('alt'),
+                full:   $img.attr('data-full') || '',
+                active: $thumbs.index($thumbs.filter('.active'))
+            },
+            // True while the picture showing is there because of a variation.
+            variationShowing: false,
+            // Full-size URL of a variation's picture that no thumb carries,
+            // while the hero shows it ('' otherwise) — for the image viewer.
+            extraFull: ''
+        };
+        return galleryState;
+    }
+
+    // The gallery a purchase form belongs to (same product layout), or null.
+    function formGallery($form) {
+        if (!$form.closest('.fh-product-layout').find('.fh-gallery').length) return null;
+        return gallery();
+    }
+
+    // Full-resolution URL for a thumb. Thumbs carry the full image in
+    // data-full; the rendered <img> is only the 120px crop, so reading
+    // its src would swap in a blurry low-res image.
+    function fullSrc($thumb) {
+        return $thumb.attr('data-full') || $thumb.find('img').attr('src');
+    }
+
+    function setAttrOrRemove($el, name, value) {
+        if (value) $el.attr(name, value);
+        else $el.removeAttr(name);
+    }
+
+    // Swap the hero image. wp_get_attachment_image() emits srcset/sizes,
+    // so the browser keeps painting a srcset candidate even after src
+    // changes — clearing them is what makes the swap actually visible
+    // (only going back to the server-rendered hero passes its own again).
+    // The box keeps its shape whatever the picture's proportions:
+    // .fh-gallery__main is a square and the image covers it (main.css).
+    function showImage(g, src, srcset, sizes) {
+        if (!src) return;
+        setAttrOrRemove(g.$img, 'srcset', srcset);
+        setAttrOrRemove(g.$img, 'sizes', srcset ? sizes : '');
+        g.$img.attr('src', src);
+    }
+
+    // Hero alt: the product's name as rendered, unless a variation's
+    // image carries an alt of its own.
+    function setHeroAlt(g, alt) {
+        var value = alt || g.initial.alt;
+        if (value === undefined) g.$img.removeAttr('alt');
+        else g.$img.attr('alt', value);
+    }
+
+    // Mark one thumb (or none, with an empty set) as the active one.
+    function markThumb($thumb) {
+        $('.fh-gallery__thumb').removeClass('active').removeAttr('aria-current');
+        $thumb.addClass('active').attr('aria-current', 'true');
+    }
+
+    // What a click on a thumb does; a variation whose picture sits on a
+    // thumb goes through here too.
+    function showThumb(g, $thumb) {
+        markThumb($thumb);
+        showImage(g, fullSrc($thumb));
+        setHeroAlt(g, '');
+    }
+
+    // Back to what the page showed when it loaded.
+    function restoreGallery(g) {
+        var $thumbs = $('.fh-gallery__thumb');
+        g.variationShowing = false;
+        g.extraFull = '';
+        markThumb(g.initial.active >= 0 ? $thumbs.eq(g.initial.active) : $());
+        showImage(g, g.initial.src, g.initial.srcset, g.initial.sizes);
+        setHeroAlt(g, '');
+    }
+
+    // A variation was picked: carry out variationImagePlan().
+    function applyVariationImage($form, variation) {
+        var g = formGallery($form);
+        if (!g) return;
+        var $thumbs = $('.fh-gallery__thumb');
+        var plan = variationImagePlan(
+            variation && variation.image,
+            g.initial.full,
+            $thumbs.map(function() { return $(this).attr('data-full') || ''; }).get(),
+            g.variationShowing
+        );
+        if (plan.action === 'none') return;
+        if (plan.action === 'restore') { restoreGallery(g); return; }
+        g.variationShowing = true;
+        if (plan.action === 'thumb') {
+            g.extraFull = '';
+            showThumb(g, $thumbs.eq(plan.index));
+            return;
+        }
+        // No thumb carries this picture: the hero shows it, no thumb is
+        // the active one, and the viewer gets it as one more picture.
+        g.extraFull = plan.src;
+        markThumb($());
+        showImage(g, plan.src);
+        setHeroAlt(g, plan.alt);
+    }
+
     // Gallery thumb switcher + lightbox
     function initGallery() {
+        var g = gallery();
+        if (!g) return;
         var $main = $('.fh-gallery__main');
-        if (!$main.length) return;
-        var $mainImg = $main.find('img');
-
-        // Full-resolution URL for a thumb. Thumbs carry the full image in
-        // data-full; the rendered <img> is only the 120px crop, so reading
-        // its src would swap in a blurry low-res image.
-        function fullSrc($thumb) {
-            return $thumb.attr('data-full') || $thumb.find('img').attr('src');
-        }
-
-        // Swap the hero image. wp_get_attachment_image() emits srcset/sizes,
-        // so the browser keeps painting a srcset candidate even after src
-        // changes — clearing them is what makes the swap actually visible.
-        function showImage(src) {
-            if (!src) return;
-            $mainImg.attr('src', src).removeAttr('srcset').removeAttr('sizes');
-        }
 
         $(document).on('click', '.fh-gallery__thumb', function() {
-            var $thumb = $(this);
-            $('.fh-gallery__thumb').removeClass('active').removeAttr('aria-current');
-            $thumb.addClass('active').attr('aria-current', 'true');
-            showImage(fullSrc($thumb));
+            // The customer's own choice: the gallery no longer shows a
+            // variation's picture, so a later size pick or "Clear" leaves
+            // this thumb alone.
+            g.variationShowing = false;
+            g.extraFull = '';
+            showThumb(g, $(this));
         });
 
         // Ordered list of full-size URLs for the lightbox. Mirrors the thumb
         // order; falls back to the hero image's own data-full when a product
-        // has a single image (no thumbs rendered).
+        // has a single image (no thumbs rendered). A variation's picture
+        // that no thumb carries comes last while the hero shows it.
         function gallerySrcs() {
             var $thumbs = $('.fh-gallery__thumb');
-            if ($thumbs.length) {
-                return $thumbs.map(function() { return fullSrc($(this)); }).get();
-            }
-            return [$mainImg.attr('data-full') || $mainImg.attr('src')];
+            var srcs = $thumbs.length
+                ? $thumbs.map(function() { return fullSrc($(this)); }).get()
+                : [g.initial.full || g.initial.src];
+            if (g.extraFull) srcs.push(g.extraFull);
+            return srcs;
         }
 
+        // The viewer opens on the picture that is showing.
         function currentIndex() {
+            if (g.extraFull) return gallerySrcs().length - 1;
             var i = $('.fh-gallery__thumb').index($('.fh-gallery__thumb.active'));
             return i < 0 ? 0 : i;
         }
@@ -895,4 +1121,4 @@
         initGiftCardSmartButtonGuard();
     });
 
-})(jQuery);
+})(typeof jQuery === 'undefined' ? undefined : jQuery);

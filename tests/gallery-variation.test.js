@@ -8,7 +8,7 @@
  *   variationImagePlan( image, mainFull, thumbFulls, variationShowing )
  *     → { action: 'none' }
  *     | { action: 'restore' }
- *     | { action: 'thumb', index }
+ *     | { action: 'thumb', index, alt }
  *     | { action: 'hero', src, alt }
  *
  * The rules it pins down: a variation with a picture of its own moves the
@@ -79,10 +79,10 @@ same(plan(wcImage('coral-main.jpg'), MAIN, THUMBS, true), RESTORE, 'main image a
 same(plan(wcImage('coral-main.jpg'), MAIN, [], true), RESTORE, 'same on a product without thumbs');
 
 // ── A variation whose picture sits on a thumb ──────────────────────────
-same(plan(wcImage('coral-green.jpg'), MAIN, THUMBS, false), { action: 'thumb', index: 1 }, 'second thumb carries it');
-same(plan(wcImage('coral-purple.jpg'), MAIN, THUMBS, false), { action: 'thumb', index: 3 }, 'fourth thumb carries it');
-same(plan(wcImage('coral-orange.jpg'), MAIN, THUMBS, true), { action: 'thumb', index: 2 }, 'from one variation picture to the next');
-same(plan(wcImage('coral-green.jpg'), '', [UP + 'coral-orange.jpg', UP + 'coral-green.jpg'], false), { action: 'thumb', index: 1 },
+same(plan(wcImage('coral-green.jpg'), MAIN, THUMBS, false), { action: 'thumb', index: 1, alt: '' }, 'second thumb carries it');
+same(plan(wcImage('coral-purple.jpg'), MAIN, THUMBS, false), { action: 'thumb', index: 3, alt: '' }, 'fourth thumb carries it');
+same(plan(wcImage('coral-orange.jpg'), MAIN, THUMBS, true), { action: 'thumb', index: 2, alt: '' }, 'from one variation picture to the next');
+same(plan(wcImage('coral-green.jpg'), '', [UP + 'coral-orange.jpg', UP + 'coral-green.jpg'], false), { action: 'thumb', index: 1, alt: '' },
   'a product with gallery images but no main image');
 
 // ── A variation whose picture no thumb carries ─────────────────────────
@@ -105,6 +105,14 @@ same(plan(wcImage('coral-blue.jpg', { alt: 'Blue coral frag on a plug' }), MAIN,
 same(plan(wcImage('coral-blue.jpg', { alt: 'coral-blue', title: 'coral-blue' }), MAIN, THUMBS, false).alt, '',
   'WooCommerce\'s fallback to the attachment title is not an alt of its own');
 same(plan(wcImage('coral-blue.jpg', { alt: '' }), MAIN, THUMBS, false).alt, '', 'no alt: keep the product\'s name');
+// The same on a thumb: its picture shown because of a variation carries the
+// image's own alt; shown by a click it keeps the product's name (main.js).
+same(plan(wcImage('coral-green.jpg', { alt: 'Green coral frag, polyps open' }), MAIN, THUMBS, false),
+  { action: 'thumb', index: 1, alt: 'Green coral frag, polyps open' }, 'a thumb\'s picture: the image\'s own alt comes along');
+same(plan(wcImage('coral-green.jpg', { alt: 'coral-green', title: 'coral-green' }), MAIN, THUMBS, true).alt, '',
+  'a thumb\'s picture without an alt of its own');
+same(plan(wcImage('coral-main.jpg', { alt: 'Main picture of the coral' }), MAIN, THUMBS, true), RESTORE,
+  'back to the product\'s own picture: no alt to carry');
 
 // ── No picture anywhere ────────────────────────────────────────────────
 same(plan(NO_IMAGE, '', [], false), NONE, 'no picture, nothing showing: left alone');
@@ -118,13 +126,30 @@ same(plan(wcImage('coral-main.jpg', { url: MAIN.replace('https:', 'http:'), full
   'http vs https is the same picture');
 same(plan(wcImage('coral-main.jpg', { url: MAIN + '?ver=3', full_src: MAIN + '?ver=3' }), MAIN, THUMBS, false), NONE,
   'a query string does not split a match');
-same(plan(wcImage('coral-green.jpg'), MAIN, [MAIN, ' ' + UP + 'coral-green.jpg?x=1 '], false), { action: 'thumb', index: 1 },
+same(plan(wcImage('coral-green.jpg'), MAIN, [MAIN, ' ' + UP + 'coral-green.jpg?x=1 '], false), { action: 'thumb', index: 1, alt: '' },
   'thumb URL with spaces and a query string');
-same(plan(wcImage('coral-green.jpg', { full_src: UP + 'coral-green-1536x1152.jpg' }), MAIN, THUMBS, false), { action: 'thumb', index: 1 },
+same(plan(wcImage('coral-green.jpg', { full_src: UP + 'coral-green-1536x1152.jpg' }), MAIN, THUMBS, false), { action: 'thumb', index: 1, alt: '' },
   'a filtered full size: `url` still names the picture');
 same(plan(wcImage('coral-main.jpg', { url: '' }), MAIN, THUMBS, false), NONE, 'no `url`: full_src names the picture');
 same(plan(wcImage('coral-main-2.jpg'), MAIN, THUMBS, false).action, 'hero', 'a similar file name is another picture');
-same(plan(wcImage('coral-green.jpg'), MAIN, ['', '', UP + 'coral-green.jpg'], false), { action: 'thumb', index: 2 },
+
+// A plugin that serves the page's pictures from another host (a CDN) rewrites
+// data-full but not WooCommerce's variation data. Host and port do not name
+// the picture, the path does: a size pick on a fish must still be "the main
+// image", not a picture of its own that throws the customer off their thumb.
+var CDN = 'https://cdn.example.net/wp-content/uploads/2026/11/';
+var CDN_THUMBS = [CDN + 'coral-main.jpg', CDN + 'coral-green.jpg', CDN + 'coral-orange.jpg', CDN + 'coral-purple.jpg'];
+same(plan(wcImage('coral-main.jpg'), CDN + 'coral-main.jpg', CDN_THUMBS, false), NONE, 'page pictures on another host: still the main image');
+same(plan(wcImage('coral-main.jpg'), CDN + 'coral-main.jpg', CDN_THUMBS, true), RESTORE, 'same, after a variation picture');
+same(plan(wcImage('coral-orange.jpg'), CDN + 'coral-main.jpg', CDN_THUMBS, false), { action: 'thumb', index: 2, alt: '' },
+  'page pictures on another host: the thumb is still found');
+same(plan(wcImage('coral-blue.jpg'), CDN + 'coral-main.jpg', CDN_THUMBS, false), BLUE, 'and a picture no thumb carries is still shown from the shop\'s own address');
+same(plan(wcImage('coral-main.jpg'), '//shop.example:8443/wp-content/uploads/2026/11/coral-main.jpg', [], false), NONE,
+  'no scheme, a port: same picture');
+same(plan(wcImage('coral-main.jpg'), '/wp-content/uploads/2026/11/coral-main.jpg', [], false), NONE, 'a path alone: same picture');
+same(plan(wcImage('coral-main.jpg'), 'https://shop.example/wp-content/uploads/2026/10/coral-main.jpg', [], false).action, 'hero',
+  'same file name in another folder is another picture');
+same(plan(wcImage('coral-green.jpg'), MAIN, ['', '', UP + 'coral-green.jpg'], false), { action: 'thumb', index: 2, alt: '' },
   'a thumb without data-full never matches, positions are kept');
 
 // The single size (`src`) is not the picture's name when a full URL exists:

@@ -96,7 +96,10 @@ Every WooCommerce product gets a "FisHotel — Product Data" meta box with three
   `variationImagePlan()`): a variation with a picture of its own shows it in the big image, and
   its thumb becomes the active one when a thumb carries that picture. A variation that only has
   the product's main image — every size of a fish — leaves the gallery where the customer put it.
-  Un-picking a variation takes its picture away again: the gallery goes back to how the page loaded.
+  Un-picking a variation takes its picture away again: the gallery goes back to the product's own
+  picture. A page that opens with a variation already picked (default attributes, the only choice
+  in stock) is printed with that variation's picture, so the main image never flashes by first
+  (inc/variation-gallery.php).
 
 ### Medication Terms Record (inc/medication-store/terms-record.php + terms-display.php)
 When the cart holds a medication, checkout shows the required "ornamental use only" checkbox

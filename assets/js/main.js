@@ -17,14 +17,17 @@
 
     // Same picture? Both sides are attachment URLs from wp_get_attachment_url()
     // — one printed by the template (data-full), one sent in WooCommerce's
-    // variation data — so compare them without scheme and query string: a
-    // http/https difference or a cache-buster must not split a match.
+    // variation data — so compare the path alone, without scheme, host and
+    // query string. A http/https difference or a cache-buster must not split
+    // a match, and neither must a plugin that serves the page's pictures
+    // from another host (a CDN) while the variation data keeps the shop's
+    // own: a size pick on a fish would then look like a picture of its own.
     function sameImageUrl(a, b) {
         function norm(u) {
             return String(u == null ? '' : u)
                 .replace(/^\s+|\s+$/g, '')
                 .replace(/[?#].*$/, '')
-                .replace(/^https?:/i, '');
+                .replace(/^(https?:)?\/\/[^\/]+/i, '');
         }
         var x = norm(a);
         return x !== '' && x === norm(b);
@@ -38,13 +41,18 @@
     //                     the hero is a placeholder)
     //   thumbFulls        the thumbs' data-full URLs, in order ([] without thumbs)
     //   variationShowing  true while the gallery shows a picture because of
-    //                     an earlier variation pick
+    //                     an earlier variation pick (or because the page was
+    //                     printed with the picture of the variation it opens on)
     //
     // Returns one of:
-    //   { action: 'none' }               leave the gallery alone
-    //   { action: 'restore' }            back to what the page showed when it loaded
-    //   { action: 'thumb', index: n }    thumb n becomes the active one, as if clicked
-    //   { action: 'hero', src, alt }     no thumb carries the picture: hero only
+    //   { action: 'none' }                  leave the gallery alone
+    //   { action: 'restore' }               back to the product's own picture
+    //   { action: 'thumb', index: n, alt }  thumb n becomes the active one, as if clicked
+    //   { action: 'hero', src, alt }        no thumb carries the picture: hero only
+    //
+    // `alt` is the image's own alt text, or '' for "keep the product's name":
+    // WooCommerce falls back to the attachment title (usually the file name)
+    // when an image has no alt, and that is not an alt of its own.
     //
     // Why 'none' exists: WooCommerce hands a variation with no picture of its
     // own the PARENT's image. Nearly every fish in the shop varies by size
@@ -78,20 +86,20 @@
         // of its own (see above).
         if (isPicture(mainFull)) return { action: variationShowing ? 'restore' : 'none' };
 
+        var alt = image.alt && image.alt !== image.title ? String(image.alt) : '';
+
         for (var i = 0; i < thumbs.length; i++) {
-            if (isPicture(thumbs[i])) return { action: 'thumb', index: i };
+            if (isPicture(thumbs[i])) return { action: 'thumb', index: i, alt: alt };
         }
 
         // Hero only, with the full-size file — what a thumb click shows too.
         // Not WooCommerce's single size with its srcset: its `sizes` goes by
         // the picture's width, and the hero is a square the picture COVERS,
-        // so a wide picture would be stretched soft. The alt is the image's
-        // own only when it is not WooCommerce's fallback to the attachment
-        // title (usually the file name) — '' means "keep the product's name".
+        // so a wide picture would be stretched soft.
         return {
             action: 'hero',
             src:    image.full_src || image.url || image.src,
-            alt:    image.alt && image.alt !== image.title ? String(image.alt) : ''
+            alt:    alt
         };
     }
 
@@ -275,8 +283,8 @@
     });
 
     // Un-picking ("Clear", an attribute back to "Choose…", no match): a
-    // variation's picture goes away with the variation. A thumb the customer
-    // chose on their own stays.
+    // variation's picture goes away with the variation and the product's own
+    // comes back. A thumb the customer chose on their own stays.
     $(document).on('reset_data.wc-variation-form', '.fh-purchase__form', function() {
         var g = formGallery($(this));
         if (g && g.variationShowing) restoreGallery(g);
@@ -437,6 +445,14 @@
     // a product with default attributes can arrive before initGallery() has
     // run, so the snapshot of the server-rendered hero is taken on first
     // use, whoever asks first — always before anything has been swapped.
+    //
+    // A page that opens on a variation with a picture of its own (default
+    // attributes, ?attribute_…= in the address, the only size in stock) is
+    // printed with that picture already in the hero, so the customer never
+    // sees the main image flash by before WooCommerce's first
+    // found_variation. The template then keeps the product's own hero in
+    // <template class="fh-gallery__own">; that, not the picture in the
+    // hero, is what the gallery goes back to when the variation is un-picked.
     var galleryState = null;
     function gallery() {
         if (galleryState) return galleryState;
@@ -444,22 +460,41 @@
         if (!$main.length) return null;
         var $img = $main.find('img').first();
         var $thumbs = $('.fh-gallery__thumb');
+        var own = $main.find('template.fh-gallery__own')[0];
+        var $own = $(own && own.content ? own.content.querySelector('img') : null);
+        var opensOnVariation = $own.length > 0;
+        var $from = opensOnVariation ? $own : $img;
+        var showing = $img.attr('data-full') || '';
+        var active = $thumbs.index($thumbs.filter('.active'));
+        // The thumb of the product's own picture: the active one as printed,
+        // or, on a page that opens on a variation, the one that carries the
+        // main image (none when the product has no main image).
+        var ownActive = active;
+        if (opensOnVariation) {
+            ownActive = -1;
+            $thumbs.each(function(i) {
+                if (ownActive < 0 && sameImageUrl($(this).attr('data-full'), $own.attr('data-full'))) ownActive = i;
+            });
+        }
         galleryState = {
             $img: $img,
-            // What the page showed when it loaded.
+            // The product's own picture: what the page shows with no
+            // variation picked.
             initial: {
-                src:    $img.attr('src'),
-                srcset: $img.attr('srcset'),
-                sizes:  $img.attr('sizes'),
-                alt:    $img.attr('alt'),
-                full:   $img.attr('data-full') || '',
-                active: $thumbs.index($thumbs.filter('.active'))
+                src:    $from.attr('src'),
+                srcset: $from.attr('srcset'),
+                sizes:  $from.attr('sizes'),
+                alt:    $from.attr('alt'),
+                full:   $from.attr('data-full') || '',
+                active: ownActive
             },
             // True while the picture showing is there because of a variation.
-            variationShowing: false,
+            variationShowing: opensOnVariation,
+            // Full-size URL of the picture in the hero ('' for a placeholder).
+            showing: showing,
             // Full-size URL of a variation's picture that no thumb carries,
             // while the hero shows it ('' otherwise) — for the image viewer.
-            extraFull: ''
+            extraFull: opensOnVariation && active < 0 ? showing : ''
         };
         return galleryState;
     }
@@ -510,20 +545,24 @@
     }
 
     // What a click on a thumb does; a variation whose picture sits on a
-    // thumb goes through here too.
-    function showThumb(g, $thumb) {
+    // thumb goes through here too, with the alt of its image when that
+    // image has one of its own.
+    function showThumb(g, $thumb, alt) {
         markThumb($thumb);
         showImage(g, fullSrc($thumb));
-        setHeroAlt(g, '');
+        g.showing = fullSrc($thumb) || '';
+        setHeroAlt(g, alt || '');
     }
 
-    // Back to what the page showed when it loaded.
+    // Back to the product's own picture — what the page shows with no
+    // variation picked.
     function restoreGallery(g) {
         var $thumbs = $('.fh-gallery__thumb');
         g.variationShowing = false;
         g.extraFull = '';
         markThumb(g.initial.active >= 0 ? $thumbs.eq(g.initial.active) : $());
         showImage(g, g.initial.src, g.initial.srcset, g.initial.sizes);
+        g.showing = g.initial.full;
         setHeroAlt(g, '');
     }
 
@@ -540,17 +579,28 @@
         );
         if (plan.action === 'none') return;
         if (plan.action === 'restore') { restoreGallery(g); return; }
+        // The hero already shows this variation's picture — the page was
+        // printed with it, or the same variation was found again. Leave the
+        // image as it is (no second download at another size); only the
+        // marks below are made sure of.
+        var $thumb = plan.action === 'thumb' ? $thumbs.eq(plan.index) : $();
+        var target = plan.action === 'thumb' ? fullSrc($thumb) : plan.src;
+        var already = g.variationShowing && sameImageUrl(g.showing, target);
         g.variationShowing = true;
         if (plan.action === 'thumb') {
             g.extraFull = '';
-            showThumb(g, $thumbs.eq(plan.index));
+            if (already) { markThumb($thumb); setHeroAlt(g, plan.alt); }
+            else showThumb(g, $thumb, plan.alt);
             return;
         }
         // No thumb carries this picture: the hero shows it, no thumb is
         // the active one, and the viewer gets it as one more picture.
         g.extraFull = plan.src;
         markThumb($());
-        showImage(g, plan.src);
+        if (!already) {
+            showImage(g, plan.src);
+            g.showing = plan.src;
+        }
         setHeroAlt(g, plan.alt);
     }
 

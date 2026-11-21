@@ -80,6 +80,35 @@ while ( have_posts() ) :
     $is_fish = function_exists( 'fishotel_is_quarantined_fish' )
         ? fishotel_is_quarantined_fish( $product_id )
         : false;
+
+    // Variation data for the purchase form. Resolved up here, ahead of the
+    // gallery, because the gallery has to know which variation the form
+    // opens on (see $opening_picture below). The Coming Soon and Amazon
+    // panels print no form and never asked for it.
+    $is_variable     = ( 'variable' === $product->get_type() ) && ! $is_gift_card;
+    $variations_data = ( $is_variable && ! $is_coming_soon && ! $is_amazon_med ) ? $product->get_available_variations() : [];
+
+    // Drop OOS variations entirely. The size row never renders an
+    // unpurchaseable button, the data-product_variations JSON only
+    // exposes valid combos to WC's variation form, and when filtering
+    // leaves exactly one variation the single-variation auto-select
+    // (JS) kicks in so the customer doesn't have to pick.
+    $variations_data = array_values( array_filter( $variations_data, function ( $v ) {
+        return ! empty( $v['is_in_stock'] );
+    } ) );
+
+    // The page can open with a variation already picked (default
+    // attributes, ?attribute_…= in the address, the only choice in stock).
+    // When that variation has a picture of its own, the gallery is printed
+    // with it — otherwise the customer would see the main image first and
+    // watch it change once WooCommerce's script has caught up. Null for
+    // every product whose variations have no pictures (the sizes of a
+    // fish): its gallery is printed as it always was. A product that
+    // cannot be bought prints no form, so nothing is picked on it.
+    $opening_picture = ( $variations_data && function_exists( 'fishotel_pdp_opening_picture' ) && $product->is_purchasable() )
+        ? fishotel_pdp_opening_picture( $product, $variations_data, $main_img_id, $gallery_ids )
+        : null;
+    $opening_thumb   = $opening_picture ? (int) $opening_picture['thumb'] : -1;
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -168,24 +197,40 @@ while ( have_posts() ) :
                     (Enter/Space fire click natively); main.js binds the
                     click on .fh-gallery__main and it bubbles up from here. */ ?>
             <button type="button" class="fh-gallery__zoom" aria-label="<?php esc_attr_e( 'Open image viewer', 'fishotel' ); ?>">
-            <?php if ($main_img_id) : ?>
+            <?php if ( $opening_picture ) : /* the page opens on a variation with a picture of its own */ ?>
+                <?php echo wp_get_attachment_image($opening_picture['image_id'], 'fishotel-product-hero', false, ['class' => '', 'id' => 'fh-main-img', 'alt' => '' !== $opening_picture['alt'] ? $opening_picture['alt'] : get_the_title(), 'data-full' => esc_url(wp_get_attachment_url($opening_picture['image_id']))]); ?>
+            <?php elseif ($main_img_id) : ?>
                 <?php echo wp_get_attachment_image($main_img_id, 'fishotel-product-hero', false, ['class' => '', 'id' => 'fh-main-img', 'alt' => get_the_title(), 'data-full' => esc_url(wp_get_attachment_url($main_img_id))]); ?>
             <?php else : ?>
                 <?php echo FisHotel_Placeholder_Library::render( $product_id, 'fishotel-product-hero', ['id' => 'fh-main-img', 'alt' => get_the_title()] ); ?>
             <?php endif; ?>
             </button>
+<?php /* The product's own hero, kept aside when the page opens on a
+        variation's picture (a <template> is not rendered and its picture
+        is not downloaded): main.js goes back to it when the variation is
+        un-picked. The PHP tags start at the margin so that every other
+        page is printed byte for byte as before. */ ?>
+<?php if ( $opening_picture ) : ?>
+            <template class="fh-gallery__own">
+            <?php if ($main_img_id) : ?>
+                <?php echo wp_get_attachment_image($main_img_id, 'fishotel-product-hero', false, ['class' => '', 'alt' => get_the_title(), 'data-full' => esc_url(wp_get_attachment_url($main_img_id))]); ?>
+            <?php else : ?>
+                <?php echo FisHotel_Placeholder_Library::render( $product_id, 'fishotel-product-hero', ['alt' => get_the_title()] ); ?>
+            <?php endif; ?>
+            </template>
+<?php endif; ?>
         </div>
 
         <?php if (!empty($gallery_ids)) : ?>
         <div class="fh-gallery__thumbs">
             <?php $thumb_n = 0; ?>
             <?php if ($main_img_id) : $thumb_n++; ?>
-                <button type="button" class="fh-gallery__thumb active" aria-current="true" aria-label="<?php echo esc_attr( sprintf( __( 'View image %d', 'fishotel' ), $thumb_n ) ); ?>" data-full="<?php echo esc_url(wp_get_attachment_url($main_img_id)); ?>">
+                <button type="button" class="fh-gallery__thumb<?php echo $opening_picture ? '' : ' active'; ?>"<?php echo $opening_picture ? '' : ' aria-current="true"'; ?> aria-label="<?php echo esc_attr( sprintf( __( 'View image %d', 'fishotel' ), $thumb_n ) ); ?>" data-full="<?php echo esc_url(wp_get_attachment_url($main_img_id)); ?>">
                     <?php echo wp_get_attachment_image($main_img_id, 'fishotel-product-thumb', false, ['alt' => '']); ?>
                 </button>
             <?php endif;
             foreach (array_slice($gallery_ids, 0, 3) as $gid) : $thumb_n++; ?>
-                <button type="button" class="fh-gallery__thumb" aria-label="<?php echo esc_attr( sprintf( __( 'View image %d', 'fishotel' ), $thumb_n ) ); ?>" data-full="<?php echo esc_url(wp_get_attachment_url($gid)); ?>">
+                <button type="button" class="fh-gallery__thumb<?php echo $opening_thumb === $thumb_n - 1 ? ' active' : ''; ?>"<?php echo $opening_thumb === $thumb_n - 1 ? ' aria-current="true"' : ''; ?> aria-label="<?php echo esc_attr( sprintf( __( 'View image %d', 'fishotel' ), $thumb_n ) ); ?>" data-full="<?php echo esc_url(wp_get_attachment_url($gid)); ?>">
                     <?php echo wp_get_attachment_image($gid, 'fishotel-product-thumb', false, ['alt' => '']); ?>
                 </button>
             <?php endforeach; ?>
@@ -250,17 +295,8 @@ while ( have_posts() ) :
         // the stock badge, and the auto-select hint on the variations form.
         // JS (main.js) updates these slots on found_variation/reset_data so
         // layout never shifts as the user picks a combo.
-        $is_variable     = ( 'variable' === $product->get_type() ) && ! $is_gift_card;
-        $variations_data = $is_variable ? $product->get_available_variations() : [];
-
-        // Drop OOS variations entirely. The size row never renders an
-        // unpurchaseable button, the data-product_variations JSON only
-        // exposes valid combos to WC's variation form, and when filtering
-        // leaves exactly one variation the single-variation auto-select
-        // (JS) kicks in so the customer doesn't have to pick.
-        $variations_data = array_values( array_filter( $variations_data, function ( $v ) {
-            return ! empty( $v['is_in_stock'] );
-        } ) );
+        // $is_variable and $variations_data (in-stock variations only) are
+        // resolved at the top of this template, ahead of the gallery.
 
         // Per-attribute set of in-stock values, used to filter the buttons
         // + hidden <select> options below. sanitize_title() on both sides

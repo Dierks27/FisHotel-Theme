@@ -253,6 +253,7 @@ $includes = [
 	'/inc/hotel-data.php',       // FisHotel quarantine meta
 	'/inc/hotel-journal.php',    // Quarantine journal entries
 	'/inc/variation-display.php', // Visual variation buttons
+	'/inc/variation-gallery.php', // The picture a product page opens on (default / only-in-stock variation)
 	'/inc/widgets.php',
 	'/inc/admin-settings.php',   // FisHotel admin settings page
 	'/inc/placeholder-library.php', // Product image placeholder library

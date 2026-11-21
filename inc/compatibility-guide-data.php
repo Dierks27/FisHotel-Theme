@@ -46,12 +46,19 @@ function fishotel_compat_data_url( $name ) {
 }
 
 /**
- * Volume modifier — canonical PHP form, mirroring the JS implementation.
+ * Volume modifier — canonical PHP form, mirroring the JS implementation
+ * (applyVolumeModifier in assets/js/compatibility-guide.js).
  *
  *   Rule 1: <  75g — 'W' between aggressive families tightens to 'N'
  *   Rule 2: ≥ 250g — 'N' on cross-genus tangs/angels softens to 'W'
- *   Rule 3: ≥ 180g — 'W' on cross-complex aggressive Cirrhilabrus softens to 'C'
  *   Rule 4: <  50g — most non-clownfish/goby pairings tighten one tier
+ *
+ * (The Cirrhilabrus 180g+ softening lives in the JS cirrhilabrusCheck, not
+ * here — it needs species-level data this category-level helper never sees.)
+ *
+ * Order is Rule 2 → Rule 1 → Rule 4, the same as the JS: Rule 1 must run
+ * BEFORE Rule 4 or a 'W' between two aggressive families under 50 gal is
+ * tightened to 'O' first and never reaches 'N'.
  *
  * Verdict tiers (worst → best): N > 1 > O > W > C.
  */
@@ -80,25 +87,26 @@ function fishotel_compat_apply_volume_modifier( $verdict, $cat_a, $cat_b, $volum
 
 	$tighten_one = [ 'C' => 'W', 'W' => 'O', 'O' => 'N', '1' => 'N', 'N' => 'N' ];
 
-	// Rule 4 — small tank, generally rougher
-	if ( $volume < 50 ) {
-		$peaceful = in_array( $cat_a, $peaceful_pair_categories, true ) && in_array( $cat_b, $peaceful_pair_categories, true );
-		if ( ! $peaceful && isset( $tighten_one[ $verdict ] ) ) {
-			$verdict = $tighten_one[ $verdict ];
+	// Rule 2 first — 250g+ softens cross-genus tang/angel 'N' to 'W'
+	if ( $volume >= 250 && $verdict === 'N' && $cat_a !== $cat_b ) {
+		if ( in_array( $cat_a, $tangs_or_angels, true ) && in_array( $cat_b, $tangs_or_angels, true ) ) {
+			$verdict = 'W';
 		}
 	}
 
-	// Rule 1 — under 75g, aggressive families that were 'W' become 'N'
+	// Rule 1 — under 75g, aggressive families that were 'W' become 'N'.
+	// Apply BEFORE Rule 4 so we don't lose a 'W' to one-tier-tighten first.
 	if ( $volume < 75 && $verdict === 'W' ) {
 		if ( in_array( $cat_a, $aggressive_pair_categories, true ) && in_array( $cat_b, $aggressive_pair_categories, true ) ) {
 			$verdict = 'N';
 		}
 	}
 
-	// Rule 2 — 250g+ softens cross-genus tang/angel 'N' to 'W'
-	if ( $volume >= 250 && $verdict === 'N' && $cat_a !== $cat_b ) {
-		if ( in_array( $cat_a, $tangs_or_angels, true ) && in_array( $cat_b, $tangs_or_angels, true ) ) {
-			$verdict = 'W';
+	// Rule 4 — small tank, generally rougher: tighten one tier for any non-peaceful pair
+	if ( $volume < 50 ) {
+		$peaceful = in_array( $cat_a, $peaceful_pair_categories, true ) && in_array( $cat_b, $peaceful_pair_categories, true );
+		if ( ! $peaceful && isset( $tighten_one[ $verdict ] ) ) {
+			$verdict = $tighten_one[ $verdict ];
 		}
 	}
 

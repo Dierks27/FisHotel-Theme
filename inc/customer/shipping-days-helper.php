@@ -5,21 +5,28 @@
  * Single source of truth for the operational shipping rules a customer
  * picker must respect:
  *
- *   - shipping_days            string[]  allowed weekday names ('Tuesday','Wednesday','Thursday')
- *   - shipping_min_advance     int       min days from today to the earliest shippable date
- *   - shipping_max_days_ahead  int       max days from today to the latest shippable date
- *   - shipping_max_per_day     int       capacity cap per delivery date (0 = unlimited)
- *   - shipping_blocked_dates   string[]  Y-m-d strings of explicitly-blocked dates (holidays etc.)
+ *   - fishotel_shipping_days         string[]  allowed weekday names ('Monday','Tuesday','Wednesday')
+ *   - fishotel_shipping_min_advance  int       min days from today to the earliest shippable date
+ *   - fishotel_shipping_max_ahead    int       max days from today to the latest shippable date
+ *   - fishotel_shipping_max_per_day  int       capacity cap per delivery date (0 = unlimited)
+ *   - fishotel_shipping_blacklist    string[]  Y-m-d strings of explicitly-blocked dates (holidays etc.)
  *
  * These are stored as WordPress options by the Fishotel Batch Plugin's
- * Delivery settings page (admin.php?page=fishotel-shipping). Reading
- * them here lets the customer self-serve picker (v1.18.0) line up with
- * the shipping admin's actual configuration — Wendi (#34161) was able
- * to pick a Monday in v1.18.5 because the self-serve picker had
- * Mon/Tue/Wed hardcoded while Batch Plugin was set to Tue/Wed/Thu.
+ * Delivery settings page (admin.php?page=fishotel-shipping) — see
+ * class-woocommerce.php fishotel_get_available_shipping_dates() for the
+ * plugin-side reader. Reading them here lets the customer self-serve
+ * picker (v1.18.0) line up with the shipping admin's actual
+ * configuration — Wendi (#34161) was able to pick a Monday in v1.18.5
+ * because the self-serve picker had Mon/Tue/Wed hardcoded while Batch
+ * Plugin was set to Tue/Wed/Thu.
  *
- * Defaults below match the current Batch Plugin admin page defaults so
- * the helper degrades gracefully if the options aren't set.
+ * WHY the keys carry the fishotel_ prefix: earlier builds read un-prefixed
+ * keys ('shipping_days', …) that nothing ever writes, so the self-serve
+ * picker silently ran on hard-coded defaults and ignored Jeff's blocked
+ * dates, per-day cap and weekday configuration.
+ *
+ * Defaults below match the Batch Plugin's own get_option() fallbacks
+ * (Mon/Tue/Wed, 1, 30, 6, []) so both readers agree when nothing is set.
  *
  * @package FisHotel
  */
@@ -33,9 +40,9 @@ defined( 'ABSPATH' ) || exit;
  * @return array{days:string[],min_advance:int,max_days_ahead:int,max_per_day:int,blocked_dates:string[]}
  */
 function fishotel_get_allowed_shipping_settings() {
-	$days = get_option( 'shipping_days', [ 'Tuesday', 'Wednesday', 'Thursday' ] );
+	$days = get_option( 'fishotel_shipping_days', [ 'Monday', 'Tuesday', 'Wednesday' ] );
 	if ( ! is_array( $days ) ) {
-		$days = [ 'Tuesday', 'Wednesday', 'Thursday' ];
+		$days = [ 'Monday', 'Tuesday', 'Wednesday' ];
 	}
 	// Normalize to ucfirst weekday names — Batch Plugin form posts uppercase
 	// first letter; defensive in case anything ever drifts.
@@ -43,7 +50,7 @@ function fishotel_get_allowed_shipping_settings() {
 		return ucfirst( strtolower( (string) $d ) );
 	}, $days ) ) );
 
-	$blocked = get_option( 'shipping_blocked_dates', [] );
+	$blocked = get_option( 'fishotel_shipping_blacklist', [] );
 	if ( ! is_array( $blocked ) ) {
 		$blocked = [];
 	}
@@ -54,9 +61,9 @@ function fishotel_get_allowed_shipping_settings() {
 
 	return [
 		'days'           => $days,
-		'min_advance'    => max( 0, (int) get_option( 'shipping_min_advance', 1 ) ),
-		'max_days_ahead' => max( 1, (int) get_option( 'shipping_max_days_ahead', 21 ) ),
-		'max_per_day'    => max( 0, (int) get_option( 'shipping_max_per_day', 0 ) ),
+		'min_advance'    => max( 0, (int) get_option( 'fishotel_shipping_min_advance', 1 ) ),
+		'max_days_ahead' => max( 1, (int) get_option( 'fishotel_shipping_max_ahead', 30 ) ),
+		'max_per_day'    => max( 0, (int) get_option( 'fishotel_shipping_max_per_day', 6 ) ),
 		'blocked_dates'  => $blocked,
 	];
 }
@@ -76,12 +83,19 @@ function fishotel_is_valid_delivery_date( $date_ymd ) {
 	if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $date_ymd ) ) {
 		return [ false, __( 'Invalid date format.', 'fishotel' ) ];
 	}
-	$ts = strtotime( $date_ymd . ' 00:00:00' );
-	if ( ! $ts ) {
+	// Site timezone, not UTC: WP pins PHP's default zone to UTC, so a bare
+	// strtotime('today') flipped "today" at 7pm Central and disagreed with
+	// the Batch Plugin's America/Chicago checkout picker by a day near the
+	// edges. Local midnights on both sides keep the day arithmetic exact.
+	$tz   = wp_timezone();
+	$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $date_ymd, $tz );
+	if ( ! $date || $date->format( 'Y-m-d' ) !== $date_ymd ) {
 		return [ false, __( 'Invalid date.', 'fishotel' ) ];
 	}
-	$today    = strtotime( 'today' );
-	$days_out = (int) floor( ( $ts - $today ) / DAY_IN_SECONDS );
+	$today    = new DateTimeImmutable( 'today', $tz );
+	// round(), not floor(): a DST change between the two local midnights
+	// makes the gap 23h/25h, which floor() would miscount by a day.
+	$days_out = (int) round( ( $date->getTimestamp() - $today->getTimestamp() ) / DAY_IN_SECONDS );
 
 	if ( $days_out < $settings['min_advance'] ) {
 		return [ false, sprintf(
@@ -100,7 +114,7 @@ function fishotel_is_valid_delivery_date( $date_ymd ) {
 	if ( in_array( $date_ymd, $settings['blocked_dates'], true ) ) {
 		return [ false, __( 'That date is unavailable.', 'fishotel' ) ];
 	}
-	$weekday = date( 'l', $ts );
+	$weekday = $date->format( 'l' );
 	if ( ! in_array( $weekday, $settings['days'], true ) ) {
 		return [ false, sprintf(
 			/* translators: %s comma-joined weekday names */

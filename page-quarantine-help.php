@@ -16,8 +16,9 @@ get_header();
 $medication_data = FisHotel_Medication_Data::get_all();
 $medications     = isset( $medication_data['medications'] ) ? $medication_data['medications'] : array();
 
-// Deep-link support: ?med=<med_id> and ?tank=<gal>
-$initial_med_id = isset( $_GET['med'] ) ? sanitize_text_field( wp_unslash( $_GET['med'] ) ) : 'copper_power';
+// Deep-link support: ?tank=<gal> is applied here; ?med=<med_id> is read and
+// validated by fishotel-calculator.js at boot (unknown ids fall back to
+// Copper Power), so PHP does not touch it.
 $initial_tank   = isset( $_GET['tank'] ) ? absint( $_GET['tank'] ) : 30;
 if ( $initial_tank < 3 )   { $initial_tank = 3; }
 if ( $initial_tank > 500 ) { $initial_tank = 500; }
@@ -54,11 +55,15 @@ $categories = array(
             <?php
             $first = true;
             foreach ( $categories as $cat_key => $cat_label ) :
-                $classes = 'fh-qh-tab' . ( $first ? ' is-on' : '' );
+                $is_on   = $first;
+                $classes = 'fh-qh-tab' . ( $is_on ? ' is-on' : '' );
                 $first = false;
+                // Roving tabindex: only the selected tab is in the Tab order;
+                // Arrow/Home/End move between tabs (fishotel-calculator.js).
                 ?>
                 <button type="button" class="<?php echo esc_attr( $classes ); ?>"
-                        role="tab" aria-selected="false"
+                        role="tab" aria-selected="<?php echo $is_on ? 'true' : 'false'; ?>"
+                        tabindex="<?php echo $is_on ? '0' : '-1'; ?>"
                         data-cat="<?php echo esc_attr( $cat_key ); ?>">
                     <?php echo esc_html( $cat_label ); ?>
                 </button>
@@ -66,7 +71,7 @@ $categories = array(
         </nav>
 
         <!-- Medication picker grid (all meds, filtered via JS by active tab) -->
-        <div id="fh-qh-medgrid" class="fh-qh-medgrid" role="tablist" aria-label="Medication picker">
+        <div id="fh-qh-medgrid" class="fh-qh-medgrid" role="group" aria-label="Medication picker">
             <?php foreach ( $medications as $med ) :
                 $cat = isset( $med['category'] ) ? $med['category'] : 'misc';
                 // Map internal_dewormer category into misc for tab purposes (only ext shown)
@@ -77,6 +82,7 @@ $categories = array(
                 ?>
                 <button type="button"
                         class="fh-qh-med"
+                        aria-pressed="false"
                         data-med-id="<?php echo esc_attr( $med['med_id'] ); ?>"
                         data-cat="<?php echo esc_attr( $display_cat ); ?>">
                     <?php echo esc_html( $short ); ?>

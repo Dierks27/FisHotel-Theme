@@ -25,15 +25,47 @@ if ( ! $cart instanceof WC_Cart ) {
 	return;
 }
 
-$cart_count      = (int) $cart->get_cart_contents_count();
+// Display count excludes sticker lines (Misc plugin giveaway, cart item data
+// fh_sticker) so "3 fish" stays 3 fish; WC's own contents count is untouched.
+$cart_count      = function_exists( 'fishotel_cart_display_count' )
+	? fishotel_cart_display_count()
+	: (int) $cart->get_cart_contents_count();
 $preset          = function_exists( 'fishotel_cart_resolve_preset' ) ? fishotel_cart_resolve_preset() : 'default';
 $shipping_label  = function_exists( 'fishotel_cart_preset_get' ) ? (string) fishotel_cart_preset_get( $preset, 'shipping_label' )   : __( 'Shipping', 'fishotel' );
 $shipping_subtxt = function_exists( 'fishotel_cart_preset_get' ) ? (string) fishotel_cart_preset_get( $preset, 'shipping_subtext' ) : '';
 $billing_state   = WC()->customer ? WC()->customer->get_billing_state() : '';
 $shipping_total  = $cart->get_shipping_total();
+// A chosen $0 rate (Free class, repeat-customer piggyback) is a real price,
+// not "not calculated yet" — only fall back to the placeholder when no rate
+// has been resolved.
+$shipping_rate   = function_exists( 'fishotel_cart_chosen_shipping_rate' ) ? fishotel_cart_chosen_shipping_rate() : null;
 $noun            = function_exists( 'fishotel_cart_preset_noun' )
 	? fishotel_cart_preset_noun( $preset, $cart_count )
 	: ( $cart_count === 1 ? __( 'item', 'fishotel' ) : __( 'items', 'fishotel' ) );
+
+// Gift-card CODE applied to the cart (WooCommerce Gift Cards). Feeds the
+// hidden .fh-gc-applied marker in the Total row, which main.js's
+// initGiftCardSmartButtonGuard() reads to suppress PPCP's smart / express
+// buttons: those build the PayPal order from the cart line items and miss
+// the gift-card deduction, so a code applied at checkout left the
+// double-charge path (order #34494) open — the existing guard only saw the
+// account-BALANCE checkbox. Rendered here because this template is re-run
+// on every update_order_review fragment, so the marker tracks apply/remove.
+// Fails closed — any doubt about the plugin API means no marker (buttons
+// stay visible, exactly as before), never a fatal mid-fragment.
+$gc_applied = false;
+if ( function_exists( 'WC_GC' ) ) {
+	try {
+		$gc_plugin = WC_GC();
+		if ( is_object( $gc_plugin ) && isset( $gc_plugin->giftcards ) && is_object( $gc_plugin->giftcards )
+			&& method_exists( $gc_plugin->giftcards, 'get_applied_giftcards' ) ) {
+			$gc_applied_list = $gc_plugin->giftcards->get_applied_giftcards( 'cart' );
+			$gc_applied      = is_array( $gc_applied_list ) && ! empty( $gc_applied_list );
+		}
+	} catch ( \Throwable $e ) {
+		$gc_applied = false;
+	}
+}
 ?>
 <table class="shop_table woocommerce-checkout-review-order-table fh-statement-table">
 	<tbody>
@@ -103,6 +135,36 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 				<td class="fh-statement-item__thumb"><?php echo $thumb_html; ?></td>
 				<td class="fh-statement-item__body">
 					<div class="fh-statement-item__title"><?php echo wp_kses_post( $item_name ); ?></div>
+					<?php /* Plugin-only cart item data (woocommerce_get_item_data): WC
+					        Gift Cards recipient/message, the Misc plugin's sticker
+					        label, etc. Filtered from an empty array on purpose —
+					        wc_get_formatted_cart_item_data() would also list the
+					        variation attributes the pills below already show.
+					        Mirrors WC's hidden / key / display resolution. */ ?>
+					<?php
+					$extra_rows = [];
+					foreach ( (array) apply_filters( 'woocommerce_get_item_data', [], $cart_item ) as $data ) {
+						if ( ! is_array( $data ) || ! empty( $data['hidden'] ) ) {
+							continue;
+						}
+						$data_key     = ! empty( $data['key'] ) ? $data['key'] : ( isset( $data['name'] ) ? $data['name'] : '' );
+						$data_display = ! empty( $data['display'] ) ? $data['display'] : ( isset( $data['value'] ) ? $data['value'] : '' );
+						if ( '' === trim( (string) $data_display ) ) {
+							continue;
+						}
+						$extra_rows[] = [ 'key' => (string) $data_key, 'display' => (string) $data_display ];
+					}
+					?>
+					<?php if ( $extra_rows ) : ?>
+						<div class="fh-cart-item__meta">
+							<dl class="variation">
+								<?php foreach ( $extra_rows as $row ) : ?>
+									<?php if ( '' !== $row['key'] ) : ?><dt><?php echo esc_html( $row['key'] ); ?>:</dt><?php endif; ?>
+									<dd><?php echo wp_kses_post( $row['display'] ); ?></dd>
+								<?php endforeach; ?>
+							</dl>
+						</div>
+					<?php endif; ?>
 					<?php if ( $variation_pills || $is_fish_item || $quantity > 0 ) : ?>
 					<div class="fh-statement-item__meta">
 						<?php foreach ( $variation_pills as $pill_val ) : ?>
@@ -151,6 +213,10 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 			<td class="fh-statement-ledger__value">
 				<?php if ( $shipping_total > 0 ) : ?>
 					<?php echo wc_price( $shipping_total ); ?>
+				<?php elseif ( $shipping_rate ) : ?>
+					<?php echo wc_price( $shipping_rate->get_cost() ); ?>
+					<?php /* The rate label carries the "Piggybacking on order #N" suffix. */ ?>
+					<small class="fh-statement-ledger__label-sub"><?php echo esc_html( $shipping_rate->get_label() ); ?></small>
 				<?php else : ?>
 					<span class="fh-cart-ledger__placeholder"><?php esc_html_e( 'Calculated at checkout', 'fishotel' ); ?></span>
 				<?php endif; ?>
@@ -195,7 +261,16 @@ $noun            = function_exists( 'fishotel_cart_preset_noun' )
 		<?php endif; ?>
 
 		<tr class="fh-statement-ledger__row fh-statement-ledger__total">
-			<td colspan="2" class="fh-statement-ledger__label"><?php esc_html_e( 'Total', 'fishotel' ); ?></td>
+			<td colspan="2" class="fh-statement-ledger__label">
+				<?php esc_html_e( 'Total', 'fishotel' ); ?>
+				<?php if ( $gc_applied ) : ?>
+					<?php /* Marker for main.js (see $gc_applied above). Lives INSIDE
+					        the table so the AJAX fragment swap carries it in and
+					        out; inside a <td> so it is valid table content. No
+					        `name` — it must never be POSTed with the checkout. */ ?>
+					<input type="hidden" class="fh-gc-applied" value="1">
+				<?php endif; ?>
+			</td>
 			<td class="fh-statement-ledger__value"><?php wc_cart_totals_order_total_html(); ?></td>
 		</tr>
 

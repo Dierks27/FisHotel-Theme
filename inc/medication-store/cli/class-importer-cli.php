@@ -163,35 +163,60 @@ class FisHotel_Med_Importer_CLI {
 	/**
 	 * Trash every product under the Medications category tree.
 	 *
+	 * Products go to the WC trash (restorable from Products → Trash),
+	 * NOT a permanent delete — the old wp_delete_post( $id, true ) nuked
+	 * products + variations with no confirmation while logging "Trashed".
+	 *
 	 * ## OPTIONS
 	 *
-	 * (none)
+	 * [--yes]
+	 * : Skip the confirmation prompt.
+	 *
+	 * [--dry-run]
+	 * : List the products that would be trashed without touching them.
 	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp fishotel-meds reset
+	 *     wp fishotel-meds reset --dry-run
+	 *     wp fishotel-meds reset --yes
 	 *
 	 * @when after_wp_load
 	 */
 	public function reset( $args, $assoc_args ) {
+		$dry_run = ! empty( $assoc_args['dry-run'] );
+
 		$ids = $this->find_medications_products();
 		if ( empty( $ids ) ) {
 			WP_CLI::log( 'No products in the Medications category tree — nothing to trash.' );
 			return;
 		}
 
+		if ( $dry_run ) {
+			foreach ( $ids as $pid ) {
+				$title = get_the_title( $pid );
+				WP_CLI::log( sprintf( '[DRY RUN] Would trash: %s (#%d)', $title !== '' ? $title : '(no title)', $pid ) );
+			}
+			WP_CLI::success( sprintf( 'Dry run complete — %d product(s) would be trashed, nothing changed.', count( $ids ) ) );
+			return;
+		}
+
+		// WP_CLI::confirm() is skipped automatically when --yes is passed.
+		WP_CLI::confirm( sprintf( 'Trash %d product(s) under Medications?', count( $ids ) ), $assoc_args );
+
 		$trashed = 0;
 		foreach ( $ids as $pid ) {
 			$title = get_the_title( $pid );
-			$deleted = wp_delete_post( (int) $pid, true );
-			if ( $deleted ) {
+			// wp_trash_post: WC's trash hook moves the variations too.
+			$result = wp_trash_post( (int) $pid );
+			if ( $result ) {
 				WP_CLI::log( sprintf( 'Trashed: %s (#%d)', $title !== '' ? $title : '(no title)', $pid ) );
 				$trashed++;
 			} else {
-				WP_CLI::warning( sprintf( 'Failed to delete product #%d', $pid ) );
+				WP_CLI::warning( sprintf( 'Failed to trash product #%d', $pid ) );
 			}
 		}
-		WP_CLI::success( sprintf( 'Reset complete — %d product(s) deleted.', $trashed ) );
+		WP_CLI::success( sprintf( 'Reset complete — %d product(s) moved to the trash.', $trashed ) );
 	}
 
 	/**
@@ -201,8 +226,8 @@ class FisHotel_Med_Importer_CLI {
 	 * ## OPTIONS
 	 *
 	 * [--force]
-	 * : Re-import even when a previous import is found. Deletes the
-	 *   matched product first, then re-creates it.
+	 * : Re-import even when a previous import is found. Moves the
+	 *   matched product to the trash first (restorable), then re-creates it.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -237,8 +262,11 @@ class FisHotel_Med_Importer_CLI {
 				continue;
 			}
 			if ( $existing && $force ) {
-				WP_CLI::log( sprintf( 'Replacing: %s (#%d) — force flag set.', $row['title'], $existing ) );
-				wp_delete_post( (int) $existing, true );
+				WP_CLI::log( sprintf( 'Replacing: %s (#%d) — force flag set, previous import moved to the trash.', $row['title'], $existing ) );
+				// Trash, not permanent delete — find_by_import_id() uses
+				// post_status 'any', which excludes trash, so the re-import
+				// still proceeds and the old product stays restorable.
+				wp_trash_post( (int) $existing );
 			}
 
 			try {

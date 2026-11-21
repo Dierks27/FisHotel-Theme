@@ -479,7 +479,7 @@ class FisHotel_Compat_Backfill {
 		<h2 style="margin-top:48px; padding-top:24px; border-top:1px solid #ddd;">Compatibility Guide — Backfill</h2>
 		<p style="max-width:760px;">
 			Match every published product against the compatibility category list by name.
-			Idempotent — products that already have a category assigned are skipped.
+			Safe to run again — products that already have a category are skipped.
 			Stock status doesn't matter; out-of-stock products are matched too so future
 			restocks just work.
 		</p>

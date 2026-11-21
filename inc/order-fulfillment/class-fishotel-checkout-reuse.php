@@ -104,6 +104,11 @@ class FisHotel_Checkout_Reuse {
 		}
 		$overnight = self::overnight_classes();
 		foreach ( WC()->cart->get_cart() as $cart_item ) {
+			// Sticker giveaway lines (Misc plugin, cart item data fh_sticker =
+			// free|extra) ride in whatever box ships — never overnight livestock.
+			if ( ! empty( $cart_item['fh_sticker'] ) ) {
+				continue;
+			}
 			$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
 			if ( ! $product instanceof WC_Product ) {
 				continue;
@@ -133,6 +138,11 @@ class FisHotel_Checkout_Reuse {
 				continue;
 			}
 			$product = $item->get_product();
+			if ( ! $product instanceof WC_Product && class_exists( 'FisHotel_Invoice_Lines' ) ) {
+				// An itemised invoice fish line (theme 1.25+) has no product of
+				// its own; the box ships in the invoice product's class.
+				$product = FisHotel_Invoice_Lines::item_invoice_product( $item );
+			}
 			if ( ! $product instanceof WC_Product ) {
 				continue;
 			}
@@ -287,41 +297,27 @@ class FisHotel_Checkout_Reuse {
 	}
 
 	/**
-	 * Existing unshipped orders/fulfillments for this customer (processing or
-	 * fulfillment status). The current cart's draft order is not in these
-	 * statuses, so it's naturally excluded.
+	 * Existing open, unshipped customer orders this cart could piggyback on.
+	 * The current cart's draft order is not in an open status, so it's
+	 * naturally excluded.
+	 *
+	 * Resolves the customer exactly like the re-order lock and auto-combine
+	 * do (customer_id when logged in, otherwise billing email — never both)
+	 * via the shared reorder helper. Matching by customer_id OR email used to
+	 * grant $0 shipping on an order auto-combine would never fold in (e.g. a
+	 * guest-placed order plus a logged-in follow-up), and the old status list
+	 * included wc-fulfillment, so the piggyback label/meta could point at the
+	 * internal #FF entity instead of a customer order. The helper excludes
+	 * fulfillment entities and already-shipped orders for us.
 	 *
 	 * @return WC_Order[]
 	 */
 	private static function existing_unshipped_orders( $customer_id, $email ) {
-		$base = [
-			'limit'   => 10,
-			'status'  => [ 'wc-processing', 'wc-fulfillment' ],
-			'orderby' => 'date',
-			'order'   => 'DESC',
-			'return'  => 'ids',
-		];
-
-		$found = [];
-		if ( $customer_id > 0 ) {
-			foreach ( (array) wc_get_orders( $base + [ 'customer_id' => $customer_id ] ) as $id ) {
-				$found[ (int) $id ] = true;
-			}
+		$key = $customer_id > 0 ? (int) $customer_id : (string) $email;
+		if ( '' === $key ) {
+			return [];
 		}
-		if ( '' !== $email ) {
-			foreach ( (array) wc_get_orders( $base + [ 'billing_email' => $email ] ) as $id ) {
-				$found[ (int) $id ] = true;
-			}
-		}
-
-		$orders = [];
-		foreach ( array_keys( $found ) as $id ) {
-			$o = wc_get_order( $id );
-			if ( $o instanceof WC_Order ) {
-				$orders[] = $o;
-			}
-		}
-		return $orders;
+		return fishotel_get_open_unshipped_orders_for_customer( $key, 10 );
 	}
 
 	/** Normalize an address into a comparable lowercase string. */
@@ -412,6 +408,13 @@ class FisHotel_Checkout_Reuse {
 			return;
 		}
 
+		// A cart that ships nothing (a wallet refill, a request fee) has no
+		// shipping charge to remove and nothing to put in the other order's box:
+		// "Shipping combined … shipping charge removed" would be untrue there.
+		if ( ! self::cart_ships_something() ) {
+			return;
+		}
+
 		// When the checkout lock is active it forces this order's destination to
 		// the open order's address (see FisHotel_Reorder_Checkout_Lock), so the
 		// shipping IS combined regardless of what the customer's session address
@@ -452,6 +455,19 @@ class FisHotel_Checkout_Reuse {
 				'notice'
 			);
 		}
+	}
+
+	/**
+	 * True when the current cart has at least one line that ships. Without a
+	 * readable cart the answer is true — the notices then behave as before.
+	 *
+	 * @return bool
+	 */
+	private static function cart_ships_something() {
+		if ( ! function_exists( 'WC' ) || ! WC() || ! is_object( WC()->cart ) || ! method_exists( WC()->cart, 'needs_shipping' ) ) {
+			return true;
+		}
+		return (bool) WC()->cart->needs_shipping();
 	}
 
 	/** Add a notice only if an identical one isn't already queued. */

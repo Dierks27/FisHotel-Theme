@@ -10,7 +10,13 @@ defined( 'ABSPATH' ) || exit;
 
 do_action( 'woocommerce_before_edit_account_form' );
 
-$hf_username = get_user_meta( $user->ID, 'humble_fish_username', true );
+// The FisHotel Batch plugin reads/writes `_fishotel_humble_username`; the
+// theme's older key `humble_fish_username` is kept as a legacy fallback so
+// a value saved before the two were aligned still prefills.
+$hf_username = (string) get_user_meta( $user->ID, '_fishotel_humble_username', true );
+if ( $hf_username === '' ) {
+	$hf_username = (string) get_user_meta( $user->ID, 'humble_fish_username', true );
+}
 ?>
 
 <form class="fh-account-form woocommerce-EditAccountForm edit-account" action="" method="post" <?php do_action( 'woocommerce_edit_account_form_tag' ); ?>>
@@ -74,11 +80,12 @@ $hf_username = get_user_meta( $user->ID, 'humble_fish_username', true );
 	<?php
 	/**
 	 * NOTE: WooCommerce's `woocommerce_edit_account_form` action is deliberately
-	 * NOT fired here. A pre-v1.10 site customization hooks a second (unstyled)
+	 * NOT fired here. The FisHotel Batch plugin hooks a second (unstyled)
 	 * "Humble.Fish Username" field onto it, which rendered below the password
 	 * block and duplicated the themed field above (the one this template adds
-	 * after Email Address, saved via inc/account-relabels.php). Suppressing the
-	 * action removes that duplicate at the source. The earlier
+	 * after Email Address, saved via inc/account-relabels.php to the same
+	 * `_fishotel_humble_username` meta the Batch plugin reads). Suppressing
+	 * the action removes that duplicate at the source. The earlier
 	 * `woocommerce_edit_account_form_fields` / `_start` / `_end` injection
 	 * points are still fired above for legitimate plugin compatibility.
 	 */

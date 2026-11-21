@@ -14,7 +14,14 @@
 defined( 'ABSPATH' ) || exit;
 
 $notes       = $order ? $order->get_customer_order_notes() : [];
-$reorder_url = $order ? wp_nonce_url( add_query_arg( 'order_again', $order->get_id(), wc_get_cart_url() ), 'woocommerce-order_again' ) : '';
+// REORDER only when WC's order_again handler will honour it: core acts on
+// 'completed' orders only (filterable), so an in-flight processing/shipped
+// order no longer shows a button that silently does nothing.
+$can_reorder = $order
+	&& $order->has_status( apply_filters( 'woocommerce_valid_order_statuses_for_order_again', [ 'completed' ] ) )
+	&& current_user_can( 'order_again', $order->get_id() );
+$reorder_url = $can_reorder ? wp_nonce_url( add_query_arg( 'order_again', $order->get_id(), wc_get_cart_url() ), 'woocommerce-order_again' ) : '';
+$pay_url     = ( $order && $order->needs_payment() ) ? $order->get_checkout_payment_url() : '';
 ?>
 
 <section class="fh-card fh-view-order">
@@ -96,6 +103,9 @@ $reorder_url = $order ? wp_nonce_url( add_query_arg( 'order_again', $order->get_
 	?>
 
 	<div class="fh-form-actions fh-view-order__actions">
+		<?php if ( $pay_url ) : ?>
+			<a class="fh-btn fh-btn--primary" href="<?php echo esc_url( $pay_url ); ?>"><?php esc_html_e( 'PAY NOW', 'fishotel' ); ?></a>
+		<?php endif; ?>
 		<?php if ( $reorder_url ) : ?>
 			<a class="fh-btn fh-btn--primary" href="<?php echo esc_url( $reorder_url ); ?>"><?php esc_html_e( 'REORDER', 'fishotel' ); ?></a>
 		<?php endif; ?>

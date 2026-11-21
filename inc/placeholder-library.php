@@ -31,18 +31,26 @@ class FisHotel_Placeholder_Library {
 	 * @param string $variant 'default' (regular library) or 'cs' (Coming Soon library).
 	 */
 	public static function get_library( $variant = 'default' ) {
+		// Memoised per variant for the request: render() calls this for
+		// every imageless card on an archive, and the get_post_status() loop
+		// over the library is the same answer each time.
+		static $memo = [];
+		$variant = ( $variant === 'cs' ) ? 'cs' : 'default';
+		if ( isset( $memo[ $variant ] ) ) {
+			return $memo[ $variant ];
+		}
 		$option_key = ( $variant === 'cs' ) ? self::OPTION_KEY_CS : self::OPTION_KEY;
 		$ids = get_option( $option_key, [] );
-		if ( ! is_array( $ids ) ) {
-			return [];
-		}
 		$out = [];
-		foreach ( $ids as $id ) {
-			$id = (int) $id;
-			if ( $id > 0 && get_post_status( $id ) ) {
-				$out[] = $id;
+		if ( is_array( $ids ) ) {
+			foreach ( $ids as $id ) {
+				$id = (int) $id;
+				if ( $id > 0 && get_post_status( $id ) ) {
+					$out[] = $id;
+				}
 			}
 		}
+		$memo[ $variant ] = $out;
 		return $out;
 	}
 
@@ -86,8 +94,13 @@ class FisHotel_Placeholder_Library {
 		} else {
 			// Opportunistic cleanup — once the release passes, drop the
 			// CS assignment so a future re-entry into Coming Soon picks
-			// fresh from the current library.
-			delete_post_meta( $product_id, self::PRODUCT_META_CS );
+			// fresh from the current library. Check first: delete_post_meta()
+			// always issues a SELECT even when there is nothing to delete,
+			// and this runs for every imageless card on every page view;
+			// get_post_meta() is served from the (loop-primed) meta cache.
+			if ( '' !== (string) get_post_meta( $product_id, self::PRODUCT_META_CS, true ) ) {
+				delete_post_meta( $product_id, self::PRODUCT_META_CS );
+			}
 		}
 		if ( ! $attachment_id ) {
 			$attachment_id = self::get_for_product( $product_id, 'default' );

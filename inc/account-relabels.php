@@ -94,6 +94,11 @@ add_filter( 'gettext', function ( $translated, $text, $domain ) {
 /**
  * Persist the optional Humble.Fish username from the Guest Profile form.
  * Stored as user meta only — no external sync.
+ *
+ * Written to BOTH keys: `_fishotel_humble_username` is what the FisHotel
+ * Batch plugin reads (admin screens, batch request form), while the theme's
+ * original `humble_fish_username` stays in sync for anything still reading
+ * it. The form input name is unchanged so no plugin change is needed.
  */
 add_action( 'woocommerce_save_account_details', function ( $user_id ) {
 	if ( ! isset( $_POST['humble_fish_username'] ) ) {
@@ -101,6 +106,7 @@ add_action( 'woocommerce_save_account_details', function ( $user_id ) {
 	}
 	// Nonce already verified by WooCommerce's save_account_details handler.
 	$username = sanitize_text_field( wp_unslash( $_POST['humble_fish_username'] ) );
+	update_user_meta( $user_id, '_fishotel_humble_username', $username );
 	update_user_meta( $user_id, 'humble_fish_username', $username );
 } );
 

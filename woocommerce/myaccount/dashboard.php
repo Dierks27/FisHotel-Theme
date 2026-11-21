@@ -88,7 +88,28 @@ $greeting_prefix = fishotel_account_text( 'fh_account_greeting_prefix' );
 					</div>
 					<?php echo fishotel_account_status_pill( $order ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					<span class="fh-reslist__total"><?php echo wp_kses_post( $order->get_formatted_order_total() ); ?></span>
-					<a class="fh-reslist__view" href="<?php echo esc_url( $view_url ); ?>"><?php esc_html_e( 'VIEW →', 'fishotel' ); ?></a>
+					<?php /* All WC account actions (View, plus Pay / Cancel on
+					        pending / failed orders) in one grid cell so the
+					        five-column row layout is unchanged. View goes last
+					        so its arrow reads as the trailing action; Cancel is
+					        a nonced GET that cancels on arrival, so confirm. */
+					$row_actions = wc_get_account_orders_actions( $order );
+					if ( isset( $row_actions['view'] ) ) {
+						$view_action = $row_actions['view'];
+						unset( $row_actions['view'] );
+						$row_actions['view'] = $view_action;
+					}
+					?>
+					<span class="fh-reslist__actions">
+						<?php foreach ( $row_actions as $action_key => $action ) :
+							$action_key = sanitize_html_class( $action_key ); ?>
+							<a class="fh-reslist__view fh-reslist__action--<?php echo esc_attr( $action_key ); ?>" href="<?php echo esc_url( $action['url'] ); ?>"<?php
+								if ( 'cancel' === $action_key ) {
+									echo ' onclick="return confirm(' . esc_attr( wp_json_encode( __( 'Cancel this order?', 'fishotel' ) ) ) . ');"';
+								}
+							?>><?php echo 'view' === $action_key ? esc_html__( 'VIEW →', 'fishotel' ) : esc_html( $action['name'] ); ?></a>
+						<?php endforeach; ?>
+					</span>
 				</div>
 			<?php endforeach; ?>
 		</div>

@@ -361,6 +361,39 @@
 
 	function doPrint() { window.print(); }
 
+	/** UTF-8 octet count of one character (or surrogate pair). */
+	function icsOctets(ch) {
+		try {
+			var enc = encodeURIComponent(ch);
+			return enc.indexOf('%') === -1 ? enc.length : enc.split('%').length - 1;
+		} catch (e) {
+			return 3; // lone surrogate — count it as a BMP char and move on
+		}
+	}
+
+	/**
+	 * RFC 5545 §3.1 line folding: 75 octets max per line, continuation lines
+	 * start with a single space (so 74 octets of content). Walks characters
+	 * and measures their UTF-8 size so multi-byte characters never split.
+	 * Same helper lives in fishotel-calculator.js and qt-scheduler.js.
+	 */
+	function icsFold(line) {
+		var s = String(line == null ? '' : line);
+		var out = '', cur = '', curOctets = 0, limit = 75;
+		for (var i = 0; i < s.length; i++) {
+			var ch = s.charAt(i);
+			var code = s.charCodeAt(i);
+			if (code >= 0xD800 && code <= 0xDBFF && i + 1 < s.length) { ch += s.charAt(i + 1); i++; }
+			var n = icsOctets(ch);
+			if (curOctets + n > limit) {
+				out += cur + '\r\n ';
+				cur = ''; curOctets = 0; limit = 74;
+			}
+			cur += ch; curOctets += n;
+		}
+		return out + cur;
+	}
+
 	function doIcs() {
 		var c = compute();
 		var now = new Date();
@@ -394,8 +427,10 @@
 			'DTSTAMP:' + stamp,
 			'DTSTART:' + icsDate(start),
 			'DTEND:' + icsDate(new Date(start.getTime() + 5 * 60 * 1000)),
-			'SUMMARY:Bleach dose: ' + fmt(c.bleach_ml) + ' ml @ ' + fmt(c.conc) + '%',
-			'DESCRIPTION:Add ' + fmt(c.bleach_ml) + ' ml bleach to ' + fmt(state.volume) + ' ' + state.unit + '. Target ' + fmt(c.target_ppm) + ' ppm. Contact ' + c.contact_min + ' min.',
+			// SUMMARY/DESCRIPTION are the only free-text lines long enough to
+			// need RFC 5545 folding; the rest are fixed-width.
+			icsFold('SUMMARY:Bleach dose: ' + fmt(c.bleach_ml) + ' ml @ ' + fmt(c.conc) + '%'),
+			icsFold('DESCRIPTION:Add ' + fmt(c.bleach_ml) + ' ml bleach to ' + fmt(state.volume) + ' ' + state.unit + '. Target ' + fmt(c.target_ppm) + ' ppm. Contact ' + c.contact_min + ' min.'),
 			'BEGIN:VALARM',
 			'TRIGGER:-PT5M',
 			'ACTION:DISPLAY',
@@ -408,7 +443,7 @@
 			'DTSTART:' + icsDate(end),
 			'DTEND:' + icsDate(new Date(end.getTime() + 15 * 60 * 1000)),
 			'SUMMARY:Add neutralizer + rinse',
-			'DESCRIPTION:Add ' + neutLabel + '. Wait 5 min. Then 2-3 fresh-water rinses. Confirm 0 ppm before reuse.',
+			icsFold('DESCRIPTION:Add ' + neutLabel + '. Wait 5 min. Then 2-3 fresh-water rinses. Confirm 0 ppm before reuse.'),
 			'BEGIN:VALARM',
 			'TRIGGER:-PT5M',
 			'ACTION:DISPLAY',

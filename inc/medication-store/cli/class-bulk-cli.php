@@ -17,22 +17,13 @@ defined( 'ABSPATH' ) || exit;
 
 class FisHotel_Med_Bulk_CLI {
 
-	/** Medications parent term ID — matches the live WP DB. */
-	const PARENT_TERM_ID = 76;
-
-	/**
-	 * Subcategory term IDs that flatten-categories strips off products.
-	 * Term names retained for editorial reference — the IDs are
-	 * authoritative.
-	 */
-	const SUBCATEGORY_TERM_IDS = array(
-		468, // Antiparasitic
-		469, // Antibacterial
-		470, // Antifungal
-		471, // Dewormer
-		472, // Medicated Food
-		473, // Quarantine Essentials
-	);
+	// Term IDs are resolved at runtime by slug (parent =
+	// FISHOTEL_MED_PARENT_SLUG, subcategories = FisHotel_Med_Taxonomy::
+	// subcategories()). WHY: the previous literal IDs (76, 468-473)
+	// matched the live DB only — on staging/local they would have
+	// stripped arbitrary categories. For reference, live is 76 =
+	// Medications, 468 Antiparasitic, 469 Antibacterial, 470 Antifungal,
+	// 471 Dewormer, 472 Medicated Food, 473 Quarantine Essentials.
 
 	/**
 	 * Curated product_tag list seeded by tags-init.
@@ -98,6 +89,24 @@ class FisHotel_Med_Bulk_CLI {
 	 * @when after_wp_load
 	 */
 	public function flatten_categories( $args, $assoc_args ) {
+		$parent = get_term_by( 'slug', FISHOTEL_MED_PARENT_SLUG, 'product_cat' );
+		if ( ! $parent || is_wp_error( $parent ) ) {
+			WP_CLI::error( sprintf( 'Medications parent category (slug "%s") not found — nothing to flatten.', FISHOTEL_MED_PARENT_SLUG ) );
+		}
+		$parent_term_id = (int) $parent->term_id;
+
+		$subcategory_term_ids = array();
+		foreach ( array_keys( FisHotel_Med_Taxonomy::subcategories() ) as $slug ) {
+			$term = get_term_by( 'slug', $slug, 'product_cat' );
+			if ( $term && ! is_wp_error( $term ) ) {
+				$subcategory_term_ids[] = (int) $term->term_id;
+			}
+		}
+		if ( empty( $subcategory_term_ids ) ) {
+			WP_CLI::success( 'No Medication subcategories exist — nothing to flatten.' );
+			return;
+		}
+
 		$product_ids = get_posts( array(
 			'post_type'      => 'product',
 			'post_status'    => 'any',
@@ -108,7 +117,7 @@ class FisHotel_Med_Bulk_CLI {
 				array(
 					'taxonomy'         => 'product_cat',
 					'field'            => 'term_id',
-					'terms'            => self::PARENT_TERM_ID,
+					'terms'            => $parent_term_id,
 					'include_children' => false,
 				),
 			),
@@ -125,7 +134,7 @@ class FisHotel_Med_Bulk_CLI {
 			}
 
 			$current_ids = array_map( 'intval', (array) $current );
-			$to_remove   = array_values( array_intersect( $current_ids, self::SUBCATEGORY_TERM_IDS ) );
+			$to_remove   = array_values( array_intersect( $current_ids, $subcategory_term_ids ) );
 
 			if ( empty( $to_remove ) ) {
 				$skipped++;
@@ -219,6 +228,7 @@ class FisHotel_Med_Bulk_CLI {
 		$filled       = 0;
 		$already_set  = 0;
 		$no_ea_sku    = 0;
+		$rejected     = 0;
 
 		foreach ( $variation_ids as $vid ) {
 			$ea_sku = (string) get_post_meta( (int) $vid, '_fishotel_ea_sku', true );
@@ -234,21 +244,44 @@ class FisHotel_Med_Bulk_CLI {
 			}
 
 			if ( ! $dry_run ) {
-				update_post_meta( (int) $vid, '_sku', $ea_sku );
-				$parent_id = wp_get_post_parent_id( (int) $vid );
-				if ( $parent_id && function_exists( 'wc_delete_product_transients' ) ) {
-					wc_delete_product_transients( $parent_id );
+				// Go through WC_Product::set_sku()/save() rather than raw
+				// _sku postmeta. WHY: the raw write bypassed WC's SKU
+				// uniqueness check (duplicate EA SKUs tolerated by the bulk
+				// importer were copied in unchecked) and never populated
+				// wc_product_meta_lookup.sku, so admin SKU search and REST
+				// ?sku= missed the variations. save() updates the lookup
+				// table and clears the parent transients itself. Mirrors
+				// the try/catch in class-bulk-import-cli.php.
+				$variation = wc_get_product( (int) $vid );
+				if ( ! $variation ) {
+					WP_CLI::warning( sprintf( 'Variation #%d could not be loaded — skipped.', $vid ) );
+					$rejected++;
+					continue;
+				}
+				try {
+					$variation->set_sku( $ea_sku );
+					$variation->save();
+				} catch ( WC_Data_Exception $e ) {
+					WP_CLI::warning( sprintf(
+						'SKU "%s" rejected by WC on variation #%d — %s. Skipped.',
+						$ea_sku,
+						$vid,
+						$e->getMessage()
+					) );
+					$rejected++;
+					continue;
 				}
 			}
 			$filled++;
 		}
 
 		WP_CLI::log( sprintf(
-			'%sBackfilled: %d variations | Already had _sku: %d | No EA SKU to copy: %d | Scanned: %d',
+			'%sBackfilled: %d variations | Already had _sku: %d | No EA SKU to copy: %d | Rejected by WC: %d | Scanned: %d',
 			$prefix,
 			$filled,
 			$already_set,
 			$no_ea_sku,
+			$rejected,
 			count( $variation_ids )
 		) );
 		WP_CLI::success( $dry_run ? 'Dry run complete — no changes persisted.' : 'Backfill complete.' );

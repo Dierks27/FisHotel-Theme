@@ -17,13 +17,22 @@ if ( ! is_user_logged_in() && function_exists( 'fishotel_account_render_page_hea
 
 <div class="fh-account-shell fh-account-shell--auth is-single">
 	<section class="fh-card fh-auth-card">
+		<?php
+		/**
+		 * WC prints its notices (empty / unknown username, "check your
+		 * email") on this hook — without it the errors never show and
+		 * leak to a later page. Fired inside the card so the notice
+		 * picks up the card styling.
+		 */
+		do_action( 'woocommerce_before_lost_password_form' );
+		?>
 		<form method="post" class="fh-account-form woocommerce-ResetPassword lost_reset_password">
 
 			<p class="fh-field__hint fh-field__hint--block"><?php echo apply_filters( 'woocommerce_lost_password_message', esc_html__( 'Lost your password? Please enter your username or email address. You will receive a link to create a new password via email.', 'fishotel' ) ); ?></p>
 
 			<p class="fh-field">
 				<label for="user_login"><?php esc_html_e( 'USERNAME OR EMAIL', 'fishotel' ); ?> <span class="req">*</span></label>
-				<input class="fh-input" type="text" name="user_login" id="user_login" autocomplete="username" />
+				<input class="fh-input" type="text" name="user_login" id="user_login" autocomplete="username" required aria-required="true" />
 			</p>
 
 			<?php do_action( 'woocommerce_lostpassword_form' ); ?>
@@ -36,5 +45,6 @@ if ( ! is_user_logged_in() && function_exists( 'fishotel_account_render_page_hea
 				</button>
 			</div>
 		</form>
+		<?php do_action( 'woocommerce_after_lost_password_form' ); ?>
 	</section>
 </div>

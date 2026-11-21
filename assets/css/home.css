@@ -206,6 +206,9 @@
 .fh-cta-sub {
   font-size: 15px; color: var(--fh-text-3); margin-bottom: 40px; position: relative;
 }
+/* Closing CTA buttons reuse .fh-hero__actions (flex-wrap); keep them above
+   the ::before gradient like the title + sub. */
+.fh-cta-section .fh-hero__actions { position: relative; }
 
 /* Responsive — tablet */
 @media (max-width: 1024px) {

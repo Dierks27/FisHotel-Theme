@@ -59,6 +59,8 @@ class FisHotel_Med_Product_Meta {
 		$ea_sku    = (string) get_post_meta( $pid, '_fishotel_ea_sku', true );
 		$asin      = (string) get_post_meta( $pid, '_fishotel_amazon_asin', true );
 		$dose_anchor = (string) get_post_meta( $pid, '_fishotel_dosing_anchor', true );
+		$extra_ack   = (string) get_post_meta( $pid, '_fishotel_med_extra_ack', true );
+		$is_med      = function_exists( 'fishotel_med_is_med_product' ) && fishotel_med_is_med_product( $pid );
 
 		$last_sync  = (int) get_post_meta( $pid, '_fishotel_ea_last_sync', true );
 		$sync_label = $last_sync ? sprintf(
@@ -90,8 +92,16 @@ class FisHotel_Med_Product_Meta {
 				<p class="form-field">
 					<label for="_fishotel_dosing_anchor"><?php esc_html_e( 'Dosing calculator anchor', 'fishotel' ); ?></label>
 					<input type="text" id="_fishotel_dosing_anchor" name="_fishotel_dosing_anchor" value="<?php echo esc_attr( $dose_anchor ); ?>" placeholder="#praziquantel" style="width:100%;">
-					<span class="description"><?php esc_html_e( 'Slug into the Medication Dosing Calculator (e.g. #praziquantel).', 'fishotel' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Use the calculator med id, e.g. #praziquantel or #copper_power; this also links the calculator and QT Scheduler back to this product. A longer anchor like #praziquantel-powder or #praziquantel100g still matches as long as it starts with a med id (the longest matching id wins, so #fenbendazole_internal is not mistaken for #fenbendazole). Override per medication under FisHotel Theme → Product Page → Tool Links.', 'fishotel' ); ?></span>
 				</p>
+
+				<?php if ( $is_med ) : ?>
+				<p class="form-field">
+					<label for="_fishotel_med_extra_ack"><?php esc_html_e( 'Extra checkout acknowledgement', 'fishotel' ); ?></label>
+					<textarea id="_fishotel_med_extra_ack" name="_fishotel_med_extra_ack" rows="3" style="width:100%;" placeholder="<?php esc_attr_e( 'I understand chloroquine phosphate is toxic to invertebrates and will only dose it in a fishless quarantine tank.', 'fishotel' ); ?>"><?php echo esc_textarea( $extra_ack ); ?></textarea>
+					<span class="description"><?php esc_html_e( 'Optional. When this product is in the cart, checkout shows one more required checkbox with this exact text (prefixed by the product name) under the main medication terms, and the accepted text is stored on the order. Products sharing the same wording share one checkbox. Leave blank for no extra acknowledgement.', 'fishotel' ); ?></span>
+				</p>
+				<?php endif; ?>
 			</div>
 
 			<div class="options_group fishotel-med-fields-ea">
@@ -230,6 +240,18 @@ class FisHotel_Med_Product_Meta {
 		update_post_meta( $post_id, '_fishotel_amazon_asin',        $asin );
 		update_post_meta( $post_id, '_fishotel_dosing_anchor',      sanitize_text_field( wp_unslash( $_POST['_fishotel_dosing_anchor']      ?? '' ) ) );
 
+		// C2 — per-product extra checkout acknowledgement. The textarea only
+		// renders for medication products, so write the meta only when the
+		// field was actually submitted (a non-med save must not blank it).
+		if ( isset( $_POST['_fishotel_med_extra_ack'] ) ) {
+			$extra_ack = sanitize_textarea_field( wp_unslash( $_POST['_fishotel_med_extra_ack'] ) );
+			if ( trim( $extra_ack ) === '' ) {
+				delete_post_meta( $post_id, '_fishotel_med_extra_ack' );
+			} else {
+				update_post_meta( $post_id, '_fishotel_med_extra_ack', $extra_ack );
+			}
+		}
+
 		// Phase 3.6 — medication + food data fields driving the subtitle
 		// and the "About This Medication / Food" data table on the PDP.
 		// Plain text fields; the Reef Safe select is constrained to its
@@ -294,16 +316,28 @@ class FisHotel_Med_Product_Meta {
 
 		update_post_meta( $variation_id, '_fishotel_wholesale', $wholesale );
 		update_post_meta( $variation_id, '_fishotel_ea_retail', $retail );
-		// size_index = $loop (0-based position), size_count = total
-		// number of variation rows on this submit. Recompute below.
-		update_post_meta( $variation_id, '_fishotel_size_index', (int) $loop );
 
-		$count = is_array( $wholesale_arr ) ? count( $wholesale_arr ) : 1;
+		// size_index / size_count come from the parent's full child list,
+		// NOT from $loop / count( $_POST[...] ). WHY: WC's variations panel
+		// only submits rows flagged .variation-needs-update and $loop is the
+		// per-page render index (15/page), so the POST count is "rows Jeff
+		// touched" and the index restarts on page 2 — editing one EA
+		// variation repriced it with the wrong multiplier. get_children()
+		// is ordered menu_order/ID like the panel and like
+		// FisHotel_Med_Pricing::recompute_for_product(), so both paths agree.
+		$parent_id = wp_get_post_parent_id( $variation_id );
+		$parent    = $parent_id ? wc_get_product( $parent_id ) : null;
+		$children  = $parent && $parent->is_type( 'variable' )
+			? array_map( 'intval', (array) $parent->get_children() )
+			: [];
+		$idx   = array_search( (int) $variation_id, $children, true );
+		$idx   = $idx === false ? (int) $loop : (int) $idx;
+		$count = max( 1, count( $children ) );
+		update_post_meta( $variation_id, '_fishotel_size_index', $idx );
 		update_post_meta( $variation_id, '_fishotel_size_count', $count );
 
 		// Update WC price meta as well (regular_price + price) so the
 		// product page renders the calculated FisHotel price.
-		$parent_id = wp_get_post_parent_id( $variation_id );
 		// No-parent fallback is '' rather than 'ea' for consistency with the
 		// opt-in fix above. This does NOT change EA pricing: a variation
 		// always has a parent (so the real mode comes from
@@ -315,7 +349,7 @@ class FisHotel_Med_Product_Meta {
 			$price = fishotel_calculate_med_price(
 				(float) $wholesale,
 				(float) $retail,
-				(int) $loop,
+				$idx,
 				$count
 			);
 			update_post_meta( $variation_id, '_regular_price', $price );

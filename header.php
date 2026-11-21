@@ -30,8 +30,21 @@
         </nav>
 
         <a href="<?php echo esc_url( home_url('/') ); ?>" class="site-logo">
-            <?php if ( has_custom_logo() ) :
-                the_custom_logo();
+            <?php
+            // Image only — the_custom_logo() wraps its <img> in its own <a>,
+            // which nested inside this .site-logo <a> gets split by the HTML
+            // parser and breaks the three-column header grid. Falls through
+            // to the hard-coded logo when no Customizer logo is set (or its
+            // attachment was deleted).
+            $logo_html = has_custom_logo()
+                ? wp_get_attachment_image( (int) get_theme_mod( 'custom_logo' ), 'full', false, [
+                    'class'   => 'site-logo__img custom-logo',
+                    'alt'     => get_bloginfo( 'name' ),
+                    'loading' => 'eager',
+                ] )
+                : '';
+            if ( $logo_html ) :
+                echo $logo_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_attachment_image() output is escaped.
             else : ?>
                 <img src="https://fishotel.com/wp-content/uploads/2020/06/Small-Fish-Hotel-White.png"
                      alt="The FisHotel" class="site-logo__img" width="80" height="80">

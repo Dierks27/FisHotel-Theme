@@ -143,6 +143,11 @@ function fishotel_load_more_products() {
         wp_send_json( [ 'html' => '', 'has_more' => false ] );
     }
 
+    // WP only primes thumbnail caches for the main loop (in_the_loop()),
+    // which is never true on admin-ajax — without this every card with a
+    // featured image fetched its attachment post + meta individually.
+    update_post_thumbnail_cache( $query );
+
     ob_start();
     while ( $query->have_posts() ) {
         $query->the_post();

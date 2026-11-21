@@ -56,6 +56,13 @@ class FisHotel_Hotel_Data {
 				<div id="fh-update-result" style="margin-top:12px;"></div>
 			</div>
 
+			<?php
+			// Invoice → fish lines backfill for orders placed before theme 1.25 (inc/invoice-lines.php).
+			if ( class_exists( 'FisHotel_Invoice_Lines' ) ) {
+				FisHotel_Invoice_Lines::render_backfill_panel();
+			}
+			?>
+
 			<div style="background:#fff; border:1px solid #ccd0d4; border-left:4px solid #c9963a; padding:20px 24px; margin:20px 0; max-width:600px;">
 				<h2 style="margin-top:0; font-size:16px;">Migrate Product Descriptions &rarr; Custom Fields</h2>
 				<p style="color:#666;">Reads every product description and auto-fills the Species Info and Care Guide custom fields. Safe to run multiple times &mdash; never overwrites fields you've already filled in.</p>

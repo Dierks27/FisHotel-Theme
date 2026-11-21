@@ -389,16 +389,16 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 
 .fh-footer-newsletter__form { flex: 1; }
 
-/* Newsletter plugin form — shared styles */
-.fh-footer-newsletter .tnp-subscription,
-.fh-newsletter-page__form .tnp-subscription {
+/* Newsletter plugin form — footer block. (The old .fh-newsletter-page__*
+   layout rules were removed: no template renders those classes; the
+   /newsletter/ page uses the .fh-nl-* block below.) */
+.fh-footer-newsletter .tnp-subscription {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.fh-footer-newsletter .tnp-field,
-.fh-newsletter-page__form .tnp-field {
+.fh-footer-newsletter .tnp-field {
   flex: 1;
   min-width: 140px;
 }
@@ -412,10 +412,7 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 
 .fh-footer-newsletter .tnp-name,
 .fh-footer-newsletter .tnp-surname,
-.fh-footer-newsletter .tnp-email,
-.fh-newsletter-page__form .tnp-name,
-.fh-newsletter-page__form .tnp-surname,
-.fh-newsletter-page__form .tnp-email {
+.fh-footer-newsletter .tnp-email {
   width: 100%;
   background: #151515;
   border: 1px solid rgba(255,255,255,0.12);
@@ -428,22 +425,17 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 
 .fh-footer-newsletter .tnp-name:focus,
 .fh-footer-newsletter .tnp-surname:focus,
-.fh-footer-newsletter .tnp-email:focus,
-.fh-newsletter-page__form .tnp-name:focus,
-.fh-newsletter-page__form .tnp-surname:focus,
-.fh-newsletter-page__form .tnp-email:focus {
+.fh-footer-newsletter .tnp-email:focus {
   outline: none;
   border-color: #c9963a;
 }
 
-.fh-footer-newsletter .tnp-field-button,
-.fh-newsletter-page__form .tnp-field-button {
+.fh-footer-newsletter .tnp-field-button {
   display: flex;
   align-items: flex-end;
 }
 
-.fh-footer-newsletter .tnp-submit,
-.fh-newsletter-page__form .tnp-submit {
+.fh-footer-newsletter .tnp-submit {
   background: #c9963a;
   color: #1c1c1c;
   border: none;
@@ -458,131 +450,18 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   white-space: nowrap;
 }
 
-.fh-footer-newsletter .tnp-submit:hover,
-.fh-newsletter-page__form .tnp-submit:hover {
+.fh-footer-newsletter .tnp-submit:hover {
   background: #deb96a;
 }
 
-.fh-footer-newsletter label,
-.fh-newsletter-page__form label {
+.fh-footer-newsletter label {
   display: none;
-}
-
-
-
-/* WP page content as intro */
-.fh-newsletter-page__wp-intro {
-  color: #a09890;
-  font-size: 15px;
-  line-height: 1.8;
-  margin-bottom: 40px;
-  max-width: 700px;
-}
-
-.fh-newsletter-page__wp-intro p { margin-bottom: 12px; }
-.fh-newsletter-page__wp-intro p:last-child { margin-bottom: 0; }
-
-/* Two-column layout below intro */
-.fh-newsletter-page__columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  align-items: start;
-}
-
-.fh-newsletter-page__benefits {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 24px;
-}
-
-.fh-newsletter-page__benefits li {
-  color: #e8e4dc;
-  font-size: 14px;
-  line-height: 1.6;
-  padding: 8px 0 8px 20px;
-  position: relative;
-}
-
-.fh-newsletter-page__benefits li::before {
-  content: '\2713';
-  color: #c9963a;
-  font-weight: 700;
-  position: absolute;
-  left: 0;
-}
-
-.fh-newsletter-page__trust {
-  color: #686058;
-  font-size: 12px;
-  font-style: italic;
-}
-
-.fh-newsletter-page__form {
-  background: #1c1c1c;
-  border-radius: 4px;
-  padding: 28px;
-}
-
-.fh-newsletter-page__form-title {
-  color: #c9963a;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  margin: 0 0 16px;
-}
-
-.fh-newsletter-page__form .tnp-subscription {
-  flex-direction: column;
-}
-
-.fh-newsletter-page__form .tnp-field {
-  min-width: 100%;
-}
-
-.fh-newsletter-page__form .tnp-submit {
-  width: 100%;
-  padding: 14px 24px;
-  font-size: 12px;
-}
-
-.fh-newsletter-page__thanks {
-  color: #686058;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 16px;
-  font-style: italic;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .fh-footer-newsletter__inner { flex-direction: column; gap: 16px; text-align: center; }
   .fh-footer-newsletter .tnp-subscription { flex-wrap: wrap; }
-  .fh-newsletter-page__columns { grid-template-columns: 1fr; gap: 40px; }
-}
-
-
-
-/* Right panel — unified dark box, tighter padding */
-.fh-newsletter-page__right-panel {
-    background: #1c1c1c;
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 4px;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-.fh-newsletter-page__right-panel .fh-newsletter-page__form-title {
-    color: var(--fh-gold);
-    font-family: 'Montserrat', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin: 0 0 16px 0;
 }
 
 /* ── NEWSLETTER PAGE ─────────────────────────── */
@@ -740,6 +619,18 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
     cursor: pointer;
 }
 .fh-nl-ad__form .tnp-submit:hover { background: #deb96a; }
+
+/* Phones: stack the gazette above the ad box. Without this the 1fr 1fr
+   grid crams the image and the signup form into two ~130px columns and
+   the form is effectively unusable. */
+@media (max-width: 768px) {
+    .fh-nl-inner {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+    .fh-nl-gazette__img { max-width: 320px; }
+    .fh-nl-ad__inner { padding: 22px 18px; }
+}
 
 /* ═══════════════════════════════════════
    COMING SOON / ARRIVING SOON
@@ -1117,6 +1008,23 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   margin-bottom: 8px;
 }
 
+/* Cart item data (wc_get_formatted_cart_item_data: gift-card recipient,
+   sticker label …) under the title on the cart + checkout statement. WC
+   emits <dl class="variation"><dt>…</dt><dd>…</dd></dl>; flatten it. */
+.fh-cart-item__meta {
+  font-size: 12px;
+  color: var(--fh-text-3);
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+.fh-cart-item__meta dl,
+.fh-cart-item__meta dd,
+.fh-cart-item__meta p { margin: 0; }
+.fh-cart-item__meta dt,
+.fh-cart-item__meta dd { display: inline; }
+.fh-cart-item__meta dt { font-weight: 600; }
+.fh-cart-item__meta dd::after { content: ""; display: block; }
+
 .fh-cart-item__pills {
   display: flex;
   gap: 6px;
@@ -1190,6 +1098,48 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   margin: 0;
 }
 
+/* Fixed (read-only) quantity — sticker giveaway lines (Misc plugin), where
+   `woocommerce_cart_item_quantity` returns a locked number instead of the
+   stepper. cart.php wraps it as "×N"; same 28px box as .fh-cart-qty so the
+   Qty column stays aligned with the stepper rows above and below it. */
+.fh-cart-item__qty-fixed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--fh-border-md);
+  border-radius: 3px;
+  color: var(--fh-text-1);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* The plugin's sticker-front.css gives its locked number a 24px
+   inline-block box, which floats the digit away from the "×". Two-class
+   specificity wins regardless of stylesheet load order. */
+.fh-cart-item__qty-fixed .fh-sticker-qty-locked {
+  display: inline;
+  min-width: 0;
+}
+
+/* Visually hidden, still announced by screen readers. The theme does not
+   define WP's .screen-reader-text on the front end, so this is the one to
+   use for front-end labels. */
+.fh-sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .fh-cart-item__remove {
   font-size: 10px;
   font-weight: 600;
@@ -1243,9 +1193,10 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 /* ── Right card — order totals (sticky) ── */
 .fh-cart-totals {
   position: sticky;
-  /* Clear the announcer bar (--ancr-bar-height) when it pushes the
-     sticky header down; falls back to the bare 20px gap otherwise. */
-  top: calc(20px + var(--ancr-bar-height, 0px));
+  /* Clear the 71px sticky compact header (+ the announcer bar via
+     --ancr-bar-height) so the card never slides under it once the
+     customer scrolls; same 84px offset as .fh-gallery. */
+  top: calc(84px + var(--ancr-bar-height, 0px));
 }
 
 .fh-cart-ledger {
@@ -1500,7 +1451,8 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 }
 
 .fh-checkout-left  { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
-.fh-checkout-right { min-width: 0; position: sticky; top: calc(20px + var(--ancr-bar-height, 0px)); }
+/* 84px clears the 71px sticky compact header (same offset as .fh-gallery). */
+.fh-checkout-right { min-width: 0; position: sticky; top: calc(84px + var(--ancr-bar-height, 0px)); }
 
 /* Card chrome — same surface as cart cards */
 .fh-checkout-card {
@@ -1509,6 +1461,9 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   border-radius: 8px;
   padding: 26px;
 }
+/* Order notes / delivery-date card: hidden when neither WC's notes field
+   nor a plugin hook rendered anything inside it (no empty card chrome). */
+.fh-checkout-notes[hidden] { display: none; }
 
 .fh-checkout-card__header {
   padding-bottom: 14px;
@@ -2126,15 +2081,18 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   outline-offset: 2px;
 }
 
-/* ── Gift card balance applied → suppress PPCP smart / express buttons ──
-   When a gift card balance is applied (main.js adds .fh-gc-balance-applied
-   to the checkout form), the PPCP smart buttons build their PayPal order
-   from the cart line-item breakdown, which omits the gift-card deduction —
-   so they capture the full pre-gift-card total (double-charge, order
-   #34494). Hide those buttons and their Pay Later messaging and reveal the
-   native place-order button, routing payment through the standard
-   place-order → PayPal redirect that charges the correct post-gift-card
-   total. Scoped to the payment card so it can't affect other contexts. */
+/* ── Gift card applied → suppress PPCP smart / express buttons ──
+   When any gift-card value is on the order — the account BALANCE checkbox
+   is ticked or a gift-card CODE is applied to the cart (main.js adds
+   .fh-gc-balance-applied to the checkout form for both; the class name
+   predates the code path) — the PPCP smart buttons build their PayPal
+   order from the cart line-item breakdown, which omits the gift-card
+   deduction — so they capture the full pre-gift-card total (double-charge,
+   order #34494). Hide those buttons and their Pay Later messaging and
+   reveal the native place-order button, routing payment through the
+   standard place-order → PayPal redirect that charges the correct
+   post-gift-card total. Scoped to the payment card so it can't affect
+   other contexts. */
 .fh-gc-balance-applied .fh-checkout-payment .ppcp-button-container,
 /* Enumerate express smart-button IDs specifically. Do NOT match
    #ppc-button-ppcp-card-button-gateway — that's the inline card gateway's

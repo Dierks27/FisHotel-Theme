@@ -62,9 +62,30 @@ do_action( 'woocommerce_before_account_orders', $has_orders );
 						<?php echo wp_kses_post( $order->get_formatted_order_total() ); ?>
 					</td>
 					<td class="col-actions">
-						<a class="fh-orders-row__view" href="<?php echo esc_url( $order->get_view_order_url() ); ?>">
-							<?php esc_html_e( 'VIEW →', 'fishotel' ); ?>
-						</a>
+						<?php
+						// Every WC account action, not just View: Pay / Cancel
+						// only exist for pending / failed orders, so a customer
+						// can retry an abandoned payment from Past Stays. View
+						// goes last so its arrow reads as the trailing action.
+						$row_actions = wc_get_account_orders_actions( $order );
+						if ( isset( $row_actions['view'] ) ) {
+							$view_action = $row_actions['view'];
+							unset( $row_actions['view'] );
+							$row_actions['view'] = $view_action;
+						}
+						foreach ( $row_actions as $action_key => $action ) :
+							$action_key = sanitize_html_class( $action_key );
+							?>
+							<a class="fh-orders-row__view fh-orders-row__action--<?php echo esc_attr( $action_key ); ?>" href="<?php echo esc_url( $action['url'] ); ?>"<?php
+								// Cancel is a nonced GET that cancels on arrival (no
+								// undo, stock hold released) — confirm a tap first.
+								if ( 'cancel' === $action_key ) {
+									echo ' onclick="return confirm(' . esc_attr( wp_json_encode( __( 'Cancel this order?', 'fishotel' ) ) ) . ');"';
+								}
+							?>>
+								<?php echo 'view' === $action_key ? esc_html__( 'VIEW →', 'fishotel' ) : esc_html( $action['name'] ); ?>
+							</a>
+						<?php endforeach; ?>
 					</td>
 				</tr>
 			<?php endforeach; ?>

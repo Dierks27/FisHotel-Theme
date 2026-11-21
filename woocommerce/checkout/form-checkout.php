@@ -33,6 +33,10 @@ $section_returning = (string) FisHotel_Admin_Settings::get( 'fh_checkout_section
 $section_coupon    = (string) FisHotel_Admin_Settings::get( 'fh_checkout_section_coupon' );
 $section_guest     = (string) FisHotel_Admin_Settings::get( 'fh_checkout_section_guest_details' );
 $section_delivery  = (string) FisHotel_Admin_Settings::get( 'fh_checkout_section_delivery_details' );
+$section_notes     = (string) FisHotel_Admin_Settings::get( 'fh_checkout_section_notes' );
+// Heading for the same card when no delivery-date picker rendered in it
+// (meds / food / merch-only carts, reorder-locked checkouts).
+$section_notes_plain = (string) FisHotel_Admin_Settings::get( 'fh_checkout_section_notes_plain' );
 $section_payment   = (string) FisHotel_Admin_Settings::get( 'fh_checkout_section_payment' );
 $section_statement = (string) FisHotel_Admin_Settings::get( 'fh_checkout_section_statement' );
 
@@ -158,9 +162,63 @@ $show_coupon_form    = wc_coupons_enabled() && WC()->cart && ! WC()->cart->is_em
 				        checkouts. The FisHotel Batch Manager injects its
 				        delivery-date dropdown into `_after_order_notes`; if
 				        these hooks fired inside the hidden card the dropdown
-				        would render but never be visible. */ ?>
-				<?php do_action( 'woocommerce_before_order_notes', $checkout ); ?>
-				<?php do_action( 'woocommerce_after_order_notes', $checkout ); ?>
+				        would render but never be visible.
+
+				        This is the ONLY place the two hooks fire: our
+				        checkout/form-shipping.php override drops WC's
+				        `.woocommerce-additional-fields` block (which fired them
+				        a second time inside the shipping card and duplicated
+				        the required delivery-date <select>), so the order
+				        fields WC rendered there are rendered here instead,
+				        mirroring the stock template.
+
+				        Rendered inside its own .fh-checkout-card (same chrome +
+				        eyebrow as Guest Details / Payment) so the textarea and
+				        the date picker don't sit bare on the page background.
+				        The block is buffered first so the card is hidden when
+				        nothing VISIBLE rendered into it (notes disabled, no
+				        plugin, or only the reorder lock's hidden date input),
+				        and so the heading can say "delivery date" only when
+				        the Batch plugin actually drew its picker — it renders
+				        nothing for carts without fish and just a hidden input
+				        under the reorder lock (the lock card shows the date). */ ?>
+				<?php
+				ob_start();
+				do_action( 'woocommerce_before_order_notes', $checkout );
+				$notes_before_html = (string) ob_get_clean();
+
+				ob_start();
+				if ( apply_filters( 'woocommerce_enable_order_notes_field', 'yes' === get_option( 'woocommerce_enable_order_comments', 'yes' ) ) ) : ?>
+					<div class="woocommerce-additional-fields__field-wrapper">
+						<?php foreach ( $checkout->get_checkout_fields( 'order' ) as $key => $field ) : ?>
+							<?php woocommerce_form_field( $key, $field, $checkout->get_value( $key ) ); ?>
+						<?php endforeach; ?>
+					</div>
+				<?php endif;
+				$notes_textarea_html = (string) ob_get_clean();
+
+				ob_start();
+				do_action( 'woocommerce_after_order_notes', $checkout );
+				$notes_after_html = (string) ob_get_clean();
+
+				// The required delivery-date <select> arrives via
+				// _after_order_notes; show it ABOVE the optional notes textarea
+				// so the field the customer must fill comes first.
+				$notes_fields_html = $notes_before_html . $notes_after_html . $notes_textarea_html;
+				$has_notes_fields  = '' !== trim( wp_strip_all_tags( $notes_fields_html ) )
+					|| (bool) preg_match( '/<(select|textarea|input(?![^>]*type=["\']hidden))\b/i', $notes_fields_html );
+				// #fishotel-shipping-date-field wraps the picker (and its "no
+				// dates" notice) but NOT the reorder lock's bare hidden input.
+				$has_date_picker   = false !== strpos( $notes_fields_html, 'id="fishotel-shipping-date-field"' );
+				?>
+				<div class="fh-checkout-card fh-checkout-notes"<?php echo $has_notes_fields ? '' : ' hidden'; ?>>
+					<header class="fh-checkout-card__header">
+						<span class="fh-checkout-card__eyebrow"><?php echo esc_html( $has_date_picker ? $section_notes : $section_notes_plain ); ?></span>
+					</header>
+					<div class="woocommerce-additional-fields">
+						<?php echo $notes_fields_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- buffered WC form fields + plugin hook output, already escaped at source. ?>
+					</div>
+				</div>
 
 				<?php /* Customer details section close — fires after billing,
 				        shipping, and order-notes injection are all done.

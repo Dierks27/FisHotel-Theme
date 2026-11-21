@@ -56,10 +56,50 @@ class FisHotel_Med_Taxonomy {
 		];
 	}
 
+	/**
+	 * Option that records which schema the bootstrap last applied. Bump
+	 * SCHEMA_VERSION when subcategories()/attributes() change so the
+	 * bootstrap runs once more; the CLI importers call ensure_*() directly
+	 * as the repair path.
+	 */
+	const SCHEMA_OPTION  = 'fishotel_med_taxonomy_v';
+	const SCHEMA_VERSION = '1';
+
 	public static function init() {
 		// Categories rely on product_cat being registered (Woo init).
-		add_action( 'admin_init', [ __CLASS__, 'ensure_categories' ] );
-		add_action( 'admin_init', [ __CLASS__, 'ensure_attributes' ] );
+		add_action( 'admin_init', [ __CLASS__, 'maybe_bootstrap' ] );
+	}
+
+	/**
+	 * Run the bootstrap once per SCHEMA_VERSION, never on AJAX / cron / REST.
+	 *
+	 * WHY: ensure_categories() + ensure_attributes() cost ~27 term lookups
+	 * (parent + 6 subcats + 20 attribute terms + the attribute list). Hooked
+	 * unconditionally they ran on every wp-admin page load AND every
+	 * admin-ajax.php call — including front-end AJAX from logged-out
+	 * visitors — and silently re-created any term Jeff deleted on purpose.
+	 *
+	 * Mirrors the request-type exclusions of the theme-wide
+	 * fishotel_should_run_bootstraps() gate (functions.php) — never on cron
+	 * or REST admin_init runs — but deliberately NOT its once-per-theme-
+	 * version stamp. That stamp is written at the very end of admin_init
+	 * whether or not this bootstrap got to run, so a bail-out below (WC
+	 * inactive / product_cat not registered on that load) would stay blocked
+	 * until the next theme-version bump. SCHEMA_OPTION (autoloaded, so the
+	 * skip path costs no query) is the sole once-gate here and is only
+	 * written on success, which keeps the retry-next-admin-load path alive.
+	 */
+	public static function maybe_bootstrap() {
+		if ( wp_doing_ajax() ) return;
+		if ( wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) return;
+		if ( get_option( self::SCHEMA_OPTION ) === self::SCHEMA_VERSION ) return;
+		// Only mark the schema applied when WC's pieces were actually
+		// available; otherwise retry on the next non-AJAX admin request.
+		if ( ! taxonomy_exists( 'product_cat' ) || ! function_exists( 'wc_get_attribute_taxonomies' ) ) return;
+
+		self::ensure_categories();
+		self::ensure_attributes();
+		update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION, true );
 	}
 
 	/** Create the Medications parent + all subcategories if missing. */

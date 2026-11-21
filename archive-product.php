@@ -9,7 +9,15 @@ defined('ABSPATH') || exit;
 $shop_display = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_shop_display') : 'categories';
 $hide_empty   = class_exists('FisHotel_Admin_Settings') ? FisHotel_Admin_Settings::get('fh_shop_hide_empty') : '1';
 
-if ( is_shop() && ! is_product_category() && $shop_display !== 'products' ) {
+// The category landing page / "both" category strip only apply to the
+// shop ROOT. WC routes product searches (?s=…&post_type=product) and
+// taxonomy archives through this template too, so guard on both — a
+// search must render its results, not the category tiles.
+$is_shop_root = is_shop() && ! is_product_taxonomy() && ! is_search();
+$show_cat_grid = $is_shop_root && in_array( $shop_display, [ 'categories', 'both' ], true );
+$cats = [];
+
+if ( $show_cat_grid ) {
     // Always fetch all top-level cats then filter — more reliable than hide_empty arg
     $cats = get_terms([
         'taxonomy'   => 'product_cat',
@@ -18,10 +26,15 @@ if ( is_shop() && ! is_product_category() && $shop_display !== 'products' ) {
         'orderby'    => 'name',
         'order'      => 'ASC',
     ]);
+    if ( is_wp_error( $cats ) ) {
+        $cats = [];
+    }
 
-    // Apply hide_empty setting in PHP
-    $should_hide_empty = ( $hide_empty === '' ) ? true : (bool) $hide_empty;
-    if ( $should_hide_empty ) {
+    // Apply hide_empty setting in PHP. The checkbox sanitizer stores
+    // '0' / '1' (an absent option still yields the '1' default), so a
+    // plain bool cast is enough — the old `=== ''` special case made
+    // the setting impossible to turn off.
+    if ( (bool) $hide_empty ) {
         $cats = array_filter( $cats, function( $cat ) { return $cat->count > 0; } );
     }
 
@@ -33,7 +46,11 @@ if ( is_shop() && ! is_product_category() && $shop_display !== 'products' ) {
             return ! in_array( $cat->slug, $hidden_cats, true );
         });
     }
+}
 
+// "Categories" = landing page only (early return). "Both" falls through
+// to the normal product flow and reuses $cats for a strip under the hero.
+if ( $show_cat_grid && $shop_display === 'categories' ) {
     get_header(); ?>
     <div class="page-hero">
         <div class="page-hero__inner">
@@ -47,7 +64,7 @@ if ( is_shop() && ! is_product_category() && $shop_display !== 'products' ) {
             </h1>
         </div>
     </div>
-    <?php if ( $cats && ! is_wp_error( $cats ) ) : ?>
+    <?php if ( ! empty( $cats ) ) : ?>
     <div class="fh-shop-categories">
         <div class="fh-shop-categories__grid">
             <?php foreach ( $cats as $cat ) :
@@ -73,6 +90,15 @@ if ( is_shop() && ! is_product_category() && $shop_display !== 'products' ) {
 }
 
 get_header();
+
+// Any product taxonomy archive (category AND tag — tag archives are
+// reachable from every PDP's tag pills) gets its own term as the title
+// and a "Home / Shop / {Term}" breadcrumb. Searches get "Search Results".
+// Only the shop root keeps the hard-coded "Quarantined Fish" heading.
+$archive_term   = is_product_taxonomy() ? get_queried_object() : null;
+$archive_is_tax = ( $archive_term instanceof WP_Term );
+$archive_search = is_search();
+$search_query   = $archive_search ? get_search_query() : '';
 ?>
 
 <?php /* ── PAGE HERO ── */ ?>
@@ -81,29 +107,59 @@ get_header();
         <nav class="page-hero__breadcrumb">
             <a href="<?php echo esc_url(home_url('/')); ?>">Home</a>
             <span>/</span>
-            <?php if (is_product_category()) :
-                $cat = get_queried_object();
+            <?php if ( $archive_is_tax ) :
                 echo '<a href="' . esc_url(get_permalink(wc_get_page_id('shop'))) . '">Shop</a>';
                 echo '<span>/</span>';
-                echo '<span style="color:var(--fh-text-2)">' . esc_html($cat->name) . '</span>';
+                echo '<span style="color:var(--fh-text-2)">' . esc_html( $archive_term->name ) . '</span>';
+            elseif ( $archive_search ) :
+                echo '<a href="' . esc_url(get_permalink(wc_get_page_id('shop'))) . '">Shop</a>';
+                echo '<span>/</span>';
+                echo '<span style="color:var(--fh-text-2)">' . esc_html__( 'Search', 'fishotel' ) . '</span>';
             else : ?>
                 <span style="color:var(--fh-text-2)">Shop</span>
             <?php endif; ?>
         </nav>
         <h1 class="page-hero__title">
-            <?php if (is_product_category()) :
+            <?php if ( $archive_is_tax ) :
                 $words = explode(' ', single_term_title('', false), 2);
                 echo '<span class="word-1">' . esc_html($words[0]) . '</span>'
                    . ( !empty($words[1]) ? '&nbsp;<span class="word-2">' . esc_html($words[1]) . '</span>' : '' );
-            else : ?>
+            elseif ( $archive_search ) : ?>
+                <span class="word-1">Search</span>&nbsp;<span class="word-2">Results</span>
+            <?php else : ?>
                 <span class="word-1">Quarantined</span>&nbsp;<span class="word-2">Fish</span>
             <?php endif; ?>
         </h1>
-        <?php if (is_product_category() && category_description()) : ?>
-        <p style="color:var(--fh-text-3); font-size:13px; max-width:600px; margin-top:10px;"><?php echo wp_kses_post(category_description()); ?></p>
+        <?php if ( $archive_is_tax && term_description() ) : ?>
+        <p style="color:var(--fh-text-3); font-size:13px; max-width:600px; margin-top:10px;"><?php echo wp_kses_post( term_description() ); ?></p>
+        <?php elseif ( $archive_search && $search_query !== '' ) : ?>
+        <p style="color:var(--fh-text-3); font-size:13px; max-width:600px; margin-top:10px;"><?php printf( esc_html__( 'Results for: %s', 'fishotel' ), '<strong>' . esc_html( $search_query ) . '</strong>' ); ?></p>
         <?php endif; ?>
     </div>
 </div>
+
+<?php /* ── CATEGORY STRIP ("Shop page display: Both") — same tiles as the
+        landing page, rendered above the product grid on the shop root only. */ ?>
+<?php if ( $show_cat_grid && $shop_display === 'both' && ! empty( $cats ) ) : ?>
+<div class="fh-shop-categories fh-shop-categories--inline">
+    <div class="fh-shop-categories__grid">
+        <?php foreach ( $cats as $cat ) :
+            $thumb_id  = get_term_meta( $cat->term_id, 'thumbnail_id', true );
+            $thumb_url = $thumb_id
+                ? wp_get_attachment_image_url( $thumb_id, 'medium_large' )
+                : wc_placeholder_img_src();
+        ?>
+        <a href="<?php echo esc_url( get_term_link( $cat ) ); ?>" class="fh-cat-card">
+            <div class="fh-cat-card__image" style="background-image:url('<?php echo esc_url($thumb_url); ?>')"></div>
+            <div class="fh-cat-card__body">
+                <h2 class="fh-cat-card__name"><?php echo esc_html( $cat->name ); ?></h2>
+                <span class="fh-cat-card__count"><?php echo esc_html( $cat->count ); ?> <?php echo esc_html( _n( 'product', 'products', $cat->count, 'fishotel' ) ); ?></span>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php /* ── FILTER BAR ── */ ?>
 <?php
@@ -118,7 +174,7 @@ $archive_noun_singular = function_exists( 'fishotel_archive_noun' ) ? fishotel_a
 // fish term + its descendants only — never on medications, foods, gift
 // cards, etc. The Medications archive gets its own dual-axis strip below.
 $is_qf_family = false;
-if ( is_shop() && ! is_product_category() ) {
+if ( $is_shop_root ) {
     $is_qf_family = true;
 } elseif ( is_product_category() ) {
     $cur_term = get_queried_object();
@@ -181,7 +237,9 @@ if ( is_shop() && ! is_product_category() ) {
         </div>
         <?php endif; ?>
 
-        <select class="fh-shop-sort" onchange="window.location=this.value">
+        <?php /* Navigation on change lives in main.js (initShopSort) so
+                keyboard arrow-stepping doesn't trigger a page load per key. */ ?>
+        <select class="fh-shop-sort" aria-label="<?php esc_attr_e( 'Sort products', 'fishotel' ); ?>">
             <?php
             // Alphabetical is the default (no orderby param → title A→Z), so
             // it's the selected option on a fresh visit. Build option URLs
@@ -289,12 +347,27 @@ if ( is_shop() && ! is_product_category() ) {
 <?php endif; ?>
 
 <?php else : ?>
+<?php /* Empty state — copy follows the archive noun so a medication / food
+        tag archive doesn't say "No Fish", and a search says what it is.
+        The newsletter CTA only makes sense for livestock arrivals; other
+        archives point back to the shop. */ ?>
 <div style="text-align:center; padding:120px 48px; color:var(--fh-text-3);">
-    <div style="font-family:var(--fh-serif); font-size:48px; font-weight:700; color:var(--fh-text-4); margin-bottom:16px;">No Fish Right Now</div>
-    <p style="font-size:14px; margin-bottom:32px;">Check back soon — new arrivals are always checking in.</p>
+    <?php if ( $archive_search ) : ?>
+    <div style="font-family:var(--fh-serif); font-size:48px; font-weight:700; color:var(--fh-text-4); margin-bottom:16px;"><?php esc_html_e( 'No Results Found', 'fishotel' ); ?></div>
+    <p style="font-size:14px; margin-bottom:32px;"><?php esc_html_e( 'Try a different search term, or browse the shop.', 'fishotel' ); ?></p>
+    <?php else : ?>
+    <div style="font-family:var(--fh-serif); font-size:48px; font-weight:700; color:var(--fh-text-4); margin-bottom:16px;"><?php printf( esc_html__( 'No %s Right Now', 'fishotel' ), esc_html( ucfirst( $archive_noun_plural ) ) ); ?></div>
+    <p style="font-size:14px; margin-bottom:32px;"><?php echo $is_qf_family ? esc_html__( 'Check back soon — new arrivals are always checking in.', 'fishotel' ) : esc_html__( 'Check back soon — we restock regularly.', 'fishotel' ); ?></p>
+    <?php endif; ?>
+    <?php if ( $is_qf_family && ! $archive_search ) : ?>
     <a href="<?php echo esc_url(home_url('/newsletter/')); ?>" class="fh-btn fh-btn--gold">
         Get Notified of New Arrivals
     </a>
+    <?php else : ?>
+    <a href="<?php echo esc_url( get_permalink( wc_get_page_id( 'shop' ) ) ); ?>" class="fh-btn fh-btn--gold">
+        <?php esc_html_e( 'Browse the Shop', 'fishotel' ); ?>
+    </a>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 

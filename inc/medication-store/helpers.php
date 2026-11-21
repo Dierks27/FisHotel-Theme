@@ -125,6 +125,71 @@ function fishotel_med_cart_has_meds() {
 }
 
 /**
+ * Every medication line in the current cart, in cart order — EA-fulfilled,
+ * self-stocked and Amazon-mode alike (anything under the Medications
+ * category). Feeds the C2 terms record and the extra-acknowledgement set.
+ *
+ * @return array [ [ 'id' => int, 'name' => string, 'qty' => int, 'extra_ack' => string ], ... ]
+ */
+function fishotel_med_cart_med_lines() {
+	$lines = [];
+	if ( ! function_exists( 'WC' ) || ! WC() || ! WC()->cart ) {
+		return $lines;
+	}
+	foreach ( WC()->cart->get_cart() as $item ) {
+		$pid = isset( $item['product_id'] ) ? (int) $item['product_id'] : 0;
+		if ( ! $pid || ! fishotel_med_is_med_product( $pid ) ) {
+			continue;
+		}
+		$product = isset( $item['data'] ) && is_object( $item['data'] ) && method_exists( $item['data'], 'get_name' )
+			? $item['data']
+			: null;
+		$name = $product ? (string) $product->get_name() : (string) get_the_title( $pid );
+		$lines[] = [
+			'id'        => $pid,
+			'name'      => $name,
+			'qty'       => isset( $item['quantity'] ) ? (int) $item['quantity'] : 1,
+			'extra_ack' => fishotel_med_get_extra_ack( $pid ),
+		];
+	}
+	return $lines;
+}
+
+/**
+ * Every medication line on an order (same shape as the cart helper,
+ * minus extra_ack). Used to decide whether an order needs a terms record.
+ *
+ * @param WC_Order $order
+ * @return array [ [ 'id' => int, 'name' => string, 'qty' => int ], ... ]
+ */
+function fishotel_med_order_med_lines( $order ) {
+	$lines = [];
+	if ( ! class_exists( 'WC_Order' ) || ! $order instanceof WC_Order ) {
+		return $lines;
+	}
+	foreach ( $order->get_items( 'line_item' ) as $item ) {
+		if ( ! method_exists( $item, 'get_product_id' ) ) {
+			continue;
+		}
+		$pid = (int) $item->get_product_id();
+		if ( ! $pid || ! fishotel_med_is_med_product( $pid ) ) {
+			continue;
+		}
+		$lines[] = [
+			'id'   => $pid,
+			'name' => (string) $item->get_name(),
+			'qty'  => (int) $item->get_quantity(),
+		];
+	}
+	return $lines;
+}
+
+/** Per-product extra checkout acknowledgement text ('' when none). */
+function fishotel_med_get_extra_ack( $product_id ) {
+	return trim( (string) get_post_meta( (int) $product_id, '_fishotel_med_extra_ack', true ) );
+}
+
+/**
  * Build the outbound Amazon affiliate URL for a product. Returns empty
  * when ASIN/tag are missing. Tag is appended only when non-empty so
  * Phase 1 launch isn't blocked on the Associates account.

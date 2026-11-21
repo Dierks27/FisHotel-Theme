@@ -1,0 +1,82 @@
+name: Lint
+
+# Syntax-only gate: php -l on every tracked PHP file outside vendor/,
+# node --check on every JS file under assets/, plus the headless tests
+# in tests/ when present. Fails only on lint / syntax errors.
+#
+# push is limited to main so a PR branch runs once (via pull_request)
+# instead of twice per commit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Checkout only — never hand a write-capable GITHUB_TOKEN to third-party
+# actions for no reason.
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: PHP ${{ matrix.php }} syntax + JS check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.3']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: php -l (tracked .php outside vendor/)
+        run: |
+          set -e
+          status=0
+          while IFS= read -r f; do
+            php -l "$f" > /dev/null || status=1
+          done < <(git ls-files '*.php' | grep -v '^vendor/')
+          exit $status
+
+      - name: node --check (assets/**/*.js)
+        run: |
+          set -e
+          status=0
+          while IFS= read -r f; do
+            node --check "$f" || status=1
+          done < <(git ls-files 'assets/**/*.js' 'assets/*.js')
+          exit $status
+
+      - name: node tests
+        run: |
+          set -e
+          shopt -s nullglob
+          files=(tests/*.test.js)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "no node tests"; exit 0
+          fi
+          for f in "${files[@]}"; do
+            node "$f"
+          done
+
+      - name: php tests
+        run: |
+          set -e
+          shopt -s nullglob
+          files=(tests/*.php)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "no php tests"; exit 0
+          fi
+          for f in "${files[@]}"; do
+            php "$f"
+          done

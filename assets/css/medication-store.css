@@ -98,6 +98,40 @@ body.fishotel-med-modal-open { overflow: hidden; }
 	color: var(--fh-gold, #c9963a);
 	margin: 0 0 6px;
 }
+/* "Dose it with our Medication Calculator →" — sits directly under the
+   eyebrow, above the title. Same tracked-caps voice as the eyebrow, in
+   the body font so it reads as an action rather than a label. */
+.fishotel-med-calc { margin: 0 0 10px; }
+.fishotel-med-calc-link {
+	display: inline;
+	font-family: var(--fh-font, 'Montserrat', sans-serif);
+	font-size: 11px;
+	letter-spacing: 2px;
+	line-height: 2;
+	text-transform: uppercase;
+	color: var(--fh-gold, #c9963a);
+	/* text-decoration, not a border: the rule follows each line when the
+	   label wraps inside a 320px purchase panel on a phone. */
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-decoration-color: rgba(201, 150, 58, 0.35);
+	text-underline-offset: 4px;
+	transition: color 0.15s, text-decoration-color 0.15s;
+}
+.fishotel-med-calc-link:hover,
+.fishotel-med-calc-link:focus {
+	color: var(--fh-gold-lt, #deb96a);
+	text-decoration-color: var(--fh-gold-lt, #deb96a);
+}
+.fishotel-med-calc-link__arrow {
+	display: inline-block;
+	margin-left: 4px;
+	text-decoration: none;
+	transition: transform 0.15s;
+}
+.fishotel-med-calc-link:hover .fishotel-med-calc-link__arrow {
+	transform: translateX(3px);
+}
 .fishotel-med-ea-disclosure {
 	margin: 16px 0 0;
 	padding: 10px 14px;
@@ -164,4 +198,47 @@ body.fishotel-med-modal-open { overflow: hidden; }
 	width: 16px;
 	height: 16px;
 	cursor: pointer;
+}
+.fishotel-med-checkout-ack__label--extra {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px dashed rgba(212, 165, 116, 0.35);
+}
+.fishotel-med-checkout-ack__terms {
+	margin: 6px 0 0 26px;
+	font-size: 12px;
+}
+.fishotel-med-terms-link {
+	color: var(--fh-gold, #c9963a);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.fishotel-med-terms-link:hover,
+.fishotel-med-terms-link:focus {
+	color: var(--fh-gold-lt, #deb96a);
+}
+/* Read-only modal (checkout "Read the terms"): version line + single Close. */
+.fishotel-med-modal__version {
+	margin: 14px 0 0;
+	font-size: 12px;
+	letter-spacing: 1px;
+	color: #a79b86;
+	text-align: right;
+}
+.fishotel-med-modal[data-mode="readonly"] .fishotel-med-modal__card {
+	max-height: calc(100vh - 48px);
+	overflow-y: auto;
+}
+/* My Account order view line. */
+.fishotel-med-terms-account {
+	margin: 14px 0 0;
+	font-size: 13px;
+	color: var(--fh-text-3, #a79b86);
+}
+/* [fishotel_med_terms] public page. */
+.fishotel-med-terms__label { margin-top: 18px; }
+.fishotel-med-terms__version {
+	font-size: 12px;
+	letter-spacing: 1px;
+	color: var(--fh-text-3, #a79b86);
 }

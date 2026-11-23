@@ -60,6 +60,10 @@ FisHotel_Reorder_Checkout_Lock::init();
 // with ShipTracker v1.9.18+ also the packing of each box (materials) and
 // how an order without a label went out (local pickup / another order's box).
 require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-shipment-cost.php';
+// Packing's box on the Shipments meta box (v1.27.0) — the Add Shipment form
+// starts on the box the FisHotel Misc plugin's Packing section picked
+// (Misc v0.46.15+); without it the box is the one of v1.26.
+require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-packing-prefill.php';
 // Unified Shipments meta box (v1.17.0) — replaces Phase 1 per-line UI + the
 // default ShipTracker sidebar widget. Kill switch: FISHOTEL_NEW_SHIPMENTS_UI_OFF.
 require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-shipments-metabox.php';

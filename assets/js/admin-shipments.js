@@ -18,6 +18,13 @@
  *     through "Add supply…" also says what one cost (a custom box that was
  *     paid for). It is sent as `materials` (a JSON string) with Add
  *     Shipment and with a shipment's inline form.
+ *   - Packing's box (only rendered when the FisHotel Misc plugin's Packing
+ *     section has a plan for the order): the Add Shipment form starts on
+ *     the box Packing picked, marked "From Packing (…)" with a "clear", and
+ *     its packing block is open as if the box had been picked by hand.
+ *     Picking another box takes the mark off; "Use Packing's box" puts it
+ *     back. The fish bags are Packing's bags — two for every bag, three for
+ *     a fish with spines — and the line says so.
  *   - How it went out (an order with no shipment): local pickup, with its
  *     own packing block, or "went in another order's box" with a lookup of
  *     that order → wp_ajax_fst_set_ship_mode.
@@ -63,7 +70,12 @@
 	 * are bought wherever the rate is best, so the default must never
 	 * record itself on a shipment nobody entered a cost for.
 	 *
-	 * @param {Object} v { cost, box, dims, weight, source, sourceTouched }
+	 * A box that Packing filled in (`boxPrefilled`: the form is still on
+	 * it, nobody picked a box) is sent — that is why it is filled in — but
+	 * it is not a sign that anybody entered a cost: the remembered source
+	 * does not go with it.
+	 *
+	 * @param {Object} v { cost, box, dims, weight, source, sourceTouched, boxPrefilled }
 	 */
 	function addCostFields( v ) {
 		v = v || {};
@@ -82,7 +94,7 @@
 		if ( weight ) {
 			out.box_weight = weight;
 		}
-		if ( source && ( v.sourceTouched || cost || dims || weight ) ) {
+		if ( source && ( v.sourceTouched || cost || weight || ( dims && ! v.boxPrefilled ) ) ) {
 			out.label_source = source;
 		}
 		return out;
@@ -345,7 +357,8 @@
 	 *  1. the supplies every block has a line for — the picked standard
 	 *     box's own supply, fish bags, heat packs, ice packs — at 0;
 	 *  2. the usual packing of the box (ShipTracker's defaults), when given;
-	 *  3. a bag per fish for the items ticked, when a fish count is given;
+	 *  3. the fish bags of the items ticked, when a fish count is given — a
+	 *     bag per fish, or what Packing plans for them (bagCount());
 	 *  4. every line the owner touched (or that is on record), as it is.
 	 * An untouched line that is in none of these is dropped — the previous
 	 * box's own supply, for one.
@@ -506,6 +519,95 @@
 	}
 
 	/**
+	 * The fish bags of the Add Shipment block, in whole hundredths.
+	 *
+	 * Each order line carries its number (data-fish): its fish — or, with
+	 * the FisHotel Misc plugin's Packing section, the bags Packing plans for
+	 * them, two for every bag and three for a fish with spines. Items ticked:
+	 * their sum. None ticked: every item still to ship — unless the form is
+	 * on Packing's box, which says itself how many bags it takes (an order
+	 * in several boxes does not put all its bags in the first).
+	 *
+	 * @param {Object} o { ticked (values), open (values), boxLayers (Packing's number, '' / null = none) }
+	 */
+	function bagCount( o ) {
+		o = o || {};
+		if ( o.ticked && o.ticked.length ) {
+			return sumFish( o.ticked );
+		}
+		var layers = clean( o.boxLayers ) === '' ? null : toHundredths( o.boxLayers );
+		return layers === null ? sumFish( o.open ) : layers;
+	}
+
+	/**
+	 * What the fish bag line says about its number: Packing's words while
+	 * the number is Packing's — a block that follows the box, a line nobody
+	 * changed. '' otherwise (and always without the Misc plugin).
+	 *
+	 * @param {Object} o { note, follow, row, supply }
+	 */
+	function bagNote( o ) {
+		o = o || {};
+		var note = clean( o.note );
+		if ( ! note || ! o.follow || ! o.row || o.row.touched || ! o.supply || o.supply.role !== 'fish_bag' ) {
+			return '';
+		}
+		return note;
+	}
+
+	/**
+	 * Which option of a box size dropdown Packing's box is: the standard
+	 * box of its NAME (two standard boxes may share a size, and the packing
+	 * is filled from the one picked), else the first option with its value.
+	 * -1 when the dropdown has neither.
+	 *
+	 * @param {Array}  options [ { value, name } ] in the dropdown's order
+	 * @param {Object} box     { value, name }
+	 */
+	function boxOptionIndex( options, box ) {
+		options = options || [];
+		box     = box || {};
+		var name  = lower( box.name );
+		var value = clean( box.value );
+		var i;
+		for ( i = 0; name && i < options.length; i++ ) {
+			if ( options[ i ] && lower( options[ i ].name ) === name ) {
+				return i;
+			}
+		}
+		for ( i = 0; i < options.length; i++ ) {
+			if ( options[ i ] && clean( options[ i ].value ) === value ) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	/**
+	 * What happens to "From Packing" on a box size field:
+	 *   'use'   — "Use Packing's box": the form goes (back) on it;
+	 *   'clear' — its "clear": the box is emptied (with no standard boxes
+	 *             saved the size is always typed, so only that is emptied);
+	 *   'hand'  — a box picked or a size typed by hand: the mark goes, what
+	 *             was picked stays.
+	 *
+	 * @param {Object}  box     Packing's box { value, name, dims }
+	 * @param {String}  event   use | clear | hand
+	 * @param {Boolean} hasList The dropdown lists standard boxes.
+	 * @return {Object} { on, set: { box, name, dims } or null (leave the inputs alone) }
+	 */
+	function packingBoxStep( box, event, hasList ) {
+		box = box || {};
+		if ( event === 'use' ) {
+			return { on: true, set: { box: clean( box.value ), name: clean( box.name ), dims: clean( box.value ) === CUSTOM_BOX ? clean( box.dims ) : '' } };
+		}
+		if ( event === 'clear' ) {
+			return { on: false, set: { box: hasList ? '' : CUSTOM_BOX, name: '', dims: '' } };
+		}
+		return { on: false, set: null };
+	}
+
+	/**
 	 * What to say about the weather check in a packing block. Only the two
 	 * actions that put a pack in the box say anything: 'heat_pack' and
 	 * 'cooling' (ice packs).
@@ -620,6 +722,10 @@
 			costText:         costText,
 			stockText:        stockText,
 			sumFish:          sumFish,
+			bagCount:         bagCount,
+			bagNote:          bagNote,
+			boxOptionIndex:   boxOptionIndex,
+			packingBoxStep:   packingBoxStep,
 			weatherNotes:     weatherNotes,
 			sharesRecordedBox: sharesRecordedBox,
 			sharedBoxQuestion: sharedBoxQuestion,
@@ -670,8 +776,54 @@
 				dims:          $fields.find( '.fhsm-cost-dims' ).val(),
 				weight:        $fields.find( '.fhsm-cost-weight' ).val(),
 				source:        $source.length ? $source.val() : null,
-				sourceTouched: $source.data( 'fhsmTouched' ) === true
+				sourceTouched: $source.data( 'fhsmTouched' ) === true,
+				boxPrefilled:  onPackingBox( $fields )
 			};
+		}
+
+		// ── Packing's box ───────────────────────────────────────────────
+
+		// True while a form is on the box Packing picked: it was filled in
+		// (or "Use Packing's box" was clicked) and no box was picked by hand
+		// since. False for a form that has no Packing box at all.
+		function onPackingBox( $fields ) {
+			return $fields.find( '.fhsm-box-packing' ).attr( 'data-on' ) === '1';
+		}
+
+		// Put a form on Packing's box ('use'), empty it ('clear') or take the
+		// mark off because a box was picked by hand ('hand').
+		function packingBoxApply( $fields, event ) {
+			var $from = $fields.find( '.fhsm-box-packing' );
+			if ( ! $from.length ) {
+				return;
+			}
+			var $select = $fields.find( '.fhsm-cost-box' );
+			var $dims   = $fields.find( '.fhsm-cost-dims' );
+			var options = $select.find( 'option' ).map( function () {
+				return { value: this.value, name: $( this ).attr( 'data-name' ) || '' };
+			} ).get();
+			var hasList = options.some( function ( option ) {
+				return option.name !== '';
+			} );
+			var step    = packingBoxStep( {
+				value: $from.attr( 'data-value' ),
+				name:  $from.attr( 'data-name' ),
+				dims:  $from.attr( 'data-dims' )
+			}, event, hasList );
+
+			// The mark first: what follows the box reads it.
+			$from.attr( 'data-on', step.on ? '1' : '0' );
+			$from.find( '.fhsm-box-from' ).prop( 'hidden', ! step.on );
+			$from.find( '.fhsm-box-use' ).prop( 'hidden', step.on );
+
+			if ( step.set ) {
+				var at = boxOptionIndex( options, { value: step.set.box, name: step.set.name } );
+				if ( at > -1 ) {
+					$select.prop( 'selectedIndex', at );
+				}
+				$dims.val( step.set.dims ).toggle( $select.val() === CUSTOM_BOX );
+				$select.trigger( 'change', [ 'packing' ] );
+			}
 		}
 
 		// $scope: the form the fields sit in — its cost inputs and, when it
@@ -731,14 +883,21 @@
 			};
 		}
 
-		// The fish of the items ticked in the Add Shipment form — of every
-		// item still to ship while none is ticked.
+		// The fish bags of the items ticked in the Add Shipment form. While
+		// none is ticked: of every item still to ship — or, with the form on
+		// Packing's box, the bags that box takes.
 		function tickedFish() {
-			var $items  = $box.find( '.fhsm-line-item-check:not(:disabled)' );
-			var $ticked = $items.filter( ':checked' );
-			return sumFish( ( $ticked.length ? $ticked : $items ).map( function () {
-				return $( this ).attr( 'data-fish' );
-			} ).get() );
+			var $items = $box.find( '.fhsm-line-item-check:not(:disabled)' );
+			function fish( $checks ) {
+				return $checks.map( function () {
+					return $( this ).attr( 'data-fish' );
+				} ).get();
+			}
+			return bagCount( {
+				ticked:    fish( $items.filter( ':checked' ) ),
+				open:      fish( $items ),
+				boxLayers: onPackingBox( $newFields ) ? $newFields.find( '.fhsm-box-packing' ).attr( 'data-layers' ) : null
+			} );
 		}
 
 		// A block starts from its record when it has one — kept as recorded,
@@ -811,6 +970,10 @@
 						.toggleClass( 'fhsm-packing-stock-low', !! ( supply.low || supply.recount_needed ) )
 						.text( stock ) );
 				}
+				// Where the number of bags comes from, while it is Packing's.
+				if ( packingData.bagNote && supply && supply.role === 'fish_bag' ) {
+					$name.append( $( '<small class="fhsm-packing-bag-note" hidden></small>' ) );
+				}
 				var $cost = $( '<td class="fhsm-packing-cost"></td>' );
 				if ( row.added ) {
 					// A line added by hand: what one cost is typed here.
@@ -859,8 +1022,16 @@
 			} );
 
 			$p.find( '.fhsm-packing-row' ).each( function () {
-				var row = byId[ $( this ).attr( 'data-supply-id' ) ];
+				var row  = byId[ $( this ).attr( 'data-supply-id' ) ];
+				var note = row ? bagNote( {
+					note:   packingData.bagNote,
+					follow: state.follow,
+					row:    row,
+					supply: findSupply( packingData.supplies, row.id )
+				} ) : '';
 				$( this ).find( '.fhsm-packing-cost-text' ).text( row ? costText( row, currency ) : '' );
+				// A number of bags the owner changed is no longer Packing's.
+				$( this ).find( '.fhsm-packing-bag-note' ).text( note ).prop( 'hidden', ! note );
 			} );
 
 			// History has no weather note: only a block that follows the box.
@@ -1114,14 +1285,36 @@
 		} );
 
 		// "Custom…" reveals the free LxWxH input; the packing block of the
-		// same form follows the box.
-		$box.on( 'change', '.fhsm-cost-box', function () {
+		// same form follows the box. A box picked by hand (`by` is not
+		// 'packing') is no longer Packing's.
+		$box.on( 'change', '.fhsm-cost-box', function ( e, by ) {
 			var $dims = $( this ).closest( '.fhsm-cost-field' ).find( '.fhsm-cost-dims' );
-			$dims.toggle( $( this ).val() === CUSTOM_BOX );
-			if ( $dims.is( ':visible' ) ) {
-				$dims.trigger( 'focus' );
+			if ( by !== 'packing' ) {
+				packingBoxApply( $( this ).closest( '.fhsm-cost-fields' ), 'hand' );
+				$dims.toggle( $( this ).val() === CUSTOM_BOX );
+				if ( $dims.is( ':visible' ) ) {
+					$dims.trigger( 'focus' );
+				}
 			}
 			packingFollowBox( $( this ).closest( '.fhsm-new-cost, .fhsm-cost-form' ).find( '.fhsm-packing' ) );
+		} );
+
+		// A size typed by hand is no longer Packing's either; the fish bags
+		// of the Add Shipment block go back to the items.
+		$box.on( 'input', '.fhsm-cost-dims', function () {
+			var $fields = $( this ).closest( '.fhsm-cost-fields' );
+			if ( onPackingBox( $fields ) ) {
+				packingBoxApply( $fields, 'hand' );
+				packingFollowBox( $fields.closest( '.fhsm-new-cost, .fhsm-cost-form' ).find( '.fhsm-packing' ) );
+			}
+		} );
+
+		// "clear" next to "From Packing (…)", and "Use Packing's box".
+		$box.on( 'click', '.fhsm-box-clear, .fhsm-box-use', function () {
+			var use     = $( this ).hasClass( 'fhsm-box-use' );
+			var $fields = $( this ).closest( '.fhsm-cost-fields' );
+			packingBoxApply( $fields, use ? 'use' : 'clear' );
+			$fields.find( use ? '.fhsm-box-clear' : '.fhsm-box-use' ).trigger( 'focus' );
 		} );
 
 		// Typing in a flagged field withdraws its message.

@@ -16,6 +16,8 @@
  *   ?array   $cost_summary     FisHotel_Shipment_Cost::view_summary(), null when unsupported
  *   ?array   $packing          FisHotel_Shipments_Metabox::packing_view(); null when ShipTracker
  *                              does not record packing (before its v1.9.18)
+ *   ?array   $from_packing     FisHotel_Packing_Prefill::for_order(); null when the FisHotel Misc
+ *                              plugin's Packing section has no plan for the order (or is not there)
  */
 defined( 'ABSPATH' ) || exit;
 
@@ -37,6 +39,16 @@ $packing_data = $has_packing
 		'currency' => function_exists( 'get_woocommerce_currency_symbol' ) ? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ) : '$',
 	]
 	: null;
+
+// Packing's box (FisHotel Misc v0.46.15+): what the Add Shipment form starts
+// on, what a box recorded without a size is offered, and — the fish count
+// ShipTracker hands over is then Packing's bags — what the bag line says.
+$from_packing = $cost_supported && isset( $from_packing ) && is_array( $from_packing ) ? $from_packing : null;
+$packing_add  = $from_packing && 'plan' === $from_packing['state'] && is_array( $from_packing['add'] ) ? $from_packing['add'] : null;
+$packing_with = $from_packing && 'folded' === $from_packing['state'] ? $from_packing : null;
+if ( $from_packing && null !== $packing_data ) {
+	$packing_data['bagNote'] = $from_packing['bag_note'];
+}
 ?>
 <div class="fishotel-shipments-metabox"<?php echo $has_packing ? ' data-packing="' . esc_attr( wp_json_encode( $packing_data ) ) . '"' : ''; ?>>
 
@@ -178,7 +190,12 @@ $packing_data = $has_packing
 						<p class="fhsm-covers-all"><em><?php esc_html_e( 'Covers all items on this order.', 'fishotel' ); ?></em></p>
 					<?php endif; ?>
 					<?php if ( $cost_supported && isset( $cost_cards[ $ship_id ] ) ) : ?>
-						<?php FisHotel_Shipments_Metabox::render_shipment_cost( $ship_id, $cost_cards[ $ship_id ], $cost_boxes, $cost_sources, $has_packing && isset( $packing['cards'][ $ship_id ] ) ? $packing['cards'][ $ship_id ] : null ); ?>
+						<?php
+						// A box recorded without a size is offered Packing's box; a recorded size stays.
+						$card_key     = isset( $cost_cards[ $ship_id ]['box']['tracking_number'] ) ? FisHotel_Shipment_Cost::box_key( $cost_cards[ $ship_id ]['box']['tracking_number'] ) : '';
+						$card_packing = $from_packing && 'plan' === $from_packing['state'] && '' !== $card_key && isset( $from_packing['cards'][ $card_key ] ) ? $from_packing['cards'][ $card_key ] : null;
+						FisHotel_Shipments_Metabox::render_shipment_cost( $ship_id, $cost_cards[ $ship_id ], $cost_boxes, $cost_sources, $has_packing && isset( $packing['cards'][ $ship_id ] ) ? $packing['cards'][ $ship_id ] : null, $card_packing );
+						?>
 					<?php endif; ?>
 					<div class="fhsm-shipment-actions">
 						<button type="button" class="button fhsm-recheck" data-shipment-id="<?php echo esc_attr( $ship_id ); ?>"><?php esc_html_e( 'Re-check', 'fishotel' ); ?></button>
@@ -360,7 +377,15 @@ $packing_data = $has_packing
 						<strong><?php esc_html_e( 'What this box cost to ship', 'fishotel' ); ?></strong>
 						<span class="description"><?php esc_html_e( '(optional — it can be added later)', 'fishotel' ); ?></span>
 					</p>
-					<?php FisHotel_Shipments_Metabox::render_cost_fields( 'fhsm-new', [], $cost_boxes, $cost_sources ); ?>
+					<?php
+					// A source order packed with a combined box: its box is on that
+					// order. (One tag with the fields: nothing is printed between
+					// them, so without Misc the form is to the character the old one.)
+					if ( $packing_with ) {
+						FisHotel_Shipments_Metabox::render_packed_with( $packing_with );
+					}
+					FisHotel_Shipments_Metabox::render_cost_fields( 'fhsm-new', [], $cost_boxes, $cost_sources, $packing_add );
+					?>
 					<?php // Packing — opens once a box is picked, filled with what that box usually takes. ?>
 					<?php if ( $has_packing ) : ?>
 						<?php FisHotel_Shipments_Metabox::render_packing_block( 'fhsm-new', 'add', $packing['add'] ); ?>

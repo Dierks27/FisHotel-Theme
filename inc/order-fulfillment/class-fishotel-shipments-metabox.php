@@ -23,7 +23,7 @@
  * Packing (ShipTracker v1.9.18+, FisHotel_Shipment_Cost::packing_supported()):
  * choosing a box in the Add Shipment form opens a "Packing" block pre-filled
  * with ShipTracker's usual materials for that box and this order (the box
- * itself, a bag per fish, a heat pack or ice packs when the weather check
+ * itself, the bags of its fish, a heat pack or ice packs when the weather check
  * asks for them, the foam and paper amounts), sent as `materials`; each
  * shipment shows its materials and full cost (label + materials) and edits
  * them in the same inline form; and an order with no shipment gets "How it
@@ -35,6 +35,18 @@
  * asked before packing is sent so a second order put in a box never
  * replaces what the box has on record. Against ShipTracker v1.9.17 the box
  * is the v1.26.0 label cost box, unchanged.
+ *
+ * Packing's box (v1.27.0, FisHotel Misc v0.46.15+ — FisHotel_Packing_Prefill):
+ * the Add Shipment form starts on the box the Packing section picked for
+ * the order, marked "From Packing (confirmed)" or "(suggested)" with a
+ * "clear", and its packing block is open as if the box had been picked by
+ * hand; on an order in several boxes it is the first one not used up by a
+ * box already on the order ("Box 2 of 3"). A box that is already recorded
+ * keeps its record — one recorded without a size only gets a "Use Packing's
+ * box" link in its form. The fish bag line counts the bags Packing plans —
+ * every bag doubled, tripled for a fish with spines — because Misc answers
+ * ShipTracker's fish count with them; the line says so. Without Misc, or
+ * when it has no plan for the order, none of this is rendered.
  *
  * Kill switch: define( 'FISHOTEL_NEW_SHIPMENTS_UI_OFF', true ) in wp-config.php
  * disables this UI and restores Phase 1 + the default ShipTracker widget.
@@ -198,6 +210,17 @@ class FisHotel_Shipments_Metabox {
 			} catch ( \Throwable $e ) {
 				$cost_supported = false;
 				$packing        = null;
+			}
+		}
+
+		// Packing's box (FisHotel Misc v0.46.15+). Null — Misc is missing,
+		// older or has no plan for the order — leaves the box as it was.
+		$from_packing = null;
+		if ( $cost_supported ) {
+			try {
+				$from_packing = FisHotel_Packing_Prefill::for_order( $order, $cost_boxes, $order_boxes );
+			} catch ( \Throwable $e ) {
+				$from_packing = null;
 			}
 		}
 
@@ -496,17 +519,31 @@ class FisHotel_Shipments_Metabox {
 	 * (data-name): two boxes may share a size, and the packing block is
 	 * filled from the one that was picked.
 	 *
-	 * @param string $prefix  Id prefix: "fhsm-new" or "fhsm-edit-{shipment id}".
-	 * @param array  $values  Recorded label_cost / box_dims / box_weight / label_source.
-	 * @param array  $boxes   FisHotel_Shipment_Cost::standard_boxes().
-	 * @param array  $sources FisHotel_Shipment_Cost::label_sources().
+	 * With Packing's box ($from_packing, v1.27.0): a form that starts on it
+	 * (`on` — the Add Shipment form) has that box selected, by its name, or
+	 * "Custom…" with its size typed in; a form it is only offered to (a box
+	 * recorded without a size) keeps its own values and gets the link.
+	 *
+	 * @param string     $prefix       Id prefix: "fhsm-new" or "fhsm-edit-{shipment id}".
+	 * @param array      $values       Recorded label_cost / box_dims / box_weight / label_source.
+	 * @param array      $boxes        FisHotel_Shipment_Cost::standard_boxes().
+	 * @param array      $sources      FisHotel_Shipment_Cost::label_sources().
+	 * @param array|null $from_packing FisHotel_Packing_Prefill::entry(); null = no Packing box.
 	 */
-	public static function render_cost_fields( $prefix, array $values, array $boxes, array $sources ) {
+	public static function render_cost_fields( $prefix, array $values, array $boxes, array $sources, $from_packing = null ) {
 		$is_add = 'fhsm-new' === $prefix;
 		$cost   = isset( $values['label_cost'] ) ? (string) $values['label_cost'] : '';
 		$dims   = isset( $values['box_dims'] ) ? (string) $values['box_dims'] : '';
 		$weight = isset( $values['box_weight'] ) ? FisHotel_Shipment_Cost::trim_decimal( $values['box_weight'] ) : '';
 		$source = isset( $values['label_source'] ) ? (string) $values['label_source'] : '';
+
+		// Packing's box is what the form starts on: a standard box by its
+		// name (two may share a size), else the size typed under "Custom…".
+		$from_packing = is_array( $from_packing ) && isset( $from_packing['value'], $from_packing['name'], $from_packing['dims'] ) ? $from_packing : null;
+		$starts_on    = $from_packing && ! empty( $from_packing['on'] ) ? $from_packing : null;
+		if ( $starts_on ) {
+			$dims = FisHotel_Shipment_Cost::CUSTOM_BOX === $starts_on['value'] ? (string) $starts_on['dims'] : (string) $starts_on['value'];
+		}
 
 		// No standard boxes saved yet: the size is typed, so the dropdown
 		// stays out of sight on "Custom…".
@@ -534,10 +571,12 @@ class FisHotel_Shipments_Metabox {
 				<select id="<?php echo esc_attr( $prefix . '-box' ); ?>" class="fhsm-cost-box" autocomplete="off"<?php echo empty( $boxes ) ? ' style="display:none;"' : ''; ?>>
 					<option value=""><?php esc_html_e( '— Not recorded —', 'fishotel' ); ?></option>
 					<?php
-					// Two standard boxes of the same size: only the first is preselected.
+					// Two standard boxes of the same size: only the first is
+					// preselected — or, for Packing's box, the one of that name.
 					$preselected = false;
 					foreach ( $boxes as $standard_box ) :
-						$is_current  = ! $preselected && $standard_box['dims'] === $choice;
+						$is_current  = ! $preselected && $standard_box['dims'] === $choice
+							&& ( ! $starts_on || '' === $starts_on['name'] || $standard_box['name'] === $starts_on['name'] );
 						$preselected = $preselected || $is_current;
 						?>
 						<option value="<?php echo esc_attr( $standard_box['dims'] ); ?>" data-name="<?php echo esc_attr( $standard_box['name'] ); ?>" <?php selected( $is_current ); ?>>
@@ -551,7 +590,13 @@ class FisHotel_Shipments_Metabox {
 					aria-label="<?php esc_attr_e( 'Custom box size: length x width x height in inches', 'fishotel' ); ?>"
 					value="<?php echo esc_attr( $is_custom ? $dims : '' ); ?>"<?php echo $is_custom ? '' : ' style="display:none;"'; ?>>
 				<span class="fhsm-field-error" aria-live="polite"></span>
-			</p>
+			<?php
+			// Kept inside one tag so that, without a Packing box, not a
+			// character of the field differs from what it always was.
+			if ( $from_packing ) {
+				self::render_box_from( $from_packing );
+			}
+			?></p>
 			<p class="fhsm-cost-field" data-field="weight">
 				<label for="<?php echo esc_attr( $prefix . '-weight' ); ?>"><?php esc_html_e( 'Weight (lb):', 'fishotel' ); ?></label>
 				<input type="text" id="<?php echo esc_attr( $prefix . '-weight' ); ?>" class="fhsm-cost-weight" inputmode="decimal" autocomplete="off" value="<?php echo esc_attr( $weight ); ?>">
@@ -580,6 +625,53 @@ class FisHotel_Shipments_Metabox {
 	}
 
 	/**
+	 * Print "Packed with combined box #5900" on a source order that the
+	 * Packing section packed with a combined (fulfillment) order: its box
+	 * is planned there, so nothing is filled in here.
+	 *
+	 * @param array $with FisHotel_Packing_Prefill::for_order() of a folded order: number, url.
+	 */
+	public static function render_packed_with( array $with ) {
+		$number = '#' . esc_html( isset( $with['number'] ) ? (string) $with['number'] : '' );
+		if ( isset( $with['url'] ) && '' !== (string) $with['url'] ) {
+			$number = '<a href="' . esc_url( $with['url'] ) . '">' . $number . '</a>';
+		}
+		echo '<p class="description fhsm-packed-with">';
+		printf(
+			/* translators: %s linked order number of the combined box */
+			esc_html__( 'Packed with combined box %s.', 'fishotel' ),
+			$number // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above.
+		);
+		echo '</p>';
+	}
+
+	/**
+	 * Print what a box size field says about Packing's box: "From Packing
+	 * (suggested) · Box 2 of 3" with a "clear" while the form is on that
+	 * box, and a "Use Packing's box: Medium (16x12x10)" link while it is
+	 * not. admin-shipments.js shows the one or the other; picking a box by
+	 * hand takes the form off Packing's.
+	 *
+	 * @param array $from_packing FisHotel_Packing_Prefill::entry().
+	 */
+	public static function render_box_from( array $from_packing ) {
+		$on = ! empty( $from_packing['on'] );
+		?>
+		<span class="fhsm-box-packing" data-on="<?php echo $on ? '1' : '0'; ?>"
+			data-value="<?php echo esc_attr( $from_packing['value'] ); ?>"
+			data-name="<?php echo esc_attr( $from_packing['name'] ); ?>"
+			data-dims="<?php echo esc_attr( $from_packing['dims'] ); ?>"
+			data-layers="<?php echo esc_attr( isset( $from_packing['layers'] ) ? $from_packing['layers'] : '' ); ?>">
+			<span class="fhsm-box-from"<?php echo $on ? '' : ' hidden'; ?>>
+				<span class="fhsm-box-from-text"><?php echo esc_html( isset( $from_packing['label'] ) ? $from_packing['label'] : '' ); ?></span>
+				<button type="button" class="button-link fhsm-box-clear"><?php esc_html_e( 'clear', 'fishotel' ); ?></button>
+			</span>
+			<button type="button" class="button-link fhsm-box-use"<?php echo $on ? ' hidden' : ''; ?>><?php echo esc_html( isset( $from_packing['use'] ) ? $from_packing['use'] : '' ); ?></button>
+		</span>
+		<?php
+	}
+
+	/**
 	 * Print the cost block of one shipment card: "Label cost $53.73 ·
 	 * 10x10x10 · Partner A" (or "No cost recorded" with an Add link) and the
 	 * inline form that saves through ShipTracker's fst_set_label_cost.
@@ -596,8 +688,11 @@ class FisHotel_Shipments_Metabox {
 	 * @param array      $boxes   FisHotel_Shipment_Cost::standard_boxes().
 	 * @param array      $sources FisHotel_Shipment_Cost::label_sources().
 	 * @param array|null $packing This card's packing_view() entry; null = no packing support.
+	 * @param array|null $from_packing The Packing box offered to this card
+	 *                                 (FisHotel_Packing_Prefill::entry()). Only a box recorded
+	 *                                 without a size gets the offer: a record is never replaced.
 	 */
-	public static function render_shipment_cost( $shipment_id, array $card, array $boxes, array $sources, $packing = null ) {
+	public static function render_shipment_cost( $shipment_id, array $card, array $boxes, array $sources, $packing = null, $from_packing = null ) {
 		$shipment_id = (int) $shipment_id;
 		if ( empty( $card['primary'] ) ) {
 			echo '<p class="fhsm-cost fhsm-cost-same-box">' . esc_html__( 'Same box as the shipment above — its label cost is shown once.', 'fishotel' ) . '</p>';
@@ -610,6 +705,11 @@ class FisHotel_Shipments_Metabox {
 		$orders  = isset( $card['order_ids'] ) && is_array( $card['order_ids'] ) ? $card['order_ids'] : [];
 		$record  = is_array( $packing ) && isset( $packing['record'] ) && is_array( $packing['record'] ) ? $packing['record'] : null;
 		$full    = FisHotel_Shipment_Cost::full_cost( $box );
+		if ( ! is_array( $from_packing ) || ( isset( $box['box_dims'] ) && '' !== trim( (string) $box['box_dims'] ) ) ) {
+			$from_packing = null;
+		} else {
+			$from_packing['on'] = false;
+		}
 		?>
 		<div class="fhsm-cost">
 			<p class="fhsm-cost-line">
@@ -655,7 +755,7 @@ class FisHotel_Shipments_Metabox {
 				</p>
 			<?php endif; ?>
 			<div class="fhsm-cost-form" id="<?php echo esc_attr( $form_id ); ?>" hidden>
-				<?php self::render_cost_fields( $form_id, $box, $boxes, $sources ); ?>
+				<?php self::render_cost_fields( $form_id, $box, $boxes, $sources, $from_packing ); ?>
 				<?php if ( is_array( $packing ) ) : ?>
 					<?php self::render_packing_block( $form_id, 'edit', $packing ); ?>
 				<?php endif; ?>

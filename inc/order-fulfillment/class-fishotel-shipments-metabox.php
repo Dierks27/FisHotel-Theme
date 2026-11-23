@@ -45,7 +45,11 @@
  * keeps its record — one recorded without a size only gets a "Use Packing's
  * box" link in its form. The fish bag line counts the bags Packing plans —
  * every bag doubled, tripled for a fish with spines — because Misc answers
- * ShipTracker's fish count with them; the line says so. Without Misc, or
+ * ShipTracker's fish count with them; the line says so. Ticking only lines
+ * that are not in Packing's box (dry goods sent ahead) takes the form off
+ * it; a tracking number that is already a box of another order keeps the
+ * size it has; and a box changed in the Packing box is asked for again
+ * (ajax_packing_box()) instead of waiting for a reload. Without Misc, or
  * when it has no plan for the order, none of this is rendered.
  *
  * Kill switch: define( 'FISHOTEL_NEW_SHIPMENTS_UI_OFF', true ) in wp-config.php
@@ -72,6 +76,7 @@ class FisHotel_Shipments_Metabox {
 		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
 		add_action( 'wp_ajax_fishotel_ship_with_lookup', [ __CLASS__, 'ajax_ship_with_lookup' ] );
 		add_action( 'wp_ajax_fishotel_box_lookup', [ __CLASS__, 'ajax_box_lookup' ] );
+		add_action( 'wp_ajax_fishotel_packing_box', [ __CLASS__, 'ajax_packing_box' ] );
 	}
 
 	public static function kill_switch_on() {
@@ -218,7 +223,7 @@ class FisHotel_Shipments_Metabox {
 		$from_packing = null;
 		if ( $cost_supported ) {
 			try {
-				$from_packing = FisHotel_Packing_Prefill::for_order( $order, $cost_boxes, $order_boxes );
+				$from_packing = FisHotel_Packing_Prefill::for_order( $order, $cost_boxes, $order_boxes, $shipments );
 			} catch ( \Throwable $e ) {
 				$from_packing = null;
 			}
@@ -486,6 +491,95 @@ class FisHotel_Shipments_Metabox {
 		wp_send_json_success( FisHotel_Shipment_Cost::existing_box( $tracking ) );
 	}
 
+	/**
+	 * Packing's box for an order as the Shipments box shows it right now —
+	 * what ajax_packing_box() answers. The Packing box of the FisHotel Misc
+	 * plugin sits on the same screen and is changed without a reload; this
+	 * is asked again each time it was, so the Add Shipment form never keeps
+	 * the box from before.
+	 *
+	 * @param WC_Order $order The order on screen.
+	 * @return array {
+	 *     @type string $add      The "From Packing" piece of the Add Shipment form's box size
+	 *                            field (render_box_from(), on that box); '' when there is none.
+	 *     @type array  $cards    Edit form id ("fhsm-edit-12") => the same piece, as an offer,
+	 *                            for each box recorded without a size.
+	 *     @type string $bag_note What the fish bag line says; '' when Packing has no plan.
+	 * }
+	 */
+	public static function packing_box_data( WC_Order $order ) {
+		$out = [
+			'add'      => '',
+			'cards'    => [],
+			'bag_note' => '',
+		];
+		if ( ! FisHotel_Shipment_Cost::supported() ) {
+			return $out;
+		}
+
+		try {
+			$is_fulfillment = function_exists( 'fishotel_is_fulfillment' ) && fishotel_is_fulfillment( $order );
+			$shipments      = self::resolve_shipments( $order, $is_fulfillment );
+			$order_boxes    = FisHotel_Shipment_Cost::order_boxes( self::view_order_ids( $order, $is_fulfillment ) );
+			$from_packing   = FisHotel_Packing_Prefill::for_order( $order, FisHotel_Shipment_Cost::standard_boxes(), $order_boxes, $shipments );
+			if ( ! is_array( $from_packing ) ) {
+				return $out;
+			}
+			$out['bag_note'] = isset( $from_packing['bag_note'] ) ? (string) $from_packing['bag_note'] : '';
+			if ( 'plan' !== $from_packing['state'] ) {
+				return $out;
+			}
+
+			if ( is_array( $from_packing['add'] ) ) {
+				ob_start();
+				self::render_box_from( $from_packing['add'] );
+				$out['add'] = trim( (string) ob_get_clean() );
+			}
+
+			foreach ( FisHotel_Shipment_Cost::plan_cards( $shipments, $order_boxes ) as $shipment_id => $card ) {
+				$box = isset( $card['box'] ) && is_array( $card['box'] ) ? $card['box'] : [];
+				$key = isset( $box['tracking_number'] ) ? FisHotel_Shipment_Cost::box_key( $box['tracking_number'] ) : '';
+				if ( empty( $card['primary'] ) || '' === $key || ! isset( $from_packing['cards'][ $key ] ) || ( isset( $box['box_dims'] ) && '' !== trim( (string) $box['box_dims'] ) ) ) {
+					continue;
+				}
+				$entry       = $from_packing['cards'][ $key ];
+				$entry['on'] = false;
+				ob_start();
+				self::render_box_from( $entry );
+				$out['cards'][ 'fhsm-edit-' . (int) $shipment_id ] = trim( (string) ob_get_clean() );
+			}
+		} catch ( \Throwable $e ) {
+			return [
+				'add'      => '',
+				'cards'    => [],
+				'bag_note' => '',
+			];
+		}
+		return $out;
+	}
+
+	/**
+	 * AJAX: Packing's box for the order on screen, as it stands now.
+	 * Read-only. Asked by admin-shipments.js when the Packing box of the
+	 * FisHotel Misc plugin says it was drawn again (the document event
+	 * "fishotel-packing-changed").
+	 *
+	 * POST: nonce (fst_nonce), order_id. Success data: packing_box_data().
+	 */
+	public static function ajax_packing_box() {
+		check_ajax_referer( self::NONCE_ACTION, 'nonce' );
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error( __( 'Permission denied', 'fishotel' ), 403 );
+		}
+
+		$order_id = isset( $_POST['order_id'] ) && is_scalar( $_POST['order_id'] ) ? absint( wp_unslash( $_POST['order_id'] ) ) : 0;
+		$order    = $order_id > 0 ? wc_get_order( $order_id ) : null;
+		if ( ! $order instanceof WC_Order ) {
+			wp_send_json_error( __( 'Could not load order.', 'fishotel' ) );
+		}
+		wp_send_json_success( self::packing_box_data( $order ) );
+	}
+
 	/** A decimal amount as WooCommerce price markup, ready to echo. */
 	private static function money( $amount ) {
 		if ( function_exists( 'wc_price' ) ) {
@@ -651,7 +745,9 @@ class FisHotel_Shipments_Metabox {
 	 * (suggested) · Box 2 of 3" with a "clear" while the form is on that
 	 * box, and a "Use Packing's box: Medium (16x12x10)" link while it is
 	 * not. admin-shipments.js shows the one or the other; picking a box by
-	 * hand takes the form off Packing's.
+	 * hand takes the form off Packing's. data-items lists the order lines
+	 * Packing put in the box ("<order id>-<item id>"), so the form can tell
+	 * a shipment of other lines — dry goods sent ahead — from this box.
 	 *
 	 * @param array $from_packing FisHotel_Packing_Prefill::entry().
 	 */
@@ -662,11 +758,13 @@ class FisHotel_Shipments_Metabox {
 			data-value="<?php echo esc_attr( $from_packing['value'] ); ?>"
 			data-name="<?php echo esc_attr( $from_packing['name'] ); ?>"
 			data-dims="<?php echo esc_attr( $from_packing['dims'] ); ?>"
-			data-layers="<?php echo esc_attr( isset( $from_packing['layers'] ) ? $from_packing['layers'] : '' ); ?>">
+			data-layers="<?php echo esc_attr( isset( $from_packing['layers'] ) ? $from_packing['layers'] : '' ); ?>"
+			data-items="<?php echo esc_attr( isset( $from_packing['items'] ) && is_array( $from_packing['items'] ) ? implode( ' ', $from_packing['items'] ) : '' ); ?>">
 			<span class="fhsm-box-from"<?php echo $on ? '' : ' hidden'; ?>>
 				<span class="fhsm-box-from-text"><?php echo esc_html( isset( $from_packing['label'] ) ? $from_packing['label'] : '' ); ?></span>
 				<button type="button" class="button-link fhsm-box-clear"><?php esc_html_e( 'clear', 'fishotel' ); ?></button>
 			</span>
+			<span class="fhsm-box-why" hidden><?php esc_html_e( 'None of the items ticked is in Packing\'s box, so no box is filled in.', 'fishotel' ); ?></span>
 			<button type="button" class="button-link fhsm-box-use"<?php echo $on ? ' hidden' : ''; ?>><?php echo esc_html( isset( $from_packing['use'] ) ? $from_packing['use'] : '' ); ?></button>
 		</span>
 		<?php

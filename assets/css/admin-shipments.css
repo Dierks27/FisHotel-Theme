@@ -292,13 +292,15 @@
 }
 .fhsm-box-from[hidden],
 .fhsm-box-use[hidden],
+.fhsm-box-why[hidden],
 .fhsm-packing-bag-note[hidden] {
 	display: none;
 }
 .fhsm-box-packing .button-link {
 	font-size: 11px;
 }
-.fhsm-box-from-text {
+.fhsm-box-from-text,
+.fhsm-box-why {
 	margin-right: 4px;
 }
 .fhsm-packed-with {

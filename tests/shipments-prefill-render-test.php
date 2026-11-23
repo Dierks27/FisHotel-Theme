@@ -15,7 +15,11 @@
  * recorded box keeps its record, and one recorded without a size is only
  * offered "Use Packing's box"; a source order packed with a combined box
  * links to it; a combined order is asked by its own id; the fish bag
- * numbers on the order lines are Packing's bags.
+ * numbers on the order lines are Packing's bags; the form is handed the
+ * order lines Packing put in the box; a kit that went ahead in a box of its
+ * own does not use up the fish box; and what the box answers when the
+ * Packing box changed (the piece for the Add Shipment form, the offer for a
+ * box recorded without a size).
  *
  * And the guard rails: with the Misc plugin missing, without a plan,
  * answering nonsense or throwing, the box is — to the character — the same.
@@ -26,9 +30,10 @@
  *   php tests/shipments-prefill-render-test.php --scene=split --misc=answers
  *
  * prints that scene's HTML (scenes: one-box, split, custom, folded,
- * combined; misc: absent, answers, noplan, garbage, throws). `--theme=DIR`
- * renders another copy of the theme with the same stand-ins, to compare
- * two versions.
+ * combined, kit-first; misc: absent, answers, noplan, garbage, throws).
+ * `--theme=DIR` renders another copy of the theme with the same stand-ins,
+ * to compare two versions; `--data=1` prints, as JSON, what the box answers
+ * when the Packing box says it changed (packing_box_data()) instead.
  *
  * All orders, customers, boxes and fish here are invented.
  *
@@ -39,9 +44,9 @@ if ( PHP_SAPI !== 'cli' ) {
 	exit( 1 );
 }
 
-$opts = [ 'scene' => '', 'misc' => 'absent', 'theme' => dirname( __DIR__ ) ];
+$opts = [ 'scene' => '', 'misc' => 'absent', 'theme' => dirname( __DIR__ ), 'data' => '' ];
 foreach ( array_slice( $argv, 1 ) as $arg ) {
-	if ( preg_match( '/^--(scene|misc|theme)=(.+)$/', $arg, $m ) ) {
+	if ( preg_match( '/^--(scene|misc|theme|data)=(.+)$/', $arg, $m ) ) {
 		$opts[ $m[1] ] = $m[2];
 	}
 }
@@ -70,6 +75,15 @@ if ( '' === $opts['scene'] ) {
 		$html = implode( "\n", $output );
 		check( "$scene / Misc $misc renders", 0 === $code && false !== strpos( $html, 'class="fishotel-shipments-metabox"' ) && false === strpos( $html, 'Warning' ) && false === strpos( $html, 'Fatal' ), substr( $html, 0, 300 ) );
 		return $html;
+	}
+	/** What the box answers when Packing's box is asked for again, for one scene. */
+	function box_data( $scene, $misc ) {
+		$output = [];
+		$code   = 1;
+		exec( escapeshellarg( PHP_BINARY ) . ' ' . escapeshellarg( __FILE__ ) . ' --scene=' . escapeshellarg( $scene ) . ' --misc=' . escapeshellarg( $misc ) . ' --data=1 2>&1', $output, $code );
+		$data = json_decode( implode( "\n", $output ), true );
+		check( "$scene / Misc $misc answers", 0 === $code && is_array( $data ) && [ 'add', 'cards', 'bag_note' ] === array_keys( $data ), substr( implode( "\n", $output ), 0, 300 ) );
+		return is_array( $data ) ? $data : [ 'add' => '', 'cards' => [], 'bag_note' => '' ];
 	}
 	/** The part of the HTML from one marker up to another. */
 	function part( $html, $from, $to ) {
@@ -117,7 +131,7 @@ if ( '' === $opts['scene'] ) {
 		// Misc answers); with no plan they are the fish, as without Misc.
 		check( "Misc $what: the box is, to the character, the one without Misc", $plain === render( 'one-box', $misc ) );
 	}
-	foreach ( [ 'split', 'custom', 'folded', 'combined' ] as $scene ) {
+	foreach ( [ 'split', 'custom', 'folded', 'combined', 'kit-first' ] as $scene ) {
 		$html = render( $scene, 'absent' );
 		check( "$scene without Misc: nothing of Packing", false === strpos( $html, 'fhsm-box-packing' ) && false === strpos( $html, 'fhsm-packed-with' ) && ! array_key_exists( 'bagNote', (array) packing_data( $html ) ) );
 	}
@@ -136,7 +150,9 @@ if ( '' === $opts['scene'] ) {
 	check( 'no item is ticked', 0 === preg_match( '/class="fhsm-line-item-check"[^>]*\schecked/s', $html ) );
 	check( 'an order line carries Packing\'s bags: 2 tangs × 3, 3 clownfish × 2', [ 7001 => '6', 7002 => '6' ] === line_fish( $html ), json_encode( line_fish( $html ) ) );
 	$data = packing_data( $html );
-	check( 'the script is told what the bag line says', '2 per bag, 3 for spiny fish — from Packing' === ( isset( $data['bagNote'] ) ? $data['bagNote'] : null ) );
+	check( 'the script is told what the bag line says', 'Double-bagged, triple for spiny fish — from Packing' === ( isset( $data['bagNote'] ) ? $data['bagNote'] : null ) );
+	check( 'the form is handed the order lines Packing put in the box', false !== strpos( $from, 'data-items="5001-7001 5001-7002"' ), $from );
+	check( 'the word for "the items ticked are not in this box" waits, hidden', 1 === preg_match( '/<span class="fhsm-box-why" hidden>None of the items ticked is in Packing&#039;s box, so no box is filled in\.<\/span>/', $from ), $from );
 	check( 'the usual packing was asked for the bags, not the fish', isset( $data['defaults']['12|heat_pack'] ), json_encode( array_keys( (array) $data['defaults'] ) ) );
 	check( 'apart from Packing\'s box the form is the one without Misc', false !== strpos( $html, '<option value="20x14x12" data-name="Long 20" >' ) && false === strpos( $html, 'fhsm-packed-with' ) );
 
@@ -155,6 +171,27 @@ if ( '' === $opts['scene'] ) {
 	check( '— for the second box, the one left of that size', false !== strpos( $unsized, '>From Packing (confirmed) · Box 2 of 3</span>' ) );
 	check( 'what the recorded boxes show is what it was', false !== strpos( $html, 'Label cost' ) && false !== strpos( $html, 'Cube 12 (12x12x12)' ) );
 	check( 'the lines still to ship carry Packing\'s bags', [ 7013 => '8', 7014 => '3' ] === array_intersect_key( line_fish( $html ), [ 7013 => 1, 7014 => 1 ] ), json_encode( line_fish( $html ) ) );
+
+	echo "dry goods sent ahead of the fish\n";
+	$html = render( 'kit-first', 'answers' );
+	check( 'the kit went out in a box of its own, recorded with the fish box\'s size', false !== strpos( $html, 'id="fhsm-edit-83"' ) && 1 === preg_match( '/value="7052"[^>]*disabled/s', $html ) );
+	check( 'the fish box is not used up by it: the form still starts on Packing\'s box', [ '12x12x12', 'Tall 12' ] === selected_box( $html, 'fhsm-new' ) && false !== strpos( part( $html, '<p class="fhsm-new-cost-heading">', '<p class="fhsm-cost-field" data-field="weight">' ), 'data-on="1"' ), json_encode( selected_box( $html, 'fhsm-new' ) ) );
+	check( 'which holds the fish line only', false !== strpos( $html, 'data-items="5030-7051"' ) );
+	check( 'the kit takes no bag', [ 7051 => '4', 7052 => '0' ] === line_fish( $html ), json_encode( line_fish( $html ) ) );
+
+	echo "the Packing box changed: its box, asked for again\n";
+	$data = box_data( 'one-box', 'answers' );
+	check( 'the piece for the Add Shipment form: on Packing\'s box, with its name, bags and lines', 0 === strpos( $data['add'], '<span class="fhsm-box-packing" data-on="1"' ) && false !== strpos( $data['add'], 'data-name="Tall 12"' ) && false !== strpos( $data['add'], 'data-layers="12"' ) && false !== strpos( $data['add'], 'data-items="5001-7001 5001-7002"' ) && '</span>' === substr( $data['add'], -7 ), $data['add'] );
+	check( 'it is the piece the page was drawn with', false !== strpos( render( 'one-box', 'answers' ), $data['add'] ) );
+	check( 'no card is offered anything; the bag line\'s words go along', [] === $data['cards'] && 'Double-bagged, triple for spiny fish — from Packing' === $data['bag_note'] );
+	$data = box_data( 'split', 'answers' );
+	check( 'an order in several boxes: the next box for the form', false !== strpos( $data['add'], 'From Packing (confirmed) · Box 3 of 3' ) && false !== strpos( $data['add'], 'data-value="20x14x12"' ), $data['add'] );
+	check( 'the box recorded without a size is offered its box, by the id of its form — the one recorded with a size nothing', [ 'fhsm-edit-82' ] === array_keys( $data['cards'] ) && false !== strpos( $data['cards']['fhsm-edit-82'], 'data-on="0"' ) && false !== strpos( $data['cards']['fhsm-edit-82'], 'Use Packing&#039;s box: Cube 12 (12x12x12)' ), json_encode( $data['cards'] ) );
+	$data = box_data( 'folded', 'answers' );
+	check( 'a source order packed with a combined box: no box, the bags still Packing\'s', '' === $data['add'] && [] === $data['cards'] && '' !== $data['bag_note'] );
+	foreach ( [ 'absent', 'noplan', 'garbage', 'throws' ] as $misc ) {
+		check( "Misc $misc: nothing at all", [ 'add' => '', 'cards' => [], 'bag_note' => '' ] === box_data( 'one-box', $misc ) );
+	}
 
 	echo "a box that is not a standard box\n";
 	$html = render( 'custom', 'answers' );
@@ -259,9 +296,10 @@ $orders = [
 	5002 => new WC_Order( 5002, [ 7031 => [ 'Banggai Cardinalfish', 2 ] ], [ 'shipping' => '25.00', '_fishotel_fulfilled_by_order' => 5900 ] ),
 	5003 => new WC_Order( 5003, [ 7041 => [ 'Coral Beauty Angelfish', 1 ] ], [ 'shipping' => '25.00', '_fishotel_fulfilled_by_order' => 5900 ] ),
 	5900 => new WC_Order( 5900, [], [ 'sources' => [ 5002, 5003 ] ] ),
+	5030 => new WC_Order( 5030, [ 7051 => [ 'Firefish Goby', 2 ], 7052 => [ 'Acclimation Kit', 1 ] ], [ 'shipping' => '30.00' ] ),
 ];
-const LAYERS = [ 7001 => 3, 7002 => 2, 7011 => 3, 7012 => 2, 7013 => 2, 7014 => 3, 7021 => 2, 7031 => 2, 7041 => 3 ];
-const SCENES = [ 'one-box' => 5001, 'split' => 5010, 'custom' => 5020, 'folded' => 5002, 'combined' => 5900 ];
+const LAYERS = [ 7001 => 3, 7002 => 2, 7011 => 3, 7012 => 2, 7013 => 2, 7014 => 3, 7021 => 2, 7031 => 2, 7041 => 3, 7051 => 2, 7052 => 0 ];
+const SCENES = [ 'one-box' => 5001, 'split' => 5010, 'custom' => 5020, 'folded' => 5002, 'combined' => 5900, 'kit-first' => 5030 ];
 
 function wc_get_order( $id ) {
 	global $orders;
@@ -289,6 +327,7 @@ class FST_Shipment {
 	const ROWS = [
 		81 => [ 5010, '1ZAAA', [ 7011 ], '12x12x12', '53.73' ],
 		82 => [ 5010, '1ZBBB', [ 7012 ], null, null ],
+		83 => [ 5030, '1ZKIT', [ 7052 ], '12x12x12', null ],
 	];
 	public static function get_by_order( $order_id ) {
 		$rows = [];
@@ -399,15 +438,16 @@ if ( 'absent' !== $opts['misc'] ) {
 		if ( 'noplan' === $mode ) {
 			return $empty;
 		}
-		$box = static function ( $index, $name, $dims, $standard, $layers ) {
-			return [ 'index' => $index, 'name' => $name, 'dims' => $dims, 'standard' => $standard ? [ 'name' => $name, 'dims' => $dims ] : null, 'match' => $standard ? 'name' : 'none', 'fish' => 0, 'bags' => 0, 'layers' => $layers, 'by_bag' => [], 'items' => [] ];
+		$box = static function ( $index, $name, $dims, $standard, $layers, array $items = [] ) {
+			return [ 'index' => $index, 'name' => $name, 'dims' => $dims, 'standard' => $standard ? [ 'name' => $name, 'dims' => $dims ] : null, 'match' => $standard ? 'name' : 'none', 'fish' => 0, 'bags' => 0, 'layers' => $layers, 'by_bag' => [], 'items' => $items ];
 		};
 		$plans = [
-			5001 => [ 'from' => 'suggestion', 'boxes' => [ $box( 0, 'Tall 12', '12x12x12', true, 12 ) ] ],
-			5010 => [ 'from' => 'confirmed', 'boxes' => [ $box( 0, 'Cube 12', '12x12x12', true, 6 ), $box( 1, 'Cube 12', '12x12x12', true, 6 ), $box( 2, 'Long 20', '20x14x12', true, 11 ) ] ],
+			5001 => [ 'from' => 'suggestion', 'boxes' => [ $box( 0, 'Tall 12', '12x12x12', true, 12, [ '5001-7001' => 2, '5001-7002' => 3 ] ) ] ],
+			5010 => [ 'from' => 'confirmed', 'boxes' => [ $box( 0, 'Cube 12', '12x12x12', true, 6, [ '5010-7011' => 2 ] ), $box( 1, 'Cube 12', '12x12x12', true, 6, [ '5010-7012' => 3 ] ), $box( 2, 'Long 20', '20x14x12', true, 11, [ '5010-7013' => 4, '5010-7014' => 1 ] ) ] ],
 			5020 => [ 'from' => 'suggestion', 'boxes' => [ $box( 0, 'Fish 12', '12.5x9x6', false, 6 ) ] ],
 			5002 => [ 'from' => '', 'boxes' => [], 'packed_with' => 5900, 'owner_id' => 5900 ],
-			5900 => [ 'from' => 'confirmed', 'boxes' => [ $box( 0, 'Long 20', '20x14x12', true, 7 ) ] ],
+			5900 => [ 'from' => 'confirmed', 'boxes' => [ $box( 0, 'Long 20', '20x14x12', true, 7, [ '5002-7031' => 2, '5003-7041' => 1 ] ) ] ],
+			5030 => [ 'from' => 'suggestion', 'boxes' => [ $box( 0, 'Tall 12', '12x12x12', true, 4, [ '5030-7051' => 2 ] ) ] ],
 		];
 		if ( ! isset( $plans[ $order_id ] ) ) {
 			return $empty;
@@ -426,5 +466,10 @@ if ( file_exists( FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-pa
 	require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-packing-prefill.php';
 }
 require_once FISHOTEL_THEME_DIR . '/inc/order-fulfillment/class-fishotel-shipments-metabox.php';
+
+if ( '' !== $opts['data'] ) {
+	echo json_encode( FisHotel_Shipments_Metabox::packing_box_data( $orders[ SCENES[ $opts['scene'] ] ] ) );
+	exit( 0 );
+}
 
 FisHotel_Shipments_Metabox::render( $orders[ SCENES[ $opts['scene'] ] ] );

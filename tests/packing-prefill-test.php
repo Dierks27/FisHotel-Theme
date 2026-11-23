@@ -187,7 +187,13 @@ echo "clean_plan()\n";
 $clean = FisHotel_Packing_Prefill::clean_plan( plan( [ $cube, $long ], 'confirmed' ) );
 check( 'a plan keeps its boxes in Packing\'s order', 'plan' === $clean['state'] && [ 'Cube 12', 'Long 20' ] === array_column( $clean['boxes'], 'name' ), json_encode( $clean ) );
 check( 'confirmed stays confirmed', 'confirmed' === $clean['from'] );
-check( 'each box: its size, ShipTracker\'s name for it, its bags', [ 'name' => 'Long 20', 'dims' => '20x14x12', 'standard_name' => 'Long 20', 'layers' => '14' ] === $clean['boxes'][1], json_encode( $clean['boxes'][1] ) );
+check( 'each box: its size, ShipTracker\'s name for it, its bags, its order lines', [ 'name' => 'Long 20', 'dims' => '20x14x12', 'standard_name' => 'Long 20', 'layers' => '14', 'items' => [] ] === $clean['boxes'][1], json_encode( $clean['boxes'][1] ) );
+check( 'the lines Packing put in a box, by "<order id>-<item id>"', [ '5001-7001', '5001-7002' ] === $clean['boxes'][0]['items'], json_encode( $clean['boxes'][0] ) );
+$odd = $cube;
+$odd['items'] = [ '5001-7001' => 2, 'nonsense' => 1, 7 => 1, '5001-' => 1, '5001-7002-1' => 1 ];
+check( 'what is not such a line is left out', [ '5001-7001' ] === FisHotel_Packing_Prefill::clean_plan( plan( [ $odd ] ) )['boxes'][0]['items'] );
+$odd['items'] = 'all of them';
+check( 'lines that are not a list: none known, the box stays', [] === FisHotel_Packing_Prefill::clean_plan( plan( [ $odd ] ) )['boxes'][0]['items'] );
 check( 'not confirmed yet → a suggestion', 'suggestion' === FisHotel_Packing_Prefill::clean_plan( plan( [ $cube ] ) )['from'] );
 check( 'no word about it → a suggestion', 'suggestion' === FisHotel_Packing_Prefill::clean_plan( plan( [ $cube ], '' ) )['from'] );
 $own = FisHotel_Packing_Prefill::clean_plan( plan( [ plan_box( 0, ' Fish 12 ', '12.50x9x6', null, 6 ) ] ) );
@@ -246,7 +252,37 @@ check( 'one box of that size recorded: the second of that size', 1 === FisHotel_
 check( 'both of that size recorded: the other size', 2 === FisHotel_Packing_Prefill::assign( $three, [ recorded( '1ZAAA', '12x12x12' ), recorded( '1ZBBB', '12.0x12x12' ) ] )['next'] );
 check( 'the big one went first: the first small one is still next', 0 === FisHotel_Packing_Prefill::assign( $three, [ recorded( '1ZCCC', '20x14x12' ) ] )['next'] );
 check( 'every box recorded: nothing to fill in', null === FisHotel_Packing_Prefill::assign( $three, [ recorded( '1ZAAA', '12x12x12' ), recorded( '1ZBBB', '12x12x12' ), recorded( '1ZCCC', '20x14x12' ) ] )['next'] );
-check( 'a recorded box of a size Packing never planned uses up none', 0 === FisHotel_Packing_Prefill::assign( $three, [ recorded( '1ZDDD', '8x8x8' ) ] )['next'] );
+check( 'a recorded box of a size Packing never planned was still one of the boxes — corrected by hand: it uses up the next one', 1 === FisHotel_Packing_Prefill::assign( $three, [ recorded( '1ZDDD', '8x8x8' ) ] )['next'] && [] === FisHotel_Packing_Prefill::assign( $three, [ recorded( '1ZDDD', '8x8x8' ) ] )['cards'] );
+check( '— after the boxes recorded with a planned size took theirs, whichever came first', 2 === FisHotel_Packing_Prefill::assign( $three, [ recorded( '1ZDDD', '8x8x8' ), recorded( '1ZAAA', '12x12x12' ) ] )['next'] );
+$two_cubes = options_of( [ $cube, $cube2 ], $standard );
+check( 'two boxes planned, the first recorded in a corrected size: the form goes on the second, not back to the first', 1 === FisHotel_Packing_Prefill::assign( $two_cubes, [ recorded( '1ZDDD', '20x14x12' ) ] )['next'] );
+check( '— and with both recorded that way nothing is left to fill in', null === FisHotel_Packing_Prefill::assign( $two_cubes, [ recorded( '1ZDDD', '20x14x12' ), recorded( '1ZEEE', '9x9x9' ) ] )['next'] );
+
+// Dry goods sent ahead of the fish: a recorded box known to hold only lines
+// that are in none of Packing's boxes was never one of them.
+$planned = [ '5001-7001', '5001-7002' ];
+check( 'a box that holds only a line Packing boxed nowhere (a kit sent ahead) uses up none — whatever its size', 0 === FisHotel_Packing_Prefill::assign( $two_cubes, [ recorded( '1ZKIT', '12x12x12' ) ], [ '1ZKIT' => [ '5001-7009' ] ], $planned )['next'] && 0 === FisHotel_Packing_Prefill::assign( $two_cubes, [ recorded( '1ZKIT', '6x6x6' ) ], [ '1ZKIT' => [ '5001-7009' ] ], $planned )['next'] );
+$kit = FisHotel_Packing_Prefill::assign( $two_cubes, [ recorded( '1zkit' ) ], [ '1ZKIT' => [ '5001-7009' ] ], $planned );
+check( '— and recorded with no size it is not offered Packing\'s box either', [ 'next' => 0, 'cards' => [] ] === $kit, json_encode( $kit ) );
+check( 'a box with a fish line and the kit is one of Packing\'s', 1 === FisHotel_Packing_Prefill::assign( $two_cubes, [ recorded( '1ZMIX', '12x12x12' ) ], [ '1ZMIX' => [ '5001-7009', '5001-7001' ] ], $planned )['next'] );
+check( 'a box that covers every line of its order (no list) is one of Packing\'s', 1 === FisHotel_Packing_Prefill::assign( $two_cubes, [ recorded( '1ZALL', '12x12x12' ) ], [ '1ZALL' => null ], $planned )['next'] && 1 === FisHotel_Packing_Prefill::assign( $two_cubes, [ recorded( '1ZALL', '12x12x12' ) ], [], $planned )['next'] );
+check( 'Packing\'s lines not told: no recorded box is left out', 1 === FisHotel_Packing_Prefill::assign( $two_cubes, [ recorded( '1ZKIT', '12x12x12' ) ], [ '1ZKIT' => [ '5001-7009' ] ], [] )['next'] );
+
+echo "box_lines()\n";
+$rows = [
+	(object) [ 'id' => 1, 'order_id' => 5001, 'tracking_number' => ' 1zkit ', 'line_item_ids' => '[7009]' ],
+	(object) [ 'id' => 2, 'order_id' => 5001, 'tracking_number' => '1ZFISH', 'line_item_ids' => [ 7001, '7002' ] ],
+	(object) [ 'id' => 3, 'order_id' => 5002, 'tracking_number' => '1ZFISH', 'line_item_ids' => '[7101]' ],
+	(object) [ 'id' => 4, 'order_id' => 5001, 'tracking_number' => '1ZALL', 'line_item_ids' => null ],
+	(object) [ 'id' => 5, 'order_id' => 5001, 'tracking_number' => '1ZBAD', 'line_item_ids' => 'not json' ],
+	(object) [ 'id' => 6, 'order_id' => 5001, 'tracking_number' => '', 'line_item_ids' => '[1]' ],
+	'not a row',
+];
+check( 'the lines of each recorded box, over the orders sharing it, keyed like the cards; a row with no list (or one that cannot be read) says nothing',
+	[ '1ZKIT' => [ '5001-7009' ], '1ZFISH' => [ '5001-7001', '5001-7002', '5002-7101' ], '1ZALL' => null, '1ZBAD' => null ] === FisHotel_Packing_Prefill::box_lines( $rows ),
+	json_encode( FisHotel_Packing_Prefill::box_lines( $rows ) ) );
+check( 'a box with one row listing lines and one covering everything: nothing can be told', [ '1ZX' => null ] === FisHotel_Packing_Prefill::box_lines( [ (object) [ 'order_id' => 5001, 'tracking_number' => '1ZX', 'line_item_ids' => '[7001]' ], (object) [ 'order_id' => 5002, 'tracking_number' => '1zx', 'line_item_ids' => '' ] ] ) && [ '1ZX' => null ] === FisHotel_Packing_Prefill::box_lines( [ (object) [ 'order_id' => 5002, 'tracking_number' => '1zx', 'line_item_ids' => '' ], (object) [ 'order_id' => 5001, 'tracking_number' => '1ZX', 'line_item_ids' => '[7001]' ] ] ) );
+check( 'no shipments: nothing', [] === FisHotel_Packing_Prefill::box_lines( [] ) );
 $mixed = FisHotel_Packing_Prefill::assign( $three, [ recorded( '1zeee' ), recorded( '1ZAAA', '12x12x12' ) ] );
 check( 'a box recorded with no size takes the next one left — after the sized ones took theirs', [ 'next' => 2, 'cards' => [ '1ZEEE' => 1 ] ] === $mixed, json_encode( $mixed ) );
 check( 'its key is the box key the cards use', FisHotel_Shipment_Cost::box_key( '1zeee' ) === array_keys( $mixed['cards'] )[0] );
@@ -267,10 +303,20 @@ check( 'the second of three', 'Box 2 of 3' === FisHotel_Packing_Prefill::box_of(
 echo "view()\n";
 $view = FisHotel_Packing_Prefill::view( FisHotel_Packing_Prefill::clean_plan( plan( [ $cube ] ) ), $standard, [] );
 check( 'one box, nothing recorded: the Add Shipment form starts on it',
-	[ 'on' => true, 'value' => '12x12x12', 'name' => 'Cube 12', 'dims' => '', 'match' => 'name', 'layers' => '12', 'label' => 'From Packing (suggested)', 'use' => 'Use Packing\'s box: Cube 12 (12x12x12)' ] === $view['add'],
+	[ 'on' => true, 'value' => '12x12x12', 'name' => 'Cube 12', 'dims' => '', 'match' => 'name', 'layers' => '12', 'items' => [ '5001-7001', '5001-7002' ], 'label' => 'From Packing (suggested)', 'use' => 'Use Packing\'s box: Cube 12 (12x12x12)' ] === $view['add'],
 	json_encode( $view['add'] ) );
 check( 'no card is offered anything', [] === $view['cards'] );
-check( 'the bag line says where its number comes from', '2 per bag, 3 for spiny fish — from Packing' === $view['bag_note'] );
+check( 'the bag line says where its number comes from', 'Double-bagged, triple for spiny fish — from Packing' === $view['bag_note'] );
+
+$kit_rows = FisHotel_Packing_Prefill::box_lines( [ (object) [ 'order_id' => 5001, 'tracking_number' => '1ZKIT', 'line_item_ids' => '[7009]' ] ] );
+$view     = FisHotel_Packing_Prefill::view( FisHotel_Packing_Prefill::clean_plan( plan( [ $cube ] ) ), $standard, [ recorded( '1ZKIT', '12x12x12' ) ], $kit_rows );
+check( 'the kit went ahead in a box of its own — even one recorded with the fish box\'s size: the fish box is still filled in', is_array( $view['add'] ) && 'Cube 12' === $view['add']['name'] && 'From Packing (suggested)' === $view['add']['label'], json_encode( $view['add'] ) );
+$view = FisHotel_Packing_Prefill::view( FisHotel_Packing_Prefill::clean_plan( plan( [ $cube ] ) ), $standard, [ recorded( '1ZKIT' ) ], $kit_rows );
+check( '— and the kit\'s box, recorded with no size, is not offered the fish box', is_array( $view['add'] ) && [] === $view['cards'], json_encode( $view ) );
+$cube14 = plan_box( 0, 'Cube 12', '12x12x12', [ 'name' => 'Cube 12', 'dims' => '12x12x12' ], 14, [ '5001-7001' => 7 ] );
+$cube9  = plan_box( 1, 'Cube 12', '12x12x12', [ 'name' => 'Cube 12', 'dims' => '12x12x12' ], 9, [ '5001-7001' => 1, '5001-7002' => 2 ] );
+$view   = FisHotel_Packing_Prefill::view( FisHotel_Packing_Prefill::clean_plan( plan( [ $cube14, $cube9 ], 'confirmed' ) ), $standard, [ recorded( '1ZAAA', '20x14x12' ) ] );
+check( 'two boxes (14 and 9 bags), the first recorded in a size corrected by hand: "Box 2 of 2" with its 9 bags — not box 1 again', 'From Packing (confirmed) · Box 2 of 2' === $view['add']['label'] && '9' === $view['add']['layers'] && [ '5001-7001', '5001-7002' ] === $view['add']['items'], json_encode( $view['add'] ) );
 
 $view = FisHotel_Packing_Prefill::view( FisHotel_Packing_Prefill::clean_plan( plan( [ $cube ], 'confirmed' ) ), $standard, [ recorded( '1ZAAA', '12x12x12' ) ] );
 check( 'its one box is already recorded: nothing is filled in, nothing offered', null === $view['add'] && [] === $view['cards'] );

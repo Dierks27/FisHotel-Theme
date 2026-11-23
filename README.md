@@ -353,8 +353,25 @@ changed.
 - **An order in several boxes** starts on the first of Packing's boxes not used up by a box
   already on the order, and says which: `From Packing (confirmed) · Box 2 of 3`. A recorded box
   uses up the first Packing box of its size; boxes of the same size are taken in Packing's order,
-  because nothing tells which physical box a tracking number is. Once every Packing box is used
-  up nothing is filled in.
+  because nothing tells which physical box a tracking number is. A box recorded in a size
+  Packing never planned — corrected by hand — was still one of the boxes: it uses up the next
+  one left, so the form moves on to "Box 2" instead of offering box 1 again. Once every Packing
+  box is used up nothing is filled in.
+- **Dry goods sent ahead of the fish** are not Packing's box. Each Packing box comes with the
+  order lines in it (`items`, handed to the form as `data-items`). Ticking only items that are in
+  none of them takes the form off Packing's box — no box, no packing, and a line saying why, with
+  the `Use Packing's box` link still there; ticking a fish as well puts it back. And a recorded
+  box whose shipment lists only such lines uses up none of Packing's boxes, whatever its size,
+  so the fish box is still filled in afterwards.
+- **A tracking number that is already a box of another order** keeps the size it has: while the
+  form is still on the box Packing filled in, neither that size nor its packing is posted for
+  such a number (the form looks the number up first — `fishotel_box_lookup`). A box picked by
+  hand is posted as before.
+- **A box changed in the Packing box reaches the form without a reload.** Misc's Packing box
+  triggers `fishotel-packing-changed` on `document` each time it is drawn again; the Shipments
+  box then asks for Packing's box as it is now (`wp_ajax_fishotel_packing_box`, read-only). A
+  form still on Packing's box follows it; a form with a box picked by hand keeps it and only
+  gets the new `Use Packing's box: …` link.
 - **A recorded box keeps its record.** A box that has a size is never touched. A box recorded
   without a size gets the `Use Packing's box: …` link in its form (Edit / Add on the card) — a
   click selects the box there; nothing is saved until "Save box cost".
@@ -365,11 +382,12 @@ changed.
   (`fst_box_fish_count`) with the bags to pull — every bag doubled, tripled for a fish with
   spines — so the number each order line carries (`data-fish`), the usual packing of every box
   and the fish bag line are bags, and the stock of the fish bag supply counts down by them. The
-  fish bag line says so: `2 per bag, 3 for spiny fish — from Packing`, until the owner changes
-  the quantity. While no item is ticked the quantity is the number of bags of the box Packing
-  planned (an order in several boxes does not put all its bags in the first); once items are
-  ticked it is the sum of the ticked lines, as before. Without Misc it is a bag per fish and
-  the line says nothing.
+  fish bag line says so: `Double-bagged, triple for spiny fish — from Packing`, until the owner
+  changes the quantity. While the form is on Packing's box the quantity is the number of bags
+  of that box — while no item is ticked, and while exactly the box's lines are ticked (an order
+  in several boxes does not put all its bags in the first, and a line Packing split over two
+  boxes carries all its bags). With any other ticks it is the sum of the ticked lines, as
+  before. Without Misc it is a bag per fish and the line says nothing.
 - **What an untouched form posts.** With Packing's box filled in, typing only a tracking number
   and ticking the items posts the box (`box_dims`) and its packing (`materials`) with the
   shipment — that is the point. The remembered "Bought through" still never records itself: it
@@ -378,13 +396,17 @@ changed.
 - **Nothing is written by the theme**, and nothing is recorded before Add Shipment or a card's
   Save is clicked.
 
-Which box is selected, which box is next, what a recorded box is offered, the words, and Misc
-missing / without a plan / answering nonsense / throwing are tested by
-`php tests/packing-prefill-test.php`; `php tests/shipments-prefill-render-test.php` renders the
-real meta box against stand-ins for WordPress, ShipTracker and Misc (and checks that without a
-plan not a character differs); the bags before and after items are ticked, the words on the bag
-line, the box found by name, use / clear / a box picked by hand and what an untouched form posts
-by the two `node tests/admin-shipments*.test.js`.
+Which box is selected, which box is next (a corrected size, dry goods sent ahead), what a
+recorded box is offered, the words, and Misc missing / without a plan / answering nonsense /
+throwing are tested by `php tests/packing-prefill-test.php`;
+`php tests/shipments-prefill-render-test.php` renders the real meta box against stand-ins for
+WordPress, ShipTracker and Misc (and checks that without a plan not a character differs) and
+reads what the box answers when the Packing box changed; the bags before and after items are
+ticked (the box's own number when its lines are ticked), the words on the bag line, the box
+found by name, use / clear / a box picked by hand, dry goods alone taking the form off
+Packing's box, what is posted for a tracking number that is already another order's box, what
+a changed Packing box does to a form, and what an untouched form posts by the two
+`node tests/admin-shipments*.test.js`.
 
 ## Build Phases
 

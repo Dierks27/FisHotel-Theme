@@ -14,10 +14,14 @@
  *   packingPayload( rows, foam, paper )  → the `materials` to send
  *   packingIsEmpty( payload )
  *   costText( row, currency ) / stockText( supply ) / sumFish( values )
- *   bagCount( { ticked, open, boxLayers } ) → the fish bags of the Add Shipment block
+ *   bagCount( { ticked, open, boxLayers, tickedKeys, openKeys, boxItems } ) → the fish bags of the Add Shipment block
+ *   itemKeys( text ) / tickedAreBox( { ticked, tickedKeys, openKeys, boxItems } ) → the lines of Packing's box
  *   bagNote( { note, follow, row, supply } ) → what the bag line says about its number
  *   boxOptionIndex( options, box )       → Packing's box in a box size dropdown
  *   packingBoxStep( box, event, hasList ) → "From Packing": use / clear / picked by hand
+ *   packingBoxForItems( { on, auto, tickedKeys, boxItems } ) → the items ticked take the form off Packing's box, or back
+ *   packingBoxRefresh( { had, on, picked, has, add } ) → the Packing box changed: follow it, or only offer it
+ *   onOtherOrder( found, orderId ) / addFieldsForBox( fields, found, orderId, boxPrefilled )
  *   weatherNotes( { action, label, rows, supplies } )
  *   shipModeFields( { mode, withOrder, materials } )
  *   sharesRecordedBox( found, orderId ) / sharedBoxQuestion( orderIds )
@@ -42,7 +46,13 @@
  * Add Shipment form starts on Packing's box: the bags are that box's until
  * items are ticked, the line says where its number comes from until the
  * owner changes it, the box is found by its name before its size, and
- * picking a box by hand takes the form off Packing's.
+ * picking a box by hand takes the form off Packing's. The box's own number
+ * of bags is also what is saved when exactly its lines are ticked (a line
+ * split over two boxes does not put all its bags in the first); ticking
+ * only dry goods takes the form off Packing's box; a box that Packing
+ * filled in is never put on a tracking number that is already a box of
+ * another order; and when the Packing box changes, a form still on its box
+ * follows while a box picked by hand stays.
  *
  * @package fishotel-theme
  */
@@ -55,7 +65,8 @@ var path = require('path');
 var mod = require(path.join(__dirname, '..', 'assets/js/admin-shipments.js'));
 ['toHundredths', 'qtyText', 'toRate', 'toCents', 'centsText', 'rateText', 'rateInput', 'lineCents', 'supplyForRole', 'usualFor', 'recordRows',
   'packingRows', 'packingTotal', 'packingPayload', 'packingIsEmpty', 'costText', 'stockText', 'sumFish', 'weatherNotes',
-  'shipModeFields', 'sharesRecordedBox', 'sharedBoxQuestion', 'errorField', 'bagCount', 'bagNote', 'boxOptionIndex', 'packingBoxStep'].forEach(function (name) {
+  'shipModeFields', 'sharesRecordedBox', 'sharedBoxQuestion', 'errorField', 'bagCount', 'bagNote', 'boxOptionIndex', 'packingBoxStep',
+  'itemKeys', 'tickedAreBox', 'packingBoxForItems', 'packingBoxRefresh', 'onOtherOrder', 'addFieldsForBox'].forEach(function (name) {
   assert.strictEqual(typeof mod[name], 'function', name + ' exported');
 });
 
@@ -216,6 +227,63 @@ same(mod.bagCount({ ticked: [], open: [tang, clown], boxLayers: 'lots' }), 1200,
 same(mod.bagCount({ ticked: [], open: ['2', '3'] }), 500, 'without the Misc plugin: a bag per fish, as before');
 same(mod.bagCount(), 0, 'nothing to count');
 
+// Add Shipment needs an item ticked, so the box's own number must survive
+// the tick. 7 wrasse (14 bags) + 1 tang (3) + 3 firefish (6): Packing puts 6
+// wrasse in the first box (12 bags) and the 7th with the rest in the second
+// (2 + 3 + 6 = 11). The wrasse line carries all its 14 bags.
+var wrasse = '14', oneTang = '3', firefish = '6', kit = '0';
+var kW = '901-11', kT = '901-12', kF = '901-13', kK = '901-14';
+var box1 = [kW], box2 = [kW, kT, kF];
+same(mod.itemKeys(' 901-11  901-12\n901-13 '), [kW, kT, kF], 'the lines of Packing\'s box, as the page hands them over');
+same(mod.itemKeys(''), [], 'none handed over');
+same(mod.bagCount({ ticked: [wrasse], open: [wrasse, oneTang, firefish, kit], boxLayers: '12', tickedKeys: [kW], openKeys: [kW, kT, kF, kK], boxItems: box1 }), 1200,
+  'exactly the lines of Packing\'s box ticked: the bags that box takes (12) — not every bag of the line (14)');
+same(mod.bagCount({ ticked: [oneTang, firefish], open: [oneTang, firefish, kit], boxLayers: '11', tickedKeys: [kT, kF], openKeys: [kT, kF, kK], boxItems: box2 }), 1100,
+  'the second box, its wrasse line already shipped: its lines still to ship ticked → its 11 bags (12 + 11 = the order\'s 23)');
+same(mod.bagCount({ ticked: [wrasse, kit], open: [wrasse, oneTang, firefish, kit], boxLayers: '12', tickedKeys: [kW, kK], openKeys: [kW, kT, kF, kK], boxItems: box1 }), 1200,
+  'a kit riding along takes no bag: still the box\'s own number');
+same(mod.bagCount({ ticked: [wrasse, oneTang], open: [wrasse, oneTang, firefish], boxLayers: '12', tickedKeys: [kW, kT], openKeys: [kW, kT, kF], boxItems: box1 }), 1700,
+  'a fish line of another box ticked too: the bags of what is ticked');
+same(mod.bagCount({ ticked: [oneTang], open: [oneTang, firefish], boxLayers: '11', tickedKeys: [kT], openKeys: [kT, kF], boxItems: box2 }), 300,
+  'only some of the box\'s lines ticked: the bags of what is ticked');
+same(mod.bagCount({ ticked: [wrasse], open: [wrasse, oneTang], boxLayers: '12', tickedKeys: [kW], openKeys: [kW, kT], boxItems: [] }), 1400,
+  'Packing did not say which lines are in its box: the bags of what is ticked');
+same(mod.bagCount({ ticked: [wrasse], open: [wrasse, oneTang], boxLayers: null, tickedKeys: [kW], openKeys: [kW, kT], boxItems: null }), 1400,
+  'the form is off Packing\'s box: the bags of what is ticked');
+// 9 wrasse (18 bags) + 3 tangs (9) in two boxes of one size: 12 and 15.
+same(mod.bagCount({ ticked: ['18'], open: ['18', '9'], boxLayers: '12', tickedKeys: ['902-21'], openKeys: ['902-21', '902-22'], boxItems: ['902-21'] }), 1200, 'two boxes of one size: the first takes its 12 — not the line\'s 18');
+same(mod.bagCount({ ticked: ['9'], open: ['9'], boxLayers: '15', tickedKeys: ['902-22'], openKeys: ['902-22'], boxItems: ['902-21', '902-22'] }), 1500, '— and the second its 15 (27 in all)');
+same(mod.tickedAreBox({ ticked: [wrasse], tickedKeys: [kW], openKeys: [kW, kT], boxItems: box1 }), true, 'the items ticked are Packing\'s box');
+same(mod.tickedAreBox({ ticked: [], tickedKeys: [], openKeys: [kW], boxItems: box1 }), false, 'nothing ticked is not "the box\'s lines"');
+same(mod.tickedAreBox({ ticked: [kit], tickedKeys: [kK], openKeys: [kK], boxItems: box1 }), false, 'every line of the box already shipped: nothing of it is left to tick');
+same(mod.tickedAreBox(), false, 'nothing asked: no');
+
+// ── The items ticked and Packing's box ─────────────────────────────────
+// 2 firefish + 1 tang + an acclimation kit, one box. Shipping the kit
+// first must not take the fish box.
+var fishBox = ['903-31', '903-32'];
+same(mod.packingBoxForItems({ on: true, auto: false, tickedKeys: ['903-33'], boxItems: fishBox }), 'off', 'only the kit ticked: this shipment is not Packing\'s box — the form goes off it');
+same(mod.packingBoxForItems({ on: true, auto: false, tickedKeys: ['903-33', '903-31'], boxItems: fishBox }), '', 'the kit and a fish ticked: it stays on Packing\'s box');
+same(mod.packingBoxForItems({ on: true, auto: false, tickedKeys: [], boxItems: fishBox }), '', 'nothing ticked: it stays');
+same(mod.packingBoxForItems({ on: false, auto: true, tickedKeys: ['903-33', '903-32'], boxItems: fishBox }), 'on', 'taken off by the kit, then a fish is ticked as well: back on Packing\'s box');
+same(mod.packingBoxForItems({ on: false, auto: true, tickedKeys: [], boxItems: fishBox }), 'on', '… or the kit is unticked again: back on it');
+same(mod.packingBoxForItems({ on: false, auto: true, tickedKeys: ['903-33'], boxItems: fishBox }), '', 'still only the kit: it stays off');
+same(mod.packingBoxForItems({ on: false, auto: false, tickedKeys: ['903-31'], boxItems: fishBox }), '', 'a box picked or cleared by hand is never put back by a tick');
+same(mod.packingBoxForItems({ on: true, auto: false, tickedKeys: ['903-33'], boxItems: [] }), '', 'Packing did not say which lines are in its box: nothing is taken off');
+same(mod.packingBoxForItems(), '', 'nothing asked: nothing');
+
+// ── The Packing box on the same screen changed ─────────────────────────
+same(mod.packingBoxRefresh({ had: true, on: true, picked: true, has: true, add: true }), 'use', 'the form is still on Packing\'s box: it follows the box Packing has now');
+same(mod.packingBoxRefresh({ had: true, on: false, picked: true, has: true, add: true }), 'offer', 'a box picked by hand stays: only the "Use Packing\'s box" link is new');
+same(mod.packingBoxRefresh({ had: true, on: false, picked: false, has: true, add: true }), 'offer', 'cleared by hand stays cleared');
+same(mod.packingBoxRefresh({ had: false, on: false, picked: false, has: true, add: true }), 'use', 'Packing had no box before and nothing was picked: the form goes on its box, as a reload would show it');
+same(mod.packingBoxRefresh({ had: false, on: false, picked: true, has: true, add: true }), 'offer', '… a box was picked meanwhile: offered only');
+same(mod.packingBoxRefresh({ had: false, on: false, picked: false, has: true, add: false }), 'offer', 'a recorded box is never put on Packing\'s: offered only');
+same(mod.packingBoxRefresh({ had: true, on: true, picked: true, has: false, add: true }), 'clear', 'Packing has no box any more and the form was on it: emptied');
+same(mod.packingBoxRefresh({ had: true, on: false, picked: true, has: false, add: true }), 'drop', '… and a box picked by hand stays; only the link goes');
+same(mod.packingBoxRefresh({ had: false, on: false, picked: false, has: false, add: true }), '', 'no Packing box before or after: nothing');
+same(mod.packingBoxRefresh(), '', 'nothing asked: nothing');
+
 // The block of the box Packing picked, before and after an item is ticked.
 rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: mod.bagCount({ ticked: [], open: [tang, clown, goby], boxLayers: '12' }) });
 same(brief(rows), ['6:1', '3:12', '1:1', '2:0'], 'Packing\'s box, nothing ticked: the box, its 12 bags, the heat pack');
@@ -226,7 +294,7 @@ rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'),
 same(brief(rows), ['6:1', '3:7*', '1:1', '2:0'], 'a number of bags the owner changed is kept, whatever is ticked next');
 
 // What the bag line says about its number.
-var packingWords = '2 per bag, 3 for spiny fish — from Packing';
+var packingWords = 'Double-bagged, triple for spiny fish — from Packing';
 var bagSupply = supplies[2];
 rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: 1200 });
 same(mod.bagNote({ note: packingWords, follow: true, row: rows[1], supply: bagSupply }), packingWords, 'the bag line says where its number comes from');
@@ -482,6 +550,33 @@ same(mod.sharesRecordedBox({ exists: false, order_ids: [], has_materials: false 
 same(mod.sharesRecordedBox({ exists: true, order_ids: [100, 104], has_materials: true }, '104'), false, 'already on this very order: ShipTracker refuses the duplicate, no question');
 same(mod.sharesRecordedBox(null, '104'), false, 'the lookup gave nothing: nothing to ask');
 same(mod.sharesRecordedBox({ exists: true, has_materials: true }, '104'), true, 'no order list given: still someone else\'s box');
+same(mod.onOtherOrder({ exists: true, order_ids: [100], has_materials: false }, '104'), true, 'a box on another order, packing recorded or not');
+same(mod.onOtherOrder({ exists: true, order_ids: [100, 104] }, '104'), false, 'on this very order: not another order\'s');
+same(mod.onOtherOrder({ exists: false, order_ids: [] }, '104'), false, 'a new tracking number: nobody\'s');
+same(mod.onOtherOrder(null, '104'), false, 'the lookup gave nothing: nobody\'s');
+
+// What the Add Shipment form posts once the number was looked up. An
+// untouched form on Packing's box (16x12x10 with its packing) meets a
+// tracking number that is already another order's Fish 12 box.
+var prefilledFields = { box_dims: '16x12x10', materials: '{"lines":[]}' };
+var otherBox = { exists: true, order_ids: [34256], has_materials: true };
+same(mod.addFieldsForBox(prefilledFields, otherBox, '34300', true), { ask: true, fields: {} },
+  'Packing\'s box on a number that is already a recorded box: asked, and neither the size nor the packing is sent — the box keeps the size it has');
+same(prefilledFields, { box_dims: '16x12x10', materials: '{"lines":[]}' }, 'what was read from the form is not changed');
+same(mod.addFieldsForBox(prefilledFields, { exists: true, order_ids: [34256], has_materials: false }, '34300', true), { ask: false, fields: {} },
+  '… a box with no packing recorded: no question, and still nothing of Packing\'s box is put on it');
+same(mod.addFieldsForBox({ box_dims: '16x12x10', box_weight: '11', label_cost: '40.00', materials: '{}' }, otherBox, '34300', true), { ask: true, fields: { box_weight: '11', label_cost: '40.00' } },
+  'a cost and a weight typed by hand still go');
+same(mod.addFieldsForBox(prefilledFields, { exists: false, order_ids: [], has_materials: false }, '34300', true), { ask: false, fields: prefilledFields },
+  'a new tracking number: Packing\'s box and its packing are sent — that is what it is filled in for');
+same(mod.addFieldsForBox(prefilledFields, null, '34300', true), { ask: false, fields: prefilledFields }, 'the lookup gave nothing: sent as it is');
+same(mod.addFieldsForBox(prefilledFields, otherBox, '34300', false), { ask: true, fields: { box_dims: '16x12x10' } },
+  'a box picked by hand on a recorded box: asked, the packing kept back, the size sent — as before v1.27');
+same(mod.addFieldsForBox(prefilledFields, { exists: true, order_ids: [34256], has_materials: false }, '34300', false), { ask: false, fields: prefilledFields },
+  'a box picked by hand on a box with no packing: everything sent — as before v1.27');
+same(mod.addFieldsForBox(prefilledFields, { exists: true, order_ids: [34256, 34300], has_materials: true }, '34300', true), { ask: false, fields: prefilledFields },
+  'already on this very order: ShipTracker refuses the duplicate itself');
+same(mod.addFieldsForBox(undefined, otherBox, '34300', true), { ask: true, fields: {} }, 'nothing to post: nothing');
 var question = mod.sharedBoxQuestion([100, '102']);
 same(question.indexOf('This tracking number is already a box on order #100, #102, and its packing is recorded.') === 0, true, 'the question names the orders the box is on');
 same(/The packing on record is left as it is/.test(question) && /Add this order to that box\?$/.test(question), true, 'and says the record is kept');
@@ -499,4 +594,4 @@ same(mod.errorField('The label cost must be an amount of 0 or more, for example 
 same(mod.errorField('This order has a label of its own. Remove its tracking first.'), '', 'a ship mode refusal is not a field error');
 same(mod.errorField('Order #100 is a local pickup, so it has no box.'), '', '… nor is a refusal of the other order');
 
-console.log('admin-shipments-packing: OK (' + checks + ' checks — a box fills the block, the bags are Packing\'s once it counts them, Packing\'s box by name then size, a box change keeps what was touched, custom starts at 0, records stay as recorded, total = ShipTracker\'s sum, 0 lines not sent, an added line carries its unit cost, weather note, ship mode fields)');
+console.log('admin-shipments-packing: OK (' + checks + ' checks — a box fills the block, the bags are Packing\'s once it counts them, the box\'s own bags when its lines are ticked, dry goods alone take the form off Packing\'s box, Packing\'s box never lands on another order\'s box, a changed Packing box is followed, Packing\'s box by name then size, a box change keeps what was touched, custom starts at 0, records stay as recorded, total = ShipTracker\'s sum, 0 lines not sent, an added line carries its unit cost, weather note, ship mode fields)');

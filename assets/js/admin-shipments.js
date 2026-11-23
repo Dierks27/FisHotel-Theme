@@ -24,7 +24,12 @@
  *     its packing block is open as if the box had been picked by hand.
  *     Picking another box takes the mark off; "Use Packing's box" puts it
  *     back. The fish bags are Packing's bags — two for every bag, three for
- *     a fish with spines — and the line says so.
+ *     a fish with spines — and the line says so. Ticking only items that
+ *     are not in Packing's box (dry goods sent ahead) takes the form off
+ *     it; a tracking number that is already a box of another order keeps
+ *     its own size; and when the Packing box says it changed (the document
+ *     event "fishotel-packing-changed") its box is asked for again →
+ *     wp_ajax_fishotel_packing_box.
  *   - How it went out (an order with no shipment): local pickup, with its
  *     own packing block, or "went in another order's box" with a lookup of
  *     that order → wp_ajax_fst_set_ship_mode.
@@ -518,25 +523,121 @@
 		return total;
 	}
 
+	/** The order lines of Packing's box, from its data-items: "5001-7001 5001-7002". */
+	function itemKeys( text ) {
+		text = clean( text );
+		return text ? text.split( /\s+/ ) : [];
+	}
+
+	function hasKey( keys, key ) {
+		return ( keys || [] ).indexOf( key ) > -1;
+	}
+
+	/**
+	 * True when the items ticked are Packing's box: every line of that box
+	 * still to ship is ticked, and nothing else that takes a bag is (dry
+	 * goods riding along change nothing).
+	 *
+	 * @param {Object} o { ticked (values), tickedKeys, openKeys, boxItems } — keys are "<order id>-<item id>"
+	 */
+	function tickedAreBox( o ) {
+		o = o || {};
+		var box        = o.boxItems || [];
+		var tickedKeys = o.tickedKeys || [];
+		var open       = ( o.openKeys || [] ).filter( function ( key ) {
+			return hasKey( box, key );
+		} );
+		if ( ! open.length || ! tickedKeys.length ) {
+			return false;
+		}
+		if ( open.some( function ( key ) {
+			return ! hasKey( tickedKeys, key );
+		} ) ) {
+			return false;
+		}
+		return ! tickedKeys.some( function ( key, i ) {
+			return ! hasKey( box, key ) && ( toHundredths( ( o.ticked || [] )[ i ] ) || 0 ) > 0;
+		} );
+	}
+
 	/**
 	 * The fish bags of the Add Shipment block, in whole hundredths.
 	 *
 	 * Each order line carries its number (data-fish): its fish — or, with
 	 * the FisHotel Misc plugin's Packing section, the bags Packing plans for
 	 * them, two for every bag and three for a fish with spines. Items ticked:
-	 * their sum. None ticked: every item still to ship — unless the form is
-	 * on Packing's box, which says itself how many bags it takes (an order
-	 * in several boxes does not put all its bags in the first).
+	 * their sum. None ticked: every item still to ship.
 	 *
-	 * @param {Object} o { ticked (values), open (values), boxLayers (Packing's number, '' / null = none) }
+	 * A form on Packing's box takes that box's own number instead — while
+	 * none is ticked, and while the items ticked are exactly the box's
+	 * lines. A line Packing split over two boxes carries all its bags, so
+	 * the sum would put them all in the first box.
+	 *
+	 * @param {Object} o { ticked (values), open (values), boxLayers (Packing's number, '' / null = none),
+	 *                   tickedKeys, openKeys, boxItems (see tickedAreBox(); left out = the sum) }
 	 */
 	function bagCount( o ) {
 		o = o || {};
-		if ( o.ticked && o.ticked.length ) {
-			return sumFish( o.ticked );
-		}
 		var layers = clean( o.boxLayers ) === '' ? null : toHundredths( o.boxLayers );
+		if ( o.ticked && o.ticked.length ) {
+			return layers !== null && tickedAreBox( o ) ? layers : sumFish( o.ticked );
+		}
 		return layers === null ? sumFish( o.open ) : layers;
+	}
+
+	/**
+	 * What the items ticked do to a form's "From Packing" box:
+	 *   'off' — the form is on Packing's box, and not one of the items
+	 *           ticked is a line of that box: this shipment is something
+	 *           else (dry goods sent ahead), so the box is emptied;
+	 *   'on'  — it was taken off that way, and the items no longer say so:
+	 *           back on Packing's box;
+	 *   ''    — nothing. A box picked, cleared or typed by hand is never
+	 *           touched, and neither is a box whose lines are not known.
+	 *
+	 * @param {Object} o { on, auto (taken off by the items), tickedKeys, boxItems }
+	 */
+	function packingBoxForItems( o ) {
+		o = o || {};
+		var box    = o.boxItems || [];
+		var ticked = o.tickedKeys || [];
+		if ( ! box.length ) {
+			return '';
+		}
+		var other = ticked.length > 0 && ! ticked.some( function ( key ) {
+			return hasKey( box, key );
+		} );
+		if ( o.on ) {
+			return other ? 'off' : '';
+		}
+		return o.auto && ! other ? 'on' : '';
+	}
+
+	/**
+	 * What a form does when Packing's box was asked for again (the Packing
+	 * box on the same screen changed):
+	 *   'use'   — go, or stay, on Packing's box as it is now;
+	 *   'offer' — only show its "Use Packing's box" link: the form holds a
+	 *             box picked by hand;
+	 *   'clear' — Packing has no box any more and the form was on it: empty it;
+	 *   'drop'  — it has none any more: take the link away;
+	 *   ''      — nothing.
+	 *
+	 * @param {Object} o { had (the form shows a Packing box), on (it is on it), picked (a box is
+	 *                   picked or typed), has (Packing has a box now), add (the Add Shipment form) }
+	 */
+	function packingBoxRefresh( o ) {
+		o = o || {};
+		if ( o.has ) {
+			if ( o.had ) {
+				return o.on ? 'use' : 'offer';
+			}
+			return o.add && ! o.picked ? 'use' : 'offer';
+		}
+		if ( o.had ) {
+			return o.on ? 'clear' : 'drop';
+		}
+		return '';
 	}
 
 	/**
@@ -646,21 +747,66 @@
 	}
 
 	/**
-	 * Whether the Add Shipment form must ask before it adds: the tracking
-	 * number is already a box with its packing recorded, on other orders
-	 * only. (On this very order ShipTracker refuses the duplicate anyway.)
+	 * Whether a tracking number is already a box on other orders only. (On
+	 * this very order ShipTracker refuses the duplicate anyway.)
 	 *
-	 * @param {Object} found   { exists, order_ids, has_materials } or null
+	 * @param {Object} found   { exists, order_ids } or null
 	 * @param {*}      orderId The order on screen.
 	 */
-	function sharesRecordedBox( found, orderId ) {
-		if ( ! found || ! found.exists || ! found.has_materials ) {
+	function onOtherOrder( found, orderId ) {
+		if ( ! found || ! found.exists ) {
 			return false;
 		}
 		var own = parseInt( orderId, 10 );
 		return ! ( found.order_ids || [] ).some( function ( id ) {
 			return parseInt( id, 10 ) === own;
 		} );
+	}
+
+	/**
+	 * Whether the Add Shipment form must ask before it adds: the tracking
+	 * number is already a box with its packing recorded, on other orders
+	 * only.
+	 *
+	 * @param {Object} found   { exists, order_ids, has_materials } or null
+	 * @param {*}      orderId The order on screen.
+	 */
+	function sharesRecordedBox( found, orderId ) {
+		return onOtherOrder( found, orderId ) && !! found.has_materials;
+	}
+
+	/**
+	 * What the Add Shipment form posts once its tracking number was looked
+	 * up, and whether to ask first.
+	 *
+	 *  - The number is a box with its packing recorded, on another order:
+	 *    ask, and the packing is not sent (the record is kept).
+	 *  - The number is a box on another order and the form is still on the
+	 *    box Packing filled in: neither the size nor its packing is sent.
+	 *    Nobody chose that box for this tracking number — the box that
+	 *    exists keeps the size it has. (A box picked by hand is sent, as
+	 *    always.)
+	 *
+	 * @param {Object}  fields       addCostFields() + materials.
+	 * @param {Object}  found        { exists, order_ids, has_materials } or null
+	 * @param {*}       orderId      The order on screen.
+	 * @param {Boolean} boxPrefilled The form is still on Packing's box.
+	 * @return {Object} { ask, fields }
+	 */
+	function addFieldsForBox( fields, found, orderId, boxPrefilled ) {
+		var out = {};
+		Object.keys( fields || {} ).forEach( function ( key ) {
+			out[ key ] = fields[ key ];
+		} );
+		var ask = sharesRecordedBox( found, orderId );
+		if ( ask ) {
+			delete out.materials;
+		}
+		if ( boxPrefilled && onOtherOrder( found, orderId ) ) {
+			delete out.box_dims;
+			delete out.materials;
+		}
+		return { ask: ask, fields: out };
 	}
 
 	/** The question asked then: the packing on record stays as it is. */
@@ -722,7 +868,13 @@
 			costText:         costText,
 			stockText:        stockText,
 			sumFish:          sumFish,
+			itemKeys:         itemKeys,
+			tickedAreBox:     tickedAreBox,
 			bagCount:         bagCount,
+			packingBoxForItems: packingBoxForItems,
+			packingBoxRefresh: packingBoxRefresh,
+			onOtherOrder:     onOtherOrder,
+			addFieldsForBox:  addFieldsForBox,
 			bagNote:          bagNote,
 			boxOptionIndex:   boxOptionIndex,
 			packingBoxStep:   packingBoxStep,
@@ -790,9 +942,19 @@
 			return $fields.find( '.fhsm-box-packing' ).attr( 'data-on' ) === '1';
 		}
 
+		// Show a "From Packing" piece as on its box or off it. `auto`: it was
+		// taken off by the items ticked, not by hand — and says so.
+		function packingBoxMark( $from, on, auto ) {
+			$from.attr( 'data-on', on ? '1' : '0' ).attr( 'data-auto', ! on && auto ? '1' : '' );
+			$from.find( '.fhsm-box-from' ).prop( 'hidden', ! on );
+			$from.find( '.fhsm-box-use' ).prop( 'hidden', !! on );
+			$from.find( '.fhsm-box-why' ).prop( 'hidden', !! on || ! auto );
+		}
+
 		// Put a form on Packing's box ('use'), empty it ('clear') or take the
-		// mark off because a box was picked by hand ('hand').
-		function packingBoxApply( $fields, event ) {
+		// mark off because a box was picked by hand ('hand'). `auto`: the
+		// items ticked did it (packingBoxForItems()).
+		function packingBoxApply( $fields, event, auto ) {
 			var $from = $fields.find( '.fhsm-box-packing' );
 			if ( ! $from.length ) {
 				return;
@@ -812,9 +974,7 @@
 			}, event, hasList );
 
 			// The mark first: what follows the box reads it.
-			$from.attr( 'data-on', step.on ? '1' : '0' );
-			$from.find( '.fhsm-box-from' ).prop( 'hidden', ! step.on );
-			$from.find( '.fhsm-box-use' ).prop( 'hidden', step.on );
+			packingBoxMark( $from, step.on, auto );
 
 			if ( step.set ) {
 				var at = boxOptionIndex( options, { value: step.set.box, name: step.set.name } );
@@ -888,16 +1048,80 @@
 		// Packing's box, the bags that box takes.
 		function tickedFish() {
 			var $items = $box.find( '.fhsm-line-item-check:not(:disabled)' );
+			var $from  = $newFields.find( '.fhsm-box-packing' );
+			var onBox  = onPackingBox( $newFields );
 			function fish( $checks ) {
 				return $checks.map( function () {
 					return $( this ).attr( 'data-fish' );
 				} ).get();
 			}
 			return bagCount( {
-				ticked:    fish( $items.filter( ':checked' ) ),
-				open:      fish( $items ),
-				boxLayers: onPackingBox( $newFields ) ? $newFields.find( '.fhsm-box-packing' ).attr( 'data-layers' ) : null
+				ticked:     fish( $items.filter( ':checked' ) ),
+				open:       fish( $items ),
+				boxLayers:  onBox ? $from.attr( 'data-layers' ) : null,
+				tickedKeys: lineKeys( $items.filter( ':checked' ) ),
+				openKeys:   lineKeys( $items ),
+				boxItems:   onBox ? itemKeys( $from.attr( 'data-items' ) ) : null
 			} );
+		}
+
+		// Order lines as Packing names them: "<order id>-<item id>".
+		function lineKeys( $checks ) {
+			return $checks.map( function () {
+				return clean( $( this ).attr( 'data-source-id' ) ) + '-' + clean( this.value );
+			} ).get();
+		}
+
+		// The items ticked may say this shipment is not Packing's box at all
+		// (only dry goods ticked): the form goes off it, and back on it when
+		// they no longer say so.
+		function packingBoxFollowItems() {
+			var $from = $newFields.find( '.fhsm-box-packing' );
+			if ( ! $from.length ) {
+				return;
+			}
+			var step = packingBoxForItems( {
+				on:         onPackingBox( $newFields ),
+				auto:       $from.attr( 'data-auto' ) === '1',
+				tickedKeys: lineKeys( $box.find( '.fhsm-line-item-check:not(:disabled)' ).filter( ':checked' ) ),
+				boxItems:   itemKeys( $from.attr( 'data-items' ) )
+			} );
+			if ( step === 'off' ) {
+				packingBoxApply( $newFields, 'clear', true );
+			} else if ( step === 'on' ) {
+				packingBoxApply( $newFields, 'use' );
+			}
+		}
+
+		// Packing's box was asked for again: put its piece (`html`, '' when
+		// Packing has no box for the form) in place of the one a form shows.
+		function packingBoxSwap( $fields, html, isAdd ) {
+			var $old = $fields.find( '.fhsm-box-packing' );
+			var auto = $old.attr( 'data-auto' ) === '1';
+			var step = packingBoxRefresh( {
+				had:    $old.length > 0,
+				on:     onPackingBox( $fields ),
+				picked: boxDims( $fields.find( '.fhsm-cost-box' ).val(), $fields.find( '.fhsm-cost-dims' ).val() ) !== '',
+				has:    !! html,
+				add:    isAdd
+			} );
+			if ( ! step ) {
+				return;
+			}
+			if ( step === 'clear' ) {
+				packingBoxApply( $fields, 'clear' );
+			}
+			$old.remove();
+			var $new = html ? $( $.parseHTML( String( html ) ) ).filter( '.fhsm-box-packing' ).first() : $();
+			if ( ! $new.length ) {
+				return;
+			}
+			$fields.find( '.fhsm-cost-field[data-field="box"]' ).append( $new );
+			if ( step === 'use' ) {
+				packingBoxApply( $fields, 'use' );
+			} else {
+				packingBoxMark( $new, false, auto );
+			}
 		}
 
 		// A block starts from its record when it has one — kept as recorded,
@@ -1081,6 +1305,7 @@
 
 		// The items ticked changed: the fish bags of the Add Shipment block follow.
 		function packingFollowItems() {
+			packingBoxFollowItems();
 			var $p = $newCost.find( '.fhsm-packing' );
 			if ( packingState( $p ) && ! $p.prop( 'hidden' ) ) {
 				packingFill( $p );
@@ -1317,6 +1542,38 @@
 			$fields.find( use ? '.fhsm-box-clear' : '.fhsm-box-use' ).trigger( 'focus' );
 		} );
 
+		// The Packing box of the FisHotel Misc plugin (same screen) was drawn
+		// again — a box confirmed, changed or cleared. Ask for its box as it
+		// is now: a form still on Packing's box follows it, a form with a
+		// box picked by hand only gets the new "Use Packing's box" link.
+		var packingAsked = 0;
+		$( document ).on( 'fishotel-packing-changed', function ( e, detail ) {
+			var changed = detail && detail.orderId ? parseInt( detail.orderId, 10 ) : 0;
+			if ( ! $newFields.length || ( changed && changed !== parseInt( orderId, 10 ) ) ) {
+				return;
+			}
+			var asked = ++packingAsked;
+			$.post( window.ajaxurl, {
+				action:   'fishotel_packing_box',
+				nonce:    nonce,
+				order_id: orderId
+			} ).done( function ( response ) {
+				var data = response && response.success ? response.data : null;
+				// Only the last answer counts: an earlier one is the box from before.
+				if ( ! data || asked !== packingAsked ) {
+					return;
+				}
+				if ( packingData && data.bag_note ) {
+					packingData.bagNote = data.bag_note;
+				}
+				packingBoxSwap( $newFields, data.add, true );
+				$box.find( '.fhsm-cost-form' ).each( function () {
+					packingBoxSwap( $( this ).find( '.fhsm-cost-fields' ), ( data.cards || {} )[ this.id ], false );
+				} );
+				packingFollowItems();
+			} );
+		} );
+
 		// Typing in a flagged field withdraws its message.
 		$box.on( 'input change', '.fhsm-cost-field-invalid input, .fhsm-cost-field-invalid select', function () {
 			var $field = $( this ).closest( '.fhsm-cost-field' );
@@ -1421,7 +1678,11 @@
 				return parseInt( $( this ).val(), 10 );
 			} ).get().filter( function ( n ) { return n > 0; } );
 			// Empty when ShipTracker does not record costs (no inputs rendered).
-			var costFields = addCostFields( readCostValues( $newFields ) );
+			var costValues = readCostValues( $newFields );
+			var costFields = addCostFields( costValues );
+			// The form is still on the box Packing filled in: nobody chose it
+			// for this tracking number.
+			var prefilled  = !! ( costValues.boxPrefilled && costFields.box_dims );
 			// The packing of the box picked — null while no box is picked (or
 			// ShipTracker does not record packing), and then nothing is sent.
 			var packing = packingRead( $newCost.find( '.fhsm-packing' ), false );
@@ -1478,15 +1739,18 @@
 				} );
 			}
 
-			if ( ! costFields.materials ) {
+			if ( ! costFields.materials && ! prefilled ) {
 				send();
 				return;
 			}
 
-			// ShipTracker takes `materials` as sent. When the tracking number
-			// is already a box with its packing recorded — another order went
-			// out in it — this order joins that box and the record is kept:
-			// asked first, and then the packing is not sent.
+			// ShipTracker takes `materials` — and a box size — as sent. When
+			// the tracking number is already a box with its packing recorded —
+			// another order went out in it — this order joins that box and the
+			// record is kept: asked first, and then the packing is not sent.
+			// And a box that Packing filled in is never put on a tracking
+			// number that is already a box of another order: that box keeps
+			// its size (addFieldsForBox()).
 			setMessage( $msg, 'Checking…', '' );
 			$.post( window.ajaxurl, {
 				action:          'fishotel_box_lookup',
@@ -1494,14 +1758,13 @@
 				tracking_number: tracking
 			} ).done( function ( response ) {
 				var found = response && response.success ? response.data : null;
-				if ( sharesRecordedBox( found, orderId ) ) {
-					if ( ! window.confirm( sharedBoxQuestion( found.order_ids ) ) ) {
-						setMessage( $msg, '', '' );
-						$btn.prop( 'disabled', false );
-						return;
-					}
-					delete costFields.materials;
+				var plan  = addFieldsForBox( costFields, found, orderId, prefilled );
+				if ( plan.ask && ! window.confirm( sharedBoxQuestion( found.order_ids ) ) ) {
+					setMessage( $msg, '', '' );
+					$btn.prop( 'disabled', false );
+					return;
 				}
+				costFields = plan.fields;
 				send();
 			} ).fail( send );
 		} );

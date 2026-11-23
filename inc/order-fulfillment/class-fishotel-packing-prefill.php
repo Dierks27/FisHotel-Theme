@@ -19,8 +19,9 @@
  * ("how many fish are in this box?", the `fst_box_fish_count` filter) with
  * the bags to pull — every bag doubled, tripled for a fish with spines —
  * so the fish bag line of a packing block already holds that number. What
- * this class adds is the box's own number of bags, used while no item is
- * ticked, and the words that say where the number comes from.
+ * this class adds is the box's own number of bags — used while no item is
+ * ticked, or exactly the box's lines are — the lines Packing put in the
+ * box, and the words that say where the number comes from.
  *
  * Everything above the "Misc / WooCommerce readers" divider needs neither
  * WordPress nor Misc and is covered by `php tests/packing-prefill-test.php`.
@@ -36,7 +37,7 @@ class FisHotel_Packing_Prefill {
 	const CUSTOM_BOX = 'custom';
 
 	/** What the fish bag line says once its number comes from Packing. */
-	const BAG_NOTE = '2 per bag, 3 for spiny fish — from Packing';
+	const BAG_NOTE = 'Double-bagged, triple for spiny fish — from Packing';
 
 	// ── Pure helpers ────────────────────────────────────────────────────
 
@@ -114,7 +115,8 @@ class FisHotel_Packing_Prefill {
 	 *
 	 * @param mixed $raw fishotel_packing_shipment_plan() result.
 	 * @return array|null { state: 'plan', from: 'confirmed' | 'suggestion',
-	 *                    boxes: [ { name, dims, standard_name, layers ("14", or '' when not told) } ] }
+	 *                    boxes: [ { name, dims, standard_name, layers ("14", or '' when not told),
+	 *                    items: the order lines in the box, as "<order id>-<item id>" } ] }
 	 *                    or { state: 'folded', packed_with: int }.
 	 */
 	public static function clean_plan( $raw ) {
@@ -147,11 +149,18 @@ class FisHotel_Packing_Prefill {
 			$layers  = isset( $box['layers'] ) && ! is_bool( $box['layers'] ) && is_numeric( $box['layers'] ) && (float) $box['layers'] >= 0
 				? rtrim( rtrim( number_format( (float) $box['layers'], 2, '.', '' ), '0' ), '.' )
 				: '';
+			$items = [];
+			foreach ( isset( $box['items'] ) && is_array( $box['items'] ) ? array_keys( $box['items'] ) : [] as $line ) {
+				if ( is_string( $line ) && preg_match( '/^\d+-\d+$/', $line ) ) {
+					$items[] = $line;
+				}
+			}
 			$boxes[] = [
 				'name'          => self::text_of( $box, 'name' ),
 				'dims'          => self::dims_text( $numbers ),
 				'standard_name' => isset( $box['standard'] ) ? self::text_of( $box['standard'], 'name' ) : '',
 				'layers'        => $layers,
+				'items'         => $items,
 			];
 		}
 
@@ -216,23 +225,73 @@ class FisHotel_Packing_Prefill {
 	}
 
 	/**
+	 * The order lines each recorded box holds, from the shipment rows of
+	 * the view: tracking number (as FisHotel_Shipment_Cost::box_key() spells
+	 * it) => [ "<order id>-<item id>" ]. Null for a box with a row that
+	 * lists no lines — it covers every line of its order, so nothing can be
+	 * told from it.
+	 *
+	 * @param array $shipments FST_Shipment rows: tracking_number, order_id, line_item_ids
+	 *                         (a list, or the JSON ShipTracker stores).
+	 * @return array box key => string[]|null
+	 */
+	public static function box_lines( array $shipments ) {
+		$lines = [];
+		foreach ( $shipments as $row ) {
+			if ( ! is_object( $row ) || ! isset( $row->tracking_number ) || ! is_scalar( $row->tracking_number ) ) {
+				continue;
+			}
+			$key = strtoupper( trim( (string) $row->tracking_number ) );
+			if ( '' === $key ) {
+				continue;
+			}
+			$ids      = isset( $row->line_item_ids ) ? $row->line_item_ids : null;
+			$ids      = is_string( $ids ) && '' !== $ids ? json_decode( $ids, true ) : $ids;
+			$order_id = isset( $row->order_id ) && is_numeric( $row->order_id ) ? (int) $row->order_id : 0;
+			if ( ! is_array( $ids ) || empty( $ids ) || $order_id <= 0 ) {
+				$lines[ $key ] = null;
+				continue;
+			}
+			if ( array_key_exists( $key, $lines ) && null === $lines[ $key ] ) {
+				continue;
+			}
+			foreach ( $ids as $id ) {
+				if ( is_scalar( $id ) && (int) $id > 0 ) {
+					$lines[ $key ][] = $order_id . '-' . (int) $id;
+				}
+			}
+		}
+		return $lines;
+	}
+
+	/**
 	 * Which of Packing's boxes the boxes already on the order used up, and
 	 * which one is next.
 	 *
 	 * The theme cannot know which physical box a tracking number is. So
 	 * boxes of the same size are taken in Packing's order: a recorded box
 	 * with a size uses up the first Packing box of that size nobody used
-	 * yet, and a recorded box with no size takes the next one that is left
-	 * (that is the box its "Use Packing's box" link offers). A recorded
-	 * box of a size Packing never planned uses up none.
+	 * yet. Then every other recorded box takes the next one that is left,
+	 * oldest first: a box recorded with a size Packing never planned (the
+	 * owner corrected it — it still was one of the boxes), and a box
+	 * recorded with no size (that is the box its "Use Packing's box" link
+	 * offers).
 	 *
-	 * @param array[] $options  box_option() of each Packing box, in Packing's order.
-	 * @param array[] $recorded FST_Shipment::get_order_boxes() entries, oldest first.
+	 * One kind of recorded box uses up none: a box known to hold only lines
+	 * that are in none of Packing's boxes — dry goods sent ahead of the
+	 * fish, or lines Packing no longer plans. It was never one of them.
+	 *
+	 * @param array[]  $options   box_option() of each Packing box, in Packing's order.
+	 * @param array[]  $recorded  FST_Shipment::get_order_boxes() entries, oldest first.
+	 * @param array    $box_lines box_lines(): what each recorded box holds; a box that is not
+	 *                            listed (or null) may hold anything.
+	 * @param string[] $planned   Every order line in one of Packing's boxes ("<order id>-<item id>");
+	 *                            [] = not told, and then no recorded box is left out.
 	 * @return array { next: int|null (position in $options of the box to fill in next),
 	 *               cards: FisHotel_Shipment_Cost::box_key() => position, for the recorded boxes
 	 *               with no size }
 	 */
-	public static function assign( array $options, array $recorded ) {
+	public static function assign( array $options, array $recorded, array $box_lines = [], array $planned = [] ) {
 		$options = array_values( $options );
 		$used    = [];
 		$sizes   = [];
@@ -240,31 +299,39 @@ class FisHotel_Packing_Prefill {
 			$sizes[] = self::CUSTOM_BOX === $option['value'] ? $option['dims'] : $option['value'];
 		}
 
-		$unsized = [];
+		// [ box key, has no size ] of the recorded boxes that claimed none by their size.
+		$waiting = [];
 		foreach ( $recorded as $box ) {
 			if ( ! is_array( $box ) || ! isset( $box['tracking_number'] ) ) {
 				continue;
 			}
-			$dims = isset( $box['box_dims'] ) ? trim( (string) $box['box_dims'] ) : '';
-			if ( '' === $dims ) {
-				$unsized[] = strtoupper( trim( (string) $box['tracking_number'] ) );
+			$key  = strtoupper( trim( (string) $box['tracking_number'] ) );
+			$held = isset( $box_lines[ $key ] ) && is_array( $box_lines[ $key ] ) ? $box_lines[ $key ] : [];
+			if ( $held && $planned && ! array_intersect( $held, $planned ) ) {
 				continue;
 			}
-			foreach ( $sizes as $position => $size ) {
+
+			$dims    = isset( $box['box_dims'] ) ? trim( (string) $box['box_dims'] ) : '';
+			$claimed = false;
+			foreach ( '' === $dims ? [] : $sizes as $position => $size ) {
 				if ( ! isset( $used[ $position ] ) && self::same_dims( $size, $dims ) ) {
 					$used[ $position ] = true;
+					$claimed           = true;
 					break;
 				}
+			}
+			if ( ! $claimed ) {
+				$waiting[] = [ $key, '' === $dims ];
 			}
 		}
 
 		$cards = [];
-		foreach ( $unsized as $key ) {
+		foreach ( $waiting as $one ) {
 			foreach ( $sizes as $position => $size ) {
 				if ( ! isset( $used[ $position ] ) ) {
 					$used[ $position ] = true;
-					if ( '' !== $key ) {
-						$cards[ $key ] = $position;
+					if ( $one[1] && '' !== $one[0] ) {
+						$cards[ $one[0] ] = $position;
 					}
 					break;
 				}
@@ -307,7 +374,7 @@ class FisHotel_Packing_Prefill {
 	 * @param int    $count    How many boxes Packing planned.
 	 * @param bool   $has_list ShipTracker has standard boxes saved.
 	 * @param bool   $on       The form starts on it (Add Shipment); false = it is only offered.
-	 * @return array { on, value, name, dims, match, layers, label, use }
+	 * @return array { on, value, name, dims, match, layers, items, label, use }
 	 */
 	public static function entry( array $plan_box, array $option, $from, $position, $count, $has_list, $on ) {
 		$label  = self::from_label( $from );
@@ -336,6 +403,7 @@ class FisHotel_Packing_Prefill {
 			'dims'   => $option['dims'],
 			'match'  => $option['match'],
 			'layers' => isset( $plan_box['layers'] ) ? (string) $plan_box['layers'] : '',
+			'items'  => isset( $plan_box['items'] ) && is_array( $plan_box['items'] ) ? array_values( $plan_box['items'] ) : [],
 			'label'  => $label,
 			'use'    => 'Use Packing\'s box: ' . $size,
 		];
@@ -347,6 +415,7 @@ class FisHotel_Packing_Prefill {
 	 * @param array|null $plan           clean_plan() result.
 	 * @param array      $standard_boxes FisHotel_Shipment_Cost::standard_boxes().
 	 * @param array      $recorded       FisHotel_Shipment_Cost::order_boxes() of the view.
+	 * @param array      $box_lines      box_lines() of the view's shipments.
 	 * @return array|null Null = nothing (the box of v1.26). Else
 	 *                    { state: 'folded', packed_with, bag_note } or
 	 *                    { state: 'plan', from,
@@ -355,7 +424,7 @@ class FisHotel_Packing_Prefill {
 	 *                      cards: box_key() => entry() offered to a recorded box with no size,
 	 *                      bag_note }.
 	 */
-	public static function view( $plan, array $standard_boxes, array $recorded ) {
+	public static function view( $plan, array $standard_boxes, array $recorded, array $box_lines = [] ) {
 		if ( ! is_array( $plan ) || ! isset( $plan['state'] ) ) {
 			return null;
 		}
@@ -372,10 +441,12 @@ class FisHotel_Packing_Prefill {
 
 		$boxes   = array_values( $plan['boxes'] );
 		$options = [];
+		$planned = [];
 		foreach ( $boxes as $box ) {
 			$options[] = self::box_option( $box, $standard_boxes );
+			$planned   = array_merge( $planned, isset( $box['items'] ) && is_array( $box['items'] ) ? $box['items'] : [] );
 		}
-		$assigned = self::assign( $options, $recorded );
+		$assigned = self::assign( $options, $recorded, $box_lines, array_values( array_unique( $planned ) ) );
 		$count    = count( $boxes );
 		$has_list = ! empty( $standard_boxes );
 
@@ -426,14 +497,15 @@ class FisHotel_Packing_Prefill {
 	 * @param mixed $order          The order on screen.
 	 * @param array $standard_boxes FisHotel_Shipment_Cost::standard_boxes().
 	 * @param array $recorded       FisHotel_Shipment_Cost::order_boxes() of the view.
+	 * @param array $shipments      The view's shipment rows (FisHotel_Shipments_Metabox::resolve_shipments()).
 	 * @return array|null
 	 */
-	public static function for_order( $order, array $standard_boxes, array $recorded ) {
+	public static function for_order( $order, array $standard_boxes, array $recorded, array $shipments = [] ) {
 		if ( ! is_object( $order ) || ! method_exists( $order, 'get_id' ) ) {
 			return null;
 		}
 		try {
-			$view = self::view( self::plan( $order->get_id() ), $standard_boxes, $recorded );
+			$view = self::view( self::plan( $order->get_id() ), $standard_boxes, $recorded, self::box_lines( $shipments ) );
 			if ( is_array( $view ) && 'folded' === $view['state'] ) {
 				$view['number'] = (string) $view['packed_with'];
 				$view['url']    = '';

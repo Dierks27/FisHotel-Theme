@@ -19,6 +19,12 @@
  * does not have is not sent (ShipTracker leaves it); ShipTracker's three
  * validation messages land on the right field.
  *
+ * Since v1.27.0 the box may be filled in from the Packing section of the
+ * FisHotel Misc plugin (`boxPrefilled`). That box is sent — it is why it
+ * is filled in — but it is nobody's sign that a cost was entered: the
+ * remembered source still needs a cost, a weight, a box picked by hand or a
+ * source picked by hand to go along.
+ *
  * @package fishotel-theme
  */
 'use strict';
@@ -68,6 +74,23 @@ same(mod.addCostFields({ box: '10x10x10', source: 'Partner B', sourceTouched: fa
 same(mod.addCostFields({ weight: '11', source: 'Partner B' }), { box_weight: '11', label_source: 'Partner B' }, 'remembered source goes with a typed weight');
 same(mod.addCostFields({ cost: '53.73', source: '', sourceTouched: true }), { label_cost: '53.73' }, 'source set back to "not recorded" is not sent');
 same(mod.addCostFields({ cost: '53.73', source: null }), { label_cost: '53.73' }, 'no source dropdown (empty list): no label_source');
+
+// A box filled in from Packing (the form is still on it, nobody picked one).
+same(mod.addCostFields({ box: '10x10x10', boxPrefilled: true }), { box_dims: '10x10x10' }, 'otherwise untouched form: Packing\'s box is sent, and nothing else');
+same(mod.addCostFields({ box: '10x10x10', boxPrefilled: true, source: 'Partner A', sourceTouched: false }), { box_dims: '10x10x10' },
+  'Packing\'s box does not take the remembered source along — it must not record itself');
+same(mod.addCostFields({ box: 'custom', dims: '12.5x9x6', boxPrefilled: true, source: 'Partner A' }), { box_dims: '12.5x9x6' },
+  'nor does a Packing box whose size is typed in');
+same(mod.addCostFields({ box: '10x10x10', boxPrefilled: true, cost: '53.73', source: 'Partner A' }),
+  { label_cost: '53.73', box_dims: '10x10x10', label_source: 'Partner A' }, 'a cost typed next to Packing\'s box: the remembered source goes with it');
+same(mod.addCostFields({ box: '10x10x10', boxPrefilled: true, weight: '11', source: 'Partner A' }),
+  { box_dims: '10x10x10', box_weight: '11', label_source: 'Partner A' }, 'a weight typed next to Packing\'s box: the same');
+same(mod.addCostFields({ box: '10x10x10', boxPrefilled: true, source: 'Partner B', sourceTouched: true }),
+  { box_dims: '10x10x10', label_source: 'Partner B' }, 'a source picked by hand goes with Packing\'s box');
+same(mod.addCostFields({ box: '16x16x16', boxPrefilled: false, source: 'Partner A' }),
+  { box_dims: '16x16x16', label_source: 'Partner A' }, 'another box picked by hand: the remembered source goes with it, as it always did');
+same(mod.addCostFields({ box: '', boxPrefilled: false, source: 'Partner A' }), {}, 'Packing\'s box cleared: the form posts nothing extra again');
+same(mod.addCostFields({ box: '', boxPrefilled: true, source: 'Partner A' }), {}, 'no box at all is never a prefilled box');
 
 // ── editCostFields ─────────────────────────────────────────────────────
 same(mod.editCostFields({ cost: '19.25', box: '10x10x10', dims: '', weight: '11', source: 'Partner B' }),
@@ -129,4 +152,4 @@ same(mod.rememberedSource(blocked, options), '', 'blocked storage reads as nothi
 same(mod.rememberSource(blocked, 'Partner A'), false, 'blocked storage does not throw on save');
 same(mod.rememberSource(null, 'Partner A'), false, 'no storage does not throw on save');
 
-console.log('admin-shipments: OK (' + checks + ' checks — untouched form posts nothing new, remembered source never records itself, cleared vs left alone, ShipTracker messages land on their field)');
+console.log('admin-shipments: OK (' + checks + ' checks — untouched form posts nothing new, remembered source never records itself — nor with a box Packing filled in, cleared vs left alone, ShipTracker messages land on their field)');

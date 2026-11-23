@@ -14,6 +14,10 @@
  *   packingPayload( rows, foam, paper )  → the `materials` to send
  *   packingIsEmpty( payload )
  *   costText( row, currency ) / stockText( supply ) / sumFish( values )
+ *   bagCount( { ticked, open, boxLayers } ) → the fish bags of the Add Shipment block
+ *   bagNote( { note, follow, row, supply } ) → what the bag line says about its number
+ *   boxOptionIndex( options, box )       → Packing's box in a box size dropdown
+ *   packingBoxStep( box, event, hasList ) → "From Packing": use / clear / picked by hand
  *   weatherNotes( { action, label, rows, supplies } )
  *   shipModeFields( { mode, withOrder, materials } )
  *   sharesRecordedBox( found, orderId ) / sharedBoxQuestion( orderIds )
@@ -32,6 +36,14 @@
  * a tracking number that is already a box with its packing recorded is
  * asked about first, and its record is not replaced.
  *
+ * With the FisHotel Misc plugin's Packing section (theme v1.27.0) the number
+ * an order line carries is no longer its fish but the bags Packing plans
+ * for them — every bag doubled, tripled for a fish with spines — and the
+ * Add Shipment form starts on Packing's box: the bags are that box's until
+ * items are ticked, the line says where its number comes from until the
+ * owner changes it, the box is found by its name before its size, and
+ * picking a box by hand takes the form off Packing's.
+ *
  * @package fishotel-theme
  */
 'use strict';
@@ -43,7 +55,7 @@ var path = require('path');
 var mod = require(path.join(__dirname, '..', 'assets/js/admin-shipments.js'));
 ['toHundredths', 'qtyText', 'toRate', 'toCents', 'centsText', 'rateText', 'rateInput', 'lineCents', 'supplyForRole', 'usualFor', 'recordRows',
   'packingRows', 'packingTotal', 'packingPayload', 'packingIsEmpty', 'costText', 'stockText', 'sumFish', 'weatherNotes',
-  'shipModeFields', 'sharesRecordedBox', 'sharedBoxQuestion', 'errorField'].forEach(function (name) {
+  'shipModeFields', 'sharesRecordedBox', 'sharedBoxQuestion', 'errorField', 'bagCount', 'bagNote', 'boxOptionIndex', 'packingBoxStep'].forEach(function (name) {
   assert.strictEqual(typeof mod[name], 'function', name + ' exported');
 });
 
@@ -162,7 +174,7 @@ same(mod.usualFor(null, 'Small'), null, 'nothing from ShipTracker: nothing usual
 
 // ── packingRows: a box is picked ───────────────────────────────────────
 var rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: 600 });
-same(brief(rows), ['6:1', '3:6', '1:1', '2:0'], 'Small box: the box itself, a bag per fish, the heat pack — and ice packs at 0');
+same(brief(rows), ['6:1', '3:6', '1:1', '2:0'], 'Small box: the box itself, the bags of its six fish, the heat pack — and ice packs at 0');
 same(rows[0].name + ' / ' + rows[0].unit + ' / ' + rows[0].rate, 'Small box / each / 1.2500', 'name, unit and unit cost come with the line');
 same(mod.packingTotal(rows, '1.80', '0.40'), 471, 'running total: 1.25 + 0.66 + 0.60 + foam 1.80 + paper 0.40 = 4.71');
 
@@ -186,6 +198,69 @@ rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'),
 same(brief(rows)[1], '3:6', 'no fish count given: ShipTracker\'s own number of bags');
 rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: 0 });
 same(brief(rows)[1], '3:0', 'no fish in it: no bags');
+
+// ── The bags, once Packing counts them ─────────────────────────────────
+// Without the Misc plugin an order line carries its fish (data-fish): one
+// bag each. With it, the line carries the bags to pull: two for every bag,
+// three for a fish with spines. Here: 2 tangs → 6, 3 clownfish → 6, and a
+// partly refunded line of gobies → 2.67.
+var tang = '6', clown = '6', goby = '2.67';
+same(mod.sumFish([tang, clown]), 1200, 'two tangs triple-bagged and three clownfish double-bagged: 12 bags');
+same(mod.bagCount({ ticked: [], open: [tang, clown, goby], boxLayers: null }), 1467, 'no Packing box, nothing ticked: the bags of every line still to ship');
+same(mod.bagCount({ ticked: [tang], open: [tang, clown, goby], boxLayers: null }), 600, 'the tangs ticked: their six bags');
+same(mod.bagCount({ ticked: [], open: [tang, clown, goby], boxLayers: '12' }), 1200, 'on Packing\'s box, nothing ticked: the bags that box takes — not the whole order\'s');
+same(mod.bagCount({ ticked: [clown, goby], open: [tang, clown, goby], boxLayers: '12' }), 867, 'on Packing\'s box, items ticked: the bags of what is ticked');
+same(mod.bagCount({ ticked: [], open: [tang, clown], boxLayers: '0' }), 0, 'a Packing box with no bags in it: 0, not the order\'s');
+same(mod.bagCount({ ticked: [], open: [tang, clown], boxLayers: '' }), 1200, 'Packing did not say how many bags its box takes: the lines still to ship');
+same(mod.bagCount({ ticked: [], open: [tang, clown], boxLayers: 'lots' }), 1200, 'a number that is not one: the lines still to ship');
+same(mod.bagCount({ ticked: [], open: ['2', '3'] }), 500, 'without the Misc plugin: a bag per fish, as before');
+same(mod.bagCount(), 0, 'nothing to count');
+
+// The block of the box Packing picked, before and after an item is ticked.
+rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: mod.bagCount({ ticked: [], open: [tang, clown, goby], boxLayers: '12' }) });
+same(brief(rows), ['6:1', '3:12', '1:1', '2:0'], 'Packing\'s box, nothing ticked: the box, its 12 bags, the heat pack');
+rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: mod.bagCount({ ticked: [tang], open: [tang, clown, goby], boxLayers: '12' }), prev: rows });
+same(brief(rows), ['6:1', '3:6', '1:1', '2:0'], 'the tangs ticked: 6 bags');
+rows[1].qty = '7'; rows[1].touched = true;                       // the owner pulled a spare bag
+rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: mod.bagCount({ ticked: [tang, clown], open: [tang, clown, goby], boxLayers: '12' }), prev: rows });
+same(brief(rows), ['6:1', '3:7*', '1:1', '2:0'], 'a number of bags the owner changed is kept, whatever is ticked next');
+
+// What the bag line says about its number.
+var packingWords = '2 per bag, 3 for spiny fish — from Packing';
+var bagSupply = supplies[2];
+rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: 1200 });
+same(mod.bagNote({ note: packingWords, follow: true, row: rows[1], supply: bagSupply }), packingWords, 'the bag line says where its number comes from');
+same(mod.bagNote({ note: packingWords, follow: true, row: rows[0], supply: supplies[5] }), '', 'no other line does');
+same(mod.bagNote({ note: packingWords, follow: true, row: { id: 3, qty: '7', touched: true }, supply: bagSupply }), '', 'a number the owner changed is no longer Packing\'s');
+same(mod.bagNote({ note: packingWords, follow: false, row: rows[1], supply: bagSupply }), '', 'a recorded packing is history: no word about it');
+same(mod.bagNote({ note: '', follow: true, row: rows[1], supply: bagSupply }), '', 'without the Misc plugin the line says nothing, as before');
+same(mod.bagNote({ follow: true, row: rows[1], supply: bagSupply }), '', '… also when nothing was handed over');
+same(mod.bagNote({ note: packingWords, follow: true, row: rows[1], supply: null }), '', 'a supply that is gone: nothing');
+same(mod.bagNote(), '', 'nothing asked: nothing');
+
+// ── Packing's box in the box size dropdown ─────────────────────────────
+// The dropdown: "— Not recorded —", the standard boxes (two of one size), "Custom…".
+var boxOptions = [{ value: '', name: '' }, { value: '10x10x10', name: 'Small' }, { value: '16x16x16', name: 'Large' }, { value: '10x10x10', name: 'Tall' }, { value: 'custom', name: '' }];
+same(mod.boxOptionIndex(boxOptions, { value: '10x10x10', name: 'Tall' }), 3, 'the box of that name — not the first of that size');
+same(mod.boxOptionIndex(boxOptions, { value: '10x10x10', name: ' tall ' }), 3, 'the name without regard to case and spaces');
+same(mod.boxOptionIndex(boxOptions, { value: '10x10x10', name: 'Gone' }), 1, 'no box of that name any more: the first of that size');
+same(mod.boxOptionIndex(boxOptions, { value: '10x10x10', name: '' }), 1, 'no name given: the first of that size');
+same(mod.boxOptionIndex(boxOptions, { value: 'custom', name: '' }), 4, 'a size that is not a standard box: Custom…');
+same(mod.boxOptionIndex(boxOptions, { value: '', name: '' }), 0, 'cleared: "— Not recorded —"');
+same(mod.boxOptionIndex(boxOptions, { value: '9x9x9', name: 'Odd' }), -1, 'neither a name nor a size the dropdown has: nothing to select');
+same(mod.boxOptionIndex([], { value: '10x10x10', name: 'Small' }), -1, 'no dropdown: nothing to select');
+same(mod.boxOptionIndex(), -1, 'nothing asked: nothing');
+
+// "From Packing (…)": use it, clear it, or pick a box by hand.
+var packed = { value: '10x10x10', name: 'Tall', dims: '' };
+var typed = { value: 'custom', name: '', dims: '12.5x9x6' };
+same(mod.packingBoxStep(packed, 'use', true), { on: true, set: { box: '10x10x10', name: 'Tall', dims: '' } }, '"Use Packing\'s box": the form goes on it, by name');
+same(mod.packingBoxStep(typed, 'use', true), { on: true, set: { box: 'custom', name: '', dims: '12.5x9x6' } }, '… or on Custom…, with the size typed in');
+same(mod.packingBoxStep(packed, 'clear', true), { on: false, set: { box: '', name: '', dims: '' } }, '"clear": the mark goes and the box is back on "— Not recorded —"');
+same(mod.packingBoxStep(typed, 'clear', false), { on: false, set: { box: 'custom', name: '', dims: '' } }, '"clear" with no standard boxes saved: only the typed size is emptied');
+same(mod.packingBoxStep(packed, 'hand', true), { on: false, set: null }, 'a box picked by hand: the mark goes, what was picked stays');
+same(mod.packingBoxStep(packed, 'anything else', true), { on: false, set: null }, 'whatever else happens to the box: the mark goes');
+same(mod.packingBoxStep(undefined, 'use', true), { on: true, set: { box: '', name: '', dims: '' } }, 'no Packing box to use: nothing is selected');
 
 // Changing the box re-fills only what was not touched.
 rows = mod.packingRows({ supplies: supplies, usual: mod.usualFor(heat, 'Small'), boxName: 'Small', fish: 600 });
@@ -424,4 +499,4 @@ same(mod.errorField('The label cost must be an amount of 0 or more, for example 
 same(mod.errorField('This order has a label of its own. Remove its tracking first.'), '', 'a ship mode refusal is not a field error');
 same(mod.errorField('Order #100 is a local pickup, so it has no box.'), '', '… nor is a refusal of the other order');
 
-console.log('admin-shipments-packing: OK (' + checks + ' checks — a box fills the block, a box change keeps what was touched, custom starts at 0, records stay as recorded, total = ShipTracker\'s sum, 0 lines not sent, an added line carries its unit cost, weather note, ship mode fields)');
+console.log('admin-shipments-packing: OK (' + checks + ' checks — a box fills the block, the bags are Packing\'s once it counts them, Packing\'s box by name then size, a box change keeps what was touched, custom starts at 0, records stay as recorded, total = ShipTracker\'s sum, 0 lines not sent, an added line carries its unit cost, weather note, ship mode fields)');

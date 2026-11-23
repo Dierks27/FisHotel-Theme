@@ -258,7 +258,8 @@ class FisHotel_Shipments_Metabox {
 	 * @return array {
 	 *     @type array[]  $supplies  FisHotel_Shipment_Cost::supplies().
 	 *     @type array    $defaults  Key => FisHotel_Shipment_Cost::default_materials().
-	 *     @type string[] $item_fish Order item id => the fish that line puts in a box ("2").
+	 *     @type string[] $item_fish Order item id => the fish that line puts in a box ("2") — its
+	 *                               fish bags, when the Misc plugin's Packing section counts them.
 	 *     @type array    $add       { key, action, label, record } for the Add Shipment form.
 	 *     @type array    $cards     Shipment id => the same, for the first card of each box.
 	 *     @type array    $pickup    The same, for a local pickup ([] when the order has shipments).

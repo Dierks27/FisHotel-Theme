@@ -675,6 +675,13 @@ class FisHotel_Shipment_Cost {
 	 * the line, less the part of it that was refunded (those fish are not
 	 * in any box).
 	 *
+	 * ShipTracker uses the count for one thing, the number of fish bags.
+	 * With the Packing section of the FisHotel Misc plugin (v0.46.15+) it
+	 * is therefore not the fish but the bags Packing plans for them — every
+	 * bag doubled, tripled for a fish with spines: Misc answers
+	 * ShipTracker's `fst_box_fish_count` filter with them. Nothing changes
+	 * here; FisHotel_Packing_Prefill holds the words that say so.
+	 *
 	 * @param mixed $count         ShipTracker's fish count for the whole line.
 	 * @param mixed $original_qty  The line's quantity.
 	 * @param mixed $available_qty What is left of it after refunds.

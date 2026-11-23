@@ -39,7 +39,8 @@ fishotel-theme/
 │   ├── calculator/            Medication Dosing Calculator data + wiring
 │   ├── scheduler/             QT Scheduler wiring
 │   ├── medication-store/      Medication / food store (EA sync, pricing, packing slip, checkout terms record — see disclaimer.php docblock)
-│   ├── order-fulfillment/     Split fulfillment, shipments meta box (+ what each box cost: label, packing; local pickups), checkout reuse
+│   ├── order-fulfillment/     Split fulfillment, shipments meta box (+ what each box cost: label, packing; local pickups;
+│   │                          the box the Packing section picked, filled in), checkout reuse
 │   ├── customer/              Self-serve delivery date, address propagation
 │   └── email/                 Consolidated shipping email
 ├── parts/                 Compatibility Guide + Bleach Calculator template parts
@@ -237,7 +238,8 @@ cleared vs left alone, which field a ShipTracker message belongs to) by
 `node tests/admin-shipments.test.js`.
 
 ### Packing, and how an order went out (same files, ShipTracker v1.9.18+)
-A box costs more than its label: the box itself, a bag per fish, a heat pack or ice packs, foam,
+A box costs more than its label: the box itself, a bag per fish (two or three with the Packing
+section of FisHotel Misc — see "Packing's box, filled in" below), a heat pack or ice packs, foam,
 paper. ShipTracker v1.9.18 keeps the supplies (with a purchase log and stock) and records the
 materials of each box; the Shipments box shows and posts them. Still v1.26.0 of the theme.
 
@@ -258,7 +260,8 @@ materials of each box; the Shipments box shows and posts them. Still v1.26.0 of 
     none — and what the input shows is what is recorded. That is where a custom box that was
     paid for gets its price (`4.50`), and a free one its `0`. Left empty it is 0.
   - Fish bags = the fish of the items ticked (all unshipped items while none is ticked); a
-    refunded fish is not bagged.
+    refunded fish is not bagged. With FisHotel Misc's Packing section the number is the bags
+    it plans, not the fish — see below.
   - A note says when a pack is there because of the weather check: "Heat pack added: the weather
     check says Heat pack." / "Ice pack added (2): the weather check says Cooling packs." The
     action comes from ShipTracker (`FST_Supplies::order_pack_action()`), which reads what the
@@ -324,6 +327,64 @@ are tested by `php tests/shipment-packing-test.php`; the packing block (what a b
 what a box change keeps, the running total, what is sent, the unit cost of an added line, the
 weather note, the ship mode fields, when to ask about a box that is already recorded) by
 `node tests/admin-shipments-packing.test.js`.
+
+### Packing's box, filled in (v1.27.0 — inc/order-fulfillment/class-fishotel-packing-prefill.php)
+The Packing section of the FisHotel Misc plugin already picks the box and the bag of every fish
+on an order. Since v1.27.0 the Shipments box starts from that, so the box is corrected when it
+is wrong instead of entered a second time. Needs FisHotel Misc v0.46.15+; ShipTracker is not
+changed.
+
+- **Only when Misc answers.** `function_exists( 'fishotel_packing_shipment_plan' )`, asked
+  inside try / catch, and only an answer with `available === true` whose boxes all have a size
+  counts (`FisHotel_Packing_Prefill::plan()`). Misc missing, older, its Packing section off, no
+  plan for the order, an answer that is not a plan, an exception: the Shipments box is, to the
+  character, the one of v1.26.
+- **Add Shipment starts on Packing's box.** The box size dropdown (`#fhsm-new-box`) is on the
+  standard box with the NAME Packing gives (two standard boxes may share a size, and the packing
+  of a box is filled from the one picked), else on the first standard box of that size, else on
+  "Custom…" with the size typed in (`#fhsm-new-dims`) and a word saying so. Under the dropdown:
+  `From Packing (confirmed)` once the owner confirmed the box in the Packing box of the order,
+  `From Packing (suggested)` before that, with a **clear** link. The packing block is open with
+  that box's usual packing, exactly as if the box had been picked by hand. The label cost, the
+  weight and the tracking number are never filled in, and no item is ticked.
+- **Picking another box by hand** (or typing another size) takes the mark off; a
+  `Use Packing's box: Tall 12 (12x12x12)` link puts the form back on it. "clear" empties the
+  box, and the form then posts nothing extra again.
+- **An order in several boxes** starts on the first of Packing's boxes not used up by a box
+  already on the order, and says which: `From Packing (confirmed) · Box 2 of 3`. A recorded box
+  uses up the first Packing box of its size; boxes of the same size are taken in Packing's order,
+  because nothing tells which physical box a tracking number is. Once every Packing box is used
+  up nothing is filled in.
+- **A recorded box keeps its record.** A box that has a size is never touched. A box recorded
+  without a size gets the `Use Packing's box: …` link in its form (Edit / Add on the card) — a
+  click selects the box there; nothing is saved until "Save box cost".
+- **A source order packed with a combined box** gets no box filled in, only
+  `Packed with combined box #5900.` with a link: the box is planned on the combined order, whose
+  own Shipments box is filled in from it.
+- **The fish bags are Packing's bags.** Misc answers ShipTracker's fish count
+  (`fst_box_fish_count`) with the bags to pull — every bag doubled, tripled for a fish with
+  spines — so the number each order line carries (`data-fish`), the usual packing of every box
+  and the fish bag line are bags, and the stock of the fish bag supply counts down by them. The
+  fish bag line says so: `2 per bag, 3 for spiny fish — from Packing`, until the owner changes
+  the quantity. While no item is ticked the quantity is the number of bags of the box Packing
+  planned (an order in several boxes does not put all its bags in the first); once items are
+  ticked it is the sum of the ticked lines, as before. Without Misc it is a bag per fish and
+  the line says nothing.
+- **What an untouched form posts.** With Packing's box filled in, typing only a tracking number
+  and ticking the items posts the box (`box_dims`) and its packing (`materials`) with the
+  shipment — that is the point. The remembered "Bought through" still never records itself: it
+  goes along only with a cost, a weight, a box picked by hand or a source picked in that page
+  view.
+- **Nothing is written by the theme**, and nothing is recorded before Add Shipment or a card's
+  Save is clicked.
+
+Which box is selected, which box is next, what a recorded box is offered, the words, and Misc
+missing / without a plan / answering nonsense / throwing are tested by
+`php tests/packing-prefill-test.php`; `php tests/shipments-prefill-render-test.php` renders the
+real meta box against stand-ins for WordPress, ShipTracker and Misc (and checks that without a
+plan not a character differs); the bags before and after items are ticked, the words on the bag
+line, the box found by name, use / clear / a box picked by hand and what an untouched form posts
+by the two `node tests/admin-shipments*.test.js`.
 
 ## Build Phases
 

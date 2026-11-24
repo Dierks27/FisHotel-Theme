@@ -9,7 +9,8 @@
  *   - Order must carry a _fishotel_shipping_date (med-only orders skip this UI).
  *   - More than 48 hours before currently selected delivery date.
  *   - Order is not in a fulfillment (delivery date lives on the fulfillment).
- *   - No shipments yet (real wp_fst_shipments rows OR Phase 1 shipped lines).
+ *   - No shipments yet (real wp_fst_shipments rows OR Phase 1 shipped lines;
+ *     a USPS letter row — stickers by mail — is not a shipment here).
  *
  * Capacity cap: 5 active orders (processing/on-hold/fulfillment) per
  * delivery date. Customer's own current date is always shown in the picker
@@ -166,10 +167,11 @@ class FisHotel_Self_Serve_Date {
 		// the whole group (one shipped sibling locks the date for everyone).
 		$group = fishotel_get_fulfillment_group_orders( $order );
 
-		// Real shipments anywhere in the group → lock.
+		// Real shipments anywhere in the group → lock. A USPS letter
+		// (ShipTracker 1.10.0, stickers by mail) is not a box: it does not lock.
 		if ( class_exists( 'FST_Shipment' ) && method_exists( 'FST_Shipment', 'get_by_order' ) ) {
 			foreach ( $group as $member ) {
-				$rows = FST_Shipment::get_by_order( $member->get_id() );
+				$rows = self::box_rows( FST_Shipment::get_by_order( $member->get_id() ) );
 				if ( ! empty( $rows ) ) {
 					return false;
 				}
@@ -201,6 +203,22 @@ class FisHotel_Self_Serve_Date {
 	}
 
 	/**
+	 * ShipTracker's rows of one order without its USPS letters (carrier
+	 * usps_letter, ShipTracker 1.10.0): a sticker letter is not a box, so it
+	 * neither ships the order nor locks its delivery date. Rows from
+	 * ShipTracker 1.9.18 (no letters) come back as they are.
+	 *
+	 * @param mixed $rows FST_Shipment::get_by_order() result.
+	 * @return mixed
+	 */
+	public static function box_rows( $rows ) {
+		if ( ! is_array( $rows ) || ! class_exists( 'FisHotel_Shipment_Cost' ) || ! method_exists( 'FisHotel_Shipment_Cost', 'without_letters' ) ) {
+			return $rows;
+		}
+		return FisHotel_Shipment_Cost::without_letters( $rows );
+	}
+
+	/**
 	 * Distinguish "locked because of the 48hr cutoff" from "locked because the
 	 * order has moved on" so the UI can choose the right copy.
 	 *
@@ -225,7 +243,7 @@ class FisHotel_Self_Serve_Date {
 		$group = fishotel_get_fulfillment_group_orders( $order );
 		if ( class_exists( 'FST_Shipment' ) && method_exists( 'FST_Shipment', 'get_by_order' ) ) {
 			foreach ( $group as $member ) {
-				$rows = FST_Shipment::get_by_order( $member->get_id() );
+				$rows = self::box_rows( FST_Shipment::get_by_order( $member->get_id() ) );
 				if ( ! empty( $rows ) ) {
 					return 'shipped';
 				}

@@ -17,6 +17,10 @@
  *     Packing's only box (Box 1 of 1, so no "Box … of …");
  *   - a letter-only EA order: no box, "How it went out" is offered;
  *   - a combined order: a source order's letter is a line with its source;
+ *   - "Sticker letter" or "Letter" is what ShipTracker recorded inside it
+ *     (FST_Letters::get_by_shipment()->contents), the order's flag only
+ *     when nothing is recorded: a sticker letter on an order without the
+ *     flag still reads "Sticker letter";
  *   - the only Re-check and Remove buttons are the boxes': the letter has
  *     none and no tracking link (Remove on a box sends that box's id only);
  *   - with ShipTracker 1.9.18 (no letters) nothing of this shows.
@@ -26,7 +30,7 @@
  *   php tests/shipments-letters-render-test.php --scene=fish-letter --letters=yes
  *
  * prints that scene's HTML (scenes: fish-letter, letter-first, letter-only,
- * combined; letters: yes, no — "no" is a ShipTracker 1.9.18 site, which has
+ * combined, unflagged; letters: yes, no — "no" is a ShipTracker 1.9.18 site, which has
  * none). `--theme=DIR` renders another copy of the theme (with no scene:
  * runs every check against it — the theme before v1.28.1 fails them).
  *
@@ -165,8 +169,15 @@ if ( '' === $opts['scene'] ) {
 	check( 'the source\'s line that is not in the box stays open', [ 8041 => true, 8051 => true, 8052 => false ] === line_disabled( $with ), json_encode( line_disabled( $with ) ) );
 	check( 'apart from that line, the page without the letter', without_letter_lines( $with ) === no_blank_lines( $without ) );
 
+	echo "a sticker letter on an order without the flag\n";
+	$with    = render( 'unflagged', 'yes' );
+	$without = render( 'unflagged', 'no' );
+	check( 'ShipTracker recorded stickers inside: "Sticker letter", not "Letter"', [ 'Sticker letter · mailed — managed in USPS Letter Tracking' ] === letter_lines( $with ), json_encode( letter_lines( $with ) ) );
+	check( 'its box is the only card, its lines as the box says', [ 99 ] === card_ids( $with ) && [ 8061 => true, 8062 => false ] === line_disabled( $with ), json_encode( line_disabled( $with ) ) );
+	check( 'apart from that line, the page without the letter', without_letter_lines( $with ) === no_blank_lines( $without ) );
+
 	echo "ShipTracker 1.9.18 (no letters)\n";
-	foreach ( [ 'fish-letter', 'letter-first', 'letter-only', 'combined' ] as $scene ) {
+	foreach ( [ 'fish-letter', 'letter-first', 'letter-only', 'combined', 'unflagged' ] as $scene ) {
 		check( "$scene: no letter line, nothing of letters", [] === letter_lines( render( $scene, 'no' ) ) && false === strpos( render( $scene, 'no' ), 'fhsm-letter' ) );
 	}
 
@@ -259,8 +270,10 @@ $orders = [
 	6004 => new WC_Order( 6004, [ 8041 => [ 'Banggai Cardinalfish', 2 ] ], [ 'shipping' => '25.00', '_fishotel_fulfilled_by_order' => 6900 ] ),
 	6005 => new WC_Order( 6005, [ 8051 => [ 'Coral Beauty Angelfish', 1 ], 8052 => [ 'Six Line Wrasse', 1 ] ], [ 'shipping' => '25.00', '_fishotel_fulfilled_by_order' => 6900 ] ),
 	6900 => new WC_Order( 6900, [], [ 'sources' => [ 6004, 6005 ] ] ),
+	// A fish order without the flag; a sticker letter went out for it all the same.
+	6006 => new WC_Order( 6006, [ 8061 => [ 'Lawnmower Blenny', 1 ], 8062 => [ 'Scooter Dragonet', 1 ] ], [ 'shipping' => '30.00' ] ),
 ];
-const SCENES = [ 'fish-letter' => 6001, 'letter-first' => 6003, 'letter-only' => 6002, 'combined' => 6900 ];
+const SCENES = [ 'fish-letter' => 6001, 'letter-first' => 6003, 'letter-only' => 6002, 'combined' => 6900, 'unflagged' => 6006 ];
 
 function wc_get_order( $id ) {
 	global $orders;
@@ -293,6 +306,7 @@ class FST_Shipment {
 			91 => [ 6001, '1ZLTR0001', [ 8001 ], '12x12x12', '41.20', 'ups', 'in_transit' ],
 			94 => [ 6004, '1ZCMB0001', [ 8041 ], '20x14x12', '38.00', 'ups', 'in_transit' ],
 			95 => [ 6005, '1ZCMB0001', [ 8051 ], null, null, 'ups', 'in_transit' ],
+			99 => [ 6006, '1ZUNF0001', [ 8061 ], '12x12x12', '30.00', 'ups', 'in_transit' ],
 		];
 		if ( 'yes' === $GLOBALS['opts']['letters'] ) {
 			$rows += [
@@ -300,6 +314,7 @@ class FST_Shipment {
 				93 => [ 6002, '0070012345600000002155555123456', null, null, null, 'usps_letter', 'likely_delivered' ],
 				96 => [ 6005, '0070012345600000003155555123456', null, null, null, 'usps_letter', 'exception' ],
 				97 => [ 6003, '0070012345600000004155555123456', null, null, null, 'usps_letter', 'label_created' ],
+				98 => [ 6006, '0070012345600000005155555123456', null, null, null, 'usps_letter', 'in_transit' ],
 			];
 		}
 		ksort( $rows );
@@ -348,6 +363,21 @@ class FST_Shipment {
 		return array_values( $boxes );
 	}
 	public static function get_box_cost( $tracking_number ) { return null; }
+}
+if ( 'yes' === $opts['letters'] ) {
+	/**
+	 * ShipTracker 1.10.0's letters table, as FST_Letters::get_by_shipment()
+	 * reads it: the current letter of a shipment row. Row 92 has no record
+	 * here, so its order's flag decides; 93 and 97 hold stickers as their
+	 * flagged orders say; 96 a plain letter; 98 stickers on an order
+	 * without the flag.
+	 */
+	class FST_Letters {
+		public static function get_by_shipment( $shipment_id ) {
+			$contents = [ 93 => 'sticker', 96 => 'letter', 97 => 'sticker', 98 => 'sticker' ];
+			return isset( $contents[ (int) $shipment_id ] ) ? (object) [ 'id' => 500 + (int) $shipment_id, 'shipment_id' => (int) $shipment_id, 'contents' => $contents[ (int) $shipment_id ], 'state' => 'active' ] : null;
+		}
+	}
 }
 class FST_Carrier {
 	public static function get_status_color( $status ) { return '#2271b1'; }

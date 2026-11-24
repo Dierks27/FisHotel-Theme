@@ -1168,6 +1168,23 @@ class FisHotel_Shipments_Metabox {
 	}
 
 	/**
+	 * What ShipTracker recorded inside a letter ('sticker', 'letter', …),
+	 * read from its letters table through FST_Letters::get_by_shipment()
+	 * (the current, not voided, letter of the row). Null when ShipTracker
+	 * has no such reader or no letter for the row.
+	 *
+	 * @param object $letter Letter shipment row.
+	 * @return string|null
+	 */
+	private static function letter_contents( $letter ) {
+		if ( ! isset( $letter->id ) || ! class_exists( 'FST_Letters' ) || ! method_exists( 'FST_Letters', 'get_by_shipment' ) ) {
+			return null;
+		}
+		$row = FST_Letters::get_by_shipment( (int) $letter->id );
+		return is_object( $row ) && isset( $row->contents ) ? (string) $row->contents : null;
+	}
+
+	/**
 	 * Print one plain line per USPS letter of this view (ShipTracker
 	 * v1.10.0), under the boxes. No link, Re-check or Remove: the letter is
 	 * printed, voided and regenerated in ShipTracker's own "USPS Letter
@@ -1184,7 +1201,10 @@ class FisHotel_Shipments_Metabox {
 			}
 			$source_id = isset( $letter->order_id ) ? (int) $letter->order_id : 0;
 			$source    = $source_id ? wc_get_order( $source_id ) : null;
-			$sticker   = $source instanceof WC_Order && (bool) $source->get_meta( '_fishotel_sticker_mail_letter' );
+			$sticker   = FisHotel_Shipment_Cost::letter_is_sticker(
+				self::letter_contents( $letter ),
+				$source instanceof WC_Order && (bool) $source->get_meta( '_fishotel_sticker_mail_letter' )
+			);
 			$text      = FisHotel_Shipment_Cost::letter_line( isset( $letter->status ) ? (string) $letter->status : '', $sticker );
 			if ( $is_fulfillment && $source_id ) {
 				/* translators: %d order ID */

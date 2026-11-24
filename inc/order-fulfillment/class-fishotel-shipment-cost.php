@@ -139,11 +139,28 @@ class FisHotel_Shipment_Cost {
 	 * "Sticker letter · mailed — managed in USPS Letter Tracking".
 	 *
 	 * @param string $status     ShipTracker status slug of the letter's row.
-	 * @param bool   $is_sticker The order is flagged to have its stickers mailed by letter.
+	 * @param bool   $is_sticker The letter holds stickers (letter_is_sticker()).
 	 * @return string Plain text.
 	 */
 	public static function letter_line( $status, $is_sticker ) {
 		return ( $is_sticker ? 'Sticker letter' : 'Letter' ) . ' · ' . self::letter_state( $status ) . ' — managed in USPS Letter Tracking';
+	}
+
+	/**
+	 * Whether a letter holds stickers. What ShipTracker recorded inside it
+	 * (wp_fst_letters.contents: 'sticker', 'letter', …) decides; with nothing
+	 * recorded, the order's "stickers by letter" flag does.
+	 *
+	 * @param string|null $contents ShipTracker's contents of the letter, null when unknown.
+	 * @param bool        $flagged  The order carries _fishotel_sticker_mail_letter.
+	 * @return bool
+	 */
+	public static function letter_is_sticker( $contents, $flagged ) {
+		$contents = is_string( $contents ) ? strtolower( trim( $contents ) ) : '';
+		if ( '' !== $contents ) {
+			return 'sticker' === $contents;
+		}
+		return (bool) $flagged;
 	}
 
 	/** A decimal amount as whole cents. */

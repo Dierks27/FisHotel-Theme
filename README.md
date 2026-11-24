@@ -27,7 +27,10 @@ fishotel-theme/
 │                          QT Scheduler, Compatibility Guide, Bleach Calculator templates
 ├── inc/
 │   ├── admin-settings.php     ★ FisHotel Theme admin pages (all editable copy + images)
-│   ├── hotel-data.php         ★ Product Data meta box (species info, care guide, notes)
+│   ├── hotel-data.php         ★ Fish facts box + Staff notes box (product screen)
+│   ├── product-facts.php      ★ Facts typed in the description: product-page text, copy, old-style test
+│   ├── fish-notes.php         One-time list of fish whose Notes the product page showed (v1.28.0)
+│   ├── admin-product-screen.php  Medication & food tab only on meds / foods
 │   ├── hotel-journal.php      ★ Quarantine journal entries (repeatable)
 │   ├── variation-display.php  ★ Visual variation buttons (replaces WC dropdowns)
 │   ├── placeholder-library.php  Placeholder images for products without a photo
@@ -64,24 +67,88 @@ Composer step, so dompdf (used for the EA packing-slip PDF) has to ship in the r
 
 ## ★ FisHotel Custom Features
 
-### Product Data Meta Fields (inc/hotel-data.php)
-Every WooCommerce product gets a "FisHotel — Product Data" meta box with three groups:
+### Fish facts and Staff notes (inc/hotel-data.php, inc/product-facts.php — v1.28.0)
+Every WooCommerce product gets two boxes (until v1.28.0 one box, "FisHotel — Product Data"):
 
-**Species Info** (rendered as the species stat grid on the product page)
-- **Scientific Name** (`_fh_scientific_name`)
-- **Common Names** (`_fh_common_names`)
-- **Max Length** (`_fh_max_length`)
-- **Min Tank Size** (`_fh_min_tank_size`)
-- **Temperament** (`_fh_temperament`)
-- **Reef Safe** — radio: yes / no / with caution (`_fh_reef_safe`)
-- **Region** (`_fh_region`)
+**Fish facts — the table on the product page** (id `fishotel_hotel_data`)
+- *Species Info* (the table under "About This Species", Quarantined Fish only): **Scientific
+  Name** (`_fh_scientific_name`), **Common Names** (`_fh_common_names`), **Max Length**
+  (`_fh_max_length`), **Min Tank Size** (`_fh_min_tank_size`), **Temperament**
+  (`_fh_temperament`), **Reef Safe** — yes / no / with caution (`_fh_reef_safe`), **Region**
+  (`_fh_region`; a region tag such as Indo-Pacific overrides it — the box says so).
+- *Care Guide (Fish Dossier)*: **Foods & Feeding** (`_fh_foods_feeding`), **Habitat & Behavior**
+  (`_fh_habitat`) — empty = the default text in FisHotel Theme settings (the box says so).
+- Filter `fishotel_fish_facts_box_fields` (array of field keys) lets another box draw a fact
+  instead — the FisHotel Misc plugin's "Fish essentials" box takes `scientific_name`. A fact not
+  drawn is not posted, so this box leaves it alone on Update. It cannot add fields or Notes.
+- **Old style.** Facts used to be typed in the description as labelled lines ("Scientific Name:
+  …", "Maximum Length: …", "Foods and Feeding: …"). When at least two different facts are typed
+  that way and at least one of them has an empty field, a yellow line says "This fish's facts are
+  still typed in the description" with **Copy them into these fields**: it fills only the EMPTY
+  boxes on screen from the description (never a typed one) and says "Copied N facts — press
+  Update to keep them". It does not write to the database itself: the next Update posts the
+  boxes as they are on screen and would undo it. A fact the box does not draw is handed on with
+  the jQuery event `fishotel-copy-facts` (values) on `document`. Not shown on medications/foods.
+- For other FisHotel plugins: `fishotel_copy_facts_from_description( $product_id )` copies the
+  facts into the empty fields of one product and returns the meta keys written (the Misc
+  plugin's "Product checks" row action); `fishotel_fish_facts_old_style( $product_id )` is the
+  old-style test above. FisHotel Theme → Tools → "Migrate Product Descriptions" runs the same
+  copy for every published product. Since v1.28.0 the reading splits paragraphs saved without
+  line breaks, and a feeding block stops at the next labelled line (it used to run into
+  "Habitat and Behavior: …").
+- **The "About This Fish" text** hides a labelled line only when that fact is shown elsewhere on
+  the page: its field is filled and the table is printed (Quarantined Fish), or it is Foods /
+  Habitat (the Dossier is printed for every product); the Region line also goes when a region
+  tag is set. A fish whose fields are empty keeps its facts readable in the text. "Fun Facts" and
+  everything after it are no longer cut off. Until v1.28.0 every labelled line was removed
+  whatever the field held, and a description saved as `<p>…</p><p>…</p>` lost everything after
+  the first label.
 
-**Care Guide (Fish Dossier)**
-- **Foods & Feeding** (`_fh_foods_feeding`) — falls back to the Care Guide default in FisHotel Settings
-- **Habitat & Behavior** (`_fh_habitat`) — same fallback
+**Staff notes — never shown on the website** (id `fishotel_staff_notes`, its own nonce)
+- **Notes** (`_fh_notes`). Until v1.28.0 the box said "not shown on website" but the product
+  page printed a Quarantined Fish's Notes on its quarantine certificate. They are now read
+  nowhere on the storefront (`fishotel_render_purchase_badge()` ignores `hotel_notes`;
+  `FisHotel_Hotel_Data::get_all()` leaves Notes out).
+- **One-time list** (inc/fish-notes.php): the first admin page load after the update writes down
+  which published Quarantined Fish had a note (option `fishotel_notes_were_public`, not
+  autoloaded). People who can edit products see "N fish have Notes that the product page showed
+  to customers until now — Show them · Don't show this again". **Show them** opens
+  `edit.php?post_type=product&fh_notes=were_public`: those fish that still have a note, with a
+  line saying what to do (move text meant for customers into the description). The notice stops
+  for good once none of them has a note left (option `fishotel_notes_notice_done`); "Don't show
+  this again" stops it for that person (user meta `fishotel_notes_notice_dismissed`).
 
-**Notes** (not shown on website)
-- **Notes** (`_fh_notes`) — internal only
+Tests: `php tests/product-facts-test.php` (the labels, the old-style test, the product-page text,
+the reading, never overwriting, the copy), `php tests/product-screen-test.php` (both boxes, the
+filter, the old-style line and its plan, each box saving only its own fields),
+`php tests/fish-notes-test.php` (the list, the wording, the certificate without a note),
+`node tests/admin-product.test.js` (what the Copy button fills).
+
+### Product and order screens — the theme's boxes only where they matter (v1.28.0)
+- **"Medication & food" tab** (was "FisHotel Medication"; inc/medication-store/product-meta.php)
+  sits right after General. It and the **EA Wholesale / EA Retail** boxes on each variation are
+  shown only when the product has no category yet, or a medication / food category (`medications`,
+  `flakes`, `pellets`, `powders`, `liquid`, `antibacterial`, `antiparasitic`, `dewormer`, `foods`,
+  `freeze-dried-foods`, `fish-food`, `medicated-food`, or any category under one of them), or
+  "Who ships it" / an Amazon ASIN is set. Ticking a category switches them at once
+  (inc/admin-product-screen.php sets `body.fh-hide-med` on load, assets/js/admin-product.js
+  switches it). Hidden fields are still in the form and still posted: nothing saves differently.
+- **"Fulfillment mode"** reads **"Who ships it (EA / Amazon / us)"** (same field
+  `_fishotel_fulfillment`), so it is not confused with combined-box Fulfillment orders.
+- **EA Packing Slip** box only on an order with a line set to EA — its own lines, a combined
+  secondary's, or a combined box's live sources' (an EA line missing its EA SKU still counts, so
+  the box can name it). A fish-only order no longer gets a box saying "No EA-mode items".
+- **Combine Orders** box not on a combined box (it only pointed to the Fulfillment box there).
+- **Date Change Override stays on a source order folded into a combined box**: the customer's
+  self-serve date change (inc/customer/class-fishotel-self-serve-date.php) runs from that source
+  order and reads the override from it, so it is the only place the override can be set for a
+  combined box.
+- Under the items of a combined box, the raw `_fishotel_source_line_item_id` number is hidden
+  (`woocommerce_hidden_order_itemmeta`); the linked "Source order" line stays.
+
+Tests: `php tests/product-screen-test.php` (the tab, its rule, the variation boxes, the CSS),
+`node tests/admin-product.test.js` (the same rule in the browser), `php tests/order-boxes-test.php`
+(the slip box for each order kind, Combine Orders, the override, the hidden item meta).
 
 ### Quarantine Journal (inc/hotel-journal.php)
 - Repeatable journal entries per product

@@ -494,6 +494,33 @@ Packing's box, what is posted for a tracking number that is already another orde
 a changed Packing box does to a form, and what an untouched form posts by the two
 `node tests/admin-shipments*.test.js`.
 
+### A USPS letter is not a box (v1.28.1 — ShipTracker v1.10.0)
+ShipTracker v1.10.0 can track a USPS letter — first used for stickers mailed in an envelope on an
+order with nothing else for the shop to send. A letter is a `wp_fst_shipments` row with carrier
+`usps_letter`, its barcode as the tracking number and no order lines. To the Shipments box a row
+with no order lines is a box that holds every item, so until v1.28.1 one letter marked every item
+shipped, took away Add Shipment and "How it went out", counted as a box with no cost, used up one
+of Packing's boxes, and showed a card with a "#" link, Re-check and a Remove that left
+ShipTracker's own record of the letter behind.
+
+- **Letters are left out of everything worked out from the boxes**: `resolve_shipments()` and
+  `FisHotel_Shipment_Cost::order_boxes()` skip `usps_letter` rows, so the items shipped, the box
+  cards, the costs line ("N boxes have no cost yet"), packing, Packing's "Box 2 of 3", the orders
+  that went in this order's box, and "How it went out" (offered while the order has no box) are
+  the boxes' only. `box_fish_count()` skips them too.
+- **Each letter is one plain line under the boxes**, with no link and no buttons:
+  `Sticker letter · mailed — managed in USPS Letter Tracking` ("Letter" when the order is not
+  flagged `_fishotel_sticker_mail_letter`; "label printed, not mailed yet", "mailed", "likely
+  delivered", "coming back to us" or "mailed, USPS reports a problem"; on a combined order with
+  `(source: #N)`). The line is there so the box does not read "No shipments yet" as if nothing
+  went out; the letter itself is printed, voided and regenerated in ShipTracker's "USPS Letter
+  Tracking" box (`fst-letter`), which keeps its own record — a Remove here would orphan it.
+- **ShipTracker 1.9.18 and older** have no letters: the box is what it was.
+
+`php tests/shipments-letters-render-test.php` renders the real box for a fish order with a box
+and a sticker letter, a letter before any box, a letter-only EA order and a combined order, and
+checks that apart from the letter line each page is the page without the letter.
+
 ## Build Phases
 
 - **Phase 1** ✅ Foundation — Design system, meta fields, variation display

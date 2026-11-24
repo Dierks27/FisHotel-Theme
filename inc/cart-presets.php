@@ -36,6 +36,10 @@ function fishotel_cart_preset_slug_map() {
 		'freeze-dried-foods' => 'food',
 		'fish-food'          => 'food',
 		'medicated-food'     => 'food',
+		'medicated-foods'    => 'food',
+		// Neutral medication categories (v1.29.0).
+		'powders-chemicals'  => 'meds',
+		'water-chemistry'    => 'meds',
 		// Merchandise — slug candidates. Adjust here if Jeff sets up
 		// a different slug; the preset key stays "merch".
 		'merchandise'        => 'merch',

@@ -39,7 +39,14 @@ class FisHotel_Med_Listing {
 
 	/** Once-gate for maybe_reset_stale_copy(). Bump VERSION to run it again. */
 	const VERSION_OPTION = 'fishotel_med_listing_v';
-	const VERSION        = '1';
+	const VERSION        = '2';
+
+	/** The entry pop-up's body until v1.29.0 (it named dosing). */
+	const OLD_DISCLAIMER_BODY = 'All medications sold by FisHotel are intended exclusively for ornamental aquarium fish. They are not for human consumption, not for food-producing animals, and not for use in any tank stocked with fish intended for human consumption. By proceeding, you acknowledge that you are purchasing these medications for ornamental aquarium use only, that you understand proper dosing and handling, and that you accept full responsibility for safe application.';
+
+	/** Footer brand line on every page; on medication pages a version with no treatment words (v1.29.0). */
+	const FOOTER_TAGLINE     = 'Premium saltwater fish quarantine. Every fish checked in, observed, treated, and cleared before it ever reaches your tank.';
+	const FOOTER_TAGLINE_MED = 'Premium saltwater fish. Every fish checked in, observed and cleared before it ever reaches your tank.';
 
 	/** Footer tool pages that are not linked from medication pages. */
 	const HIDDEN_TOOL_TEMPLATES = [ 'page-quarantine-help.php', 'page-qt-scheduler.php' ];
@@ -211,6 +218,10 @@ class FisHotel_Med_Listing {
 			'fh_cart_meds_trust_3_body'  => 'Hand-picked for reef and quarantine use',
 			'fh_cart_meds_trust_4_label' => 'DOSING CALCULATOR',
 			'fh_cart_meds_trust_4_body'  => 'Free FisHotel calculator for every medication',
+			// The entry pop-up's body as the theme shipped it until v1.29.0
+			// ("… you understand proper dosing and handling …"). A saved copy of
+			// it is reset so the neutral default shows.
+			'fishotel_med_disclaimer_body' => self::OLD_DISCLAIMER_BODY,
 		];
 	}
 
@@ -271,6 +282,45 @@ class FisHotel_Med_Listing {
 		return array_values( array_filter( $defs, function ( $def ) {
 			return ! in_array( (string) $def[0], self::HIDDEN_TOOL_TEMPLATES, true );
 		} ) );
+	}
+
+	/**
+	 * Whether a product description already says the supplier line ("Ships
+	 * direct from our supplier."), so the line under the cart button is not
+	 * printed a second time.
+	 *
+	 * @param string $description post_content (HTML allowed).
+	 * @return bool
+	 */
+	public static function says_shipping_line( $description ) {
+		$text = html_entity_decode( strip_tags( (string) $description ), ENT_QUOTES, 'UTF-8' );
+		$text = preg_replace( '/\s+/u', ' ', $text );
+		return stripos( (string) $text, rtrim( self::SHIPPING_LINE, '.' ) ) !== false;
+	}
+
+	/**
+	 * The line under the product name on a medication page: '' when the
+	 * active ingredient is shown in the "Contains" row already (it was printed
+	 * three times: here, in the row and in the description), else the short
+	 * description.
+	 *
+	 * @param string $ingredient _fishotel_active_ingredient.
+	 * @param string $short      Short description.
+	 * @return string
+	 */
+	public static function med_subtitle( $ingredient, $short ) {
+		return trim( (string) $ingredient ) !== '' ? '' : (string) $short;
+	}
+
+	/**
+	 * The footer brand line: on a medication page without "quarantine" and "treated" (a
+	 * treatment word next to a product listing), everywhere else as before.
+	 *
+	 * @param bool $on_med_page
+	 * @return string
+	 */
+	public static function footer_tagline( $on_med_page ) {
+		return $on_med_page ? self::FOOTER_TAGLINE_MED : self::FOOTER_TAGLINE;
 	}
 
 	// ─────────────────────────────────────────

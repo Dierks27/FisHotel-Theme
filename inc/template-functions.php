@@ -550,8 +550,8 @@ function fishotel_archive_noun( $singular = false ) {
     $slug = ( $term && isset( $term->slug ) ) ? (string) $term->slug : '';
 
     $fish_slugs = [ 'quarantined-fish' ];
-    $med_slugs  = [ 'medications', 'flakes', 'pellets', 'powders', 'liquid', 'antibacterial', 'antiparasitic', 'dewormer' ];
-    $food_slugs = [ 'freeze-dried-foods', 'fish-food', 'medicated-food' ];
+    $med_slugs  = [ 'medications', 'flakes', 'pellets', 'powders', 'liquid', 'antibacterial', 'antiparasitic', 'dewormer', 'powders-chemicals', 'water-chemistry' ];
+    $food_slugs = [ 'freeze-dried-foods', 'fish-food', 'medicated-food', 'medicated-foods' ];
 
     if ( in_array( $slug, $fish_slugs, true ) ) {
         return 'fish'; // same in singular + plural
@@ -608,7 +608,8 @@ function fishotel_is_food_product( $product_id = null ) {
     if ( empty( $cats ) ) {
         return false;
     }
-    $food_slugs = [ 'freeze-dried-foods', 'fish-food', 'medicated-food' ];
+    // 'medicated-foods': the neutral "Medicated Foods" category (v1.29.0).
+    $food_slugs = [ 'freeze-dried-foods', 'fish-food', 'medicated-food', 'medicated-foods' ];
     return (bool) array_intersect( $food_slugs, $cats );
 }
 

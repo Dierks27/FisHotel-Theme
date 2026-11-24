@@ -154,8 +154,11 @@ while ( have_posts() ) :
             } elseif ( function_exists( 'fishotel_is_amazon_affiliate_product' )
                 && ( fishotel_is_amazon_affiliate_product( $product_id )
                     || ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) ) ) ) {
-                $subtitle = (string) get_post_meta( $product_id, '_fishotel_active_ingredient', true );
-                if ( $subtitle === '' ) { $subtitle = $short; }
+                // The ingredient is in the "Contains" row and the description
+                // (v1.29.0): no third copy under the name.
+                $subtitle = class_exists( 'FisHotel_Med_Listing' )
+                    ? FisHotel_Med_Listing::med_subtitle( (string) get_post_meta( $product_id, '_fishotel_active_ingredient', true ), $short )
+                    : $short;
             } elseif ( function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id ) ) {
                 $subtitle = (string) get_post_meta( $product_id, '_fishotel_food_source', true );
                 if ( $subtitle === '' ) { $subtitle = $short; }
@@ -622,6 +625,7 @@ $_card_cat_slugs   = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' =
 $_card_cat_slugs   = is_wp_error( $_card_cat_slugs ) ? [] : (array) $_card_cat_slugs;
 $is_medicated_food = $is_med_or_aff && (
     in_array( 'flakes', $_card_cat_slugs, true ) || in_array( 'pellets', $_card_cat_slugs, true )
+    || in_array( 'medicated-food', $_card_cat_slugs, true ) || in_array( 'medicated-foods', $_card_cat_slugs, true )
 );
 
 $reef_labels = [

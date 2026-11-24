@@ -41,7 +41,7 @@ if ( function_exists( 'fishotel_tool_page_url' ) ) {
     <div class="site-footer__main<?php echo empty( $fh_footer_tools ) ? ' site-footer__main--no-tools' : ''; ?>">
         <div>
             <div class="site-footer__brand-name">The FisHotel</div>
-            <p class="site-footer__tagline">Premium saltwater fish quarantine. Every fish checked in, observed, treated, and cleared before it ever reaches your tank.</p>
+            <p class="site-footer__tagline"><?php echo esc_html( class_exists( 'FisHotel_Med_Listing' ) ? FisHotel_Med_Listing::footer_tagline( FisHotel_Med_Listing::on_med_page() ) : 'Premium saltwater fish quarantine. Every fish checked in, observed, treated, and cleared before it ever reaches your tank.' ); ?></p>
         </div>
         <div>
             <p class="site-footer__col-title">Navigate</p>

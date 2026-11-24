@@ -73,6 +73,9 @@ class FisHotel_Med_Product_Display {
 		// mode check above — covers any future hybrid product that ends up
 		// with mode=ea while also carrying an `_fishotel_amazon_asin` value.
 		if ( function_exists( 'fishotel_is_amazon_affiliate_product' ) && fishotel_is_amazon_affiliate_product( $pid ) ) return;
+		// The description already ends with the same line (written by the
+		// Misc plugin's Med listings cleanup): print it once, not twice.
+		if ( FisHotel_Med_Listing::says_shipping_line( (string) get_post_field( 'post_content', $pid ) ) ) return;
 		?>
 		<p class="fishotel-med-ea-disclosure">
 			<?php echo esc_html( FisHotel_Med_Listing::SHIPPING_LINE ); ?>

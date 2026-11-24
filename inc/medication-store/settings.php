@@ -45,7 +45,7 @@ class FisHotel_Med_Settings {
 
 	/** Default body for the entry modal (spec §4). */
 	public static function default_disclaimer_body() {
-		return "All medications sold by FisHotel are intended exclusively for ornamental aquarium fish. They are not for human consumption, not for food-producing animals, and not for use in any tank stocked with fish intended for human consumption. By proceeding, you acknowledge that you are purchasing these medications for ornamental aquarium use only, that you understand proper dosing and handling, and that you accept full responsibility for safe application.";
+		return "All medications sold by FisHotel are intended exclusively for ornamental aquarium fish. They are not for human consumption, not for food-producing animals, and not for use in any tank stocked with fish intended for human consumption. By proceeding, you acknowledge that you are purchasing these medications for ornamental aquarium use only, that you understand safe handling and storage, and that you accept full responsibility for safe use.";
 	}
 
 	/** Default checkout checkbox label (spec §4). */

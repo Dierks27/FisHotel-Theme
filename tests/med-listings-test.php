@@ -248,5 +248,35 @@ foreach ( FisHotel_Med_Listing::stale_copy() as $key => $old ) {
 	check( "old default for $key is no longer the code default", $gone );
 }
 
+// ── Review fixes (pop-up wording, supplier line once, subtitle, footer, slugs) ──
+$body = '';
+if ( preg_match( '/function default_disclaimer_body\(\)\s*\{\s*return\s*"([^"]*)"/', src( 'inc/medication-store/settings.php' ), $m ) ) {
+	$body = $m[1];
+}
+check( 'pop-up default body found', $body !== '' );
+check( 'pop-up default body names no dosing', $body !== '' && stripos( $body, 'dosing' ) === false && ! FisHotel_Med_Listing::carries_treatment_text( $body ), $body );
+check( 'pop-up default says safe handling and storage', strpos( $body, 'safe handling and storage' ) !== false );
+check( 'a saved copy of the old pop-up body is reset', FisHotel_Med_Listing::stale_keys( [ 'fishotel_med_disclaimer_body' => FisHotel_Med_Listing::OLD_DISCLAIMER_BODY ] ) === [ 'fishotel_med_disclaimer_body' ] );
+check( 'the old pop-up body itself carried "dosing"', FisHotel_Med_Listing::carries_treatment_text( FisHotel_Med_Listing::OLD_DISCLAIMER_BODY ) );
+check( 'a pop-up body the owner wrote with dosing is reported, not reset', FisHotel_Med_Listing::custom_claim_keys( [ 'fishotel_med_disclaimer_body' => 'Know your dosing.' ] ) === [ 'fishotel_med_disclaimer_body' ] );
+check( 'the reset runs again on a site that ran the first one', FisHotel_Med_Listing::VERSION === '2' );
+
+check( 'description ending with the supplier line → no second line', FisHotel_Med_Listing::says_shipping_line( "<p>General Trio Flake</p>\n<p>Ships direct from our&nbsp;supplier.</p>" ) );
+check( 'description without it → the line is printed', ! FisHotel_Med_Listing::says_shipping_line( '<p>Keep sealed.</p>' ) );
+check( 'product-display checks the description before printing the line', strpos( src( 'inc/medication-store/product-display.php' ), 'says_shipping_line' ) !== false );
+
+check( 'ingredient set → no subtitle (it is in the Contains row)', FisHotel_Med_Listing::med_subtitle( 'Metronidazole 99%+', 'Contains: metronidazole.' ) === '' );
+check( 'no ingredient → short description under the name', FisHotel_Med_Listing::med_subtitle( '', 'Powder.' ) === 'Powder.' );
+check( 'single-product uses med_subtitle()', strpos( src( 'woocommerce/single-product.php' ), 'med_subtitle(' ) !== false );
+
+check( 'footer line on a med page has no "treated"', ! FisHotel_Med_Listing::carries_treatment_text( FisHotel_Med_Listing::footer_tagline( true ) ) );
+check( 'footer line elsewhere unchanged', FisHotel_Med_Listing::footer_tagline( false ) === 'Premium saltwater fish quarantine. Every fish checked in, observed, treated, and cleared before it ever reaches your tank.' );
+check( 'footer.php prints footer_tagline()', strpos( src( 'footer.php' ), 'footer_tagline(' ) !== false );
+
+$tf = src( 'inc/template-functions.php' );
+check( 'Medicated Foods (plural slug) counts as food', substr_count( $tf, "'medicated-foods'" ) >= 2 );
+check( 'cart preset knows the neutral categories', strpos( src( 'inc/cart-presets.php' ), "'powders-chemicals'" ) !== false && strpos( src( 'inc/cart-presets.php' ), "'medicated-foods'" ) !== false );
+check( 'a product in Medicated Foods reads as a medicated food on its page', strpos( src( 'woocommerce/single-product.php' ), "'medicated-foods'" ) !== false );
+
 echo $failures ? "\n$failures FAILED\n" : "\nAll med-listing checks passed.\n";
 exit( $failures ? 1 : 0 );

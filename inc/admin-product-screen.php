@@ -29,7 +29,7 @@ class FisHotel_Admin_Product_Screen {
 	/** Category slugs whose terms (and every term under them) are medication / food. */
 	const MED_FOOD_ROOTS = [
 		'medications', 'flakes', 'pellets', 'powders', 'liquid', 'antibacterial', 'antiparasitic', 'dewormer',
-		'foods', 'freeze-dried-foods', 'fish-food', 'medicated-food',
+		'foods', 'freeze-dried-foods', 'fish-food', 'medicated-food', 'medicated-foods', 'powders-chemicals', 'water-chemistry',
 	];
 
 	const BODY_CLASS = 'fh-hide-med';

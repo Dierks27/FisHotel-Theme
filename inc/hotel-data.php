@@ -145,106 +145,18 @@ class FisHotel_Hotel_Data {
 		}
 		check_ajax_referer( 'fishotel_run_migration' );
 
-		// Migration runs inline below
-		$products = wc_get_products( [ 'limit' => -1, 'status' => 'publish' ] );
+		// The same per-product copy the fish facts box offers
+		// (inc/product-facts.php) — reads the labelled lines, fills only
+		// empty fields.
+		$ids      = wc_get_products( [ 'limit' => -1, 'status' => 'publish', 'return' => 'ids' ] );
 		$migrated = 0;
 		$skipped  = 0;
-
-		$extract = function( $patterns, $text ) {
-			foreach ( $patterns as $pattern ) {
-				if ( preg_match( $pattern, $text, $m ) ) {
-					$val = trim( $m[1] );
-					$val = preg_replace( '/\s+(Scientific|Common|Maximum|Minimum|Reef|Temperament|Foods|Habitat|Fun\s+Facts?).*$/is', '', $val );
-					return $val;
-				}
+		foreach ( $ids as $id ) {
+			if ( FisHotel_Product_Facts::copy_from_description( $id ) ) {
+				$migrated++;
+			} else {
+				$skipped++;
 			}
-			return '';
-		};
-
-		// Single-line fields — safe regex (no backtracking risk)
-		$fields_map = [
-			'_fh_scientific_name' => [ '/Scientific Name\s*[:-]\s*([^\n]+)/i' ],
-			'_fh_common_names'    => [ '/Common Names?\s*[:-]\s*([^\n]+)/i' ],
-			'_fh_max_length'      => [ '/Maximum?\s*Lengths?\s*[:-]\s*([^\n]+)/i', '/Max\.?\s*Lengths?\s*[:-]\s*([^\n]+)/i' ],
-			'_fh_min_tank_size'   => [ '/Minimum\s*Aquarium\s*Sizes?\s*[:-]\s*([^\n]+)/i', '/Min\.?\s*Tank\s*Sizes?\s*[:-]\s*([^\n]+)/i' ],
-			'_fh_temperament'     => [ '/Temperament\s*[:-]\s*([^\n]+)/i' ],
-			'_fh_region'          => [ '/Region\s*[:-]\s*([^\n]+)/i' ],
-		];
-
-		// Multi-line fields: find label line, collect following lines until next known label
-		// This avoids catastrophic backtracking from [\s\S]+? patterns
-		$multiline_map = [
-			'_fh_foods_feeding' => [ 'Foods and Feeding Habits', 'Foods and Feeding', 'Feeding' ],
-			'_fh_habitat'       => [ 'Habitat and Behavior', 'Habitat & Behavior', 'Habitat', 'Habits' ],
-		];
-		$stop_at = [ 'Scientific Name', 'Common Names', 'Maximum', 'Minimum Aquarium',
-		             'Temperament', 'Reef Safety', 'Reef Safe', 'Description', 'Fun Facts',
-		             'Region', 'Foods and Feeding', 'Habitat', 'Habits', 'Feeding' ];
-
-		foreach ( $products as $product ) {
-			$id   = $product->get_id();
-			$desc = wp_strip_all_tags( $product->get_description() );
-			if ( empty( $desc ) ) { $skipped++; continue; }
-
-			$updated = false;
-
-			// Single-line fields
-			foreach ( $fields_map as $key => $patterns ) {
-				if ( get_post_meta( $id, $key, true ) ) continue;
-				$value = $extract( $patterns, $desc );
-				if ( $value ) {
-					update_post_meta( $id, $key, sanitize_textarea_field( $value ) );
-					$updated = true;
-				}
-			}
-
-			// Multi-line fields: line-by-line parsing (no backtracking risk)
-			$lines = explode( "\n", $desc );
-			foreach ( $multiline_map as $key => $labels ) {
-				if ( get_post_meta( $id, $key, true ) ) continue;
-				$collecting = false;
-				$collected  = [];
-				foreach ( $lines as $line ) {
-					$line = trim( $line );
-					if ( ! $collecting ) {
-						foreach ( $labels as $label ) {
-							if ( stripos( $line, $label . ':' ) === 0 || stripos( $line, $label . ' -' ) === 0 ) {
-								$collecting = true;
-								$after = trim( preg_replace( '/^' . preg_quote( $label, '/' ) . '\s*[:\-]\s*/i', '', $line ) );
-								if ( $after ) $collected[] = $after;
-								break;
-							}
-						}
-					} else {
-						// Stop at next known label
-						$stop = false;
-						foreach ( $stop_at as $s ) {
-							if ( stripos( $line, $s . ':' ) === 0 || stripos( $line, $s . ' -' ) === 0 ) {
-								$stop = true; break;
-							}
-						}
-						if ( $stop ) break;
-						if ( $line ) $collected[] = $line;
-					}
-				}
-				if ( ! empty( $collected ) ) {
-					update_post_meta( $id, $key, sanitize_textarea_field( implode( ' ', $collected ) ) );
-					$updated = true;
-				}
-			}
-
-			if ( ! get_post_meta( $id, '_fh_reef_safe', true ) ) {
-				if ( preg_match( '/Reef[\s\-]?Safe(?:ty)?\s*[:-]\s*([^\n]+)/i', $desc, $m ) ) {
-					$val = strtolower( trim( $m[1] ) );
-					$reef = 'yes';
-					if ( strpos( $val, 'caution' ) !== false ) $reef = 'caution';
-					elseif ( strpos( $val, 'no' ) !== false )  $reef = 'no';
-					update_post_meta( $id, '_fh_reef_safe', $reef );
-					$updated = true;
-				}
-			}
-
-			if ( $updated ) $migrated++; else $skipped++;
 		}
 
 		wp_send_json_success( [
@@ -252,27 +164,114 @@ class FisHotel_Hotel_Data {
 		] );
 	}
 
+	/**
+	 * Two boxes since v1.28.0:
+	 *  - "Fish facts — the table on the product page" (the facts fields);
+	 *  - "Staff notes — never shown on the website" (Notes only). Until
+	 *    v1.28.0 the Notes were printed on the product page's quarantine
+	 *    certificate although the box said they were not shown; they are
+	 *    now read nowhere on the storefront (see inc/fish-notes.php for the
+	 *    one-time list of fish whose note was shown).
+	 */
 	public static function add_meta_box() {
 		add_meta_box(
 			'fishotel_hotel_data',
-			'FisHotel — Product Data',
+			'Fish facts — the table on the product page',
 			[ __CLASS__, 'render_meta_box' ],
 			'product',
 			'normal',
 			'high'
 		);
+		add_meta_box(
+			'fishotel_staff_notes',
+			'Staff notes — never shown on the website',
+			[ __CLASS__, 'render_notes_box' ],
+			'product',
+			'normal',
+			'low'
+		);
+	}
+
+	/**
+	 * Fact fields drawn in the fish facts box, in order. Filter
+	 * `fishotel_fish_facts_box_fields` (array of field keys) lets another
+	 * box draw a field instead — the FisHotel Misc plugin's "Fish
+	 * essentials" box takes scientific_name. A field not drawn is not
+	 * posted, so this box's save leaves it alone.
+	 *
+	 * @return string[]
+	 */
+	public static function box_field_keys() {
+		$keys = [];
+		foreach ( self::fields() as $key => $field ) {
+			if ( 'notes' !== $field['group'] ) {
+				$keys[] = $key;
+			}
+		}
+		$filtered = apply_filters( 'fishotel_fish_facts_box_fields', $keys );
+		return is_array( $filtered ) ? array_values( array_intersect( $keys, $filtered ) ) : $keys;
+	}
+
+	/** Field hints shown under a few facts. */
+	private static function hints() {
+		return [
+			'region'        => 'A region tag such as Indo-Pacific overrides this.',
+			'foods_feeding' => 'Empty = the site\'s default text (FisHotel Theme settings).',
+			'habitat'       => 'Empty = the site\'s default text (FisHotel Theme settings).',
+		];
 	}
 
 	public static function render_meta_box( $post ) {
 		wp_nonce_field( 'fishotel_save_hotel_data', 'fishotel_hotel_nonce' );
 
 		$fields = self::fields();
+		$keys   = self::box_field_keys();
+		$hints  = self::hints();
 		$groups = [
 			'species' => 'Species Info',
 			'care'    => 'Care Guide (Fish Dossier)',
-			'notes'   => 'Notes (not shown on website)',
 		];
 
+		self::print_box_styles();
+		self::render_old_style_line( $post );
+
+		foreach ( $groups as $group_key => $group_label ) :
+			$group_fields = [];
+			foreach ( $keys as $key ) {
+				if ( $fields[ $key ]['group'] === $group_key ) {
+					$group_fields[ $key ] = $fields[ $key ];
+				}
+			}
+			if ( empty( $group_fields ) ) continue;
+		?>
+			<p class="fh-meta-section"><?php echo esc_html( $group_label ); ?></p>
+			<div class="fh-meta-grid">
+				<?php foreach ( $group_fields as $key => $field ) :
+					$value = get_post_meta( $post->ID, self::PREFIX . $key, true );
+					self::render_field( $key, $field, $value, $hints[ $key ] ?? '' );
+				endforeach; ?>
+			</div>
+		<?php endforeach;
+	}
+
+	/** The Staff notes box: one textarea, its own nonce. */
+	public static function render_notes_box( $post ) {
+		wp_nonce_field( 'fishotel_save_staff_notes', 'fishotel_staff_notes_nonce' );
+		$fields = self::fields();
+		self::print_box_styles();
+		?>
+		<div class="fh-meta-field fh-meta-field--wide">
+			<label for="fh_notes">Notes for the team</label>
+			<textarea id="fh_notes" name="fh_notes" rows="4" placeholder="<?php echo esc_attr( $fields['notes']['placeholder'] ); ?>"><?php echo esc_textarea( get_post_meta( $post->ID, self::PREFIX . 'notes', true ) ); ?></textarea>
+			<p class="fh-meta-hint">Only people who can edit products see this. Anything customers should read belongs in the description.</p>
+		</div>
+		<?php
+	}
+
+	private static function print_box_styles() {
+		static $done = false;
+		if ( $done ) return;
+		$done = true;
 		?>
 		<style>
 			.fh-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0 0; }
@@ -281,66 +280,114 @@ class FisHotel_Hotel_Data {
 				width: 100%; padding: 7px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px;
 			}
 			.fh-meta-field textarea { min-height: 80px; resize: vertical; }
+			.fh-meta-hint { margin: 4px 0 0; font-size: 12px; color: #757575; }
 			.fh-meta-section { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #999; border-bottom: 1px solid #eee; padding-bottom: 6px; margin: 24px 0 8px; }
 			.fh-meta-section:first-of-type { margin-top: 8px; }
 			.fh-radio-group { display: flex; gap: 16px; margin-top: 4px; }
 			.fh-radio-group label { font-weight: 400; font-size: 13px; color: #333; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 			.fh-radio-group input[type="radio"] { margin: 0; }
+			.fh-facts-oldstyle { margin: 8px 0 4px; padding: 8px 12px; background: #fcf9e8; border-left: 4px solid #dba617; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+			.fh-facts-oldstyle p { margin: 0; }
+			.fh-facts-copy-result { font-style: italic; }
 		</style>
-
-		<?php foreach ( $groups as $group_key => $group_label ) :
-			$group_fields = array_filter( $fields, function( $f ) use ( $group_key ) { return $f['group'] === $group_key; } );
-			if ( empty( $group_fields ) ) continue;
-		?>
-			<p class="fh-meta-section"><?php echo esc_html( $group_label ); ?></p>
-			<div class="fh-meta-grid">
-				<?php foreach ( $group_fields as $key => $field ) :
-					$meta_key = self::PREFIX . $key;
-					$value = get_post_meta( $post->ID, $meta_key, true );
-					$name = 'fh_' . $key;
-				?>
-				<div class="fh-meta-field">
-					<label><?php echo esc_html( $field['label'] ); ?></label>
-					<?php if ( $field['type'] === 'text' ) : ?>
-						<input type="text" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>" placeholder="<?php echo esc_attr( $field['placeholder'] ?? '' ); ?>">
-					<?php elseif ( $field['type'] === 'textarea' ) : ?>
-						<textarea name="<?php echo esc_attr( $name ); ?>" rows="4" placeholder="<?php echo esc_attr( $field['placeholder'] ?? '' ); ?>"><?php echo esc_textarea( $value ); ?></textarea>
-					<?php elseif ( $field['type'] === 'radio' ) : ?>
-						<div class="fh-radio-group">
-							<label><input type="radio" name="<?php echo esc_attr( $name ); ?>" value="" <?php checked( $value, '' ); ?>> Not set</label>
-							<?php foreach ( $field['options'] as $opt_val => $opt_label ) : ?>
-								<label><input type="radio" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $opt_val ); ?>" <?php checked( $value, $opt_val ); ?>> <?php echo esc_html( $opt_label ); ?></label>
-							<?php endforeach; ?>
-						</div>
-					<?php endif; ?>
-				</div>
-				<?php endforeach; ?>
-			</div>
-		<?php endforeach; ?>
 		<?php
 	}
 
+	private static function render_field( $key, $field, $value, $hint ) {
+		$name = 'fh_' . $key;
+		?>
+		<div class="fh-meta-field">
+			<label><?php echo esc_html( $field['label'] ); ?></label>
+			<?php if ( $field['type'] === 'text' ) : ?>
+				<input type="text" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>" placeholder="<?php echo esc_attr( $field['placeholder'] ?? '' ); ?>">
+			<?php elseif ( $field['type'] === 'textarea' ) : ?>
+				<textarea name="<?php echo esc_attr( $name ); ?>" rows="4" placeholder="<?php echo esc_attr( $field['placeholder'] ?? '' ); ?>"><?php echo esc_textarea( $value ); ?></textarea>
+			<?php elseif ( $field['type'] === 'radio' ) : ?>
+				<div class="fh-radio-group">
+					<label><input type="radio" name="<?php echo esc_attr( $name ); ?>" value="" <?php checked( $value, '' ); ?>> Not set</label>
+					<?php foreach ( $field['options'] as $opt_val => $opt_label ) : ?>
+						<label><input type="radio" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $opt_val ); ?>" <?php checked( $value, $opt_val ); ?>> <?php echo esc_html( $opt_label ); ?></label>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+			<?php if ( '' !== $hint ) : ?>
+				<p class="fh-meta-hint"><?php echo esc_html( $hint ); ?></p>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * The yellow line on a fish whose facts are still typed in the
+	 * description. The button fills the EMPTY boxes on this screen from
+	 * the description (assets/js/admin-product.js); Update saves them.
+	 * Writing straight to the database would be undone by the next Update,
+	 * which posts these boxes as they are on screen.
+	 */
+	private static function render_old_style_line( $post ) {
+		$pid = (int) $post->ID;
+		if ( ! $pid || ! class_exists( 'FisHotel_Product_Facts' ) ) return;
+		// Medications and foods are never old style (product-facts.php).
+		if ( ! FisHotel_Product_Facts::product_is_old_style( $pid ) ) return;
+		$plan   = FisHotel_Product_Facts::plan_for( $pid );
+		$labels = [];
+		foreach ( self::fields() as $key => $field ) {
+			$labels[ $key ] = $field['label'];
+		}
+		?>
+		<div class="fh-facts-oldstyle">
+			<p>This fish's facts are still typed in the description.</p>
+			<button type="button" class="button fh-facts-copy" data-facts="<?php echo esc_attr( wp_json_encode( (object) $plan ) ); ?>" data-labels="<?php echo esc_attr( wp_json_encode( $labels ) ); ?>">Copy them into these fields</button>
+			<span class="fh-facts-copy-result" aria-live="polite"></span>
+		</div>
+		<?php
+	}
+
+	/**
+	 * A blank box posted for a fact that was never stored is skipped, so a
+	 * save never adds empty fish facts to a product (every dry good got ten
+	 * empty `_fh_*` rows on each save before v1.28.0). A stored fact that
+	 * was cleared on screen is still cleared.
+	 *
+	 * @param mixed $posted The posted value.
+	 * @param bool  $exists True when the product already has this meta row.
+	 * @return bool
+	 */
+	public static function skip_blank( $posted, $exists ) {
+		return ! $exists && '' === trim( (string) $posted );
+	}
+
 	public static function save_meta( $product_id ) {
-		if ( ! isset( $_POST['fishotel_hotel_nonce'] ) || ! wp_verify_nonce( $_POST['fishotel_hotel_nonce'], 'fishotel_save_hotel_data' ) ) return;
 		if ( ! current_user_can( 'edit_post', $product_id ) ) return;
+		$facts_ok = isset( $_POST['fishotel_hotel_nonce'] ) && wp_verify_nonce( $_POST['fishotel_hotel_nonce'], 'fishotel_save_hotel_data' );
+		$notes_ok = isset( $_POST['fishotel_staff_notes_nonce'] ) && wp_verify_nonce( $_POST['fishotel_staff_notes_nonce'], 'fishotel_save_staff_notes' );
+		if ( ! $facts_ok && ! $notes_ok ) return;
 
 		foreach ( self::fields() as $key => $field ) {
 			$name     = 'fh_' . $key;
 			$meta_key = self::PREFIX . $key;
+			$is_notes = 'notes' === $field['group'];
 
+			if ( $is_notes ? ! $notes_ok : ! $facts_ok ) continue;
 			if ( ! isset( $_POST[ $name ] ) ) continue;
 
-			if ( $field['type'] === 'textarea' ) {
-				update_post_meta( $product_id, $meta_key, sanitize_textarea_field( $_POST[ $name ] ) );
-			} else {
-				update_post_meta( $product_id, $meta_key, sanitize_text_field( $_POST[ $name ] ) );
-			}
+			$value = $field['type'] === 'textarea'
+				? sanitize_textarea_field( $_POST[ $name ] )
+				: sanitize_text_field( $_POST[ $name ] );
+			if ( self::skip_blank( $value, metadata_exists( 'post', $product_id, $meta_key ) ) ) continue;
+			update_post_meta( $product_id, $meta_key, $value );
 		}
 	}
 
+	/**
+	 * The facts of a product, for the storefront. Since v1.28.0 the staff
+	 * Notes are NOT included — they are private; read `_fh_notes` directly
+	 * in admin code.
+	 */
 	public static function get_all( $product_id ) {
 		$data = [];
 		foreach ( self::fields() as $key => $field ) {
+			if ( 'notes' === $field['group'] ) continue;
 			$data[ $key ] = get_post_meta( $product_id, self::PREFIX . $key, true );
 		}
 		return $data;

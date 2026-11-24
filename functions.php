@@ -8,7 +8,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FISHOTEL_THEME_VERSION', '1.27.0' );
+define( 'FISHOTEL_THEME_VERSION', '1.28.0' );
 define( 'FISHOTEL_THEME_DIR', get_template_directory() );
 define( 'FISHOTEL_THEME_URI', get_template_directory_uri() );
 
@@ -254,7 +254,10 @@ $includes = [
 	'/inc/pdf-invoice.php',      // PDF Invoices & Packing Slips (WP Overnight): refund rows + marker, customer notes
 	'/inc/invoice-lines.php',    // Invoice products → itemised fish lines + credit fees at checkout, purchase lock, backfill tool
 	'/inc/shop-load-more.php', // Shop archive Load More (AJAX) + enqueue
-	'/inc/hotel-data.php',       // FisHotel quarantine meta
+	'/inc/product-facts.php',    // Facts typed in the description: product-page text, per-product copy, old-style test
+	'/inc/hotel-data.php',       // Fish facts box + Staff notes box (product screen)
+	'/inc/fish-notes.php',       // One-time list of fish whose Notes the product page showed (Notes are private since 1.28.0)
+	'/inc/admin-product-screen.php', // Product screen: Medication & food tab only on meds/food, Copy-facts button script
 	'/inc/hotel-journal.php',    // Quarantine journal entries
 	'/inc/variation-display.php', // Visual variation buttons
 	'/inc/variation-gallery.php', // The picture a product page opens on (default / only-in-stock variation)

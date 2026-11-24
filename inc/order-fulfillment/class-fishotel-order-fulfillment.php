@@ -729,8 +729,16 @@ class FisHotel_Order_Fulfillment {
 	//  Phase 2 — Order combining
 	// ════════════════════════════════════════════════════════════════
 
-	/** Register the "Combine Orders" meta box (side column, default priority). */
+	/**
+	 * Register the "Combine Orders" meta box (side column, default
+	 * priority). Not on a combined box (fulfillment order) since v1.28.0 —
+	 * there it only pointed to the Fulfillment box.
+	 */
 	public static function register_combine_meta_box( $screen_or_post = null ) {
+		$order = self::resolve_order( $screen_or_post );
+		if ( $order instanceof WC_Order && fishotel_is_fulfillment( $order ) ) {
+			return;
+		}
 		add_meta_box(
 			'fishotel-combine-orders',
 			__( 'Combine Orders', 'fishotel' ),

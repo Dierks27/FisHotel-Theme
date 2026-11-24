@@ -221,5 +221,22 @@ FisHotel_Med_Product_Meta::save_variation_fields( 708, 0 );
 check( 'variation: a typed wholesale is saved, a cleared retail is cleared', '4.50' === $GLOBALS['meta'][708]['_fishotel_wholesale'] && '' === $GLOBALS['meta'][708]['_fishotel_ea_retail'] );
 $_POST = [];
 
+// The medication / food categories are read in ONE query (the product screen
+// asked once per category slug, 12 queries on every product opened).
+$GLOBALS['term_reads'] = [];
+function get_term_by( $field, $value, $tax ) { $GLOBALS['term_reads'][] = "by:$value"; return false; }
+function get_terms( $args ) {
+	$GLOBALS['term_reads'][] = 'terms:' . implode( ',', (array) ( $args['slug'] ?? [] ) );
+	$known = [ 'medications' => 76, 'foods' => 80, 'dewormer' => 471 ];
+	return array_values( array_intersect_key( $known, array_flip( (array) $args['slug'] ) ) );
+}
+function get_term_children( $id, $tax ) { return 76 === $id ? [ 468, 471 ] : []; }
+function is_wp_error( $v ) { return false; }
+$ids = FisHotel_Admin_Product_Screen::med_term_ids();
+sort( $ids );
+check( 'medication / food categories: one read for all the slugs', 1 === count( $GLOBALS['term_reads'] ) && 0 === strpos( $GLOBALS['term_reads'][0], 'terms:medications,' ), json_encode( $GLOBALS['term_reads'] ) );
+check( '— the roots found and everything under them', [ 76, 80, 468, 471 ] === $ids, json_encode( $ids ) );
+check( '— asked again in the same request: no second read', FisHotel_Admin_Product_Screen::med_term_ids() && 1 === count( $GLOBALS['term_reads'] ) );
+
 echo "\n" . ( $failures ? "$failures FAILED" : 'all passed' ) . "\n";
 exit( $failures ? 1 : 0 );

@@ -70,13 +70,23 @@ class FisHotel_Admin_Product_Screen {
 			return $ids;
 		}
 		$ids = [];
-		foreach ( self::MED_FOOD_ROOTS as $slug ) {
-			$term = get_term_by( 'slug', $slug, 'product_cat' );
-			if ( ! $term || is_wp_error( $term ) ) {
-				continue;
-			}
-			$ids[] = (int) $term->term_id;
-			$children = get_term_children( (int) $term->term_id, 'product_cat' );
+		// One read for every root slug (not one get_term_by() per slug: twelve
+		// queries on every product opened). The children come from WordPress's
+		// cached category tree, with no query.
+		$roots = get_terms(
+			[
+				'taxonomy'   => 'product_cat',
+				'slug'       => self::MED_FOOD_ROOTS,
+				'hide_empty' => false,
+				'fields'     => 'ids',
+			]
+		);
+		if ( is_wp_error( $roots ) || ! is_array( $roots ) ) {
+			$roots = [];
+		}
+		foreach ( $roots as $root ) {
+			$ids[]    = (int) $root;
+			$children = get_term_children( (int) $root, 'product_cat' );
 			if ( is_array( $children ) ) {
 				$ids = array_merge( $ids, array_map( 'intval', $children ) );
 			}

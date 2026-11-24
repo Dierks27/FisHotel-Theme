@@ -151,6 +151,7 @@ the message).
   "Who ships it" / an Amazon ASIN is set. Ticking a category switches them at once
   (inc/admin-product-screen.php sets `body.fh-hide-med` on load, assets/js/admin-product.js
   switches it). Hidden fields are still in the form and still posted: nothing saves differently.
+  Those categories are read in one query per product screen (not one per category slug).
 - **"Fulfillment mode"** reads **"Who ships it (EA / Amazon / us)"** (same field
   `_fishotel_fulfillment`), so it is not confused with combined-box Fulfillment orders.
 - **EA Packing Slip** box only on an order with a line set to EA — its own lines, a combined

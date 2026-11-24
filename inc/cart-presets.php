@@ -129,7 +129,15 @@ function fishotel_cart_preset_get( $preset, $field ) {
 	if ( ! class_exists( 'FisHotel_Admin_Settings' ) ) {
 		return '';
 	}
-	return (string) FisHotel_Admin_Settings::get( "fh_cart_{$preset}_{$field}" );
+	$value = (string) FisHotel_Admin_Settings::get( "fh_cart_{$preset}_{$field}" );
+	// Meds cart copy the owner typed that still reads as a claim falls back
+	// to the neutral default (v1.29.0).
+	if ( $preset === 'meds' && class_exists( 'FisHotel_Med_Listing' ) ) {
+		$defaults = FisHotel_Admin_Settings::defaults();
+		$key      = "fh_cart_{$preset}_{$field}";
+		$value    = FisHotel_Med_Listing::plain_copy( $value, isset( $defaults[ $key ] ) && is_string( $defaults[ $key ] ) ? $defaults[ $key ] : '' );
+	}
+	return $value;
 }
 
 /**

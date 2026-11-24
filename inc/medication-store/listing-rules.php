@@ -299,6 +299,25 @@ class FisHotel_Med_Listing {
 	}
 
 	/**
+	 * Shop copy shown on a medication page (badge subtitle, trust strip,
+	 * cart preset): a setting the owner typed that still reads as a claim
+	 * (treatment / dosing / quarantine / disease words, or "pharmacy") is
+	 * not printed — the neutral default is, and the admin notice
+	 * (custom_claim_notice()) names the setting so it can be reworded.
+	 *
+	 * @param string $text    The stored setting as resolved.
+	 * @param string $default The neutral code default ('' = print nothing).
+	 * @return string
+	 */
+	public static function plain_copy( $text, $default ) {
+		$text = (string) $text;
+		if ( self::carries_treatment_text( $text ) || stripos( $text, 'pharmacy' ) !== false ) {
+			return self::carries_treatment_text( (string) $default ) ? '' : (string) $default;
+		}
+		return $text;
+	}
+
+	/**
 	 * The line under the product name on a medication page: '' when the
 	 * active ingredient is shown in the "Contains" row already (it was printed
 	 * three times: here, in the row and in the description), else the short

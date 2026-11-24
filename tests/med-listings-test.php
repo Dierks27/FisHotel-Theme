@@ -278,5 +278,10 @@ check( 'Medicated Foods (plural slug) counts as food', substr_count( $tf, "'medi
 check( 'cart preset knows the neutral categories', strpos( src( 'inc/cart-presets.php' ), "'powders-chemicals'" ) !== false && strpos( src( 'inc/cart-presets.php' ), "'medicated-foods'" ) !== false );
 check( 'a product in Medicated Foods reads as a medicated food on its page', strpos( src( 'woocommerce/single-product.php' ), "'medicated-foods'" ) !== false );
 
+check( 'typed copy with a claim → the neutral default instead', FisHotel_Med_Listing::plain_copy( 'The same meds we use in our QT', 'Authentic product, sourced direct' ) === 'Authentic product, sourced direct' );
+check( 'typed copy with "pharmacy" → the default', FisHotel_Med_Listing::plain_copy( 'Straight from our pharmacy', '' ) === '' );
+check( 'plain typed copy is printed as typed', FisHotel_Med_Listing::plain_copy( 'Ships Mondays', 'x' ) === 'Ships Mondays' );
+check( 'trust strip, badge and cart preset go through plain_copy()', substr_count( src( 'inc/template-functions.php' ), 'plain_copy(' ) >= 2 && strpos( src( 'inc/cart-presets.php' ), 'plain_copy(' ) !== false );
+
 echo $failures ? "\n$failures FAILED\n" : "\nAll med-listing checks passed.\n";
 exit( $failures ? 1 : 0 );

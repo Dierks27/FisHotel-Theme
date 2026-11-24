@@ -677,6 +677,10 @@ function fishotel_render_purchase_badge( $product_id, $extras = [] ) {
         // Was "From the Pharmacy" until v1.29.0 (plain product listing).
         $title    = class_exists( 'FisHotel_Med_Listing' ) ? FisHotel_Med_Listing::BADGE_TITLE : 'From the Supply Room';
         $line_one = $get( 'fh_pharmacy_badge_subtitle' );
+        if ( class_exists( 'FisHotel_Med_Listing' ) && class_exists( 'FisHotel_Admin_Settings' ) ) {
+            $badge_defaults = FisHotel_Admin_Settings::defaults();
+            $line_one       = FisHotel_Med_Listing::plain_copy( $line_one, (string) ( $badge_defaults['fh_pharmacy_badge_subtitle'] ?? '' ) );
+        }
         $line_two = '';
         $extras_html = '';
     } elseif ( function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id ) ) {
@@ -763,6 +767,15 @@ function fishotel_get_trust_strip_items( $product_id = null ) {
             ? (string) FisHotel_Admin_Settings::get( $key )
             : '';
     };
+    // Medication / Amazon copy the owner typed that still reads as a claim
+    // falls back to the neutral default (v1.29.0).
+    $plain = function ( $key ) use ( $get ) {
+        if ( ! class_exists( 'FisHotel_Med_Listing' ) || ! class_exists( 'FisHotel_Admin_Settings' ) ) {
+            return $get( $key );
+        }
+        $defaults = FisHotel_Admin_Settings::defaults();
+        return FisHotel_Med_Listing::plain_copy( $get( $key ), isset( $defaults[ $key ] ) && is_string( $defaults[ $key ] ) ? $defaults[ $key ] : '' );
+    };
 
     // Branch order matters: Tier 2 (Amazon-affiliate) products are still
     // categorised under medications, so the affiliate check has to win
@@ -772,10 +785,10 @@ function fishotel_get_trust_strip_items( $product_id = null ) {
         return [ $get( 'fh_trust_1' ), $get( 'fh_trust_2' ), $get( 'fh_trust_3' ) ];
     }
     if ( fishotel_is_amazon_affiliate_product( $product_id ) ) {
-        return [ $get( 'fh_tier2_trust_1' ), $get( 'fh_tier2_trust_2' ), $get( 'fh_tier2_trust_3' ) ];
+        return [ $plain( 'fh_tier2_trust_1' ), $plain( 'fh_tier2_trust_2' ), $plain( 'fh_tier2_trust_3' ) ];
     }
     if ( fishotel_is_medication_product( $product_id ) ) {
-        return [ $get( 'fh_med_trust_1' ), $get( 'fh_med_trust_2' ), $get( 'fh_med_trust_3' ) ];
+        return [ $plain( 'fh_med_trust_1' ), $plain( 'fh_med_trust_2' ), $plain( 'fh_med_trust_3' ) ];
     }
     if ( fishotel_is_food_product( $product_id ) ) {
         return [ $get( 'fh_food_trust_1' ), $get( 'fh_food_trust_2' ), $get( 'fh_food_trust_3' ) ];

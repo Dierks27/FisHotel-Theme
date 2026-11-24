@@ -282,6 +282,30 @@
 	color: #646970;
 	font-size: 11px;
 }
+/* Packing's box (FisHotel Misc v0.46.15+): "From Packing (suggested) · clear". */
+.fhsm-box-packing {
+	display: block;
+	margin-top: 3px;
+	color: #646970;
+	font-size: 11px;
+	overflow-wrap: anywhere;
+}
+.fhsm-box-from[hidden],
+.fhsm-box-use[hidden],
+.fhsm-box-why[hidden],
+.fhsm-packing-bag-note[hidden] {
+	display: none;
+}
+.fhsm-box-packing .button-link {
+	font-size: 11px;
+}
+.fhsm-box-from-text,
+.fhsm-box-why {
+	margin-right: 4px;
+}
+.fhsm-packed-with {
+	margin: 0 0 8px;
+}
 .fhsm-cost-totals {
 	display: flex;
 	flex-wrap: wrap;
@@ -360,6 +384,11 @@
 }
 .fhsm-packing-stock-low {
 	color: #996800;
+}
+.fhsm-packing-bag-note {
+	display: block;
+	color: #646970;
+	font-size: 11px;
 }
 .fhsm-packing-qty-cell {
 	white-space: nowrap;

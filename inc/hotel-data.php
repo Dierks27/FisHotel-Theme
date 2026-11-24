@@ -327,19 +327,34 @@ class FisHotel_Hotel_Data {
 	private static function render_old_style_line( $post ) {
 		$pid = (int) $post->ID;
 		if ( ! $pid || ! class_exists( 'FisHotel_Product_Facts' ) ) return;
-		if ( ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $pid ) )
-			|| ( function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $pid ) ) ) {
-			return;
-		}
+		// Medications and foods are never old style (product-facts.php).
 		if ( ! FisHotel_Product_Facts::product_is_old_style( $pid ) ) return;
-		$plan = FisHotel_Product_Facts::plan_for( $pid );
+		$plan   = FisHotel_Product_Facts::plan_for( $pid );
+		$labels = [];
+		foreach ( self::fields() as $key => $field ) {
+			$labels[ $key ] = $field['label'];
+		}
 		?>
 		<div class="fh-facts-oldstyle">
 			<p>This fish's facts are still typed in the description.</p>
-			<button type="button" class="button fh-facts-copy" data-facts="<?php echo esc_attr( wp_json_encode( (object) $plan ) ); ?>">Copy them into these fields</button>
+			<button type="button" class="button fh-facts-copy" data-facts="<?php echo esc_attr( wp_json_encode( (object) $plan ) ); ?>" data-labels="<?php echo esc_attr( wp_json_encode( $labels ) ); ?>">Copy them into these fields</button>
 			<span class="fh-facts-copy-result" aria-live="polite"></span>
 		</div>
 		<?php
+	}
+
+	/**
+	 * A blank box posted for a fact that was never stored is skipped, so a
+	 * save never adds empty fish facts to a product (every dry good got ten
+	 * empty `_fh_*` rows on each save before v1.28.0). A stored fact that
+	 * was cleared on screen is still cleared.
+	 *
+	 * @param mixed $posted The posted value.
+	 * @param bool  $exists True when the product already has this meta row.
+	 * @return bool
+	 */
+	public static function skip_blank( $posted, $exists ) {
+		return ! $exists && '' === trim( (string) $posted );
 	}
 
 	public static function save_meta( $product_id ) {
@@ -356,11 +371,11 @@ class FisHotel_Hotel_Data {
 			if ( $is_notes ? ! $notes_ok : ! $facts_ok ) continue;
 			if ( ! isset( $_POST[ $name ] ) ) continue;
 
-			if ( $field['type'] === 'textarea' ) {
-				update_post_meta( $product_id, $meta_key, sanitize_textarea_field( $_POST[ $name ] ) );
-			} else {
-				update_post_meta( $product_id, $meta_key, sanitize_text_field( $_POST[ $name ] ) );
-			}
+			$value = $field['type'] === 'textarea'
+				? sanitize_textarea_field( $_POST[ $name ] )
+				: sanitize_text_field( $_POST[ $name ] );
+			if ( self::skip_blank( $value, metadata_exists( 'post', $product_id, $meta_key ) ) ) continue;
+			update_post_meta( $product_id, $meta_key, $value );
 		}
 	}
 

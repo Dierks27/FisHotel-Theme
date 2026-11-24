@@ -186,8 +186,11 @@ class FisHotel_Product_Facts {
 	/**
 	 * Still "old style": at least two different facts are typed as
 	 * labelled lines AND at least one of those facts has an empty field
-	 * (so the table is missing something the text has). Labels found but
-	 * every field filled is harmless — the product page hides the lines.
+	 * that a copy can fill (so the table is missing something the text
+	 * has). Labels found but every field filled is harmless — the product
+	 * page hides the lines. A label with nothing readable after it
+	 * ("Minimum Tank Size:" and no size) is not a fact to copy, so it never
+	 * keeps a fish flagged.
 	 *
 	 * @param string   $text   Normalised description (+ short description).
 	 * @param string[] $filled Filled field keys.
@@ -198,8 +201,9 @@ class FisHotel_Product_Facts {
 		if ( count( $found ) < 2 ) {
 			return false;
 		}
+		$readable = self::extract( $text );
 		foreach ( $found as $field ) {
-			if ( 'fun_facts' !== $field && ! in_array( $field, $filled, true ) ) {
+			if ( 'fun_facts' !== $field && ! in_array( $field, $filled, true ) && isset( $readable[ $field ] ) ) {
 				return true;
 			}
 		}
@@ -246,6 +250,11 @@ class FisHotel_Product_Facts {
 				if ( preg_match( $pattern, $text, $m ) ) {
 					$val = trim( $m[1] );
 					$val = preg_replace( '/\s+(Scientific|Common|Maximum|Minimum|Reef|Temperament|Foods|Habitat|Fun\s+Facts?).*$/is', '', $val );
+					// "Scientific Name:" with nothing after it: the pattern
+					// ran on to the next line, which is another fact's label.
+					if ( '' !== self::line_field( $val ) ) {
+						continue;
+					}
 					return $val;
 				}
 			}
@@ -312,12 +321,20 @@ class FisHotel_Product_Facts {
 			}
 		}
 
-		if ( preg_match( '/Reef[\s\-]?Safe(?:ty)?\s*[:-]\s*([^\n]+)/i', $text, $m ) ) {
-			$val  = strtolower( trim( $m[1] ) );
-			$reef = 'yes';
-			if ( strpos( $val, 'caution' ) !== false ) $reef = 'caution';
-			elseif ( strpos( $val, 'no' ) !== false )  $reef = 'no';
-			$out['reef_safe'] = $reef;
+		if ( preg_match( '/Reef[\s\-]?Safe(?:ty)?\s*[:-]\s*([^\n]+)/i', $text, $m ) && '' === self::line_field( $m[1] ) ) {
+			$out['reef_safe'] = self::reef_value( $m[1] );
+		}
+
+		// Every other labelled line the old-style test recognises
+		// ("Minimum Tank Size:", "Foods & Feeding:", "Habitat and
+		// Behaviour:", "Temperament – calm", a heading on its own line…):
+		// read it the same way the test sees it, so a fish flagged "old
+		// style" can always be copied (v1.28.0).
+		foreach ( self::labelled_values( $text ) as $field => $value ) {
+			if ( isset( $out[ $field ] ) ) {
+				continue;
+			}
+			$out[ $field ] = 'reef_safe' === $field ? self::reef_value( $value ) : $value;
 		}
 
 		// Field order, not discovery order.
@@ -328,6 +345,70 @@ class FisHotel_Product_Facts {
 			}
 		}
 		return $ordered;
+	}
+
+	/** A typed reef-safe answer → yes / no / caution (yes unless it says otherwise). */
+	public static function reef_value( $typed ) {
+		$val = strtolower( trim( (string) $typed ) );
+		if ( strpos( $val, 'caution' ) !== false ) return 'caution';
+		if ( strpos( $val, 'no' ) !== false )      return 'no';
+		return 'yes';
+	}
+
+	/**
+	 * The value of each labelled line, read exactly as LABEL_REGEX sees
+	 * the label: the text after the label on the same line; when that is
+	 * empty (a heading on its own line), the lines below it up to the next
+	 * labelled line — one line for a short fact, all of them for Foods &
+	 * feeding and Habitat. A label with nothing after it gives nothing.
+	 * First occurrence wins. Fun Facts is never a value.
+	 *
+	 * @param string $text Normalised text.
+	 * @return array<string,string> Field key => value.
+	 */
+	public static function labelled_values( $text ) {
+		$lines = explode( "\n", (string) $text );
+		$out   = [];
+		$n     = count( $lines );
+		for ( $i = 0; $i < $n; $i++ ) {
+			if ( ! preg_match( self::LABEL_REGEX, $lines[ $i ], $m ) ) {
+				continue;
+			}
+			$field = self::field_for_label( $m['label'] );
+			if ( 'fun_facts' === $field || isset( $out[ $field ] ) ) {
+				continue;
+			}
+			$multi = in_array( $field, [ 'foods_feeding', 'habitat' ], true );
+			$parts = [];
+			$after = trim( (string) substr( $lines[ $i ], strlen( $m[0] ) ) );
+			if ( '' !== $after ) {
+				$parts[] = $after;
+			}
+			if ( $multi || ! $parts ) {
+				for ( $k = $i + 1; $k < $n; $k++ ) {
+					$line = trim( $lines[ $k ] );
+					if ( '' !== self::line_field( $line ) || preg_match( '/^Description\s*:/i', $line ) ) {
+						break;
+					}
+					if ( '' === $line ) {
+						if ( $parts ) {
+							// A blank line ends a short fact; a block goes on.
+							if ( ! $multi ) break;
+						}
+						continue;
+					}
+					$parts[] = $line;
+					if ( ! $multi ) {
+						break;
+					}
+				}
+			}
+			$value = trim( implode( ' ', $parts ) );
+			if ( '' !== $value ) {
+				$out[ $field ] = $value;
+			}
+		}
+		return $out;
 	}
 
 	/**
@@ -375,8 +456,20 @@ class FisHotel_Product_Facts {
 	}
 
 	/**
+	 * Medications and foods never get fish facts: their descriptions often
+	 * hold lines such as "Reef Safe: Yes" or "Region: …" that are about the
+	 * product, not a fish. Same rule as the fish facts box's yellow line.
+	 */
+	public static function is_med_or_food( $product_id ) {
+		return ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) )
+			|| ( function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id ) );
+	}
+
+	/**
 	 * Copy the facts typed in one product's description into its empty
-	 * fields. Never overwrites a filled field.
+	 * fields. Never overwrites a filled field. A medication or food is
+	 * never touched (also when the Tools migration or another plugin's bulk
+	 * action asks).
 	 *
 	 * @param int $product_id
 	 * @return string[] Meta keys written (empty when nothing was copied).
@@ -384,7 +477,7 @@ class FisHotel_Product_Facts {
 	public static function copy_from_description( $product_id ) {
 		$product_id = (int) $product_id;
 		$written    = [];
-		if ( ! $product_id ) {
+		if ( ! $product_id || self::is_med_or_food( $product_id ) ) {
 			return $written;
 		}
 		foreach ( self::plan_for( $product_id ) as $field => $value ) {
@@ -402,7 +495,7 @@ class FisHotel_Product_Facts {
 	/** Old-style test for one product. */
 	public static function product_is_old_style( $product_id ) {
 		$product_id = (int) $product_id;
-		if ( ! $product_id ) {
+		if ( ! $product_id || self::is_med_or_food( $product_id ) ) {
 			return false;
 		}
 		return self::is_old_style(
@@ -414,7 +507,8 @@ class FisHotel_Product_Facts {
 
 /**
  * Copy the facts typed in a product's description into its empty fish
- * facts fields (never overwrites). For other FisHotel plugins.
+ * facts fields (never overwrites; a medication or food is never touched).
+ * For other FisHotel plugins.
  *
  * @param int $product_id
  * @return string[] Meta keys written.
@@ -425,7 +519,8 @@ function fishotel_copy_facts_from_description( $product_id ) {
 
 /**
  * True when a product's facts are still typed in its description and at
- * least one of them is missing from the fields.
+ * least one of them is missing from the fields and can be copied. Never
+ * true for a medication or food.
  *
  * @param int $product_id
  * @return bool

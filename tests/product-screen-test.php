@@ -43,6 +43,13 @@ function current_user_can() { return true; }
 function wp_json_encode( $d ) { return json_encode( $d ); }
 function get_post_meta( $id, $key, $single = false ) { return $GLOBALS['meta'][ $id ][ $key ] ?? ''; }
 function update_post_meta( $id, $key, $value ) { $GLOBALS['meta'][ $id ][ $key ] = $value; return true; }
+function delete_post_meta( $id, $key ) { unset( $GLOBALS['meta'][ $id ][ $key ] ); return true; }
+function metadata_exists( $type, $id, $key ) { return isset( $GLOBALS['meta'][ $id ] ) && array_key_exists( $key, $GLOBALS['meta'][ $id ] ); }
+function wp_unslash( $v ) { return $v; }
+function esc_url_raw( $v ) { return trim( (string) $v ); }
+function absint( $v ) { return abs( (int) $v ); }
+function wc_format_decimal( $v ) { return trim( (string) $v ); }
+function wp_get_post_parent_id( $id ) { return 0; }
 function get_post_field( $field, $id ) { return $GLOBALS['posts'][ $id ][ $field ] ?? ''; }
 function sanitize_text_field( $v ) { return trim( strip_tags( (string) $v ) ); }
 function sanitize_textarea_field( $v ) { return trim( strip_tags( (string) $v ) ); }
@@ -136,6 +143,9 @@ check( 'button says "Copy them into these fields"', false !== strpos( $facts, 'C
 preg_match( '/data-facts="([^"]*)"/', $facts, $m );
 $plan = json_decode( html_entity_decode( $m[1] ?? '', ENT_QUOTES ), true );
 check( 'the plan on the button holds only empty fields', [ 'scientific_name' => 'Testus oldus', 'max_length' => '2 in' ] === $plan, json_encode( $plan ) );
+preg_match( '/data-labels="([^"]*)"/', $facts, $m );
+$labels = json_decode( html_entity_decode( $m[1] ?? '', ENT_QUOTES ), true );
+check( 'the button carries the fact names (to name a fact that was not copied)', 'Scientific Name' === ( $labels['scientific_name'] ?? '' ) && ! isset( $labels['notes'] ) || 'Scientific Name' === ( $labels['scientific_name'] ?? '' ), json_encode( $labels ) );
 check( 'nothing was written by drawing the box', ! isset( $GLOBALS['meta'][702]['_fh_scientific_name'] ) );
 $GLOBALS['posts'][900] = $GLOBALS['posts'][702];
 check( 'no old-style line on a medication', false === strpos( render( [ 'FisHotel_Hotel_Data', 'render_meta_box' ], 900 ), 'class="fh-facts-oldstyle"' ) );
@@ -157,6 +167,58 @@ check( 'a field not posted is left alone', 'Calm' === $GLOBALS['meta'][703]['_fh
 $_POST = [ 'fishotel_hotel_nonce' => 'bad', 'fh_temperament' => 'x' ];
 FisHotel_Hotel_Data::save_meta( 703 );
 check( 'bad nonce saves nothing', 'Calm' === $GLOBALS['meta'][703]['_fh_temperament'] );
+
+// A save never writes an empty fact onto a product that never had one
+// (a dry good, or a fish whose fact was never typed): blank boxes posted
+// with nothing stored are skipped. Clearing a stored fact still clears it.
+$GLOBALS['meta'][704] = [ '_fh_temperament' => 'Calm' ];
+$blank = [ 'fishotel_hotel_nonce' => 'nonce-fishotel_save_hotel_data', 'fishotel_staff_notes_nonce' => 'nonce-fishotel_save_staff_notes' ];
+foreach ( [ 'scientific_name', 'common_names', 'max_length', 'min_tank_size', 'temperament', 'reef_safe', 'region', 'foods_feeding', 'habitat', 'notes' ] as $k ) {
+	$blank[ 'fh_' . $k ] = '';
+}
+$_POST = $blank;
+$_POST['fh_common_names'] = 'Testie';
+FisHotel_Hotel_Data::save_meta( 704 );
+check( 'blank boxes with nothing stored write nothing', [ '_fh_temperament', '_fh_common_names' ] === array_keys( $GLOBALS['meta'][704] ), json_encode( $GLOBALS['meta'][704] ) );
+check( 'a typed fact is still saved', 'Testie' === $GLOBALS['meta'][704]['_fh_common_names'] );
+check( 'a stored fact cleared on screen is cleared', '' === $GLOBALS['meta'][704]['_fh_temperament'] );
+$GLOBALS['meta'][705] = [];
+$_POST = $blank;
+FisHotel_Hotel_Data::save_meta( 705 );
+check( 'a dry good saved with every box blank gets no fish facts at all', [] === $GLOBALS['meta'][705], json_encode( $GLOBALS['meta'][705] ) );
+check( 'rule: blank + nothing stored → skip', FisHotel_Hotel_Data::skip_blank( '  ', false ) && ! FisHotel_Hotel_Data::skip_blank( '', true ) && ! FisHotel_Hotel_Data::skip_blank( 'x', false ) );
+
+// The Medication & food tab is posted on every product (hidden on fish):
+// saving a fish must not add empty medication fields to it.
+$GLOBALS['meta'][706] = [ '_fishotel_treats' => 'Ich' ];
+$_POST = [ '_fishotel_med_nonce' => 'nonce-' . FisHotel_Med_Product_Meta::NONCE ];
+foreach ( [ '_fishotel_med_eyebrow', '_fishotel_ea_url', '_fishotel_ea_product_id', '_fishotel_ea_sku', '_fishotel_amazon_asin', '_fishotel_dosing_anchor', '_fishotel_active_ingredient', '_fishotel_treats', '_fishotel_use_in', '_fishotel_reef_safe', '_fishotel_food_source', '_fishotel_best_for', '_fishotel_nutrition', '_fishotel_additives' ] as $k ) {
+	$_POST[ $k ] = '';
+}
+$_POST['_fishotel_use_in'] = 'Quarantine tank';
+FisHotel_Med_Product_Meta::save_product_meta( 706 );
+check( 'medication tab: blanks with nothing stored write nothing', [ '_fishotel_treats', '_fishotel_use_in' ] === array_keys( $GLOBALS['meta'][706] ), json_encode( $GLOBALS['meta'][706] ) );
+check( 'medication tab: a stored value cleared on screen is cleared', '' === $GLOBALS['meta'][706]['_fishotel_treats'] );
+$GLOBALS['meta'][707] = [];
+unset( $_POST['_fishotel_ea_product_id'] );
+$_POST['_fishotel_use_in'] = '';
+FisHotel_Med_Product_Meta::save_product_meta( 707 );
+check( 'medication tab: a fish saved with the tab untouched gets nothing (not even EA product id 0)', [] === $GLOBALS['meta'][707], json_encode( $GLOBALS['meta'][707] ) );
+$_POST['_fishotel_ea_product_id'] = '123';
+FisHotel_Med_Product_Meta::save_product_meta( 707 );
+check( 'medication tab: a typed EA product id is saved', 123 === ( $GLOBALS['meta'][707]['_fishotel_ea_product_id'] ?? null ) );
+$_POST['_fishotel_ea_product_id'] = '';
+FisHotel_Med_Product_Meta::save_product_meta( 707 );
+check( 'medication tab: clearing a stored EA product id still clears it', 0 === ( $GLOBALS['meta'][707]['_fishotel_ea_product_id'] ?? null ) );
+
+$GLOBALS['meta'][708] = [];
+$_POST = [];
+FisHotel_Med_Product_Meta::save_variation_fields( 708, 0 );
+check( 'variation EA boxes blank, nothing stored → no EA Wholesale / Retail rows', ! array_key_exists( '_fishotel_wholesale', $GLOBALS['meta'][708] ) && ! array_key_exists( '_fishotel_ea_retail', $GLOBALS['meta'][708] ), json_encode( $GLOBALS['meta'][708] ) );
+$_POST = [ '_fishotel_wholesale' => [ '4.50' ], '_fishotel_ea_retail' => [ '' ] ];
+$GLOBALS['meta'][708]['_fishotel_ea_retail'] = '9.99';
+FisHotel_Med_Product_Meta::save_variation_fields( 708, 0 );
+check( 'variation: a typed wholesale is saved, a cleared retail is cleared', '4.50' === $GLOBALS['meta'][708]['_fishotel_wholesale'] && '' === $GLOBALS['meta'][708]['_fishotel_ea_retail'] );
 $_POST = [];
 
 echo "\n" . ( $failures ? "$failures FAILED" : 'all passed' ) . "\n";

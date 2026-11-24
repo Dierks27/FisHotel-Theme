@@ -30,6 +30,8 @@ function update_post_meta( $id, $key, $value ) {
 	return true;
 }
 function sanitize_textarea_field( $v ) { return trim( strip_tags( (string) $v ) ); }
+function fishotel_is_medication_product( $id ) { return 900 === (int) $id; }
+function fishotel_is_food_product( $id ) { return 901 === (int) $id; }
 
 require_once dirname( __DIR__ ) . '/inc/product-facts.php';
 
@@ -182,6 +184,59 @@ check( 'second copy writes nothing', [] === fishotel_copy_facts_from_description
 check( 'no product → nothing', [] === fishotel_copy_facts_from_description( 0 ) && ! fishotel_fish_facts_old_style( 0 ) );
 $GLOBALS['posts'][502] = [ 'post_content' => 'Just a nice fish.', 'post_excerpt' => '' ];
 check( 'prose-only fish is not old style and copies nothing', ! fishotel_fish_facts_old_style( 502 ) && [] === fishotel_copy_facts_from_description( 502 ) );
+
+
+// ── Every labelled line the old-style test sees can be copied ──────────
+// (a fish flagged "Old style" whose Copy could not read the line stayed
+// flagged for ever — e.g. "Minimum Tank Size:").
+echo "old style ⇔ something to copy\n";
+$forms = [
+	'Minimum Tank Size: 40 gallons'      => [ 'min_tank_size', '40 gallons' ],
+	'Min Aquarium Size: 40 gallons'      => [ 'min_tank_size', '40 gallons' ],
+	'Foods & Feeding: mysis'             => [ 'foods_feeding', 'mysis' ],
+	'Food and Feeding: mysis'            => [ 'foods_feeding', 'mysis' ],
+	'Habitat and Behaviour: rockwork'    => [ 'habitat', 'rockwork' ],
+	'Habitat & Behaviour: rockwork'      => [ 'habitat', 'rockwork' ],
+	'Temperament – calm'                 => [ 'temperament', 'calm' ],
+	'Temperament | calm'                 => [ 'temperament', 'calm' ],
+	"Temperament\tcalm"                  => [ 'temperament', 'calm' ],
+	"Temperament\ncalm"                  => [ 'temperament', 'calm' ],
+	'Max Lengths: 3 in'                  => [ 'max_length', '3 in' ],
+	'Reef-Safe: no'                      => [ 'reef_safe', 'no' ],
+];
+foreach ( $forms as $line => $want ) {
+	$t    = "Scientific Name: Testus formus\n" . $line . "\nFun Facts: it hides at night.";
+	$got  = $F::extract( $t );
+	check( '"' . str_replace( [ "\n", "\t" ], [ '⏎', '⇥' ], $line ) . '" is read', ( $got[ $want[0] ] ?? null ) === $want[1], j( $got ) );
+	check( '  … and once copied the fish is no longer old style', ! $F::is_old_style( $t, array_keys( $got ) ) );
+}
+$t = "Foods and Feeding\nMeaty foods.\nNori too.\n\nTemperament: calm";
+check( 'a block heading on its own line takes the lines under it', 'Meaty foods. Nori too.' === ( $F::extract( $t )['foods_feeding'] ?? '' ), j( $F::extract( $t ) ) );
+$t = "Scientific Name: Testus emptyus\nMinimum Tank Size:\nTemperament: calm";
+check( 'a label with nothing after it is not a fact (not the next label either)', ! isset( $F::extract( $t )['min_tank_size'] ), j( $F::extract( $t ) ) );
+check( '  … and never keeps a fish flagged', ! $F::is_old_style( $t, [ 'scientific_name', 'temperament' ] ) );
+$t = "Scientific Name:\nTemperament: calm";
+check( '"Scientific Name:" with nothing after it does not read the next label', ! isset( $F::extract( $t )['scientific_name'] ), j( $F::extract( $t ) ) );
+$t = "Reef Safe:\nTemperament: calm";
+check( '"Reef Safe:" with nothing after it reads nothing', ! isset( $F::extract( $t )['reef_safe'] ), j( $F::extract( $t ) ) );
+$t = "Scientific Name: Testus formus\nTemperament – calm\nA paragraph about it.";
+check( 'a short fact takes one line only', 'calm' === ( $F::extract( $t )['temperament'] ?? '' ) );
+$t = "Scientific Name: Testus formus\nHabitat & Behaviour: rockwork\nKeeps to caves.\nFun Facts: x";
+check( 'a block takes the lines under it up to the next label', 'rockwork Keeps to caves.' === ( $F::extract( $t )['habitat'] ?? '' ), j( $F::extract( $t ) ) );
+check( 'the old reading still wins where it read something', 'Testus' === $F::extract( "Scientific Name: Testus Common Names: Tester" )['scientific_name'] );
+
+// ── Medications and foods never get fish facts ──────────────────────────
+echo "medications and foods\n";
+$medtext = "<p>Reef Safe: Yes</p><p>Region: worldwide shipping</p><p>Temperament: n/a</p>";
+foreach ( [ 900 => 'medication', 901 => 'food' ] as $pid => $kind ) {
+	$GLOBALS['posts'][ $pid ] = [ 'post_content' => $medtext, 'post_excerpt' => '' ];
+	$GLOBALS['meta'][ $pid ]  = [];
+	$GLOBALS['wrote']         = [];
+	check( "a $kind is never old style", ! fishotel_fish_facts_old_style( $pid ) );
+	check( "a $kind copies nothing (Tools migration, bulk actions)", [] === fishotel_copy_facts_from_description( $pid ) && [] === $GLOBALS['wrote'] );
+}
+$GLOBALS['posts'][503] = [ 'post_content' => $medtext, 'post_excerpt' => '' ];
+check( 'the same text on a fish is still copied', [] !== fishotel_copy_facts_from_description( 503 ) );
 
 echo "\n" . ( $failures ? "$failures FAILED" : 'all passed' ) . "\n";
 exit( $failures ? 1 : 0 );

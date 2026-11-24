@@ -12,7 +12,11 @@
  *     on the button, inc/hotel-data.php). Update saves them. Any fact the
  *     box does not draw (e.g. the scientific name, when another box draws
  *     it) is handed on with the jQuery event `fishotel-copy-facts`
- *     (values) on document, so that box can fill itself.
+ *     (values) on document, so that box can fill itself. A listener may
+ *     say which facts it filled by setting `event.taken[key] = true`; a
+ *     listener that says nothing is trusted with all of them. With no
+ *     listener at all, the message names the facts that were NOT copied
+ *     (before, they were counted as copied and silently dropped).
  *
  * Pure helpers are exported for tests/admin-product.test.js.
  *
@@ -70,24 +74,53 @@
 	}
 
 	/**
+	 * Which handed-on facts another box took.
+	 *
+	 * @param {Object}  elsewhere   fact key → value handed on.
+	 * @param {Object}  taken       fact key → true, as set by listeners.
+	 * @param {boolean} hasListener True when anything listens for the event.
+	 * @return {{taken: Array, missed: Array}}
+	 */
+	function handedOn( elsewhere, taken, hasListener ) {
+		var keys = Object.keys( elsewhere || {} );
+		var said = taken && typeof taken === 'object' ? Object.keys( taken ).filter( function ( k ) { return !! taken[ k ]; } ) : [];
+		if ( ! said.length ) {
+			return hasListener ? { taken: keys, missed: [] } : { taken: [], missed: keys };
+		}
+		return {
+			taken:  keys.filter( function ( k ) { return said.indexOf( k ) !== -1; } ),
+			missed: keys.filter( function ( k ) { return said.indexOf( k ) === -1; } )
+		};
+	}
+
+	/**
 	 * The line shown after a copy.
 	 *
 	 * @param {number} filled    Boxes filled here.
-	 * @param {number} elsewhere Facts handed to another box.
+	 * @param {number} elsewhere Facts another box took.
+	 * @param {Array}  missed    Names of facts nobody could fill (optional).
 	 * @return {string}
 	 */
-	function copyMessage( filled, elsewhere ) {
+	function copyMessage( filled, elsewhere, missed ) {
 		var total = filled + elsewhere;
-		if ( total === 0 ) {
-			return 'Nothing new could be read from the description — copy by hand.';
+		var names = ( missed || [] ).filter( function ( n ) { return String( n || '' ) !== ''; } );
+		var tail  = '';
+		if ( names.length ) {
+			tail = ' ' + names.join( ', ' ) + ( names.length === 1 ? ' was' : ' were' ) + ' not copied — type ' + ( names.length === 1 ? 'it' : 'them' ) + ' in by hand.';
 		}
-		return 'Copied ' + total + ( total === 1 ? ' fact' : ' facts' ) + ' — press Update to keep them.';
+		if ( total === 0 ) {
+			return names.length
+				? 'Nothing could be filled here.' + tail
+				: 'Nothing new could be read from the description — copy by hand.';
+		}
+		return 'Copied ' + total + ( total === 1 ? ' fact' : ' facts' ) + ' — press Update to keep them.' + tail;
 	}
 
 	if ( typeof module === 'object' && module && module.exports ) {
 		module.exports = {
 			medFieldsShown: medFieldsShown,
 			factsToFill:    factsToFill,
+			handedOn:       handedOn,
 			copyMessage:    copyMessage
 		};
 	}
@@ -160,11 +193,23 @@
 					$box.find( '[name="fh_' + key + '"]' ).val( value ).trigger( 'change' );
 				}
 			} );
+			var handed = { taken: [], missed: [] };
 			if ( Object.keys( todo.elsewhere ).length ) {
-				$( document ).trigger( 'fishotel-copy-facts', [ todo.elsewhere ] );
+				var ev = $.Event( 'fishotel-copy-facts' );
+				ev.taken = {};
+				$( document ).trigger( ev, [ todo.elsewhere ] );
+				var taken = ( ev.result && typeof ev.result === 'object' ) ? ev.result : ev.taken;
+				var bound = $._data ? $._data( document, 'events' ) : null;
+				var hasListener = !! ( bound && bound[ 'fishotel-copy-facts' ] && bound[ 'fishotel-copy-facts' ].length );
+				handed = handedOn( todo.elsewhere, taken, hasListener );
 			}
+			var labels = $btn.data( 'labels' ) || {};
 			$btn.siblings( '.fh-facts-copy-result' ).text(
-				copyMessage( Object.keys( todo.fill ).length, Object.keys( todo.elsewhere ).length )
+				copyMessage(
+					Object.keys( todo.fill ).length,
+					handed.taken.length,
+					handed.missed.map( function ( k ) { return labels[ k ] || k; } )
+				)
 			);
 		} );
 	} );

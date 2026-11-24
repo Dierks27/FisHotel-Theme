@@ -83,12 +83,28 @@ Every WooCommerce product gets two boxes (until v1.28.0 one box, "FisHotel — P
   drawn is not posted, so this box leaves it alone on Update. It cannot add fields or Notes.
 - **Old style.** Facts used to be typed in the description as labelled lines ("Scientific Name:
   …", "Maximum Length: …", "Foods and Feeding: …"). When at least two different facts are typed
-  that way and at least one of them has an empty field, a yellow line says "This fish's facts are
-  still typed in the description" with **Copy them into these fields**: it fills only the EMPTY
-  boxes on screen from the description (never a typed one) and says "Copied N facts — press
-  Update to keep them". It does not write to the database itself: the next Update posts the
-  boxes as they are on screen and would undo it. A fact the box does not draw is handed on with
-  the jQuery event `fishotel-copy-facts` (values) on `document`. Not shown on medications/foods.
+  that way and at least one of them has an empty field that the copy can fill, a yellow line says
+  "This fish's facts are still typed in the description" with **Copy them into these fields**: it
+  fills only the EMPTY boxes on screen from the description (never a typed one) and says "Copied
+  N facts — press Update to keep them". It does not write to the database itself: the next
+  Update posts the boxes as they are on screen and would undo it. A fact the box does not draw is
+  handed on with the jQuery event `fishotel-copy-facts` (values) on `document`; a listener may
+  set `event.taken[key] = true` for each fact it filled (a listener that says nothing is trusted
+  with all of them). When nothing listens, the message names the fact ("Scientific Name was not
+  copied — type it in by hand") instead of counting it as copied.
+- Every labelled line the old-style test recognises can be read by the copy ("Minimum Tank
+  Size:", "Foods & Feeding:", "Habitat and Behaviour:", "Temperament – calm", a heading on its
+  own line with the text under it). A label with nothing after it ("Minimum Tank Size:" and no
+  size) is not a fact, is never copied, and never keeps a fish flagged — so a flagged fish can
+  always be cleared with one click.
+- **Medications and foods are never old style and never get fish facts**, whoever asks (the box,
+  the Tools migration, another plugin's bulk action): their descriptions often say "Reef Safe:
+  Yes" or "Region: …" about the product.
+- **Saving never adds empty rows.** A blank box for a fact the product never had is not written
+  (a dry good used to get ten empty `_fh_*` rows on every save); clearing a stored fact still
+  clears it. The Medication & food tab and the EA Wholesale / EA Retail boxes follow the same
+  rule, so saving a fish no longer adds empty medication rows (an EA product id of 0 counts as
+  empty).
 - For other FisHotel plugins: `fishotel_copy_facts_from_description( $product_id )` copies the
   facts into the empty fields of one product and returns the meta keys written (the Misc
   plugin's "Product checks" row action); `fishotel_fish_facts_old_style( $product_id )` is the
@@ -119,10 +135,12 @@ Every WooCommerce product gets two boxes (until v1.28.0 one box, "FisHotel — P
   this again" stops it for that person (user meta `fishotel_notes_notice_dismissed`).
 
 Tests: `php tests/product-facts-test.php` (the labels, the old-style test, the product-page text,
-the reading, never overwriting, the copy), `php tests/product-screen-test.php` (both boxes, the
-filter, the old-style line and its plan, each box saving only its own fields),
+the reading of every label form, never overwriting, the copy, medications and foods left alone),
+`php tests/product-screen-test.php` (both boxes, the filter, the old-style line and its plan, each
+box saving only its own fields, no empty rows from the facts box or the Medication & food tab),
 `php tests/fish-notes-test.php` (the list, the wording, the certificate without a note),
-`node tests/admin-product.test.js` (what the Copy button fills).
+`node tests/admin-product.test.js` (what the Copy button fills, which handed-on facts were taken,
+the message).
 
 ### Product and order screens — the theme's boxes only where they matter (v1.28.0)
 - **"Medication & food" tab** (was "FisHotel Medication"; inc/medication-store/product-meta.php)

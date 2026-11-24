@@ -37,7 +37,7 @@ class FisHotel_Med_Packing_Slip {
 		// targeting both screen IDs. Using a meta box (vs. the
 		// woocommerce_admin_order_data_after_order_details hook) is
 		// the only approach that survives HPOS unconditionally.
-		add_action( 'add_meta_boxes', [ __CLASS__, 'register_meta_box' ] );
+		add_action( 'add_meta_boxes', [ __CLASS__, 'register_meta_box' ], 10, 2 );
 
 		// Admin POST handlers (open print view / send email).
 		add_action( 'admin_post_' . self::ACTION_VIEW,  [ __CLASS__, 'handle_view' ] );
@@ -47,8 +47,27 @@ class FisHotel_Med_Packing_Slip {
 		add_action( 'woocommerce_order_status_processing', [ __CLASS__, 'maybe_auto_email' ], 20, 2 );
 	}
 
-	/** Register the EA Packing Slip meta box on legacy + HPOS screens. */
-	public static function register_meta_box() {
+	/**
+	 * Register the EA Packing Slip meta box on legacy + HPOS screens —
+	 * since v1.28.0 only on an order that has EA-mode lines (its own, its
+	 * combined secondaries', or a combined box's sources'), the way the
+	 * Medication terms box already works. A live-fish-only order no longer
+	 * gets a box that just says "No EA-mode items". An EA-mode line missing
+	 * its EA SKU still counts, so the box can name it.
+	 *
+	 * @param string           $screen_or_type Post type (legacy) or screen id (HPOS).
+	 * @param WP_Post|WC_Order $post_or_order
+	 */
+	public static function register_meta_box( $screen_or_type = '', $post_or_order = null ) {
+		$order = null;
+		if ( $post_or_order instanceof WC_Order ) {
+			$order = $post_or_order;
+		} elseif ( $post_or_order instanceof WP_Post && 'shop_order' === $post_or_order->post_type ) {
+			$order = wc_get_order( $post_or_order->ID );
+		}
+		if ( ! $order instanceof WC_Order || ! self::has_ea_mode_lines( self::slip_source_orders( $order ) ) ) {
+			return;
+		}
 		// Legacy post-type-based edit screen.
 		add_meta_box(
 			'fishotel-med-packing-slip',
@@ -67,6 +86,27 @@ class FisHotel_Med_Packing_Slip {
 			'side',
 			'default'
 		);
+	}
+
+	/**
+	 * True when any line of these orders is a product set to EA ("Who
+	 * ships it" = EA), with or without its EA SKU.
+	 *
+	 * @param WC_Order[] $orders
+	 * @return bool
+	 */
+	public static function has_ea_mode_lines( array $orders ) {
+		foreach ( $orders as $src ) {
+			if ( ! $src instanceof WC_Order ) continue;
+			foreach ( $src->get_items( 'line_item' ) as $item ) {
+				if ( ! $item instanceof WC_Order_Item_Product ) continue;
+				$product_id = (int) $item->get_product_id();
+				if ( $product_id && 'ea' === get_post_meta( $product_id, '_fishotel_fulfillment', true ) ) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/**

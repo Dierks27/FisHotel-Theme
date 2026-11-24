@@ -2,7 +2,8 @@
  * FisHotel Medication Store — admin
  *
  * Styles for:
- *   - The "FisHotel Medication" product-data tab + its options groups.
+ *   - The "Medication & food" product-data tab + its options groups
+ *     (hidden on products that are not a medication or food — v1.28.0).
  *   - The Settings page's masked-secret rows.
  *   - The order-screen "EA Packing Slip" panel.
  *
@@ -35,6 +36,18 @@
 #woocommerce-product-data ul.product_data_tabs li.fishotel_med_options a::before {
 	content: "\f487";
 	font-family: "dashicons";
+}
+
+/* Product data box — "Medication & food" tab, its panel and the EA
+ * Wholesale / EA Retail boxes on each variation are hidden when the
+ * product is not a medication or food (body class set by the server and
+ * switched live by assets/js/admin-product.js). !important beats the
+ * inline display WooCommerce's show_if_simple / show_if_variable script
+ * writes. The fields are still in the form and still posted. */
+body.fh-hide-med #woocommerce-product-data ul.product_data_tabs li.fishotel_med_options,
+body.fh-hide-med #fishotel_med_panel,
+body.fh-hide-med #woocommerce-product-data .fh-med-only {
+	display: none !important;
 }
 
 /* Product data box — mode-driven field visibility. Toggled by the

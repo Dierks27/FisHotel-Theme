@@ -242,6 +242,9 @@ class FisHotel_Fulfillment {
 		// raw ID into a link to the source order's edit page.
 		add_filter( 'woocommerce_order_item_display_meta_key', [ __CLASS__, 'linkify_source_meta_key' ], 10, 3 );
 		add_filter( 'woocommerce_order_item_display_meta_value', [ __CLASS__, 'linkify_source_meta_value' ], 10, 3 );
+		// The raw source line-item id under each combined-box item is only
+		// for the code (refund / remove matching) — keep it off the screen.
+		add_filter( 'woocommerce_hidden_order_itemmeta', [ __CLASS__, 'hide_source_line_item_meta' ] );
 
 		// Sidebar "Orders" badge: match the in-page Open Orders count.
 		// v1.16.0 used woocommerce_menu_order_count, which didn't apply on
@@ -1658,6 +1661,22 @@ class FisHotel_Fulfillment {
 	}
 
 	// ── Line-item source-order linkifier ─────────────────────────────
+
+	/**
+	 * woocommerce_hidden_order_itemmeta: hide `_fishotel_source_line_item_id`
+	 * (a bare number) under the items of a combined box. The meta stays on
+	 * the item; WooCommerce keeps hidden meta when the items are saved.
+	 *
+	 * @param mixed $keys
+	 * @return array
+	 */
+	public static function hide_source_line_item_meta( $keys ) {
+		$keys = is_array( $keys ) ? $keys : [];
+		if ( ! in_array( self::META_SOURCE_LINE_ITEM, $keys, true ) ) {
+			$keys[] = self::META_SOURCE_LINE_ITEM;
+		}
+		return $keys;
+	}
 
 	/** Replace the raw '_fishotel_source_order' meta label with "Source order". */
 	public static function linkify_source_meta_key( $display_key, $meta, $item ) {

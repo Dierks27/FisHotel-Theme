@@ -1,0 +1,163 @@
+<?php
+/**
+ * Test for the theme's boxes on the product edit screen (v1.28.0):
+ *  - "Medication & food" tab: name, place, and when its fields show
+ *    (inc/admin-product-screen.php + inc/medication-store/product-meta.php);
+ *  - EA Wholesale / EA Retail on a variation carry the med-only class;
+ *  - "Fish facts — the table on the product page" and "Staff notes — never
+ *    shown on the website" (inc/hotel-data.php): titles, fields, the
+ *    fields filter, the old-style line + copy plan, the hints, and the
+ *    save rules (each box saves only its own fields, only with its nonce).
+ * No WordPress, no database. Invented data.
+ *
+ *   php tests/product-screen-test.php
+ *
+ * @package FisHotel
+ */
+
+if ( PHP_SAPI !== 'cli' ) {
+	exit( 1 );
+}
+
+if ( ! defined( 'ABSPATH' ) ) define( 'ABSPATH', __DIR__ . '/' );
+
+$GLOBALS['boxes']   = [];
+$GLOBALS['filters'] = [];
+$GLOBALS['meta']    = [];
+$GLOBALS['posts']   = [];
+$GLOBALS['inputs']  = [];
+function add_action() {}
+function add_filter() {}
+function apply_filters( $hook, $value ) {
+	return isset( $GLOBALS['filters'][ $hook ] ) ? call_user_func( $GLOBALS['filters'][ $hook ], $value ) : $value;
+}
+function add_meta_box( $id, $title, $cb, $screen, $ctx, $prio ) { $GLOBALS['boxes'][ $id ] = compact( 'title', 'screen', 'ctx', 'prio' ); }
+function __( $t, $d = '' ) { return $t; }
+function esc_html( $t ) { return htmlspecialchars( (string) $t, ENT_QUOTES, 'UTF-8' ); }
+function esc_attr( $t ) { return htmlspecialchars( (string) $t, ENT_QUOTES, 'UTF-8' ); }
+function esc_textarea( $t ) { return htmlspecialchars( (string) $t, ENT_QUOTES, 'UTF-8' ); }
+function checked( $a, $b = true ) { if ( (string) $a === (string) $b ) echo ' checked="checked"'; }
+function wp_nonce_field( $action, $name ) { echo '<input type="hidden" name="' . $name . '" value="nonce-' . $action . '">'; }
+function wp_verify_nonce( $value, $action ) { return $value === 'nonce-' . $action; }
+function current_user_can() { return true; }
+function wp_json_encode( $d ) { return json_encode( $d ); }
+function get_post_meta( $id, $key, $single = false ) { return $GLOBALS['meta'][ $id ][ $key ] ?? ''; }
+function update_post_meta( $id, $key, $value ) { $GLOBALS['meta'][ $id ][ $key ] = $value; return true; }
+function get_post_field( $field, $id ) { return $GLOBALS['posts'][ $id ][ $field ] ?? ''; }
+function sanitize_text_field( $v ) { return trim( strip_tags( (string) $v ) ); }
+function sanitize_textarea_field( $v ) { return trim( strip_tags( (string) $v ) ); }
+function fishotel_is_medication_product( $id ) { return 900 === (int) $id; }
+function fishotel_is_food_product( $id ) { return false; }
+function woocommerce_wp_text_input( $args ) { $GLOBALS['inputs'][] = $args; }
+
+require_once dirname( __DIR__ ) . '/inc/product-facts.php';
+require_once dirname( __DIR__ ) . '/inc/hotel-data.php';
+require_once dirname( __DIR__ ) . '/inc/admin-product-screen.php';
+require_once dirname( __DIR__ ) . '/inc/medication-store/product-meta.php';
+
+$failures = 0;
+function check( $label, $ok, $detail = '' ) {
+	global $failures;
+	if ( $ok ) {
+		echo "  ok   $label\n";
+	} else {
+		$failures++;
+		echo "  FAIL $label" . ( $detail !== '' ? " — $detail" : '' ) . "\n";
+	}
+}
+function render( $cb, $id ) {
+	ob_start();
+	call_user_func( $cb, (object) [ 'ID' => $id ] );
+	return ob_get_clean();
+}
+
+// ── Medication & food tab ───────────────────────────────────────────────
+echo "Medication & food\n";
+$S = 'FisHotel_Admin_Product_Screen';
+check( 'no category yet → shown (nothing hidden)', $S::med_fields_shown( [], [ 5, 6 ], '', '' ) );
+check( 'a medication category → shown', $S::med_fields_shown( [ 3, 6 ], [ 5, 6 ], '', '' ) );
+check( 'only fish categories → hidden', ! $S::med_fields_shown( [ 3, 4 ], [ 5, 6 ], '', '' ) );
+check( '"Who ships it" set → shown whatever the category', $S::med_fields_shown( [ 3 ], [ 5 ], 'self', '' ) );
+check( 'Amazon ASIN set → shown', $S::med_fields_shown( [ 3 ], [ 5 ], '', 'B000TEST01' ) );
+check( 'ids compared as numbers', $S::med_fields_shown( [ '5' ], [ 5 ], '', '' ) );
+check( 'blank mode / ASIN do not count', ! $S::med_fields_shown( [ 3 ], [ 5 ], '  ', ' ' ) );
+check( 'the roots include medications and foods', in_array( 'medications', $S::MED_FOOD_ROOTS, true ) && in_array( 'freeze-dried-foods', $S::MED_FOOD_ROOTS, true ) && in_array( 'medicated-food', $S::MED_FOOD_ROOTS, true ) );
+
+$tabs = FisHotel_Med_Product_Meta::add_data_tab( [] );
+check( 'tab renamed "Medication & food"', 'Medication & food' === $tabs['fishotel_med']['label'] );
+check( 'tab right after General (10) and before Inventory (20)', 15 === $tabs['fishotel_med']['priority'] );
+check( 'tab target unchanged (saving unchanged)', 'fishotel_med_panel' === $tabs['fishotel_med']['target'] );
+$src = file_get_contents( dirname( __DIR__ ) . '/inc/medication-store/product-meta.php' );
+check( '"Fulfillment mode" renamed "Who ships it (EA / Amazon / us)"', false !== strpos( $src, "'Who ships it (EA / Amazon / us)'" ) && false === strpos( $src, "'Fulfillment mode'" ) );
+
+$GLOBALS['inputs'] = [];
+FisHotel_Med_Product_Meta::render_variation_fields( 0, [], (object) [ 'ID' => 4101 ] );
+check( 'two EA fields drawn on a variation', 2 === count( $GLOBALS['inputs'] ) );
+check( 'both carry fh-med-only (hidden unless med / food)', 2 === count( array_filter( $GLOBALS['inputs'], function ( $a ) { return false !== strpos( $a['wrapper_class'], 'fh-med-only' ); } ) ) );
+check( 'their names are unchanged (saving unchanged)', '_fishotel_wholesale[0]' === $GLOBALS['inputs'][0]['name'] && '_fishotel_ea_retail[0]' === $GLOBALS['inputs'][1]['name'] );
+$css = file_get_contents( dirname( __DIR__ ) . '/assets/css/medication-store-admin.css' );
+check( 'CSS hides the tab, its panel and fh-med-only under body.fh-hide-med', false !== strpos( $css, 'body.fh-hide-med #woocommerce-product-data ul.product_data_tabs li.fishotel_med_options' ) && false !== strpos( $css, 'body.fh-hide-med #fishotel_med_panel' ) && false !== strpos( $css, 'body.fh-hide-med #woocommerce-product-data .fh-med-only' ) );
+
+// ── Fish facts + Staff notes boxes ──────────────────────────────────────
+echo "boxes\n";
+FisHotel_Hotel_Data::add_meta_box();
+check( 'fish box renamed', 'Fish facts — the table on the product page' === $GLOBALS['boxes']['fishotel_hotel_data']['title'] );
+check( 'fish box keeps its id and place', 'normal' === $GLOBALS['boxes']['fishotel_hotel_data']['ctx'] && 'high' === $GLOBALS['boxes']['fishotel_hotel_data']['prio'] );
+check( 'Staff notes box exists', 'Staff notes — never shown on the website' === ( $GLOBALS['boxes']['fishotel_staff_notes']['title'] ?? '' ) );
+check( 'Staff notes box is low in the main column', 'normal' === $GLOBALS['boxes']['fishotel_staff_notes']['ctx'] && 'low' === $GLOBALS['boxes']['fishotel_staff_notes']['prio'] );
+
+$GLOBALS['meta'][701]  = [ '_fh_scientific_name' => 'Testus brightus', '_fh_notes' => 'Feeds well', '_fh_reef_safe' => 'yes' ];
+$GLOBALS['posts'][701] = [ 'post_content' => 'A nice fish.', 'post_excerpt' => '' ];
+$facts = render( [ 'FisHotel_Hotel_Data', 'render_meta_box' ], 701 );
+check( 'fish box draws the facts', false !== strpos( $facts, 'name="fh_scientific_name"' ) && false !== strpos( $facts, 'name="fh_habitat"' ) && false !== strpos( $facts, 'value="Testus brightus"' ) );
+check( 'fish box no longer draws Notes', false === strpos( $facts, 'name="fh_notes"' ) && false === strpos( $facts, 'Feeds well' ) );
+check( 'fish box has its own nonce', false !== strpos( $facts, 'name="fishotel_hotel_nonce"' ) );
+check( 'Region hint', false !== strpos( $facts, 'A region tag such as Indo-Pacific overrides this.' ) );
+check( 'Foods / Habitat hint', 2 === substr_count( $facts, 'Empty = the site&#039;s default text' ) );
+check( 'no old-style line on a prose-only fish', false === strpos( $facts, 'class="fh-facts-oldstyle"' ) );
+
+$notes = render( [ 'FisHotel_Hotel_Data', 'render_notes_box' ], 701 );
+check( 'Staff notes box draws Notes with their value', false !== strpos( $notes, 'name="fh_notes"' ) && false !== strpos( $notes, 'Feeds well' ) );
+check( 'Staff notes box has its own nonce', false !== strpos( $notes, 'name="fishotel_staff_notes_nonce"' ) );
+
+$GLOBALS['filters']['fishotel_fish_facts_box_fields'] = function ( $keys ) { return array_values( array_diff( $keys, [ 'scientific_name' ] ) ); };
+$facts = render( [ 'FisHotel_Hotel_Data', 'render_meta_box' ], 701 );
+check( 'filter can take Scientific name out of the box', false === strpos( $facts, 'name="fh_scientific_name"' ) && false !== strpos( $facts, 'name="fh_common_names"' ) );
+$GLOBALS['filters']['fishotel_fish_facts_box_fields'] = function ( $keys ) { return [ 'habitat', 'bogus', 'notes' ]; };
+check( 'filter cannot add unknown fields or Notes', [ 'habitat' ] === FisHotel_Hotel_Data::box_field_keys() );
+unset( $GLOBALS['filters']['fishotel_fish_facts_box_fields'] );
+
+// Old-style fish.
+$GLOBALS['meta'][702]  = [ '_fh_temperament' => 'Shy' ];
+$GLOBALS['posts'][702] = [ 'post_content' => "Scientific Name: Testus oldus\nTemperament: Peaceful\nMax Length: 2 in", 'post_excerpt' => '' ];
+$facts = render( [ 'FisHotel_Hotel_Data', 'render_meta_box' ], 702 );
+check( 'old-style fish gets the yellow line', false !== strpos( $facts, "This fish&#039;s facts are still typed in the description." ) || false !== strpos( $facts, "This fish's facts are still typed in the description." ) );
+check( 'button says "Copy them into these fields"', false !== strpos( $facts, 'Copy them into these fields' ) );
+preg_match( '/data-facts="([^"]*)"/', $facts, $m );
+$plan = json_decode( html_entity_decode( $m[1] ?? '', ENT_QUOTES ), true );
+check( 'the plan on the button holds only empty fields', [ 'scientific_name' => 'Testus oldus', 'max_length' => '2 in' ] === $plan, json_encode( $plan ) );
+check( 'nothing was written by drawing the box', ! isset( $GLOBALS['meta'][702]['_fh_scientific_name'] ) );
+$GLOBALS['posts'][900] = $GLOBALS['posts'][702];
+check( 'no old-style line on a medication', false === strpos( render( [ 'FisHotel_Hotel_Data', 'render_meta_box' ], 900 ), 'class="fh-facts-oldstyle"' ) );
+
+// ── Saving ──────────────────────────────────────────────────────────────
+echo "save\n";
+$GLOBALS['meta'][703] = [ '_fh_notes' => 'old note', '_fh_temperament' => 'old' ];
+$_POST = [ 'fishotel_hotel_nonce' => 'nonce-fishotel_save_hotel_data', 'fh_temperament' => 'Calm', 'fh_notes' => 'forged' ];
+FisHotel_Hotel_Data::save_meta( 703 );
+check( 'facts nonce saves facts', 'Calm' === $GLOBALS['meta'][703]['_fh_temperament'] );
+check( 'facts nonce does not save Notes', 'old note' === $GLOBALS['meta'][703]['_fh_notes'] );
+$_POST = [ 'fishotel_staff_notes_nonce' => 'nonce-fishotel_save_staff_notes', 'fh_notes' => 'new note', 'fh_temperament' => 'forged' ];
+FisHotel_Hotel_Data::save_meta( 703 );
+check( 'notes nonce saves Notes', 'new note' === $GLOBALS['meta'][703]['_fh_notes'] );
+check( 'notes nonce does not save facts', 'Calm' === $GLOBALS['meta'][703]['_fh_temperament'] );
+$_POST = [ 'fishotel_hotel_nonce' => 'nonce-fishotel_save_hotel_data', 'fishotel_staff_notes_nonce' => 'nonce-fishotel_save_staff_notes', 'fh_common_names' => 'Testie' ];
+FisHotel_Hotel_Data::save_meta( 703 );
+check( 'a field not posted is left alone', 'Calm' === $GLOBALS['meta'][703]['_fh_temperament'] && 'new note' === $GLOBALS['meta'][703]['_fh_notes'] && 'Testie' === $GLOBALS['meta'][703]['_fh_common_names'] );
+$_POST = [ 'fishotel_hotel_nonce' => 'bad', 'fh_temperament' => 'x' ];
+FisHotel_Hotel_Data::save_meta( 703 );
+check( 'bad nonce saves nothing', 'Calm' === $GLOBALS['meta'][703]['_fh_temperament'] );
+$_POST = [];
+
+echo "\n" . ( $failures ? "$failures FAILED" : 'all passed' ) . "\n";
+exit( $failures ? 1 : 0 );

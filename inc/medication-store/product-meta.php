@@ -33,13 +33,18 @@ class FisHotel_Med_Product_Meta {
 		add_action( 'woocommerce_save_product_variation',    [ __CLASS__, 'save_variation_fields' ], 10, 2 );
 	}
 
-	/** Add a new tab on the Product Data tabs strip. */
+	/**
+	 * Add a new tab on the Product Data tabs strip. Since v1.28.0 it is
+	 * called "Medication & food" and sits right after General (it holds
+	 * what a medication must have); it is hidden on live fish and other
+	 * products by inc/admin-product-screen.php (still printed and posted).
+	 */
 	public static function add_data_tab( $tabs ) {
 		$tabs['fishotel_med'] = [
-			'label'    => __( 'FisHotel Medication', 'fishotel' ),
+			'label'    => __( 'Medication & food', 'fishotel' ),
 			'target'   => 'fishotel_med_panel',
 			'class'    => [ 'show_if_simple', 'show_if_variable' ],
-			'priority' => 65,
+			'priority' => 15,
 		];
 		return $tabs;
 	}
@@ -74,7 +79,7 @@ class FisHotel_Med_Product_Meta {
 
 			<div class="options_group">
 				<p class="form-field _fishotel_fulfillment_field">
-					<label for="_fishotel_fulfillment"><?php esc_html_e( 'Fulfillment mode', 'fishotel' ); ?></label>
+					<label for="_fishotel_fulfillment"><?php esc_html_e( 'Who ships it (EA / Amazon / us)', 'fishotel' ); ?></label>
 					<select id="_fishotel_fulfillment" name="_fishotel_fulfillment" class="fishotel-med-mode">
 						<option value=""       <?php selected( $mode, '' ); ?>>— Not a FisHotel-managed product —</option>
 						<option value="ea"     <?php selected( $mode, 'ea' ); ?>>EA — synced from EverythingAquatic</option>
@@ -290,7 +295,7 @@ class FisHotel_Med_Product_Meta {
 			'data_type'     => 'price',
 			'desc_tip'      => true,
 			'description'   => __( 'Wholesale cost from EA for this size.', 'fishotel' ),
-			'wrapper_class' => 'form-row form-row-first',
+			'wrapper_class' => 'form-row form-row-first fh-med-only',
 		] );
 
 		woocommerce_wp_text_input( [
@@ -301,7 +306,7 @@ class FisHotel_Med_Product_Meta {
 			'data_type'     => 'price',
 			'desc_tip'      => true,
 			'description'   => __( 'EA\'s retail price for this size — acts as the FisHotel price floor.', 'fishotel' ),
-			'wrapper_class' => 'form-row form-row-last',
+			'wrapper_class' => 'form-row form-row-last fh-med-only',
 		] );
 	}
 

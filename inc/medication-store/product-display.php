@@ -113,7 +113,7 @@ class FisHotel_Med_Product_Display {
 		<div class="fishotel-med-amazon-panel">
 			<?php if ( $url === '' ) : ?>
 				<p class="fishotel-med-amazon-panel__warning">
-					<?php esc_html_e( 'Amazon ASIN is not set on this product yet — outbound link is unavailable. Add the ASIN in the FisHotel Medication tab of this product to enable the button.', 'fishotel' ); ?>
+					<?php esc_html_e( 'Amazon ASIN is not set on this product yet — outbound link is unavailable. Add the ASIN in the Medication & food tab of this product to enable the button.', 'fishotel' ); ?>
 				</p>
 			<?php else : ?>
 				<a class="fh-btn fh-btn--gold fh-btn--full fishotel-med-amazon-panel__btn"

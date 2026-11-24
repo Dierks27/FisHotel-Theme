@@ -548,7 +548,7 @@ class FisHotel_Med_Settings {
 						<th scope="row">Extra acknowledgement (per product)</th>
 						<td>
 							<p class="description" style="max-width:640px;">
-								Need a product called out on its own — chloroquine, for example? Open that product, go to the <strong>FisHotel Medication</strong> tab and fill in <strong>Extra checkout acknowledgement</strong>. Each distinct wording becomes one more required checkbox under the main one at checkout, prefixed with the product name(s) it applies to, and the accepted text is stored on the order alongside the main terms record.
+								Need a product called out on its own — chloroquine, for example? Open that product, go to the <strong>Medication &amp; food</strong> tab and fill in <strong>Extra checkout acknowledgement</strong>. Each distinct wording becomes one more required checkbox under the main one at checkout, prefixed with the product name(s) it applies to, and the accepted text is stored on the order alongside the main terms record.
 							</p>
 						</td>
 					</tr>

@@ -674,7 +674,7 @@ function fishotel_is_amazon_affiliate_product( $product_id = null ) {
 /**
  * Render the purchase-panel badge above the price. Branch by category:
  *   - quarantined-fish → "Quarantine Complete" with the two QT protocol
- *     lines, region, hotel notes (existing fish behavior).
+ *     lines and region (staff Notes are never shown — v1.28.0).
  *   - medications + Tier 2 affiliate → "From the Pharmacy" with the
  *     admin-editable pharmacy subtitle.
  *   - foods → "From the Pantry" with the admin-editable pantry subtitle.
@@ -684,7 +684,8 @@ function fishotel_is_amazon_affiliate_product( $product_id = null ) {
  * separate styling — only the copy swaps.
  *
  * @param int   $product_id Product ID.
- * @param array $extras     Optional fish-specific extras (region, hotel_notes).
+ * @param array $extras     Optional fish-specific extras (region). Any
+ *                          'hotel_notes' key is ignored: staff Notes are private.
  */
 function fishotel_render_purchase_badge( $product_id, $extras = [] ) {
     $product_id = (int) $product_id;
@@ -706,9 +707,8 @@ function fishotel_render_purchase_badge( $product_id, $extras = [] ) {
         if ( ! empty( $extras['region'] ) ) {
             $extras_html .= '<div class="fh-qt-cert__region">Region: ' . esc_html( $extras['region'] ) . '</div>';
         }
-        if ( ! empty( $extras['hotel_notes'] ) ) {
-            $extras_html .= '<div class="fh-qt-cert__notes">' . esc_html( $extras['hotel_notes'] ) . '</div>';
-        }
+        // No staff Notes here: until v1.28.0 the fish's "Notes (not shown
+        // on website)" were printed on this certificate. They are private.
     } elseif (
         ( function_exists( 'fishotel_is_amazon_affiliate_product' ) && fishotel_is_amazon_affiliate_product( $product_id ) )
         || ( function_exists( 'fishotel_is_medication_product' )    && fishotel_is_medication_product( $product_id ) )

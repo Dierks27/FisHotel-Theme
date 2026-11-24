@@ -173,7 +173,11 @@ class FisHotel_Shipments_Metabox {
 
 		$is_fulfillment   = function_exists( 'fishotel_is_fulfillment' ) && fishotel_is_fulfillment( $order );
 		$items_by_source  = self::resolve_displayable_items( $order, $is_fulfillment );
-		$shipments        = self::resolve_shipments( $order, $is_fulfillment );
+		$all_rows         = self::resolve_all_rows( $order, $is_fulfillment );
+		$shipments        = FisHotel_Shipment_Cost::without_letters( $all_rows );
+		// USPS letters (ShipTracker v1.10.0): one plain line each under the
+		// boxes; ShipTracker's "USPS Letter Tracking" box looks after them.
+		$letters          = FisHotel_Shipment_Cost::only_letters( $all_rows );
 		$legacy_shipments = self::resolve_phase1_legacy_shipments( $order, $is_fulfillment );
 		$covered_ids      = self::get_covered_item_ids( $order, $is_fulfillment );
 
@@ -1164,6 +1168,35 @@ class FisHotel_Shipments_Metabox {
 	}
 
 	/**
+	 * Print one plain line per USPS letter of this view (ShipTracker
+	 * v1.10.0), under the boxes. No link, Re-check or Remove: the letter is
+	 * printed, voided and regenerated in ShipTracker's own "USPS Letter
+	 * Tracking" box, and removing its row here would leave that box's
+	 * record of it behind.
+	 *
+	 * @param array $letters        Letter shipment rows (FisHotel_Shipment_Cost::only_letters()).
+	 * @param bool  $is_fulfillment The view is a fulfillment order (rows are its source orders').
+	 */
+	public static function render_letters( array $letters, $is_fulfillment ) {
+		foreach ( $letters as $letter ) {
+			if ( ! is_object( $letter ) ) {
+				continue;
+			}
+			$source_id = isset( $letter->order_id ) ? (int) $letter->order_id : 0;
+			$source    = $source_id ? wc_get_order( $source_id ) : null;
+			$sticker   = $source instanceof WC_Order && (bool) $source->get_meta( '_fishotel_sticker_mail_letter' );
+			$text      = FisHotel_Shipment_Cost::letter_line( isset( $letter->status ) ? (string) $letter->status : '', $sticker );
+			if ( $is_fulfillment && $source_id ) {
+				/* translators: %d order ID */
+				$text .= ' ' . sprintf( __( '(source: #%d)', 'fishotel' ), $source_id );
+			}
+			?>
+			<p class="description fhsm-letter"><?php echo esc_html( $text ); ?></p>
+			<?php
+		}
+	}
+
+	/**
 	 * Print the line under the shipments list: the shipping paid, what the
 	 * boxes cost, the difference (red when they cost more) and how many
 	 * boxes have no cost yet.
@@ -1310,8 +1343,19 @@ class FisHotel_Shipments_Metabox {
 		];
 	}
 
-	/** Resolve existing wp_fst_shipments rows for this view. */
+	/**
+	 * The boxes of this view: its wp_fst_shipments rows, less the USPS
+	 * letters (ShipTracker v1.10.0). A letter holds none of the order's
+	 * items — its row lists none, which for a box means "every item" — so
+	 * it is kept out of everything worked out from the boxes: the items
+	 * shipped, the box count, costs, packing and "How it went out".
+	 */
 	public static function resolve_shipments( WC_Order $order, $is_fulfillment ) {
+		return FisHotel_Shipment_Cost::without_letters( self::resolve_all_rows( $order, $is_fulfillment ) );
+	}
+
+	/** Every wp_fst_shipments row of this view, letters included. */
+	private static function resolve_all_rows( WC_Order $order, $is_fulfillment ) {
 		if ( ! class_exists( 'FST_Shipment' ) ) {
 			return [];
 		}

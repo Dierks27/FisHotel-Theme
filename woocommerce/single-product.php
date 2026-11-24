@@ -289,9 +289,9 @@ while ( have_posts() ) :
                 fh-qt-cert markup for all three so they share styling. */ ?>
         <?php
         if ( function_exists( 'fishotel_render_purchase_badge' ) ) {
+            // Staff Notes are never passed: they are private (v1.28.0).
             fishotel_render_purchase_badge( $product_id, [
-                'region'      => $region,
-                'hotel_notes' => $hotel['notes'] ?? '',
+                'region' => $region,
             ] );
         }
         ?>
@@ -702,23 +702,21 @@ if ( $is_fish ) {
         <?php endif; ?>
 
         <?php
-        // Strip structured data lines from prose — they now live in custom fields
+        // The facts typed in the description ("old style"): a labelled
+        // line is hidden only when its field is filled — the table above
+        // shows it. Empty fields leave their line readable (v1.28.0;
+        // inc/product-facts.php).
         if ( $desc_raw ) :
-            $prose = strip_tags( $desc_raw );
-            $strip_labels = [
-                'Scientific Name', 'Common Names', 'Maximum Length',
-                'Minimum Aquarium Size', 'Reef Safety', 'Temperament',
-                'Foods and Feeding', 'Foods and Feeding Habits',
-                'Habitat and Behavior', 'Habitat', 'Habits',
-            ];
-            foreach ( $strip_labels as $lbl ) {
-                $prose = preg_replace( '/' . preg_quote( $lbl, '/' ) . '\s*[:\-–—]\s*[^\n]*/i', '', $prose );
+            if ( class_exists( 'FisHotel_Product_Facts' ) ) {
+                $facts_shown = FisHotel_Product_Facts::shown_elsewhere(
+                    FisHotel_Product_Facts::current( $product_id ),
+                    (bool) $is_fish,
+                    $region !== ''
+                );
+                $prose = FisHotel_Product_Facts::prose( $desc_raw, $facts_shown );
+            } else {
+                $prose = trim( wp_strip_all_tags( $desc_raw ) );
             }
-            // Strip "Description:" prefix
-            $prose = preg_replace( '/^Description:\s*/i', '', trim( $prose ) );
-            // Strip Fun Facts and everything after
-            $prose = preg_replace( '/Fun Facts?:?[\s\S]*/i', '', $prose );
-            $prose = trim( preg_replace( '/\n{3,}/', "\n\n", $prose ) );
         ?>
         <?php if ( $prose ) :
             // Sub-heading varies by product category. Anything outside

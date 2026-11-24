@@ -33,13 +33,18 @@ class FisHotel_Med_Product_Meta {
 		add_action( 'woocommerce_save_product_variation',    [ __CLASS__, 'save_variation_fields' ], 10, 2 );
 	}
 
-	/** Add a new tab on the Product Data tabs strip. */
+	/**
+	 * Add a new tab on the Product Data tabs strip. Since v1.28.0 it is
+	 * called "Medication & food" and sits right after General (it holds
+	 * what a medication must have); it is hidden on live fish and other
+	 * products by inc/admin-product-screen.php (still printed and posted).
+	 */
 	public static function add_data_tab( $tabs ) {
 		$tabs['fishotel_med'] = [
-			'label'    => __( 'FisHotel Medication', 'fishotel' ),
+			'label'    => __( 'Medication & food', 'fishotel' ),
 			'target'   => 'fishotel_med_panel',
 			'class'    => [ 'show_if_simple', 'show_if_variable' ],
-			'priority' => 65,
+			'priority' => 15,
 		];
 		return $tabs;
 	}
@@ -74,7 +79,7 @@ class FisHotel_Med_Product_Meta {
 
 			<div class="options_group">
 				<p class="form-field _fishotel_fulfillment_field">
-					<label for="_fishotel_fulfillment"><?php esc_html_e( 'Fulfillment mode', 'fishotel' ); ?></label>
+					<label for="_fishotel_fulfillment"><?php esc_html_e( 'Who ships it (EA / Amazon / us)', 'fishotel' ); ?></label>
 					<select id="_fishotel_fulfillment" name="_fishotel_fulfillment" class="fishotel-med-mode">
 						<option value=""       <?php selected( $mode, '' ); ?>>— Not a FisHotel-managed product —</option>
 						<option value="ea"     <?php selected( $mode, 'ea' ); ?>>EA — synced from EverythingAquatic</option>
@@ -217,6 +222,21 @@ class FisHotel_Med_Product_Meta {
 		<?php
 	}
 
+	/**
+	 * This tab is posted on EVERY product (hidden on fish and dry goods
+	 * since v1.28.0), so an empty field is written only when the product
+	 * already has that row: saving a fish no longer adds a dozen empty
+	 * medication rows to it. A value cleared on screen is still cleared.
+	 * An EA product id of 0 counts as empty.
+	 */
+	private static function write( $post_id, $key, $value ) {
+		$blank = '' === trim( (string) $value ) || 0 === $value;
+		if ( $blank && ! metadata_exists( 'post', $post_id, $key ) ) {
+			return;
+		}
+		update_post_meta( $post_id, $key, $value );
+	}
+
 	public static function save_product_meta( $post_id ) {
 		if ( ! isset( $_POST['_fishotel_med_nonce'] ) ) return;
 		$nonce = sanitize_text_field( wp_unslash( $_POST['_fishotel_med_nonce'] ) );
@@ -237,15 +257,15 @@ class FisHotel_Med_Product_Meta {
 		} else {
 			update_post_meta( $post_id, '_fishotel_fulfillment', $mode );
 		}
-		update_post_meta( $post_id, '_fishotel_med_eyebrow',        sanitize_text_field( wp_unslash( $_POST['_fishotel_med_eyebrow']        ?? '' ) ) );
-		update_post_meta( $post_id, '_fishotel_ea_url',             esc_url_raw(           wp_unslash( $_POST['_fishotel_ea_url']           ?? '' ) ) );
-		update_post_meta( $post_id, '_fishotel_ea_product_id',      absint(                wp_unslash( $_POST['_fishotel_ea_product_id']    ?? 0  ) ) );
-		update_post_meta( $post_id, '_fishotel_ea_sku',             sanitize_text_field( wp_unslash( $_POST['_fishotel_ea_sku']             ?? '' ) ) );
+		self::write( $post_id, '_fishotel_med_eyebrow',        sanitize_text_field( wp_unslash( $_POST['_fishotel_med_eyebrow']        ?? '' ) ) );
+		self::write( $post_id, '_fishotel_ea_url',             esc_url_raw(           wp_unslash( $_POST['_fishotel_ea_url']           ?? '' ) ) );
+		self::write( $post_id, '_fishotel_ea_product_id',      absint(                wp_unslash( $_POST['_fishotel_ea_product_id']    ?? 0  ) ) );
+		self::write( $post_id, '_fishotel_ea_sku',             sanitize_text_field( wp_unslash( $_POST['_fishotel_ea_sku']             ?? '' ) ) );
 		// ASIN: 10 chars, uppercase letters and digits.
 		$asin = strtoupper( preg_replace( '/[^A-Z0-9]/', '', strtoupper( (string) ( $_POST['_fishotel_amazon_asin'] ?? '' ) ) ) );
 		$asin = substr( $asin, 0, 10 );
-		update_post_meta( $post_id, '_fishotel_amazon_asin',        $asin );
-		update_post_meta( $post_id, '_fishotel_dosing_anchor',      sanitize_text_field( wp_unslash( $_POST['_fishotel_dosing_anchor']      ?? '' ) ) );
+		self::write( $post_id, '_fishotel_amazon_asin',        $asin );
+		self::write( $post_id, '_fishotel_dosing_anchor',      sanitize_text_field( wp_unslash( $_POST['_fishotel_dosing_anchor']      ?? '' ) ) );
 
 		// C2 — per-product extra checkout acknowledgement. The textarea only
 		// renders for medication products, so write the meta only when the
@@ -263,16 +283,16 @@ class FisHotel_Med_Product_Meta {
 		// and the "About This Medication / Food" data table on the PDP.
 		// Plain text fields; the Reef Safe select is constrained to its
 		// own allowlist.
-		update_post_meta( $post_id, '_fishotel_active_ingredient', sanitize_text_field( wp_unslash( $_POST['_fishotel_active_ingredient'] ?? '' ) ) );
-		update_post_meta( $post_id, '_fishotel_treats',            sanitize_text_field( wp_unslash( $_POST['_fishotel_treats']            ?? '' ) ) );
-		update_post_meta( $post_id, '_fishotel_use_in',            sanitize_text_field( wp_unslash( $_POST['_fishotel_use_in']            ?? '' ) ) );
+		self::write( $post_id, '_fishotel_active_ingredient', sanitize_text_field( wp_unslash( $_POST['_fishotel_active_ingredient'] ?? '' ) ) );
+		self::write( $post_id, '_fishotel_treats',            sanitize_text_field( wp_unslash( $_POST['_fishotel_treats']            ?? '' ) ) );
+		self::write( $post_id, '_fishotel_use_in',            sanitize_text_field( wp_unslash( $_POST['_fishotel_use_in']            ?? '' ) ) );
 		$reef_safe_in = sanitize_text_field( wp_unslash( $_POST['_fishotel_reef_safe'] ?? '' ) );
 		$reef_safe    = in_array( $reef_safe_in, [ '', 'yes', 'no', 'caution' ], true ) ? $reef_safe_in : '';
-		update_post_meta( $post_id, '_fishotel_reef_safe',         $reef_safe );
-		update_post_meta( $post_id, '_fishotel_food_source',       sanitize_text_field( wp_unslash( $_POST['_fishotel_food_source']       ?? '' ) ) );
-		update_post_meta( $post_id, '_fishotel_best_for',          sanitize_text_field( wp_unslash( $_POST['_fishotel_best_for']          ?? '' ) ) );
-		update_post_meta( $post_id, '_fishotel_nutrition',         sanitize_text_field( wp_unslash( $_POST['_fishotel_nutrition']         ?? '' ) ) );
-		update_post_meta( $post_id, '_fishotel_additives',         sanitize_text_field( wp_unslash( $_POST['_fishotel_additives']         ?? '' ) ) );
+		self::write( $post_id, '_fishotel_reef_safe',         $reef_safe );
+		self::write( $post_id, '_fishotel_food_source',       sanitize_text_field( wp_unslash( $_POST['_fishotel_food_source']       ?? '' ) ) );
+		self::write( $post_id, '_fishotel_best_for',          sanitize_text_field( wp_unslash( $_POST['_fishotel_best_for']          ?? '' ) ) );
+		self::write( $post_id, '_fishotel_nutrition',         sanitize_text_field( wp_unslash( $_POST['_fishotel_nutrition']         ?? '' ) ) );
+		self::write( $post_id, '_fishotel_additives',         sanitize_text_field( wp_unslash( $_POST['_fishotel_additives']         ?? '' ) ) );
 	}
 
 	/**
@@ -297,7 +317,7 @@ class FisHotel_Med_Product_Meta {
 			'data_type'     => 'price',
 			'desc_tip'      => true,
 			'description'   => __( 'Wholesale cost from EA for this size.', 'fishotel' ),
-			'wrapper_class' => 'form-row form-row-first',
+			'wrapper_class' => 'form-row form-row-first fh-med-only',
 		] );
 
 		woocommerce_wp_text_input( [
@@ -308,7 +328,7 @@ class FisHotel_Med_Product_Meta {
 			'data_type'     => 'price',
 			'desc_tip'      => true,
 			'description'   => __( 'EA\'s retail price for this size — acts as the FisHotel price floor.', 'fishotel' ),
-			'wrapper_class' => 'form-row form-row-last',
+			'wrapper_class' => 'form-row form-row-last fh-med-only',
 		] );
 	}
 
@@ -321,8 +341,8 @@ class FisHotel_Med_Product_Meta {
 		$wholesale = isset( $wholesale_arr[ $loop ] ) ? wc_format_decimal( wp_unslash( $wholesale_arr[ $loop ] ) ) : '';
 		$retail    = isset( $retail_arr[ $loop ] )    ? wc_format_decimal( wp_unslash( $retail_arr[ $loop ] ) )    : '';
 
-		update_post_meta( $variation_id, '_fishotel_wholesale', $wholesale );
-		update_post_meta( $variation_id, '_fishotel_ea_retail', $retail );
+		self::write( $variation_id, '_fishotel_wholesale', $wholesale );
+		self::write( $variation_id, '_fishotel_ea_retail', $retail );
 
 		// size_index / size_count come from the parent's full child list,
 		// NOT from $loop / count( $_POST[...] ). WHY: WC's variations panel

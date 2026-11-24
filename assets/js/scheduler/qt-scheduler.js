@@ -167,87 +167,27 @@
   // MED-LINK HELPER
   // ============================================================================
 
-  // Legacy SKU guesses — kept only as data-med-sku attributes (harmless).
-  // Real product URLs come from window.FISHOTEL_MED_LINKS, localised by
-  // inc/tool-product-links.php: { links: { med_id: { url, name, source,
-  // in_stock, mode } }, fallback_url, calculator_url, scheduler_url }.
-  // source 'none' = hidden (render the name as plain text, no anchor);
-  // mode 'amazon' = the product page holds a Buy-on-Amazon button, so the
-  // accessible name says "View", not "Buy".
-  var MED_SKU_MAP = {
-    copper_power:         { sku: 'copper-power-2oz',         brand: 'Copper Power' },
-    formalin_37:          { sku: 'formalin-37-pint',         brand: 'Formalin 37%' },
-    metronidazole:        { sku: 'metronidazole-100g',       brand: 'Metronidazole' },
-    praziquantel:         { sku: 'praziquantel-100g',        brand: 'Praziquantel' },
-    chloroquine_phosphate:{ sku: 'chloroquine-phosphate-25g',brand: 'Chloroquine Phosphate' }
+  // Display names for the medications the day cards mention. Since v1.29.0
+  // the scheduler is an educational page: it names medications as plain
+  // text and never links to (or embeds) a product, so there is no
+  // FISHOTEL_MED_LINKS payload and no shop fallback URL any more.
+  var MED_NAMES = {
+    copper_power:          'Copper Power',
+    formalin_37:           'Formalin 37%',
+    metronidazole:         'Metronidazole',
+    praziquantel:          'Praziquantel',
+    chloroquine_phosphate: 'Chloroquine Phosphate'
   };
-
-  var FALLBACK_SHOP_URL = '/product-category/medications/';
 
   function escHtml(str) {
     return String(str == null ? '' : str)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function escAttr(str) {
-    return escHtml(str).replace(/"/g, '&quot;');
-  }
-
-  /**
-   * Resolve where a med link should point. Returns
-   * { url, fallback, hidden, name, outOfStock, mode }. hidden === true when
-   * the server says there is nothing to link (source 'none'): render plain
-   * text. fallback === true when no real product is known (older page cache
-   * without FISHOTEL_MED_LINKS, or the server resolved nothing) — the link
-   * then goes to the Medications shop and is styled accordingly. outOfStock
-   * flags a resolved product that currently cannot be bought.
-   */
-  function medLinkTarget(medId) {
-    var cfg = window.FISHOTEL_MED_LINKS || null;
-    var fallbackUrl = (cfg && cfg.fallback_url) || FALLBACK_SHOP_URL;
-    var entry = cfg && cfg.links && cfg.links[medId];
-    if (entry && entry.source === 'none') {
-      return { url: '', fallback: false, hidden: true, name: entry.name || '', outOfStock: false, mode: '' };
-    }
-    if (entry && entry.url && entry.source !== 'fallback') {
-      return { url: entry.url, fallback: false, hidden: false, name: entry.name || '', outOfStock: entry.in_stock === false, mode: entry.mode || '' };
-    }
-    return { url: fallbackUrl, fallback: true, hidden: false, name: '', outOfStock: false, mode: '' };
-  }
-
-  /**
-   * Classes, accessible name and title for a med link. The accessible name
-   * always contains the visible text (WCAG 2.5.3 Label in Name) so
-   * voice-control "click Copper Power" still works on fallback links.
-   */
-  function medLinkAttrs(target, visibleName) {
-    var cls = 'fst-med-link';
-    var label, title = '';
-    if (target.fallback) {
-      cls  += ' fst-med-link--fallback';
-      label = visibleName + ' — browse medications at FisHotel';
-    } else {
-      label = (target.mode === 'amazon' ? 'View ' : 'Buy ') + visibleName + ' at FisHotel';
-      if (target.outOfStock) {
-        cls  += ' fst-med-link--oos';
-        label += ' (currently out of stock)';
-        title  = 'Currently out of stock at FisHotel';
-      }
-    }
-    return { cls: cls, label: label, title: title };
-  }
-
+  /** A medication name as plain text (HTML string for the day cards). */
   function medLink(medId, displayName) {
-    var info   = MED_SKU_MAP[medId] || { sku: medId, brand: displayName || medId };
-    var name   = displayName || info.brand;
-    var target = medLinkTarget(medId);
-    if (target.hidden) {
-      return '<span class="fst-med-name">' + escHtml(name) + '</span>';
-    }
-    var attrs  = medLinkAttrs(target, name);
-    return '<a class="' + attrs.cls + '" data-med-sku="' + escAttr(info.sku) + '" data-brand-name="' + escAttr(info.brand) +
-           '" href="' + escAttr(target.url) + '" aria-label="' + escAttr(attrs.label) + '"' +
-           (attrs.title ? ' title="' + escAttr(attrs.title) + '"' : '') + '>' + escHtml(name) + '</a>';
+    var name = displayName || MED_NAMES[medId] || medId;
+    return '<span class="fst-med-name">' + escHtml(name) + '</span>';
   }
 
   // ============================================================================
@@ -640,7 +580,7 @@
   }
 
   // ============================================================================
-  // KEY MEDS — consolidated meds list with data-med-sku slots
+  // KEY MEDS — consolidated meds list (names only)
   // ============================================================================
 
   function keyMedsForMethod(method) {
@@ -655,11 +595,9 @@
     });
     return out.map(function (id) {
       var m = getMed(id);
-      var info = MED_SKU_MAP[id] || { sku: id, brand: id };
       return {
         med_id: id,
-        name: (m && m.name_generic) || info.brand,
-        sku: info.sku
+        name: (m && m.name_generic) || MED_NAMES[id] || id
       };
     });
   }
@@ -1167,23 +1105,9 @@
     if (keyMeds && keyMeds.length) {
       var ul = el('ul', 'fst-medlist');
       keyMeds.forEach(function (m) {
+        // Names only, never a product link (v1.29.0).
         var li = el('li');
-        var target = medLinkTarget(m.med_id);
-        if (target.hidden) {
-          // Nothing to buy (protocol, or an admin "None" override): name only.
-          li.appendChild(el('span', 'fst-med-name', m.name));
-          ul.appendChild(li);
-          return;
-        }
-        var attrs  = medLinkAttrs(target, m.name);
-        var a = el('a', attrs.cls);
-        a.setAttribute('data-med-sku', m.sku);
-        a.setAttribute('data-brand-name', m.name);
-        a.href = target.url;
-        a.setAttribute('aria-label', attrs.label);
-        if (attrs.title) a.title = attrs.title;
-        a.textContent = m.name;
-        li.appendChild(a);
+        li.appendChild(el('span', 'fst-med-name', m.name));
         ul.appendChild(li);
       });
       wrap.appendChild(ul);
@@ -1486,7 +1410,9 @@
       metroDoseMg: metroDoseMg,
       metroLabel: metroLabel,
       praziDoseMg: praziDoseMg,
-      praziLabel: praziLabel
+      praziLabel: praziLabel,
+      medLink: medLink,
+      renderMedsBlock: renderMedsBlock
     };
   }
 

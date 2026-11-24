@@ -174,56 +174,9 @@ function fishotel_tag_modifier_class( $slug ) {
     // class also has a matching CSS rule in main.css; the modifier name
     // just needs to be unique per group, not per slug.
     $exact_map = [
-        // Treatment type
-        'dewormer'           => 'fh-tag--dewormer',
-        'antibiotic'         => 'fh-tag--antibiotic',
-        'antibacterial'      => 'fh-tag--antibacterial',
-        'antiparasitic'      => 'fh-tag--antiparasitic',
-        'external-parasites' => 'fh-tag--external-parasites',
-        'antifungal'         => 'fh-tag--antifungal',
-        'broad-spectrum'     => 'fh-tag--broad-spectrum',
-        'multi-purpose'      => 'fh-tag--multi-purpose',
-        // Pathogens / symptoms (muted coral)
-        'ich'                  => 'fh-tag--ich',
-        'velvet'               => 'fh-tag--velvet',
-        'brook'                => 'fh-tag--brook',
-        'brooklynella'         => 'fh-tag--brooklynella',
-        'cryptocaryon'         => 'fh-tag--cryptocaryon',
-        'amyloodinium'         => 'fh-tag--amyloodinium',
-        'uronema'              => 'fh-tag--uronema',
-        'bacterial-infection'  => 'fh-tag--bacterial-infection',
-        'fin-rot'              => 'fh-tag--fin-rot',
-        'fungus'               => 'fh-tag--fungus',
-        'fungal-infection'     => 'fh-tag--fungal-infection',
-        'saprolegnia'          => 'fh-tag--saprolegnia',
-        'cestodes'             => 'fh-tag--cestodes',
-        'monogeneans'          => 'fh-tag--monogeneans',
-        'digeneans'            => 'fh-tag--digeneans',
-        'flukes'               => 'fh-tag--flukes',
-        'nematodes'            => 'fh-tag--nematodes',
-        'worms'                => 'fh-tag--worms',
-        'internal-worms'       => 'fh-tag--internal-worms',
-        'internal-parasites'   => 'fh-tag--internal-parasites',
-        'hex'                  => 'fh-tag--hex',
-        'hexamita'             => 'fh-tag--hexamita',
-        'spironucleus'         => 'fh-tag--spironucleus',
-        'hydroids'             => 'fh-tag--hydroids',
-        'camallanus'           => 'fh-tag--camallanus',
-        'cnidaria'             => 'fh-tag--cnidaria',
-        'bloat'                => 'fh-tag--bloat',
-        // Drug-class (muted teal)
-        'gram-positive'  => 'fh-tag--gram-positive',
-        'gram-negative'  => 'fh-tag--gram-negative',
-        'phenothiazine'  => 'fh-tag--phenothiazine',
-        'benzimidazole'  => 'fh-tag--benzimidazole',
-        'imidazothiazole'=> 'fh-tag--imidazothiazole',
-        'aminoglycoside' => 'fh-tag--aminoglycoside',
-        'nitrofuran'     => 'fh-tag--nitrofuran',
-        'quinoline'      => 'fh-tag--quinoline',
-        'formalin'       => 'fh-tag--formalin',
-        'metronidazole'  => 'fh-tag--metronidazole',
-        'anthelmintic'   => 'fh-tag--anthelmintic',
-        'azole'          => 'fh-tag--azole',
+        // Treatment-type, disease and drug-class tags (Dewormer, Ich,
+        // Flukes, Aminoglycoside …) have no colour since v1.29.0: they are
+        // no longer printed on medication pages (single-product.php).
         // Food benefit (green)
         'high-protein'  => 'fh-tag--high-protein',
         'premium-food'  => 'fh-tag--premium-food',
@@ -630,7 +583,14 @@ function fishotel_is_medication_product( $product_id = null ) {
         return false;
     }
     $med_slugs = [ 'medications', 'flakes', 'pellets', 'powders', 'liquid', 'antibacterial', 'antiparasitic', 'dewormer' ];
-    return (bool) array_intersect( $med_slugs, $cats );
+    if ( array_intersect( $med_slugs, $cats ) ) {
+        return true;
+    }
+    // Any other category inside the Medications tree counts too (v1.29.0),
+    // so a product moved from Antibacterial / Dewormer into a neutral
+    // category such as "Medicated Foods" or "Powders & Chemicals" under
+    // Medications keeps its medication page (badge, table, no claims).
+    return function_exists( 'fishotel_med_is_med_product' ) && fishotel_med_is_med_product( $product_id );
 }
 
 /**
@@ -713,7 +673,8 @@ function fishotel_render_purchase_badge( $product_id, $extras = [] ) {
         ( function_exists( 'fishotel_is_amazon_affiliate_product' ) && fishotel_is_amazon_affiliate_product( $product_id ) )
         || ( function_exists( 'fishotel_is_medication_product' )    && fishotel_is_medication_product( $product_id ) )
     ) {
-        $title    = 'From the Pharmacy';
+        // Was "From the Pharmacy" until v1.29.0 (plain product listing).
+        $title    = class_exists( 'FisHotel_Med_Listing' ) ? FisHotel_Med_Listing::BADGE_TITLE : 'From the Supply Room';
         $line_one = $get( 'fh_pharmacy_badge_subtitle' );
         $line_two = '';
         $extras_html = '';

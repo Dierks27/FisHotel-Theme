@@ -2,9 +2,9 @@
 /**
  * Medication store — taxonomy bootstrap.
  *
- * Idempotently creates the Medications parent category, its 6 purpose-
- * based subcategories, and the 4 product attributes (form, treats, reef
- * safe, use in) with sample terms. Safe to call repeatedly — every
+ * Idempotently creates the Medications parent category, its Medicated
+ * Food subcategory, and the 2 product attributes (form, reef safe) with
+ * sample terms (v1.29.0: no therapeutic categories or Treats / Use In). Safe to call repeatedly — every
  * term/attribute is created only when missing, so this also acts as a
  * "repair" for hand-deleted entries.
  *
@@ -19,39 +19,49 @@ defined( 'ABSPATH' ) || exit;
 
 class FisHotel_Med_Taxonomy {
 
-	/** Subcategory slugs (under "Medications"). */
+	/**
+	 * Subcategory slugs (under "Medications"). Since v1.29.0 the theme no
+	 * longer seeds therapeutic categories (Antiparasitic, Antibacterial,
+	 * Antifungal, Dewormer, Quarantine Essentials): a category name is
+	 * printed on the product page, so it must not be a treatment claim.
+	 * Existing terms on a site are left alone (renaming them is the
+	 * owner's cleanup tool's job); only a missing one is no longer
+	 * re-created by ensure_categories() / the CLI importers.
+	 */
 	public static function subcategories() {
 		return [
-			'antiparasitic'         => 'Antiparasitic',
-			'antibacterial'         => 'Antibacterial',
-			'antifungal'            => 'Antifungal',
-			'dewormer'              => 'Dewormer',
-			'medicated-food'        => 'Medicated Food',
-			'quarantine-essentials' => 'Quarantine Essentials',
+			'medicated-food' => 'Medicated Food',
 		];
 	}
 
-	/** Product attributes (taxonomy slug => [label, terms]). */
+	/**
+	 * Every subcategory slug the theme ever seeded (before v1.29.0 too).
+	 * Only `wp fishotel-meds flatten-categories` reads this, so it keeps
+	 * flattening the old therapeutic categories as it always did.
+	 *
+	 * @return string[]
+	 */
+	public static function legacy_subcategory_slugs() {
+		return [ 'antiparasitic', 'antibacterial', 'antifungal', 'dewormer', 'medicated-food', 'quarantine-essentials' ];
+	}
+
+	/**
+	 * Product attributes (taxonomy slug => [label, terms]). The "Treats"
+	 * (pa_med_treats) and "Use In" (pa_med_use_in) attributes are no
+	 * longer seeded since v1.29.0: their terms are disease names and
+	 * treatment settings, and as public attributes they had their own
+	 * archive pages. Existing ones on a site are left for the owner's
+	 * cleanup tool.
+	 */
 	public static function attributes() {
 		return [
 			'med_form' => [
 				'label' => 'Form',
 				'terms' => [ 'Powder', 'Liquid', 'Flake', 'Pellet', 'Medicated Food' ],
 			],
-			'med_treats' => [
-				'label' => 'Treats',
-				'terms' => [
-					'Ich', 'Velvet', 'Brooklynella', 'Uronema', 'Flukes',
-					'Internal Worms', 'Bacterial Infection', 'Fin Rot', 'Fungal Infection',
-				],
-			],
 			'med_reef_safe' => [
 				'label' => 'Reef Safe',
 				'terms' => [ 'Yes', 'No', 'With Caution' ],
-			],
-			'med_use_in' => [
-				'label' => 'Use In',
-				'terms' => [ 'Display Tank', 'Quarantine Tank Only', 'Hospital Tank Only' ],
 			],
 		];
 	}

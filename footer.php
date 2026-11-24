@@ -20,6 +20,12 @@ if ( function_exists( 'fishotel_tool_page_url' ) ) {
         [ 'page-bleach-calculator.php',  'bleach-calculator',   __( 'Bleach Calculator', 'fishotel' ) ],
         [ 'page-compatibility-guide.php','compatibility-guide', __( 'Build-a-Tank', 'fishotel' ) ],
     ];
+    // Medication pages (product page or Medications category) do not link
+    // to Medication Dosing or the QT Scheduler (v1.29.0); the other tools
+    // stay, so the column and the four-column layout keep their shape.
+    if ( class_exists( 'FisHotel_Med_Listing' ) ) {
+        $fh_footer_tool_defs = FisHotel_Med_Listing::footer_tool_defs( $fh_footer_tool_defs, FisHotel_Med_Listing::on_med_page() );
+    }
     foreach ( $fh_footer_tool_defs as $def ) {
         $tool_url = fishotel_tool_page_url( $def[0], $def[1] );
         if ( $tool_url !== '' ) {

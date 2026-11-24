@@ -184,9 +184,16 @@ function fishotel_med_order_med_lines( $order ) {
 	return $lines;
 }
 
-/** Per-product extra checkout acknowledgement text ('' when none). */
+/**
+ * Per-product extra checkout acknowledgement text ('' when none). Since
+ * v1.29.0 a text that talks about dosing, treatment, quarantine or a
+ * disease is not shown at checkout (nor required, nor stored on the
+ * order): FisHotel_Med_Listing::shown_extra_ack(). The stored text is
+ * kept and the product screen says why it is not shown.
+ */
 function fishotel_med_get_extra_ack( $product_id ) {
-	return trim( (string) get_post_meta( (int) $product_id, '_fishotel_med_extra_ack', true ) );
+	$text = trim( (string) get_post_meta( (int) $product_id, '_fishotel_med_extra_ack', true ) );
+	return class_exists( 'FisHotel_Med_Listing' ) ? FisHotel_Med_Listing::shown_extra_ack( $text ) : $text;
 }
 
 /**

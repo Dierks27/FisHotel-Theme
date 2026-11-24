@@ -3,11 +3,16 @@
  * Medication store — product page rewiring.
  *
  * Renders:
- *   - The eyebrow tagline above the hero title (all modes).
  *   - The "Buy on Amazon →" CTA in place of Add to Cart for `amazon`-
  *     mode products.
- *   - The "Fulfilled by EverythingAquatic" disclosure footer for
- *     `ea`-mode products.
+ *   - The neutral "Ships direct from our supplier." line for `ea`-mode
+ *     products (until v1.29.0: "Fulfilled by EverythingAquatic, our
+ *     trusted medication partner.").
+ *
+ * Since v1.29.0 the eyebrow tagline and the "Dose it with our Medication
+ * Calculator" link are no longer printed: a medication page is a plain
+ * product listing (inc/medication-store/listing-rules.php). The tagline
+ * and the dosing anchor stay in wp-admin and in the database.
  *   - Add-to-cart blocking for `amazon`-mode products in case anyone
  *     reaches the form via REST/scripts.
  *
@@ -23,15 +28,11 @@ defined( 'ABSPATH' ) || exit;
 class FisHotel_Med_Product_Display {
 
 	public static function init() {
-		// Eyebrow + form pills above hero title content. We hook the
-		// theme's own `woocommerce_before_single_product_summary` so
-		// the eyebrow renders in the purchase panel.
-		add_action( 'woocommerce_before_single_product_summary', [ __CLASS__, 'render_purchase_eyebrow' ], 15 );
-		// "Dose it with our Medication Calculator →" directly under the
-		// eyebrow (same hook, one priority later). Resolved by the
-		// tool-product-links module's reverse map / dosing anchor.
-		add_action( 'woocommerce_before_single_product_summary', [ __CLASS__, 'render_calculator_link' ], 16 );
-		// EA disclosure footer (mode = ea only).
+		// No eyebrow tagline and no calculator link on the product page
+		// since v1.29.0 (plain product listing). render_purchase_eyebrow()
+		// and render_calculator_link() are kept, unhooked, so a child
+		// theme or snippet calling them keeps working; both print nothing.
+		// Neutral shipping line (mode = ea only).
 		add_action( 'woocommerce_after_add_to_cart_form', [ __CLASS__, 'render_ea_disclosure' ], 20 );
 		// Defensive: block server-side add-to-cart for amazon-mode meds.
 		add_filter( 'woocommerce_add_to_cart_validation',  [ __CLASS__, 'block_amazon_atc' ], 10, 2 );
@@ -39,54 +40,32 @@ class FisHotel_Med_Product_Display {
 	}
 
 	/**
-	 * Echo the eyebrow tagline + dosing-calculator link above the
-	 * variation block. Skipped when not a med product or when no
-	 * eyebrow is set.
+	 * Until v1.29.0: the eyebrow tagline ("The Persistent Worm
+	 * Specialist") above the variation block. Taglines are treatment
+	 * claims by nature, so nothing is printed any more; the field stays
+	 * in wp-admin. Kept as a no-op for any external caller.
 	 */
-	public static function render_purchase_eyebrow() {
-		if ( ! is_product() ) return;
-		$pid = get_queried_object_id();
-		if ( ! fishotel_med_is_med_product( $pid ) ) return;
-
-		$eyebrow = (string) get_post_meta( $pid, '_fishotel_med_eyebrow', true );
-		if ( $eyebrow === '' ) return;
-		?>
-		<div class="fishotel-med-eyebrow"><?php echo esc_html( $eyebrow ); ?></div>
-		<?php
-	}
+	public static function render_purchase_eyebrow() {}
 
 	/**
-	 * Echo the calculator deep link for a medication product. The URL is
-	 * ?med=<med_id> when the product resolves to a calculator medication
-	 * (reverse map or dosing anchor), else the raw dosing anchor appended
-	 * to the calculator URL. Silent when neither applies.
+	 * Until v1.29.0: the "Dose it with our Medication Calculator →" link.
+	 * Product pages no longer link to the calculator (the calculator stays
+	 * a standalone page). Kept as a no-op for any external caller.
 	 */
-	public static function render_calculator_link() {
-		if ( ! is_product() ) return;
-		if ( ! function_exists( 'fishotel_tool_calculator_link_for_product' ) ) return;
-		$pid = get_queried_object_id();
-		if ( ! fishotel_med_is_med_product( $pid ) ) return;
+	public static function render_calculator_link() {}
 
-		$url = fishotel_tool_calculator_link_for_product( $pid );
-		if ( $url === '' ) return;
-		?>
-		<p class="fishotel-med-calc">
-			<a class="fishotel-med-calc-link" href="<?php echo esc_url( $url ); ?>">
-				<?php esc_html_e( 'Dose it with our Medication Calculator', 'fishotel' ); ?>
-				<span aria-hidden="true" class="fishotel-med-calc-link__arrow">&rarr;</span>
-			</a>
-		</p>
-		<?php
-	}
-
-	/** Render the "Fulfilled by EverythingAquatic" disclosure for EA-mode. */
+	/**
+	 * Neutral shipping line for EA-mode products: "Ships direct from our
+	 * supplier." (until v1.29.0 it read "Fulfilled by EverythingAquatic,
+	 * our trusted medication partner.").
+	 */
 	public static function render_ea_disclosure() {
 		if ( ! is_product() ) return;
 		$pid = get_queried_object_id();
 		if ( ! fishotel_med_is_med_product( $pid ) ) return;
 		// Raw meta, NOT fishotel_med_get_mode(): the helper defaults an unset
 		// mode to 'ea', so an untagged Medications product would show
-		// "Fulfilled by EverythingAquatic" while every fulfillment path
+		// the EA shipping line while every fulfillment path
 		// (slip, EA column, mixed-order split) treats it as non-EA.
 		if ( get_post_meta( $pid, '_fishotel_fulfillment', true ) !== 'ea' ) return;
 		// Tier 2 (Amazon-affiliate) products are never EA-fulfilled, so the
@@ -96,7 +75,7 @@ class FisHotel_Med_Product_Display {
 		if ( function_exists( 'fishotel_is_amazon_affiliate_product' ) && fishotel_is_amazon_affiliate_product( $pid ) ) return;
 		?>
 		<p class="fishotel-med-ea-disclosure">
-			<?php esc_html_e( 'Fulfilled by EverythingAquatic, our trusted medication partner.', 'fishotel' ); ?>
+			<?php echo esc_html( FisHotel_Med_Listing::SHIPPING_LINE ); ?>
 		</p>
 		<?php
 	}

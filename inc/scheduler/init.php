@@ -57,15 +57,9 @@ function fishotel_enqueue_qt_scheduler_assets() {
         FisHotel_Medication_Data::get_all()
     );
 
-    // Product links for the med links in the day cards + "Meds for this
-    // protocol" block (resolved + cached by inc/tool-product-links.php).
-    if ( function_exists( 'fishotel_tool_links_for_js' ) ) {
-        wp_localize_script(
-            'fishotel-qt-scheduler-data',
-            'FISHOTEL_MED_LINKS',
-            fishotel_tool_links_for_js()
-        );
-    }
+    // No product links (v1.29.0): this page stays an educational tool and
+    // no longer links to or embeds products, so FISHOTEL_MED_LINKS is not
+    // sent. The JS prints medication names as plain text.
 }
 
 // Bootstrap the /qt-scheduler/ page if it doesn't already exist. The shared

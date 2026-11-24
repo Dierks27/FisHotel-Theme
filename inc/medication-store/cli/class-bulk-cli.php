@@ -96,7 +96,7 @@ class FisHotel_Med_Bulk_CLI {
 		$parent_term_id = (int) $parent->term_id;
 
 		$subcategory_term_ids = array();
-		foreach ( array_keys( FisHotel_Med_Taxonomy::subcategories() ) as $slug ) {
+		foreach ( FisHotel_Med_Taxonomy::legacy_subcategory_slugs() as $slug ) {
 			$term = get_term_by( 'slug', $slug, 'product_cat' );
 			if ( $term && ! is_wp_error( $term ) ) {
 				$subcategory_term_ids[] = (int) $term->term_id;

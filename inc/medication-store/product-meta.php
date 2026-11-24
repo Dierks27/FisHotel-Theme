@@ -86,20 +86,24 @@ class FisHotel_Med_Product_Meta {
 
 				<p class="form-field">
 					<label for="_fishotel_med_eyebrow"><?php esc_html_e( 'Eyebrow tagline', 'fishotel' ); ?></label>
-					<input type="text" id="_fishotel_med_eyebrow" name="_fishotel_med_eyebrow" value="<?php echo esc_attr( $eyebrow ); ?>" placeholder="The Persistent Worm Specialist" style="width:100%;">
+					<input type="text" id="_fishotel_med_eyebrow" name="_fishotel_med_eyebrow" value="<?php echo esc_attr( $eyebrow ); ?>" style="width:100%;">
+					<span class="description"><?php esc_html_e( 'Kept here for your records; not shown on the website since v1.29.0 (medication pages are plain listings: name, what is in it, size, price).', 'fishotel' ); ?></span>
 				</p>
 
 				<p class="form-field">
 					<label for="_fishotel_dosing_anchor"><?php esc_html_e( 'Dosing calculator anchor', 'fishotel' ); ?></label>
 					<input type="text" id="_fishotel_dosing_anchor" name="_fishotel_dosing_anchor" value="<?php echo esc_attr( $dose_anchor ); ?>" placeholder="#praziquantel" style="width:100%;">
-					<span class="description"><?php esc_html_e( 'Use the calculator med id, e.g. #praziquantel or #copper_power; this also links the calculator and QT Scheduler back to this product. A longer anchor like #praziquantel-powder or #praziquantel100g still matches as long as it starts with a med id (the longest matching id wins, so #fenbendazole_internal is not mistaken for #fenbendazole). Override per medication under FisHotel Theme → Product Page → Tool Links.', 'fishotel' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Not used on the website since v1.29.0: product pages no longer link to the calculator, and the calculator and QT Scheduler no longer link to products. Kept for your records. Use the calculator med id, e.g. #praziquantel or #copper_power. A longer anchor like #praziquantel-powder or #praziquantel100g still matches as long as it starts with a med id (the longest matching id wins, so #fenbendazole_internal is not mistaken for #fenbendazole). Override per medication under FisHotel Theme → Product Page → Tool Links.', 'fishotel' ); ?></span>
 				</p>
 
 				<?php if ( $is_med ) : ?>
 				<p class="form-field">
 					<label for="_fishotel_med_extra_ack"><?php esc_html_e( 'Extra checkout acknowledgement', 'fishotel' ); ?></label>
-					<textarea id="_fishotel_med_extra_ack" name="_fishotel_med_extra_ack" rows="3" style="width:100%;" placeholder="<?php esc_attr_e( 'I understand chloroquine phosphate is toxic to invertebrates and will only dose it in a fishless quarantine tank.', 'fishotel' ); ?>"><?php echo esc_textarea( $extra_ack ); ?></textarea>
-					<span class="description"><?php esc_html_e( 'Optional. When this product is in the cart, checkout shows one more required checkbox with this exact text (prefixed by the product name) under the main medication terms, and the accepted text is stored on the order. Products sharing the same wording share one checkbox. Leave blank for no extra acknowledgement.', 'fishotel' ); ?></span>
+					<textarea id="_fishotel_med_extra_ack" name="_fishotel_med_extra_ack" rows="3" style="width:100%;" placeholder="<?php esc_attr_e( 'I understand chloroquine phosphate is toxic to corals and invertebrates.', 'fishotel' ); ?>"><?php echo esc_textarea( $extra_ack ); ?></textarea>
+					<span class="description"><?php esc_html_e( 'Optional. When this product is in the cart, checkout shows one more required checkbox with this exact text (prefixed by the product name) under the main medication terms, and the accepted text is stored on the order. Products sharing the same wording share one checkbox. Leave blank for no extra acknowledgement. Since v1.29.0 a text that mentions dosing, treatment, quarantine, QT or a disease is NOT shown at checkout — word it as a plain handling warning (e.g. "Toxic to corals and invertebrates. Keep out of reach of children.").', 'fishotel' ); ?></span>
+					<?php if ( $extra_ack !== '' && class_exists( 'FisHotel_Med_Listing' ) && FisHotel_Med_Listing::carries_treatment_text( $extra_ack ) ) : ?>
+					<span class="description" style="display:block;color:#b32d2e;"><?php esc_html_e( 'This text is not shown at checkout: it reads as a treatment instruction. Reword it as a handling warning to show it again.', 'fishotel' ); ?></span>
+					<?php endif; ?>
 				</p>
 				<?php endif; ?>
 			</div>
@@ -165,15 +169,17 @@ class FisHotel_Med_Product_Meta {
 				<p class="form-field">
 					<label for="_fishotel_active_ingredient"><?php esc_html_e( 'Active ingredient(s)', 'fishotel' ); ?></label>
 					<input type="text" id="_fishotel_active_ingredient" name="_fishotel_active_ingredient" value="<?php echo esc_attr( $active_ingredient ); ?>" placeholder="Praziquantel" style="width:100%;">
-					<span class="description"><?php esc_html_e( 'Comma-separated for combo products. Renders as the italic subtitle under the title and as the first row of the data table.', 'fishotel' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Comma-separated for combo products, with the amount or strength if you have it (e.g. "Metronidazole 99%+"). Renders as the italic subtitle under the title and as the "Contains" row of the data table.', 'fishotel' ); ?></span>
 				</p>
 				<p class="form-field">
 					<label for="_fishotel_treats"><?php esc_html_e( 'Treats', 'fishotel' ); ?></label>
-					<input type="text" id="_fishotel_treats" name="_fishotel_treats" value="<?php echo esc_attr( $treats_text ); ?>" placeholder="Gill flukes, intestinal tapeworms" style="width:100%;">
+					<input type="text" id="_fishotel_treats" name="_fishotel_treats" value="<?php echo esc_attr( $treats_text ); ?>" style="width:100%;">
+					<span class="description"><?php esc_html_e( 'Kept here for your records; not shown on the website since v1.29.0 (medication pages are plain listings: name, what is in it, size, price).', 'fishotel' ); ?></span>
 				</p>
 				<p class="form-field">
 					<label for="_fishotel_use_in"><?php esc_html_e( 'Use in', 'fishotel' ); ?></label>
-					<input type="text" id="_fishotel_use_in" name="_fishotel_use_in" value="<?php echo esc_attr( $use_in_text ); ?>" placeholder="QT tank, hospital tank" style="width:100%;">
+					<input type="text" id="_fishotel_use_in" name="_fishotel_use_in" value="<?php echo esc_attr( $use_in_text ); ?>" style="width:100%;">
+					<span class="description"><?php esc_html_e( 'Kept here for your records; not shown on the website since v1.29.0 (medication pages are plain listings: name, what is in it, size, price).', 'fishotel' ); ?></span>
 				</p>
 				<p class="form-field">
 					<label for="_fishotel_reef_safe"><?php esc_html_e( 'Reef safe', 'fishotel' ); ?></label>
@@ -196,6 +202,7 @@ class FisHotel_Med_Product_Meta {
 				<p class="form-field">
 					<label for="_fishotel_best_for"><?php esc_html_e( 'Best for', 'fishotel' ); ?></label>
 					<input type="text" id="_fishotel_best_for" name="_fishotel_best_for" value="<?php echo esc_attr( $food_best_for ); ?>" placeholder="LPS corals, planktivores, finicky eaters" style="width:100%;">
+					<span class="description"><?php esc_html_e( 'Shown on plain foods only. On a medication or medicated food it is not shown since v1.29.0.', 'fishotel' ); ?></span>
 				</p>
 				<p class="form-field">
 					<label for="_fishotel_nutrition"><?php esc_html_e( 'Nutrition value', 'fishotel' ); ?></label>

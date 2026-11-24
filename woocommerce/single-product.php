@@ -170,6 +170,12 @@ while ( have_posts() ) :
             $display_tags = function_exists( 'fishotel_pdp_display_tags' )
                 ? fishotel_pdp_display_tags( $tags, $product_id )
                 : $tags;
+            // No tag pills on a medication page (v1.29.0): its tags are
+            // therapeutic labels and disease names (Antibacterial, Ich,
+            // Flukes …), each linking to a tag page. Plain listing only.
+            if ( class_exists( 'FisHotel_Med_Listing' ) && FisHotel_Med_Listing::is_med( $product_id ) ) {
+                $display_tags = [];
+            }
             if ( $display_tags ) : ?>
             <div class="fh-tag-list">
                 <?php foreach ($display_tags as $tag) :
@@ -638,40 +644,30 @@ if ( $is_fish ) {
     if ( $temperament ) $spec_rows[] = [ 'Temperament',     esc_html( $temperament ) ];
     if ( $reef_safe )   $spec_rows[] = [ 'Reef Safe', $reef_labels[ $reef_safe ] ?? esc_html( $reef_safe ) ];
     if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
-} else {
-    if ( $is_med_or_aff ) {
-        $active_ing = get_post_meta( $product_id, '_fishotel_active_ingredient', true );
-        $treats     = get_post_meta( $product_id, '_fishotel_treats',             true );
-        $use_in     = get_post_meta( $product_id, '_fishotel_use_in',             true );
-        $reef_safe  = get_post_meta( $product_id, '_fishotel_reef_safe',          true );
-        if ( $active_ing ) $spec_rows[] = [ 'Active Ingredients', esc_html( $active_ing ) ];
-        if ( $treats )     $spec_rows[] = [ 'Treats',             esc_html( $treats ) ];
-        if ( $use_in )     $spec_rows[] = [ 'Use In',             esc_html( $use_in ) ];
-        if ( $reef_safe )  $spec_rows[] = [ 'Reef Safe', $reef_labels[ $reef_safe ] ?? esc_html( $reef_safe ) ];
-    }
-    if ( $is_food || $is_medicated_food ) {
-        $food_source = get_post_meta( $product_id, '_fishotel_food_source', true );
-        $best_for    = get_post_meta( $product_id, '_fishotel_best_for',    true );
-        $nutrition   = get_post_meta( $product_id, '_fishotel_nutrition',   true );
-        $additives   = get_post_meta( $product_id, '_fishotel_additives',   true );
-        if ( $is_food && $food_source ) $spec_rows[] = [ 'Food Source', esc_html( $food_source ) ];
-        if ( $best_for )                $spec_rows[] = [ 'Best For',    esc_html( $best_for ) ];
-        if ( $nutrition )               $spec_rows[] = [ 'Nutrition Value', esc_html( $nutrition ) ];
-        if ( $additives )               $spec_rows[] = [ 'Additives & Enrichments', esc_html( $additives ) ];
-    }
+} elseif ( class_exists( 'FisHotel_Med_Listing' ) ) {
+    // Plain product listing (v1.29.0): "Contains" (active ingredients),
+    // Reef Safe and the food rows. Treats and Use In are kept in wp-admin
+    // but never printed; "Best For" is printed on a plain food only.
+    $spec_rows = FisHotel_Med_Listing::spec_rows( [
+        'active_ingredient' => (string) get_post_meta( $product_id, '_fishotel_active_ingredient', true ),
+        'reef_safe'         => (string) get_post_meta( $product_id, '_fishotel_reef_safe',          true ),
+        'food_source'       => (string) get_post_meta( $product_id, '_fishotel_food_source',        true ),
+        'best_for'          => (string) get_post_meta( $product_id, '_fishotel_best_for',           true ),
+        'nutrition'         => (string) get_post_meta( $product_id, '_fishotel_nutrition',          true ),
+        'additives'         => (string) get_post_meta( $product_id, '_fishotel_additives',          true ),
+    ], $is_med_or_aff, $is_food, $is_medicated_food, $reef_labels );
 }
 
-// Resolve the H2 copy by category. Phase 3.6 mirrors the prose-heading
-// logic from Phase 3.2 so the section header and the prose sub-heading
-// stay consistent on the same product.
+// Resolve the H2 copy by category: "Species" for fish, "Food" for foods and
+// medicated flakes/pellets, "Product" for other medications (until v1.29.0
+// both said "Medication"). The prose sub-heading below uses the same word.
+$about_word = class_exists( 'FisHotel_Med_Listing' )
+    ? FisHotel_Med_Listing::about_word( $is_med_or_aff, $is_food, $is_medicated_food )
+    : '';
 if ( $is_fish ) {
     $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">Species</em>';
-} elseif ( $is_med_or_aff && $is_medicated_food ) {
-    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">Medication</em>';
-} elseif ( $is_med_or_aff ) {
-    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">Medication</em>';
-} elseif ( $is_food ) {
-    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">Food</em>';
+} elseif ( $about_word !== '' ) {
+    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">' . $about_word . '</em>';
 } else {
     $about_label = '';
 }
@@ -733,8 +729,8 @@ if ( $is_fish ) {
             $prose_cats = is_wp_error( $prose_cats ) ? [] : (array) $prose_cats;
             if ( $is_fish ) {
                 $prose_label = 'About This Fish';
-            } elseif ( in_array( 'medications', $prose_cats, true ) ) {
-                $prose_label = 'About This Medication';
+            } elseif ( in_array( 'medications', $prose_cats, true ) || $is_med_or_aff ) {
+                $prose_label = 'About This ' . ( $about_word !== '' ? $about_word : 'Product' );
             } elseif ( in_array( 'foods', $prose_cats, true ) || in_array( 'freeze-dried-foods', $prose_cats, true ) ) {
                 $prose_label = 'About This Food';
             } else {
@@ -765,7 +761,9 @@ if ( ! $habitat && class_exists('FisHotel_Admin_Settings') ) {
 }
 ?>
 
-<?php if ( $foods_feeding || $habitat ) : ?>
+<?php /* Not on a medication page (v1.29.0): the site-wide "Default Foods &
+        Feeding" text would print a feeding schedule under a medicated food. */ ?>
+<?php if ( ( $foods_feeding || $habitat ) && ! $is_med_or_aff ) : ?>
 <div class="fh-careguide">
     <div class="fh-careguide__inner">
         <span class="fh-eyebrow">Care Guide</span>

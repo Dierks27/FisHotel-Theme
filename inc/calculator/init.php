@@ -58,15 +58,9 @@ function fishotel_enqueue_calculator_assets() {
         FisHotel_Medication_Data::get_all()
     );
 
-    // Product links for the "Shop <med> at FisHotel" line under each panel
-    // header (resolved + cached by inc/tool-product-links.php).
-    if ( function_exists( 'fishotel_tool_links_for_js' ) ) {
-        wp_localize_script(
-            'fishotel-calculator',
-            'FISHOTEL_MED_LINKS',
-            fishotel_tool_links_for_js()
-        );
-    }
+    // No product links (v1.29.0): this page stays an educational tool and
+    // no longer links to or embeds products, so FISHOTEL_MED_LINKS is not
+    // sent. The JS prints medication names as plain text.
 }
 
 /* End Quarantine Help Calculator wiring */

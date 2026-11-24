@@ -8,6 +8,7 @@
  *   array    $items_by_source   [ source_id => [ 'order'=>WC_Order, 'items'=>WC_Order_Item_Product[] ] ]
  *   array    $shipments         FST_Shipment[] (or stdClass-like rows)
  *   array    $legacy_shipments  see resolve_phase1_legacy_shipments()
+ *   array    $letters           USPS letter rows (ShipTracker v1.10.0) — never boxes, one plain line each
  *   int[]    $covered_ids
  *   bool     $cost_supported   ShipTracker records label costs (v1.9.17+)
  *   array    $cost_boxes       ShipTracker's standard boxes [ { name, dims } ]
@@ -246,6 +247,10 @@ if ( $from_packing && null !== $packing_data ) {
 				</p>
 			</div>
 		<?php endforeach; ?>
+
+		<?php if ( ! empty( $letters ) ) : ?>
+			<?php FisHotel_Shipments_Metabox::render_letters( $letters, $is_fulfillment ); ?>
+		<?php endif; ?>
 
 		<?php if ( $has_packing && ! empty( $packing['riders'] ) ) : ?>
 			<?php FisHotel_Shipments_Metabox::render_riders( $packing['riders'] ); ?>

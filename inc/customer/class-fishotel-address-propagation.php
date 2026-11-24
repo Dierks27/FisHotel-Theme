@@ -116,7 +116,8 @@ class FisHotel_Address_Propagation {
 	/**
 	 * True when ShipTracker holds a shipment row for this order or, for a
 	 * source folded into a fulfillment, for that fulfillment (the box is
-	 * labelled from the fulfillment). Guarded so a missing/refactored
+	 * labelled from the fulfillment). USPS letters (stickers by mail) do not
+	 * count: they are not boxes. Guarded so a missing/refactored
 	 * ShipTracker degrades to "no shipment" rather than fatalling.
 	 */
 	private static function has_shipment_in_motion( WC_Order $order ) {
@@ -130,6 +131,11 @@ class FisHotel_Address_Propagation {
 		}
 		foreach ( $ids as $id ) {
 			$rows = FST_Shipment::get_by_order( (int) $id );
+			// A USPS letter (ShipTracker 1.10.0, stickers by mail) is not a
+			// box in motion: the order's own box can still take the address.
+			if ( is_array( $rows ) && class_exists( 'FisHotel_Shipment_Cost' ) && method_exists( 'FisHotel_Shipment_Cost', 'without_letters' ) ) {
+				$rows = FisHotel_Shipment_Cost::without_letters( $rows );
+			}
 			if ( ! empty( $rows ) ) {
 				return true;
 			}

@@ -38,6 +38,15 @@ class FisHotel_Shipment_Cost {
 	/** Value of the "Custom…" entry in the box size dropdown. Never posted as a size. */
 	const CUSTOM_BOX = 'custom';
 
+	/**
+	 * ShipTracker's carrier for a USPS letter (its v1.10.0): a shipment row
+	 * whose tracking number is the letter's barcode. A letter is not a box —
+	 * it holds none of the order's items, has no label cost or packing, and
+	 * ShipTracker's own "USPS Letter Tracking" box prints, voids and
+	 * regenerates it.
+	 */
+	const LETTER_CARRIER = 'usps_letter';
+
 	// ── Pure helpers ────────────────────────────────────────────────────
 
 	/**
@@ -46,6 +55,112 @@ class FisHotel_Shipment_Cost {
 	 */
 	public static function box_key( $tracking_number ) {
 		return strtoupper( trim( (string) $tracking_number ) );
+	}
+
+	/**
+	 * Whether a shipment row (object) or a get_order_boxes() entry (array)
+	 * is a USPS letter rather than a box.
+	 *
+	 * @param mixed $row
+	 * @return bool
+	 */
+	public static function is_letter( $row ) {
+		$carrier = null;
+		if ( is_object( $row ) && isset( $row->carrier ) ) {
+			$carrier = $row->carrier;
+		} elseif ( is_array( $row ) && isset( $row['carrier'] ) ) {
+			$carrier = $row['carrier'];
+		}
+		return is_string( $carrier ) && self::LETTER_CARRIER === strtolower( trim( $carrier ) );
+	}
+
+	/**
+	 * Shipment rows or box entries without the letters, in their order.
+	 *
+	 * @param array $rows
+	 * @return array
+	 */
+	public static function without_letters( array $rows ) {
+		$out = [];
+		foreach ( $rows as $row ) {
+			if ( ! self::is_letter( $row ) ) {
+				$out[] = $row;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Only the letters of a list of shipment rows, in their order.
+	 *
+	 * @param array $rows
+	 * @return array
+	 */
+	public static function only_letters( array $rows ) {
+		$out = [];
+		foreach ( $rows as $row ) {
+			if ( self::is_letter( $row ) ) {
+				$out[] = $row;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Where a letter is, in plain words, from its shipment status. A letter
+	 * never gets a "delivered" scan, so the furthest it goes is "likely
+	 * delivered".
+	 *
+	 * @param string $status ShipTracker status slug.
+	 * @return string
+	 */
+	public static function letter_state( $status ) {
+		$status = is_string( $status ) ? strtolower( trim( $status ) ) : '';
+		switch ( $status ) {
+			case '':
+			case 'unknown':
+			case 'label_created':
+				return 'label printed, not mailed yet';
+			case 'likely_delivered':
+			case 'delivered':
+				return 'likely delivered';
+			case 'return_to_sender':
+				return 'coming back to us';
+			case 'exception':
+			case 'failure':
+				return 'mailed, USPS reports a problem';
+			default:
+				return 'mailed';
+		}
+	}
+
+	/**
+	 * The one line the Shipments box shows for a letter:
+	 * "Sticker letter · mailed — managed in USPS Letter Tracking".
+	 *
+	 * @param string $status     ShipTracker status slug of the letter's row.
+	 * @param bool   $is_sticker The letter holds stickers (letter_is_sticker()).
+	 * @return string Plain text.
+	 */
+	public static function letter_line( $status, $is_sticker ) {
+		return ( $is_sticker ? 'Sticker letter' : 'Letter' ) . ' · ' . self::letter_state( $status ) . ' — managed in USPS Letter Tracking';
+	}
+
+	/**
+	 * Whether a letter holds stickers. What ShipTracker recorded inside it
+	 * (wp_fst_letters.contents: 'sticker', 'letter', …) decides; with nothing
+	 * recorded, the order's "stickers by letter" flag does.
+	 *
+	 * @param string|null $contents ShipTracker's contents of the letter, null when unknown.
+	 * @param bool        $flagged  The order carries _fishotel_sticker_mail_letter.
+	 * @return bool
+	 */
+	public static function letter_is_sticker( $contents, $flagged ) {
+		$contents = is_string( $contents ) ? strtolower( trim( $contents ) ) : '';
+		if ( '' !== $contents ) {
+			return 'sticker' === $contents;
+		}
+		return (bool) $flagged;
 	}
 
 	/** A decimal amount as whole cents. */
@@ -1005,7 +1120,7 @@ class FisHotel_Shipment_Cost {
 				$rows = [];
 			}
 			foreach ( is_array( $rows ) ? $rows : [] as $row ) {
-				if ( ! is_object( $row ) || ! isset( $row->tracking_number ) || self::box_key( $row->tracking_number ) !== $key ) {
+				if ( ! is_object( $row ) || ! isset( $row->tracking_number ) || self::is_letter( $row ) || self::box_key( $row->tracking_number ) !== $key ) {
 					continue;
 				}
 				// No list of items on the row = every item of that order.
@@ -1174,6 +1289,9 @@ class FisHotel_Shipment_Cost {
 	 * the box's cost data and the orders sharing it.
 	 *
 	 * @param int[] $order_ids
+	 * A USPS letter (ShipTracker v1.10.0) is left out: it is no box, so it
+	 * counts in no box number, cost, packing or "went with" lookup.
+	 *
 	 * @return array[] FST_Shipment::get_order_boxes() entries, [] when unsupported.
 	 */
 	public static function order_boxes( array $order_ids ) {
@@ -1185,7 +1303,7 @@ class FisHotel_Shipment_Cost {
 		} catch ( \Throwable $e ) {
 			return [];
 		}
-		return is_array( $boxes ) ? $boxes : [];
+		return is_array( $boxes ) ? self::without_letters( $boxes ) : [];
 	}
 
 	/**

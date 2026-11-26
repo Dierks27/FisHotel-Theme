@@ -551,6 +551,43 @@ Tests: `php tests/med-listings-test.php` checks the rules with an invented, clai
 plus the theme files themselves. `node tests/med-listings-tools.test.js` checks that the scheduler
 names medications without links and that neither tool script knows a product or shop URL.
 
+### A USPS letter is not a box (v1.28.1 — ShipTracker v1.10.0)
+ShipTracker v1.10.0 can track a USPS letter — first used for stickers mailed in an envelope on an
+order with nothing else for the shop to send. A letter is a `wp_fst_shipments` row with carrier
+`usps_letter`, its barcode as the tracking number and no order lines. To the Shipments box a row
+with no order lines is a box that holds every item, so until v1.28.1 one letter marked every item
+shipped, took away Add Shipment and "How it went out", counted as a box with no cost, used up one
+of Packing's boxes, and showed a card with a "#" link, Re-check and a Remove that left
+ShipTracker's own record of the letter behind.
+
+- **Letters are left out of everything worked out from the boxes**: `resolve_shipments()` and
+  `FisHotel_Shipment_Cost::order_boxes()` skip `usps_letter` rows, so the items shipped, the box
+  cards, the costs line ("N boxes have no cost yet"), packing, Packing's "Box 2 of 3", the orders
+  that went in this order's box, and "How it went out" (offered while the order has no box) are
+  the boxes' only. `box_fish_count()` skips them too.
+- **Each letter is one plain line under the boxes**, with no link and no buttons:
+  `Sticker letter · mailed — managed in USPS Letter Tracking` ("Sticker letter" when ShipTracker
+  recorded stickers inside it — `FST_Letters::get_by_shipment()->contents` is `sticker` — and
+  "Letter" for anything else; with no record the order's `_fishotel_sticker_mail_letter` flag
+  decides; "label printed, not mailed yet", "mailed", "likely
+  delivered", "coming back to us" or "mailed, USPS reports a problem"; on a combined order with
+  `(source: #N)`). The line is there so the box does not read "No shipments yet" as if nothing
+  went out; the letter itself is printed, voided and regenerated in ShipTracker's "USPS Letter
+  Tracking" box (`fst-letter`), which keeps its own record — a Remove here would orphan it.
+- **A letter does not lock the customer's delivery date or stop an address change**: the
+  self-serve date change (`FisHotel_Self_Serve_Date::can_change()` / `lock_reason()`, which look
+  at every order of a combined box) and the My Account address update
+  (`FisHotel_Address_Propagation::has_shipment_in_motion()`) count boxes only. Before, a sticker
+  letter on the EA-only order of a combined box locked the fish order's date as "shipped", and a
+  fish order with only a letter stopped taking address changes. A real box still locks both.
+- **ShipTracker 1.9.18 and older** have no letters: the box is what it was.
+
+`php tests/shipments-letters-render-test.php` renders the real box for a fish order with a box
+and a sticker letter, a letter before any box, a letter-only EA order, a combined order and a
+sticker letter on an order without the flag, and checks that apart from the letter line each
+page is the page without the letter. `php tests/letters-customer-locks-test.php` runs the date
+lock and the address check with a letter on a combined box's EA-only order and on a fish order.
+
 ## Build Phases
 
 - **Phase 1** ✅ Foundation — Design system, meta fields, variation display

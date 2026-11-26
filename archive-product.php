@@ -266,9 +266,11 @@ if ( $is_shop_root ) {
 <?php /* ── MEDICATIONS DUAL-AXIS FILTER STRIP ── */ ?>
 <?php if ( function_exists( 'fishotel_is_medications_archive' ) && fishotel_is_medications_archive() ) :
     // Axes are hardcoded — slugs map 1:1 to the term IDs in the Phase 3.4
-    // data-model table. Labels intentionally reframe the taxonomy slugs
-    // ("antibacterial" → "Antibiotics", "antiparasitic" → "External") for
-    // the customer-facing chip copy.
+    // data-model table. Form only since v1.29.0: the "Treats" row
+    // (Antibiotics / Dewormers / External) was a treatment claim, and a
+    // listing says what a product is, not what it treats.
+    // medications-filter.js still reads ?treats=; with no Treats row it
+    // simply finds no chip and shows everything.
     $med_filter_axes = [
         'form' => [
             'label' => 'Form',
@@ -277,14 +279,6 @@ if ( $is_shop_root ) {
                 [ 'slug' => 'pellets', 'label' => 'Pellets' ],
                 [ 'slug' => 'powders', 'label' => 'Powders' ],
                 [ 'slug' => 'liquid',  'label' => 'Liquid'  ],
-            ],
-        ],
-        'treats' => [
-            'label' => 'Treats',
-            'chips' => [
-                [ 'slug' => 'antibacterial', 'label' => 'Antibiotics' ],
-                [ 'slug' => 'dewormer',      'label' => 'Dewormers'   ],
-                [ 'slug' => 'antiparasitic', 'label' => 'External'    ],
             ],
         ],
     ];

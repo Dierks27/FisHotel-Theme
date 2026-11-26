@@ -36,6 +36,7 @@ require_once FISHOTEL_MED_DIR . '/disclaimer.php';
 require_once FISHOTEL_MED_DIR . '/terms-display.php';
 require_once FISHOTEL_MED_DIR . '/product-display.php';
 require_once FISHOTEL_MED_DIR . '/packing-slip.php';
+require_once FISHOTEL_MED_DIR . '/listing-rules.php'; // plain product listings (v1.29.0) — pure rules + reset of old claim copy
 
 FisHotel_Med_Taxonomy::init();
 FisHotel_Med_Settings::init();
@@ -46,6 +47,7 @@ FisHotel_Med_Disclaimer::init();
 FisHotel_Med_Terms_Display::init();
 FisHotel_Med_Product_Display::init();
 FisHotel_Med_Packing_Slip::init();
+FisHotel_Med_Listing::init();
 
 // WP-CLI commands (Phase 1.5 importer + Phase 2 bulk helpers) — only
 // loaded under wp-cli so the command classes don't sit in memory on
@@ -115,7 +117,7 @@ function fishotel_med_enqueue_frontend() {
 		'homeUrl'      => home_url( '/' ),
 		'modalTitle'   => 'FOR ORNAMENTAL USE ONLY',
 		'modalBody'    => FisHotel_Med_Settings::get_disclaimer_body(),
-		'agreeLabel'   => 'I Agree — Show Me the Pharmacy',
+		'agreeLabel'   => 'I Agree — Continue',
 		'declineLabel' => 'Decline',
 		'isArchive'    => fishotel_med_is_med_archive(),
 		'isMedPdp'     => is_product() && fishotel_med_is_med_product( get_queried_object_id() ),

@@ -142,21 +142,24 @@ class FisHotel_Admin_Settings {
 			'fh_trust_1'                  => '28-day QT protocol',
 			'fh_trust_2'                  => 'Live arrival guarantee',
 			'fh_trust_3'                  => 'Ships Mon–Tue',
-			// Trust Strip — medications (Phase 3.5)
-			'fh_med_trust_1'              => 'The same meds we use in QT',
-			'fh_med_trust_2'              => 'Trusted partner fulfillment',
+			// Trust Strip — medications (Phase 3.5). Plain wording since
+			// v1.29.0 (was "The same meds we use in QT" / "Trusted partner
+			// fulfillment"; FisHotel_Med_Listing::stale_copy() resets a
+			// stored copy of the old text once).
+			'fh_med_trust_1'              => 'Authentic product, sourced direct',
+			'fh_med_trust_2'              => 'For ornamental aquarium use only',
 			'fh_med_trust_3'              => 'Ships in 1-2 business days',
 			// Trust Strip — foods (Phase 3.5)
 			'fh_food_trust_1'             => 'The same foods we feed in-house',
 			'fh_food_trust_2'             => 'Trusted partner fulfillment',
 			'fh_food_trust_3'             => 'Ships in 1-2 business days',
 			// Trust Strip — tier 2 / Amazon-affiliate medications (Phase 3.5.1)
-			'fh_tier2_trust_1'            => 'The same meds we use in QT',
+			'fh_tier2_trust_1'            => '', // was "The same meds we use in QT" (v1.29.0)
 			'fh_tier2_trust_2'            => 'Sourced via Amazon for best pricing',
 			'fh_tier2_trust_3'            => 'Reef-keeper favorite for decades',
 			// Pharmacy / Pantry badge subtitles (Phase 3.6) — mirror the QT
 			// certificate panel for med + food products.
-			'fh_pharmacy_badge_subtitle'  => 'Sourced direct · Therapeutic-grade',
+			'fh_pharmacy_badge_subtitle'  => 'Sourced direct', // was "· Therapeutic-grade" (v1.29.0)
 			'fh_pantry_badge_subtitle'    => 'Sourced direct · Premium grade',
 			// Branding
 			'fh_tagline'                  => 'We quarantine. You reef.',
@@ -300,14 +303,16 @@ class FisHotel_Admin_Settings {
 				'subtitle_template' => '{count} {medications_or_medications} in your cart.',
 				'shipping_label'    => 'Standard Shipping',
 				'shipping_subtext'  => 'Ships within 1–2 business days',
-				'trust_1_label'     => 'FROM THE PHARMACY',
-				'trust_1_body'      => 'The same meds we use in-house',
+				// Plain wording since v1.29.0 (no pharmacy, quarantine
+				// or dosing-calculator copy; see FisHotel_Med_Listing).
+				'trust_1_label'     => 'FROM THE SUPPLY ROOM',
+				'trust_1_body'      => 'Ships direct from our supplier',
 				'trust_2_label'     => 'SOURCED DIRECT',
 				'trust_2_body'      => 'Authentic product, never gray market',
-				'trust_3_label'     => 'EXPERT-CURATED',
-				'trust_3_body'      => 'Hand-picked for reef and quarantine use',
-				'trust_4_label'     => 'DOSING CALCULATOR',
-				'trust_4_body'      => 'Free FisHotel calculator for every medication',
+				'trust_3_label'     => 'FAST SHIPPING',
+				'trust_3_body'      => 'Ships within 1–2 business days',
+				'trust_4_label'     => 'ORNAMENTAL USE ONLY',
+				'trust_4_body'      => 'Not for human use. Keep out of reach of children.',
 			],
 			'food' => [
 				'subtitle_template' => '{count} {items_or_items} from the pantry.',
@@ -761,8 +766,8 @@ JS;
 				'page'   => 'fishotel-product',
 				'title'  => 'Medication Trust Strip (below Add to Cart)',
 				'fields' => [
-					'fh_med_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => 'The same meds we use in QT' ],
-					'fh_med_trust_2' => [ 'label' => 'Trust item 2', 'type' => 'text', 'placeholder' => 'Trusted partner fulfillment' ],
+					'fh_med_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => 'Authentic product, sourced direct', 'description' => 'Say what the product is or how it ships — never what it treats (no dosing, quarantine or disease words).' ],
+					'fh_med_trust_2' => [ 'label' => 'Trust item 2', 'type' => 'text', 'placeholder' => 'For ornamental aquarium use only' ],
 					'fh_med_trust_3' => [ 'label' => 'Trust item 3', 'type' => 'text', 'placeholder' => 'Ships in 1-2 business days' ],
 				],
 			],
@@ -779,7 +784,7 @@ JS;
 				'page'   => 'fishotel-product',
 				'title'  => 'Tier 2 / Amazon-Affiliate Trust Strip (below Buy on Amazon)',
 				'fields' => [
-					'fh_tier2_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => 'The same meds we use in QT' ],
+					'fh_tier2_trust_1' => [ 'label' => 'Trust item 1', 'type' => 'text', 'placeholder' => '', 'description' => 'Empty by default since v1.29.0 (was "The same meds we use in QT"). Never what the product treats.' ],
 					'fh_tier2_trust_2' => [ 'label' => 'Trust item 2', 'type' => 'text', 'placeholder' => 'Sourced via Amazon for best pricing' ],
 					'fh_tier2_trust_3' => [ 'label' => 'Trust item 3', 'type' => 'text', 'placeholder' => 'Reef-keeper favorite for decades' ],
 				],
@@ -788,7 +793,7 @@ JS;
 				'page'   => 'fishotel-product',
 				'title'  => 'Pharmacy / Pantry Badge (above Price)',
 				'fields' => [
-					'fh_pharmacy_badge_subtitle' => [ 'label' => 'Pharmacy badge subtitle', 'type' => 'text', 'placeholder' => 'Sourced direct · Therapeutic-grade', 'description' => 'Shown beneath "FROM THE PHARMACY" on medication + Amazon-affiliate product pages.' ],
+					'fh_pharmacy_badge_subtitle' => [ 'label' => 'Supply Room badge subtitle', 'type' => 'text', 'placeholder' => 'Sourced direct', 'description' => 'Shown beneath "FROM THE SUPPLY ROOM" (was "From the Pharmacy" until v1.29.0) on medication + Amazon-affiliate product pages. No treatment words.' ],
 					'fh_pantry_badge_subtitle'   => [ 'label' => 'Pantry badge subtitle',   'type' => 'text', 'placeholder' => 'Sourced direct · Premium grade',     'description' => 'Shown beneath "FROM THE PANTRY" on food product pages.' ],
 				],
 			],
@@ -806,7 +811,8 @@ JS;
 			'tool_links' => [
 				'page'        => 'fishotel-product',
 				'title'       => 'Tool Links (Calculator + QT Scheduler → Products)',
-				'description' => function_exists( 'fishotel_tool_link_section_description' ) ? fishotel_tool_link_section_description() : '',
+				'description' => 'Switched off since v1.29.0: the calculator and QT Scheduler no longer link to products, and product pages no longer link to them (medication pages are plain listings). These settings are kept, unused. '
+					. ( function_exists( 'fishotel_tool_link_section_description' ) ? fishotel_tool_link_section_description() : '' ),
 				'fields'      => function_exists( 'fishotel_tool_link_settings_fields' ) ? fishotel_tool_link_settings_fields() : [],
 			],
 			// Cart page — hero

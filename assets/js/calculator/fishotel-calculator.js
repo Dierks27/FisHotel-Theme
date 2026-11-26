@@ -809,49 +809,9 @@
     var h = el('div', 'fh-qh-phead');
     h.appendChild(el('div', 'fh-qh-pname', med.name_generic));
     h.appendChild(el('div', 'fh-qh-ptag',  tag));
-    // Shop link lives inside the header so every render path (flat daily,
-    // ramp/hold, prazi, bath, chloroquine, generic) gets it for free.
-    var shop = renderShopLink(med);
-    if (shop) h.appendChild(shop);
+    // No shop link to a product since v1.29.0: the calculator
+    // is an educational page and does not link to or embed products.
     return h;
-  }
-
-  /**
-   * "Shop <product> at FisHotel →" when the server resolved a real product
-   * for this med (window.FISHOTEL_MED_LINKS from inc/tool-product-links.php;
-   * "View <product>" when the product is Amazon-mode, since its page holds
-   * the Buy-on-Amazon button), else "Browse medications at FisHotel →"
-   * pointing at the Medications shop. Returns null when the med is hidden
-   * (source 'none': Hyposalinity, or an admin "None" override) so the row
-   * is not rendered at all.
-   */
-  function renderShopLink(med) {
-    var cfg = window.FISHOTEL_MED_LINKS || null;
-    var fallbackUrl = (cfg && cfg.fallback_url) || '/product-category/medications/';
-    var entry = cfg && cfg.links && med && cfg.links[med.med_id];
-    if (entry && entry.source === 'none') return null;
-    var row = el('div', 'fh-qh-shoprow');
-    var a = el('a');
-    if (entry && entry.url && entry.source !== 'fallback') {
-      var name = entry.name || med.name_generic;
-      var verb = entry.mode === 'amazon' ? 'View ' : 'Shop ';
-      a.href = entry.url;
-      if (entry.in_stock === false) {
-        // Still link (the product page is the place to see it), but
-        // don't promise a purchase.
-        a.className = 'fh-qh-shoplink fh-qh-shoplink--oos';
-        a.textContent = name + ' at FisHotel (currently out of stock) →';
-      } else {
-        a.className = 'fh-qh-shoplink';
-        a.textContent = verb + name + ' at FisHotel →';
-      }
-    } else {
-      a.className = 'fh-qh-shoplink fh-qh-shoplink--fallback';
-      a.href = fallbackUrl;
-      a.textContent = 'Browse medications at FisHotel →';
-    }
-    row.appendChild(a);
-    return row;
   }
 
   function renderSensitivityToggle(options, label, bindKey) {

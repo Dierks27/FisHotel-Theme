@@ -34,7 +34,7 @@ fishotel-theme/
 │   ├── hotel-journal.php      ★ Quarantine journal entries (repeatable)
 │   ├── variation-display.php  ★ Visual variation buttons (replaces WC dropdowns)
 │   ├── placeholder-library.php  Placeholder images for products without a photo
-│   ├── tool-product-links.php   Calculator / QT Scheduler → medication product links
+│   ├── tool-product-links.php   Calculator / QT Scheduler → product links (unused since v1.29.0)
 │   ├── invoice-lines.php      ★ Invoice products → itemised fish lines at checkout, purchase lock, backfill
 │   ├── theme-updater.php      Self-updater from the GitHub main branch
 │   ├── woocommerce.php        WooCommerce wrappers + hooks
@@ -493,6 +493,63 @@ found by name, use / clear / a box picked by hand, dry goods alone taking the fo
 Packing's box, what is posted for a tracking number that is already another order's box, what
 a changed Packing box does to a form, and what an untouched form posts by the two
 `node tests/admin-shipments*.test.js`.
+
+### Medication pages are plain listings (v1.29.0 — inc/medication-store/listing-rules.php)
+FDA warning letters to aquarium-medication sellers quote the seller's own website as proof that a
+product is a drug. Since v1.29.0 a medication or medicated-food page says what the product is,
+what is in it, its sizes and price, and who ships it. Nothing on it says what it treats. The
+products stay for sale. The theme only changes what its code prints. The text stored on each
+product (description, short description, category and tag names, Yoast fields) is cleaned with
+the owner's tool in the FisHotel Misc plugin.
+
+**No longer printed** (the fields stay in wp-admin with their data; each field's description says
+it is not shown):
+- the eyebrow tagline ("The Persistent Worm Specialist"), the "Dose it with our Medication
+  Calculator →" link, and the Treats and Use In rows. "Best For" is not printed on a medication
+  (a plain food still shows it). The Care Guide block is not printed on a medication.
+- tag pills on a medication page (its tags are disease and drug-class names linking to tag pages),
+  and the colours the theme gave those tags.
+- the "Treats" row (Antibiotics / Dewormers / External) of the Medications filter strip. Form stays.
+- an extra checkout acknowledgement whose text mentions dosing, treatment, quarantine, QT or a
+  disease (`FisHotel_Med_Listing::carries_treatment_text()`). It is not shown, not required and
+  not stored on the order. The product screen says so in red. A plain handling warning ("Toxic to
+  corals and invertebrates.") is still shown.
+- review texts in WooCommerce's product JSON-LD on a medication page (the star rating stays).
+- product links on the Medication Dosing calculator and the QT Scheduler. They name medications as
+  plain text, the page no longer gets `FISHOTEL_MED_LINKS`, and there is no fallback to the
+  Medications shop. The Tool Links settings are kept but unused. On a medication page the footer's
+  Tools column keeps Bleach Calculator and Build-a-Tank only.
+
+**Reworded:**
+- "Fulfilled by EverythingAquatic, our trusted medication partner." is now "Ships direct from our
+  supplier."
+- The badge "From the Pharmacy / Sourced direct · Therapeutic-grade" is now "From the Supply Room /
+  Sourced direct".
+- The modal button "I Agree — Show Me the Pharmacy" is now "I Agree — Continue".
+- The table row "Active Ingredients" is now "Contains". "About This Medication" is now "About This
+  Food" (medicated flake or pellet) or "About This Product".
+- Medication trust strip: "Authentic product, sourced direct · For ornamental aquarium use only ·
+  Ships in 1-2 business days". Amazon item 1 is now empty.
+- Cart meds preset: FROM THE SUPPLY ROOM · SOURCED DIRECT · FAST SHIPPING · ORNAMENTAL USE ONLY.
+  Before, it said PHARMACY, "reef and quarantine use" and DOSING CALCULATOR.
+
+**Stored copies of the old wording.** These settings fall back to the code default only when they
+are blank, so a site that once saved its settings page still holds the old text. On the first
+wp-admin load after the update (`fishotel_med_listing_v` = 1), any of these settings that still
+equals its old default, word for word, is deleted so the new default shows. After that the page
+cache is emptied (Breeze `breeze_clear_all_cache`, only if Breeze is there). Wording the owner
+typed differently is never changed. When it still reads like a claim, a notice on the FisHotel
+Theme screens names it.
+
+**Which products count.** A product counts as a medication when it is in any category under
+Medications, not only the old fixed slug list. So a product moved from Antibacterial / Dewormer
+into a neutral category under Medications keeps its plain medication page. The theme no longer
+creates the therapeutic subcategories or the Treats / Use In attributes. Existing ones are left
+for the owner's tool.
+
+Tests: `php tests/med-listings-test.php` checks the rules with an invented, claim-heavy flake,
+plus the theme files themselves. `node tests/med-listings-tools.test.js` checks that the scheduler
+names medications without links and that neither tool script knows a product or shop URL.
 
 ### A USPS letter is not a box (v1.28.1 — ShipTracker v1.10.0)
 ShipTracker v1.10.0 can track a USPS letter — first used for stickers mailed in an envelope on an

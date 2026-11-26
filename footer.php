@@ -20,6 +20,12 @@ if ( function_exists( 'fishotel_tool_page_url' ) ) {
         [ 'page-bleach-calculator.php',  'bleach-calculator',   __( 'Bleach Calculator', 'fishotel' ) ],
         [ 'page-compatibility-guide.php','compatibility-guide', __( 'Build-a-Tank', 'fishotel' ) ],
     ];
+    // Medication pages (product page or Medications category) do not link
+    // to Medication Dosing or the QT Scheduler (v1.29.0); the other tools
+    // stay, so the column and the four-column layout keep their shape.
+    if ( class_exists( 'FisHotel_Med_Listing' ) ) {
+        $fh_footer_tool_defs = FisHotel_Med_Listing::footer_tool_defs( $fh_footer_tool_defs, FisHotel_Med_Listing::on_med_page() );
+    }
     foreach ( $fh_footer_tool_defs as $def ) {
         $tool_url = fishotel_tool_page_url( $def[0], $def[1] );
         if ( $tool_url !== '' ) {
@@ -35,7 +41,7 @@ if ( function_exists( 'fishotel_tool_page_url' ) ) {
     <div class="site-footer__main<?php echo empty( $fh_footer_tools ) ? ' site-footer__main--no-tools' : ''; ?>">
         <div>
             <div class="site-footer__brand-name">The FisHotel</div>
-            <p class="site-footer__tagline">Premium saltwater fish quarantine. Every fish checked in, observed, treated, and cleared before it ever reaches your tank.</p>
+            <p class="site-footer__tagline"><?php echo esc_html( class_exists( 'FisHotel_Med_Listing' ) ? FisHotel_Med_Listing::footer_tagline( FisHotel_Med_Listing::on_med_page() ) : 'Premium saltwater fish quarantine. Every fish checked in, observed, treated, and cleared before it ever reaches your tank.' ); ?></p>
         </div>
         <div>
             <p class="site-footer__col-title">Navigate</p>

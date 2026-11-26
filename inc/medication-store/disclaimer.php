@@ -214,7 +214,7 @@ class FisHotel_Med_Disclaimer {
 					</div>
 				<?php else : ?>
 					<div class="fishotel-med-modal__actions">
-						<button type="button" class="fishotel-med-modal__btn fishotel-med-modal__btn--agree">I Agree — Show Me the Pharmacy</button>
+						<button type="button" class="fishotel-med-modal__btn fishotel-med-modal__btn--agree">I Agree — Continue</button>
 						<button type="button" class="fishotel-med-modal__btn fishotel-med-modal__btn--decline">Decline</button>
 					</div>
 				<?php endif; ?>

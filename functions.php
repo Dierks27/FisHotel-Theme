@@ -254,7 +254,8 @@ $includes = [
 	'/inc/pdf-invoice.php',      // PDF Invoices & Packing Slips (WP Overnight): refund rows + marker, customer notes
 	'/inc/invoice-lines.php',    // Invoice products → itemised fish lines + credit fees at checkout, purchase lock, backfill tool
 	'/inc/shop-load-more.php', // Shop archive Load More (AJAX) + enqueue
-	'/inc/product-facts.php',    // Facts typed in the description: product-page text, per-product copy, old-style test
+	'/inc/product-facts.php',    // Facts typed in the description: product-page text (plain + with formatting), per-product copy, old-style test
+	'/inc/product-layout.php',   // Product page: which fact goes where, what is printed when a field is empty
 	'/inc/hotel-data.php',       // Fish facts box + Staff notes box (product screen)
 	'/inc/fish-notes.php',       // One-time list of fish whose Notes the product page showed (Notes are private since 1.28.0)
 	'/inc/admin-product-screen.php', // Product screen: Medication & food tab only on meds/food, Copy-facts button script

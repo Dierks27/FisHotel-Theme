@@ -238,60 +238,6 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
   text-decoration: line-through;
 }
 
-/* About This Species — stat grid (table) */
-.fh-species-grid {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 32px;
-}
-
-.fh-species-grid tr:nth-child(even) {
-  background: rgba(255,255,255,0.02);
-}
-
-.fh-species-grid td {
-  padding: 10px 14px;
-  font-size: 13px;
-  line-height: 1.5;
-  vertical-align: top;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-
-.fh-species-grid td:first-child {
-  color: #a09890;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  width: 38%;
-  white-space: nowrap;
-}
-
-.fh-species-grid td:last-child {
-  color: #e8e4dc;
-}
-
-/* Species description prose */
-.fh-species__prose {
-  margin-top: 28px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  color: #a09890;
-  font-size: 14px;
-  line-height: 1.8;
-}
-
-.fh-species__prose-label {
-  color: #c9963a;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  margin: 0 0 10px 0;
-}
-
 /* Spec badges */
 .fh-spec-badge {
   display: inline-block;
@@ -306,38 +252,8 @@ del .woocommerce-Price-amount { color: var(--fh-text-3); font-size: .85em; }
 .fh-spec-badge--green { color: #5aaa78; border-color: rgba(90,170,120,.3); }
 .fh-spec-badge--amber { color: #d4903a; border-color: rgba(212,144,58,.3); }
 
-/* Care guide blocks — correct selectors */
-.fh-careguide__blocks {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.fh-careguide__block {
-  background: #1c1c1c;
-  border-radius: 4px;
-  padding: 24px;
-}
-
-.fh-careguide__block-title {
-  color: #c9963a;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
-.fh-careguide__block-text {
-  color: #a09890;
-  font-size: 14px;
-  line-height: 1.7;
-}
-
 /* Responsive — product components */
 @media (max-width: 768px) {
-  .fh-careguide__blocks { grid-template-columns: 1fr; }
   .fh-trust-strip { flex-direction: column; gap: 8px; }
 }
 

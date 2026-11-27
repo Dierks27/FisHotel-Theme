@@ -1041,6 +1041,10 @@ h1, h2, h3, h4, h5 {
   margin-bottom: 6px;
 }
 
+/* A sale price: the old price is struck through, the new one is not underlined
+   (browsers underline <ins> by default). */
+.fh-purchase__price ins { text-decoration: none; }
+
 .fh-purchase__price-note {
   font-size: 11px;
   color: var(--fh-text-3);
@@ -1454,60 +1458,6 @@ h1, h2, h3, h4, h5 {
   font-style: italic;
 }
 
-/* About This Species — stat grid */
-.fh-species {
-  background: var(--fh-bg-dk);
-  border-top: 1px solid var(--fh-border);
-  padding: var(--fh-section-pad) var(--fh-page-pad);
-}
-
-.fh-species__inner {
-  max-width: var(--fh-max-width);
-  margin: 0 auto;
-}
-
-.fh-species-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  margin-bottom: 40px;
-}
-
-.fh-species-grid__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--fh-border);
-}
-
-.fh-species-grid__row:nth-child(odd) {
-  background: rgba(255,255,255,0.02);
-}
-
-.fh-species-grid__label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--fh-text-2);
-}
-
-.fh-species-grid__val {
-  font-size: 13px;
-  color: var(--fh-text-1);
-  text-align: right;
-}
-
-.fh-species__prose {
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--fh-text-2);
-  max-width: 800px;
-}
-
-.fh-species__prose p { margin-bottom: 16px; }
-.fh-species__prose p:last-child { margin-bottom: 0; }
-
 .fh-spec-badge {
   display: inline-block;
   font-size: 9px;
@@ -1521,66 +1471,320 @@ h1, h2, h3, h4, h5 {
 .fh-spec-badge--green { color: var(--fh-green); border-color: rgba(90,170,120,.3); }
 .fh-spec-badge--amber { color: var(--fh-amber); border-color: rgba(212,144,58,.3); }
 
-/* Care Guide — clean labeled blocks */
-.fh-careguide {
-  background: var(--fh-bg);
+/* ═══════════════════════════════════════════════════════════════════════
+   PRODUCT PAGE BODY (v1.30.0) — the "at a glance" row inside the top area,
+   then one band: the story (description + Fun Facts card) on the left, the
+   details (Fish Dossier entries + quarantine buttons) on the right.
+   Replaces the .fh-species / .fh-careguide / .fh-plan-qt bands. Markup:
+   woocommerce/single-product.php; which piece is printed when:
+   inc/product-layout.php. Theme tokens only.
+═══════════════════════════════════════════════════════════════════════ */
+
+/* 1 ── One left edge, one right edge ────────────────────────────────────
+   The header, the photo + buy box, the shop grid and the footer keep their
+   48px inside the 1300 box (118px from the edge at 1440). The title band
+   and "More Available Now" had it outside (70px). Bring those two, and the
+   new body band, onto the header's line. .page-hero is shared by every
+   page, so it is scoped to the product page. */
+.fishotel-product-page .page-hero__inner,
+.fishotel-product-page .fh-related__inner,
+.fh-pdp-body__inner {
+  max-width: calc(var(--fh-max-width) - 2 * var(--fh-page-pad));
+}
+
+/* A long two-word name wraps on a phone instead of being cut off. */
+.fishotel-product-page .page-hero__title { overflow-wrap: break-word; }
+
+.fishotel-product-page .fh-product-layout { row-gap: 32px; }
+
+/* 2 ── At a glance ─────────────────────────────────────────────────────
+   A <dl>, third child of .fh-product-layout. Flex + wrap: the 1px gaps over
+   the tinted background draw the dividers, and a short last line stretches,
+   so 2, 3, 4 or 5 cells always fill their line at any width. */
+.fh-glance {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  margin: 0;
+  background: var(--fh-border-md);
+  border: 1px solid var(--fh-border-md);
+}
+
+.fh-glance__cell {
+  flex: 1 1 150px;
+  min-width: 0;
+  background: var(--fh-bg-dk);
+  padding: 15px 20px 16px;
+}
+
+.fh-glance dt {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fh-text-2);
+  margin-bottom: 6px;
+}
+
+.fh-glance dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--fh-text-1);
+  overflow-wrap: anywhere;
+}
+
+/* A value that is also a tag links to that tag's page (the pill is not printed twice). */
+.fh-glance dd a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--fh-gold-rule);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.fh-glance dd a:hover { color: var(--fh-gold-lt); text-decoration-color: var(--fh-gold); }
+.fh-glance dd a.fh-glance__badge-link {            /* the Reef Safe badge as a link: same thin gold line under it */
+  display: inline-block;
+  text-decoration: none;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--fh-gold-rule);
+}
+.fh-glance dd a.fh-glance__badge-link:hover { border-bottom-color: var(--fh-gold); }
+.fh-glance dd a.fh-glance__badge-link .fh-spec-badge { vertical-align: 0; }
+
+.fh-glance .fh-spec-badge { font-size: 10px; padding: 3px 9px; vertical-align: 2px; }
+
+/* The row sits under the photo, so the photo must not follow the scroll down
+   over it (a sticky grid item is held by the whole grid, not by its own row). */
+.fh-product-layout--facts-below .fh-gallery { position: static; }
+
+/* No buy form (fish unavailable, Coming Soon): the same <dl> moves up beside
+   the photo and sits on the photo's bottom edge, one fact to a line, so the
+   right side is framed instead of half empty. Only the placement changes. */
+@media (min-width: 769px) {
+  .fh-product-layout--facts-beside .fh-gallery { grid-row: 1 / span 2; }
+  .fh-product-layout--facts-beside .fh-purchase { grid-column: 2; grid-row: 1; }
+  .fh-product-layout--facts-beside .fh-glance {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+  .fh-product-layout--facts-beside .fh-glance__cell {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    column-gap: 16px;
+    align-items: baseline;
+    padding: 13px 20px;
+  }
+  .fh-product-layout--facts-beside .fh-glance dt { margin: 0; }
+}
+
+/* 3 ── The body: story on the left, details on the right ──────────────── */
+.fh-pdp-body {
+  background: var(--fh-bg-dk);
   border-top: 1px solid var(--fh-border);
   padding: var(--fh-section-pad) var(--fh-page-pad);
 }
 
-.fh-careguide__inner {
-  max-width: var(--fh-max-width);
+.fh-pdp-body__inner {
   margin: 0 auto;
-}
-
-.fh-careguide__blocks {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  column-gap: 56px;
+  align-items: start;
 }
 
-.fh-careguide__block-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--fh-gold);
-  margin-bottom: 12px;
-}
+.fh-pdp-body--solo .fh-pdp-body__inner { grid-template-columns: minmax(0, 1fr); }
 
-.fh-careguide__block-text {
-  font-size: 13px;
+.fh-pdp-h2 {
+  font-size: 26px;
+  line-height: 1.25;
+  margin: 0 0 22px;
+}
+.fh-pdp-h2 em { font-style: normal; color: var(--fh-gold); }
+
+/* The story: the description with its paragraphs, lists, bold and links */
+.fh-story { min-width: 0; }
+
+.fh-story__prose {
+  font-size: 15px;
   line-height: 1.8;
   color: var(--fh-text-2);
+  overflow-wrap: break-word;
+}
+.fh-pdp-body--solo .fh-story__prose,
+.fh-pdp-body--solo .fh-funfacts { max-width: 760px; }
+
+.fh-story__prose > * { margin: 0 0 16px; }
+.fh-story__prose > *:last-child { margin-bottom: 0; }
+.fh-story__prose strong, .fh-story__prose b { color: var(--fh-text-1); font-weight: 600; }
+.fh-story__prose a { color: var(--fh-gold-lt); text-decoration: underline; text-underline-offset: 3px; }
+.fh-story__prose a:hover { color: var(--fh-gold-pale); }
+.fh-story__prose ul, .fh-story__prose ol { padding-left: 22px; }
+.fh-story__prose ul { list-style: square; }
+.fh-story__prose ol { list-style: decimal; }
+.fh-story__prose li { margin-bottom: 6px; padding-left: 4px; }
+.fh-story__prose li::marker { color: var(--fh-gold); }
+
+/* A quote that is not fun facts */
+.fh-story__prose blockquote {
+  margin: 24px 0;
+  padding: 2px 0 2px 22px;
+  border-left: 2px solid var(--fh-gold);
+  font-family: var(--fh-serif);
+  font-size: 17px;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--fh-text-1);
+}
+.fh-story__prose blockquote > * { margin: 0 0 10px; }
+.fh-story__prose blockquote > *:last-child { margin-bottom: 0; }
+
+/* Fun Facts card */
+.fh-funfacts {
+  margin-top: 30px;
+  background: var(--fh-bg);
+  border: 1px solid var(--fh-border);
+  border-left: 3px solid var(--fh-gold);
+  padding: 22px 26px 6px;
+}
+.fh-story > .fh-funfacts:first-of-type:nth-child(2) { margin-top: 0; }   /* no text above it */
+
+.fh-funfacts__title {
+  font-family: var(--fh-serif);
+  font-size: 19px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.3;
+  color: var(--fh-text-1);
+  margin: 0 0 14px;
+}
+.fh-funfacts__title em { font-style: normal; color: var(--fh-gold); }
+
+.fh-funfacts__list { margin: 0; padding: 0; list-style: none; }
+
+.fh-funfacts__item {
+  padding: 13px 0 14px;
+  border-top: 1px solid var(--fh-border);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--fh-text-2);
+  overflow-wrap: break-word;
 }
 
-/* "Plan this fish's quarantine" — compact tool-link row under the Care Guide. */
-.fh-plan-qt {
-  background: var(--fh-bg);
-  border-top: 1px solid var(--fh-border);
-  padding: 28px var(--fh-page-pad);
-}
-.fh-plan-qt__inner {
-  max-width: var(--fh-max-width);
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px 32px;
-}
-.fh-plan-qt__label {
-  font-size: 11px;
+.fh-funfacts__lead {
+  display: block;
+  font-family: var(--fh-serif);
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  line-height: 1.4;
+  color: var(--fh-text-1);
+  margin-bottom: 3px;
+}
+.fh-funfacts__text strong, .fh-funfacts__text b { color: var(--fh-text-1); font-weight: 600; }
+.fh-funfacts__text a { color: var(--fh-gold-lt); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Details column (the Fish Dossier): one quiet list of labelled entries, no boxes */
+.fh-dossier {
+  min-width: 0;
+  align-self: stretch;
+  border-left: 1px solid var(--fh-border-md);
+  padding-left: 48px;
+}
+
+.fh-dossier__item { padding: 0 0 20px; margin: 0 0 20px; border-bottom: 1px solid var(--fh-border); }
+.fh-dossier__items > .fh-dossier__item:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+
+.fh-dossier__label {
+  font-family: var(--fh-font);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
+  line-height: 1.4;
   color: var(--fh-gold);
+  margin: 0 0 8px;
 }
-.fh-plan-qt__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+
+.fh-dossier__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--fh-text-2);
+  white-space: pre-line;          /* keeps the line breaks typed in the box */
+  overflow-wrap: break-word;
 }
+
+/* With no "Fish Dossier" heading above them (food, medication) the entries
+   start level with the first line of text on the left. */
+.fh-dossier--untitled { padding-top: 6px; }
+
+.fh-dossier__plan {
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--fh-border-md);
+}
+.fh-dossier__plan .fh-dossier__label { margin-bottom: 14px; }
+.fh-dossier__links { display: flex; flex-wrap: wrap; gap: 10px; }
+.fh-dossier__links .fh-btn { flex: 1 1 auto; text-align: center; }
+.fh-dossier--tools-only { padding-top: 6px; }
+.fh-dossier--tools-only .fh-dossier__plan { margin-top: 0; padding-top: 0; border-top: 0; }
+
+/* Details with no story beside them: entries side by side across the page */
+.fh-pdp-body--care-only .fh-dossier { border-left: 0; padding-left: 0; padding-top: 0; }
+.fh-pdp-body--care-only .fh-dossier__items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px 48px;
+}
+.fh-pdp-body--care-only .fh-dossier__item,
+.fh-pdp-body--care-only .fh-dossier__items > .fh-dossier__item:last-child { border-bottom: 0; margin: 0; padding: 0; }
+.fh-pdp-body--care-only .fh-dossier__links .fh-btn { flex: 0 1 auto; }
+
+/* The band above "More Available Now" is now the dark one, so lift this one. */
+.fishotel-product-page .fh-related { background: var(--fh-bg); }
+
+/* Keyboard focus on everything new */
+.fh-glance a:focus-visible,
+.fh-story__prose a:focus-visible,
+.fh-funfacts a:focus-visible,
+.fh-dossier__links .fh-btn:focus-visible {
+  outline: 2px solid var(--fh-gold);
+  outline-offset: 3px;
+}
+
+/* ── Tablet: still two columns, tighter ── */
+@media (max-width: 1024px) {
+  .fh-pdp-body__inner { column-gap: 36px; }
+  .fh-dossier { padding-left: 32px; }
+}
+
+/* ── Phone and small tablet: one column ── */
+@media (max-width: 768px) {
+  .fishotel-product-page .fh-product-layout { row-gap: 28px; }
+  .fh-glance__cell { flex-basis: 40%; padding: 13px 16px 14px; }
+  .fh-glance dd { font-size: 14px; }
+
+  .fh-pdp-body__inner { grid-template-columns: minmax(0, 1fr); row-gap: 40px; }
+  .fh-pdp-h2 { font-size: 23px; margin-bottom: 18px; }
+  .fh-story__prose { font-size: 14px; }
+  .fh-funfacts { padding: 18px 18px 4px; margin-top: 26px; }
+
+  .fh-dossier,
+  .fh-dossier--untitled,
+  .fh-dossier--tools-only { border-left: 0; padding-left: 0; padding-top: 36px; border-top: 1px solid var(--fh-border-md); }
+  .fh-pdp-body--solo .fh-dossier { border-top: 0; padding-top: 0; }
+  .fh-dossier__links .fh-btn,
+  .fh-pdp-body--care-only .fh-dossier__links .fh-btn { flex: 1 1 100%; }
+}
+
+/* The two quarantine tool buttons (in the details column). */
 .fh-plan-qt__btn {
   padding: 10px 20px;
   font-size: 9px;
@@ -1892,9 +2096,6 @@ h1, h2, h3, h4, h5 {
     grid-template-columns: 1fr 1fr;
     gap: 40px;
   }
-
-  .fh-species-grid { grid-template-columns: 1fr; }
-  .fh-careguide__blocks { grid-template-columns: 1fr; gap: 32px; }
 
   .fh-journal__grid {
     grid-template-columns: 1fr;

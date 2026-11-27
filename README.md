@@ -589,7 +589,7 @@ sticker letter on an order without the flag, and checks that apart from the lett
 page is the page without the letter. `php tests/letters-customer-locks-test.php` runs the date
 lock and the address check with a letter on a combined box's EA-only order and on a fish order.
 
-### Dates read month-day-year (inc/us-dates.php)
+### Dates read month-day-year (v1.29.1 — inc/us-dates.php)
 In the United States a date is written month, day, year. Wherever the theme printed a date as
 digits with the year first (`2026-11-27`), a person now reads `11-27-26`. Dates already written
 in words ("Friday, November 27, 2026", "Nov 27") are left as they are, and nothing that is

@@ -69,7 +69,10 @@ class FisHotel_Med_Terms_Display {
 		);
 	}
 
-	/** Legacy timestamp formatted in the site timezone, '' when none. */
+	/**
+	 * Legacy timestamp in the site timezone as a person reads it
+	 * ('10-17-26 14:03 EDT' since 1.29.1), '' when none. Display only.
+	 */
 	public static function legacy_local_time( $order ) {
 		if ( ! $order instanceof WC_Order ) {
 			return '';
@@ -78,7 +81,7 @@ class FisHotel_Med_Terms_Display {
 		if ( $ts <= 0 ) {
 			return '';
 		}
-		return FisHotel_Med_Terms::local_time_string( $ts, wp_timezone() );
+		return FisHotel_Med_Terms::shown_time( FisHotel_Med_Terms::local_time_string( $ts, wp_timezone() ) );
 	}
 
 	/**
@@ -259,7 +262,7 @@ class FisHotel_Med_Terms_Display {
 	protected static function render_record( array $record ) {
 		$is_manual = isset( $record['source'] ) && $record['source'] === 'manual';
 		$rows      = [];
-		$rows[]    = [ __( 'Accepted at', 'fishotel' ), isset( $record['accepted_at_local'] ) ? $record['accepted_at_local'] : '' ];
+		$rows[]    = [ __( 'Accepted at', 'fishotel' ), FisHotel_Med_Terms::accepted_time( $record ) ];
 		if ( $is_manual ) {
 			$by = isset( $record['admin_user_name'] ) ? (string) $record['admin_user_name'] : '';
 			if ( ! empty( $record['admin_user_id'] ) ) {
@@ -347,7 +350,7 @@ class FisHotel_Med_Terms_Display {
 			$text   = sprintf( __( 'NOT RECORDED — record it on order #%s', 'fishotel' ), $number );
 			if ( $state === FisHotel_Med_Terms::STATE_RECORDED ) {
 				$record = self::get_record( $src );
-				$when   = isset( $record['accepted_at_local'] ) ? (string) $record['accepted_at_local'] : '';
+				$when   = FisHotel_Med_Terms::accepted_time( $record );
 				$ver    = isset( $record['terms_version'] ) ? (string) $record['terms_version'] : '';
 				$class  = 'fishotel-med-terms-box__state--ok';
 				$text   = isset( $record['source'] ) && $record['source'] === 'manual'
@@ -542,7 +545,7 @@ class FisHotel_Med_Terms_Display {
 			$line = sprintf(
 				/* translators: 1: local date/time, 2: terms version */
 				__( 'Medication terms acknowledgement recorded %1$s · terms v%2$s', 'fishotel' ),
-				isset( $record['accepted_at_local'] ) ? (string) $record['accepted_at_local'] : '',
+				FisHotel_Med_Terms::accepted_time( $record ),
 				isset( $record['terms_version'] ) ? (string) $record['terms_version'] : ''
 			);
 		} else {
@@ -566,7 +569,7 @@ class FisHotel_Med_Terms_Display {
 		if ( ! $record ) {
 			return;
 		}
-		$date = isset( $record['accepted_at_local'] ) ? (string) $record['accepted_at_local'] : '';
+		$date = FisHotel_Med_Terms::accepted_time( $record );
 		$text = isset( $record['source'] ) && $record['source'] === 'manual'
 			/* translators: %s = local date/time */
 			? sprintf( __( 'Your medication terms acknowledgement was recorded on %s.', 'fishotel' ), $date )

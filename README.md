@@ -37,6 +37,7 @@ fishotel-theme/
 │   ├── tool-product-links.php   Calculator / QT Scheduler → product links (unused since v1.29.0)
 │   ├── invoice-lines.php      ★ Invoice products → itemised fish lines at checkout, purchase lock, backfill
 │   ├── theme-updater.php      Self-updater from the GitHub main branch
+│   ├── us-dates.php           ★ How a date is written for a person: MM-DD-YY (stored dates stay YYYY-MM-DD)
 │   ├── woocommerce.php        WooCommerce wrappers + hooks
 │   ├── template-functions.php Helper functions
 │   ├── calculator/            Medication Dosing Calculator data + wiring
@@ -587,6 +588,63 @@ and a sticker letter, a letter before any box, a letter-only EA order, a combine
 sticker letter on an order without the flag, and checks that apart from the letter line each
 page is the page without the letter. `php tests/letters-customer-locks-test.php` runs the date
 lock and the address check with a letter on a combined box's EA-only order and on a fish order.
+
+### Dates read month-day-year (inc/us-dates.php)
+In the United States a date is written month, day, year. Wherever the theme printed a date as
+digits with the year first (`2026-11-27`), a person now reads `11-27-26`. Dates already written
+in words ("Friday, November 27, 2026", "Nov 27") are left as they are, and nothing that is
+stored or sent changes.
+
+**One helper, `FisHotel_Theme_US_Dates`** (pure: no WordPress, no clock, no time zone — the digits
+are moved as text, so a date can never slip to the day before or after):
+
+| Call | Gives |
+|---|---|
+| `show( '2026-11-27' )` | `11-27-26` (empty stays empty; text that is not a real date is shown as stored) |
+| `show_datetime( '2026-10-17 14:03 EDT' )` | `10-17-26 14:03 EDT` — the time and zone exactly as stored |
+| `parse( '11/27/26' )` | `2026-11-27`. Reads MM-DD-YY, MM/DD/YY, MM-DD-YYYY, M/D/YY and YYYY-MM-DD; a two-digit year is 20YY; `''` for nothing typed; `null` for a date that does not exist (02-30-26, month 13) — never changed into a nearby one |
+| `refusal( '02-30-26' )` | the one sentence to show for a refused date |
+
+To write dates another way later, change `write()` in that file — nothing else builds the form.
+The Batch Manager and Misc plugins carry the same helper under their own names. The theme has no
+script that shows a date as digits, so there is no JavaScript twin, and no screen of the theme
+takes a typed date, so `parse()` is there for the day one does.
+
+**Where it shows**
+
+| Where | Before | Now |
+|---|---|---|
+| Order note when a customer changes their delivery date (also on every order of a combined box) | `…date change: 2026-12-03 → 2026-12-08.` | `…date change: 12-03-26 → 12-08-26.` |
+| E-mail to staff "Delivery date changed" | `Old date: 2026-12-03` / `New date: 2026-12-08` | `Old date: 12-03-26` / `New date: 12-08-26` |
+| Order notes when an order joins a combined box | `Delivery date moved to 2026-12-01 — … (was 2026-12-09).`, `Requested delivery date 2026-12-09 superseded …, which ships on 2026-12-01.` | the same sentences with `12-01-26`, `12-09-26` |
+| Medication terms: the wp-admin "Medication terms" box, the line in the order e-mails, My Account → an order, the PDF invoice / packing slip and the EA packing slip | `Medication terms accepted 2026-10-17 14:03 EDT` | `Medication terms accepted 10-17-26 14:03 EDT` |
+
+The medication terms line is the one place customers saw a year-first date. "terms v2026-10" in
+that line is the name of the terms version, not a date, and stays.
+
+**What does not change**: `_fishotel_shipping_date` and the `_fishotel_*_orig_ship_date` backups,
+the `new_date` the My Account picker sends and gets back, the terms record
+(`accepted_at_local` is still stored as `2026-10-17 14:03 EDT`, `accepted_at_utc` and
+`accepted_at` as before — the record is formatted when shown, through
+`FisHotel_Med_Terms::accepted_time()`, never rewritten), the QT Scheduler's calendar file, and
+every sort that compares the stored dates. Notes and e-mails already written are stored text and
+stay as written.
+
+**Picking a date**: the theme has two places, both for customers and both already calendars or
+worded lists — the QT Scheduler's "Day 1 starts on" (the browser's own calendar) and My Account →
+Change Delivery Date (a list of the days on offer, in words). No wp-admin screen of the theme
+asks for a date; `tests/us-dates-screens-test.php` fails if a pop-up question (`prompt()`) or a
+text box with a date pattern is ever added.
+
+**Left as they are, on purpose**: the local pickup line in the Shipments box ("Marked …") and the
+dates on the customer's account pages follow WordPress → Settings → General → Date Format, which
+writes them in words unless that setting is changed.
+
+`php tests/us-dates-test.php` covers the helper (every form a person may type, two-digit years,
+impossible dates, empty, the minutes around midnight, the two days the clocks change, every day
+of 2026 with the server in seven time zones). `php tests/us-dates-screens-test.php` runs the real
+date change, the combined-box notes and every medication terms line against stand-ins and pins
+both what is read (month-day-year) and what is saved or sent (year first).
 
 ## Build Phases
 

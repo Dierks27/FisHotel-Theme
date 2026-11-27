@@ -10,7 +10,7 @@
  * lines, extra-ack dedupe by hash + the required-set computation from a
  * fake cart, validation rejecting a missing / unchecked extra ack and a
  * forged index, the manual record shape, legacy fallback detection and
- * the display formatter (local date, version).
+ * the display formatter (the stored local time shown month-day-year, version).
  *
  * @package FisHotel
  */
@@ -173,11 +173,14 @@ check( 'malformed record ignored',          FisHotel_Med_Terms::detect_state( [ 
 check( 'string meta is not a record',       ! FisHotel_Med_Terms::is_record( 'a:1:{s:8:"accepted";b:1;}' ) );
 
 echo "\ndisplay formatter\n";
-check( 'email line',        FisHotel_Med_Terms::format_line( $record ) === 'Medication terms accepted 2026-10-14 13:46 EDT · terms v2026-10', FisHotel_Med_Terms::format_line( $record ) );
-check( 'pdf line with ip',  FisHotel_Med_Terms::format_line( $record, true ) === 'Medication terms accepted 2026-10-14 13:46 EDT · IP 203.0.113.9 · v2026-10', FisHotel_Med_Terms::format_line( $record, true ) );
-check( 'manual line marks it', FisHotel_Med_Terms::format_line( $manual ) === 'Medication terms accepted 2026-10-14 13:46 EDT · terms v2026-10 (recorded manually by Jeff)', FisHotel_Med_Terms::format_line( $manual ) );
-check( 'manual pdf line, no ip', FisHotel_Med_Terms::format_line( $manual, true ) === 'Medication terms accepted 2026-10-14 13:46 EDT · IP n/a · v2026-10 (recorded manually by Jeff)' );
-check( 'legacy timestamp formatter', FisHotel_Med_Terms::local_time_string( $ts, $tz ) === '2026-10-14 13:46 EDT' );
+check( 'email line',        FisHotel_Med_Terms::format_line( $record ) === 'Medication terms accepted 10-14-26 13:46 EDT · terms v2026-10', FisHotel_Med_Terms::format_line( $record ) );
+check( 'pdf line with ip',  FisHotel_Med_Terms::format_line( $record, true ) === 'Medication terms accepted 10-14-26 13:46 EDT · IP 203.0.113.9 · v2026-10', FisHotel_Med_Terms::format_line( $record, true ) );
+check( 'manual line marks it', FisHotel_Med_Terms::format_line( $manual ) === 'Medication terms accepted 10-14-26 13:46 EDT · terms v2026-10 (recorded manually by Jeff)', FisHotel_Med_Terms::format_line( $manual ) );
+check( 'manual pdf line, no ip', FisHotel_Med_Terms::format_line( $manual, true ) === 'Medication terms accepted 10-14-26 13:46 EDT · IP n/a · v2026-10 (recorded manually by Jeff)' );
+// What is STORED keeps the year first; a person reads it month-day-year (1.29.1).
+check( 'legacy timestamp formatter (stored form)', FisHotel_Med_Terms::local_time_string( $ts, $tz ) === '2026-10-14 13:46 EDT' );
+check( 'the stored form as a person reads it', FisHotel_Med_Terms::shown_time( '2026-10-14 13:46 EDT' ) === '10-14-26 13:46 EDT', FisHotel_Med_Terms::shown_time( '2026-10-14 13:46 EDT' ) );
+check( 'the record still holds the stored form after a line was made', $record['accepted_at_local'] === '2026-10-14 13:46 EDT' && $manual['accepted_at_local'] === '2026-10-14 13:46 EDT' );
 
 echo "\norder notes\n";
 $notes = FisHotel_Med_Terms::order_note_lines( $record );

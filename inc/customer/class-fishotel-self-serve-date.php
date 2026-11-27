@@ -30,6 +30,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
+// How a date is written for a person to read (MM-DD-YY). What is saved and
+// sent stays YYYY-MM-DD.
+require_once dirname( __DIR__ ) . '/us-dates.php';
+
 /**
  * Effective delivery date for an order, falling back to the order's
  * fulfillment when the source order's own _fishotel_shipping_date has been
@@ -505,13 +509,17 @@ class FisHotel_Self_Serve_Date {
 			$is_in_group = true;
 		}
 
-		// Commit the date to the authoritative order.
+		// Commit the date to the authoritative order. The meta keeps the
+		// year-first date; the notes and the staff e-mail below show it the
+		// way it is read here, month-day-year (1.29.1).
+		$old_shown = '' !== $current ? FisHotel_Theme_US_Dates::show( $current ) : __( '(unset)', 'fishotel' );
+		$new_shown = FisHotel_Theme_US_Dates::show( $new_date );
 		$authoritative->update_meta_data( self::META_DELIVERY, $new_date );
 		$authoritative->add_order_note( sprintf(
 			/* translators: 1: old date, 2: new date */
 			__( 'Customer self-served delivery date change: %1$s → %2$s.', 'fishotel' ),
-			'' !== $current ? $current : __( '(unset)', 'fishotel' ),
-			$new_date
+			$old_shown,
+			$new_shown
 		), false );
 		$authoritative->save();
 
@@ -527,8 +535,8 @@ class FisHotel_Self_Serve_Date {
 					/* translators: 1: fulfillment id, 2: old date, 3: new date */
 					__( 'Delivery date changed via combined fulfillment FF-%1$d: %2$s → %3$s.', 'fishotel' ),
 					$authoritative->get_id(),
-					'' !== $current ? $current : __( '(unset)', 'fishotel' ),
-					$new_date
+					$old_shown,
+					$new_shown
 				), false );
 				// Also refresh the source's pre-combine backup date: Delete
 				// Fulfillment (detach_source) restores that backup onto the
@@ -560,11 +568,14 @@ class FisHotel_Self_Serve_Date {
 	 * @param WC_Order   $authoritative
 	 * @param bool       $is_in_group
 	 * @param WC_Order[] $group
-	 * @param string     $old
-	 * @param string     $new
+	 * @param string     $old Stored date (YYYY-MM-DD) or ''.
+	 * @param string     $new Stored date (YYYY-MM-DD).
 	 */
 	private static function notify_admin( WC_Order $viewed_order, WC_Order $authoritative, $is_in_group, array $group, $old, $new ) {
 		$to = get_option( 'admin_email' );
+		// Staff read the two dates month-day-year (1.29.1).
+		$old_shown = '' !== $old ? FisHotel_Theme_US_Dates::show( $old ) : '(unset)';
+		$new_shown = FisHotel_Theme_US_Dates::show( $new );
 		if ( $is_in_group ) {
 			$sources = array_filter( $group, function ( $o ) use ( $authoritative ) {
 				return $o->get_id() !== $authoritative->get_id();
@@ -585,8 +596,8 @@ class FisHotel_Self_Serve_Date {
 				$viewed_order->get_billing_last_name(),
 				$viewed_order->get_billing_email()
 			);
-			$body .= sprintf( "Old date: %s\n", '' !== $old ? $old : '(unset)' );
-			$body .= sprintf( "New date: %s\n\n", $new );
+			$body .= sprintf( "Old date: %s\n", $old_shown );
+			$body .= sprintf( "New date: %s\n\n", $new_shown );
 			$body .= sprintf( "View fulfillment: %s\n", admin_url( 'post.php?post=' . $authoritative->get_id() . '&action=edit' ) );
 		} else {
 			$subject = sprintf(
@@ -601,8 +612,8 @@ class FisHotel_Self_Serve_Date {
 				$viewed_order->get_billing_last_name(),
 				$viewed_order->get_billing_email()
 			);
-			$body .= sprintf( "Old date: %s\n", '' !== $old ? $old : '(unset)' );
-			$body .= sprintf( "New date: %s\n\n", $new );
+			$body .= sprintf( "Old date: %s\n", $old_shown );
+			$body .= sprintf( "New date: %s\n\n", $new_shown );
 			$body .= sprintf( "View order: %s\n", admin_url( 'post.php?post=' . $authoritative->get_id() . '&action=edit' ) );
 		}
 		wp_mail( $to, $subject, $body );

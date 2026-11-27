@@ -13,7 +13,10 @@
  *
  *   accepted          bool    always true when a record exists
  *   accepted_at_utc   string  ISO-8601, gmdate('c')
- *   accepted_at_local string  site timezone, 'Y-m-d H:i T'
+ *   accepted_at_local string  site timezone, 'Y-m-d H:i T' — stored like this
+ *                             for good; a person reads it through
+ *                             accepted_time() / shown_time() as
+ *                             '10-17-26 14:03 EDT' (1.29.1)
  *   accepted_at       int     unix timestamp (for sorting / re-formatting)
  *   ip                string  <= 45 chars (IPv6 max)
  *   user_agent        string  <= 255 chars
@@ -31,6 +34,9 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+
+// How a date is written for a person to read (MM-DD-YY). Pure too.
+require_once dirname( __DIR__ ) . '/us-dates.php';
 
 class FisHotel_Med_Terms {
 
@@ -276,14 +282,16 @@ class FisHotel_Med_Terms {
 	/**
 	 * One-line summary used in emails, PDFs and the EA slip.
 	 *
-	 *   Medication terms accepted 2026-10-17 14:03 EDT · terms v2026-10
-	 *   Medication terms accepted 2026-10-17 14:03 EDT · IP 203.0.113.9 · v2026-10
+	 *   Medication terms accepted 10-17-26 14:03 EDT · terms v2026-10
+	 *   Medication terms accepted 10-17-26 14:03 EDT · IP 203.0.113.9 · v2026-10
 	 *
-	 * A manual record is marked as such so nobody mistakes it for a
-	 * checkout click. Plain text — callers escape for their context.
+	 * The date is written month-day-year (1.29.1); "v2026-10" is the name
+	 * of the terms version, not a date, and stays. A manual record is marked
+	 * as such so nobody mistakes it for a checkout click. Plain text —
+	 * callers escape for their context.
 	 */
 	public static function format_line( array $record, $with_ip = false ) {
-		$date    = isset( $record['accepted_at_local'] ) ? (string) $record['accepted_at_local'] : '';
+		$date    = self::accepted_time( $record );
 		$version = isset( $record['terms_version'] ) ? (string) $record['terms_version'] : '';
 		$ip      = isset( $record['ip'] ) ? (string) $record['ip'] : '';
 		$source  = isset( $record['source'] ) ? (string) $record['source'] : 'checkout';
@@ -302,7 +310,31 @@ class FisHotel_Med_Terms {
 		return $line;
 	}
 
-	/** Local time string for a legacy record that only stored a timestamp. */
+	/**
+	 * When a record was accepted, as a person reads it: the stored
+	 * accepted_at_local ('2026-10-17 14:03 EDT') with its date part written
+	 * month-day-year — '10-17-26 14:03 EDT'. '' when the record has none.
+	 * Every screen, e-mail and PDF line goes through here; the record itself
+	 * is never rewritten.
+	 */
+	public static function accepted_time( array $record ) {
+		return self::shown_time( isset( $record['accepted_at_local'] ) ? $record['accepted_at_local'] : '' );
+	}
+
+	/**
+	 * A stored local time string (LOCAL_FORMAT) as a person reads it. The
+	 * digits are moved as text — no clock, no time zone — so the day, the
+	 * time and the zone letters are exactly the stored ones.
+	 */
+	public static function shown_time( $stored ) {
+		return FisHotel_Theme_US_Dates::show_datetime( $stored );
+	}
+
+	/**
+	 * Local time string in the STORED form (LOCAL_FORMAT, year first) — what
+	 * build_record() saves, and the time of a legacy record that only stored
+	 * a timestamp. Show it to a person through shown_time().
+	 */
 	public static function local_time_string( $timestamp, $timezone = 'UTC' ) {
 		$timestamp = (int) $timestamp;
 		try {

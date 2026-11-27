@@ -30,6 +30,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
+// How a date is written for a person to read (MM-DD-YY) — used by the two
+// delivery-date order notes in add_source(). What is saved stays YYYY-MM-DD.
+require_once dirname( __DIR__ ) . '/us-dates.php';
+
 /** True when an order is a fulfillment entity. */
 function fishotel_is_fulfillment( $order ) {
 	return FisHotel_Fulfillment::is_fulfillment( $order );
@@ -505,7 +509,9 @@ class FisHotel_Fulfillment {
 			// this, a manually/force-combined order whose customer picked an
 			// earlier day silently inherits the fulfillment's later date.
 			// attach_source() clears the source's own date right after this,
-			// so decide here while it's still readable.
+			// so decide here while it's still readable. The meta keeps the
+			// year-first date (strcmp() below relies on it); the two notes
+			// show it month-day-year (1.29.1).
 			$src_date = (string) $o->get_meta( self::META_SHIP_DATE );
 			$ff_date  = (string) $f->get_meta( self::META_SHIP_DATE );
 			if ( '' !== $src_date && ( '' === $ff_date || strcmp( $src_date, $ff_date ) < 0 ) ) {
@@ -514,16 +520,16 @@ class FisHotel_Fulfillment {
 					/* translators: 1: order number, 2: new date, 3: previous date or "none" */
 					__( 'Delivery date moved to %2$s — order #%1$s chose it (was %3$s).', 'fishotel' ),
 					$o->get_order_number(),
-					$src_date,
-					'' !== $ff_date ? $ff_date : __( 'none', 'fishotel' )
+					FisHotel_Theme_US_Dates::show( $src_date ),
+					'' !== $ff_date ? FisHotel_Theme_US_Dates::show( $ff_date ) : __( 'none', 'fishotel' )
 				) );
 			} elseif ( '' !== $src_date && $src_date !== $ff_date ) {
 				$o->add_order_note( sprintf(
 					/* translators: 1: requested date, 2: fulfillment ID, 3: fulfillment date */
 					__( 'Requested delivery date %1$s superseded by fulfillment #FF-%2$d, which ships on %3$s.', 'fishotel' ),
-					$src_date,
+					FisHotel_Theme_US_Dates::show( $src_date ),
 					(int) $f->get_id(),
-					$ff_date
+					FisHotel_Theme_US_Dates::show( $ff_date )
 				) );
 			}
 			$f->save();

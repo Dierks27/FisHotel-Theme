@@ -29,6 +29,11 @@ function fishotel_asset_version( $relative_path ) {
 	return ( file_exists( $path ) ? filemtime( $path ) : 0 ) . '-' . FISHOTEL_THEME_VERSION;
 }
 
+// US dates (1.29.1): the one place the theme writes a date for a person to
+// read as digits — MM-DD-YY. What is stored or sent stays YYYY-MM-DD. Loaded
+// first; the files that use it also require it themselves.
+require_once FISHOTEL_THEME_DIR . '/inc/us-dates.php';
+
 // Medication Dosing Calculator
 require_once FISHOTEL_THEME_DIR . '/inc/calculator/init.php';
 // QT Scheduler

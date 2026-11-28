@@ -109,6 +109,241 @@ while ( have_posts() ) :
         ? fishotel_pdp_opening_picture( $product, $variations_data, $main_img_id, $gallery_ids )
         : null;
     $opening_thumb   = $opening_picture ? (int) $opening_picture['thumb'] : -1;
+
+    // Not purchasable at all (no price, unpublished, filtered out) is
+    // a different state from "sold out": WC would reject the add-to-
+    // cart POST, so rendering the stock badge + qty + button would
+    // only lead the customer into an error. Mirror WC core's own
+    // simple.php (which bails before the form when ! is_purchasable)
+    // and show a muted contact line instead. Worked out once, here: the
+    // buy box and the place of the facts row both depend on it.
+    $is_unavailable = in_array( $product->get_type(), array( 'simple', 'variable' ), true )
+        && ! $product->is_purchasable();
+
+    // ── What the page prints around the photo and the buy box (v1.30.0) ──
+    // Resolved up here, ahead of the title band, because the tag pills and
+    // the top area depend on it: a pill that only repeats a fact is not
+    // printed, and the short facts sit in a row inside the top area. The
+    // rules — which fact goes where, what is printed when a field is
+    // empty — are in inc/product-layout.php and inc/product-facts.php.
+    // Everything read here was already printed by this page; nothing new
+    // is read and nothing is stored.
+
+    // Subtitle under the H1. Fish products surface the short
+    // description (where the italicized scientific name lives).
+    // Medications + Tier 2 surface their active ingredient(s);
+    // foods surface their source species. Short description acts
+    // as the fallback for everything else (gift cards, merch,
+    // future categories Jeff adds). The tag pill row's genus
+    // deny-list (fishotel_pdp_display_tags) drops any pill that
+    // duplicates the first word of this subtitle so the same
+    // word never appears in both places.
+    $short    = (string) $product->get_short_description();
+    $subtitle = '';
+    if ( $is_fish ) {
+        $subtitle = $short;
+    } elseif ( function_exists( 'fishotel_is_amazon_affiliate_product' )
+        && ( fishotel_is_amazon_affiliate_product( $product_id )
+            || ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) ) ) ) {
+        // The ingredient is in the "Contains" row and the description
+        // (v1.29.0): no third copy under the name.
+        $subtitle = class_exists( 'FisHotel_Med_Listing' )
+            ? FisHotel_Med_Listing::med_subtitle( (string) get_post_meta( $product_id, '_fishotel_active_ingredient', true ), $short )
+            : $short;
+    } elseif ( function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id ) ) {
+        $subtitle = (string) get_post_meta( $product_id, '_fishotel_food_source', true );
+        if ( $subtitle === '' ) { $subtitle = $short; }
+    } else {
+        $subtitle = $short;
+    }
+
+    $desc_raw = $product->get_description();
+
+    // Build the fact rows per category. Empty fields skip. Medicated foods
+    // (a medication product that's also a flake or pellet, e.g.
+    // Praziquantel Pellet) merge both sets — meds first, then the
+    // food-specific rows. Phase 3.6.
+    $spec_rows         = [];
+    $is_amazon_aff     = function_exists( 'fishotel_is_amazon_affiliate_product' ) && fishotel_is_amazon_affiliate_product( $product_id );
+    $is_med_or_aff     = $is_amazon_aff || ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) );
+    $is_food           = function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id );
+    $_card_cat_slugs   = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
+    $_card_cat_slugs   = is_wp_error( $_card_cat_slugs ) ? [] : (array) $_card_cat_slugs;
+    $is_medicated_food = $is_med_or_aff && (
+        in_array( 'flakes', $_card_cat_slugs, true ) || in_array( 'pellets', $_card_cat_slugs, true )
+        || in_array( 'medicated-food', $_card_cat_slugs, true ) || in_array( 'medicated-foods', $_card_cat_slugs, true )
+    );
+
+    $reef_labels = [
+        'yes'     => '<span class="fh-spec-badge fh-spec-badge--green">&#10003; Yes</span>',
+        'no'      => '<span class="fh-spec-badge fh-spec-badge--amber">&#10007; No</span>',
+        'caution' => '<span class="fh-spec-badge fh-spec-badge--amber">&#9888; With Caution</span>',
+    ];
+
+    if ( $is_fish ) {
+        $sci_name    = get_post_meta( $product_id, '_fh_scientific_name', true );
+        $common      = get_post_meta( $product_id, '_fh_common_names', true );
+        $max_length  = get_post_meta( $product_id, '_fh_max_length', true );
+        $tank_size   = get_post_meta( $product_id, '_fh_min_tank_size', true );
+        $temperament = get_post_meta( $product_id, '_fh_temperament', true );
+        $reef_safe   = get_post_meta( $product_id, '_fh_reef_safe', true );
+        if ( $sci_name )    $spec_rows[] = [ 'Scientific Name', esc_html( $sci_name ) ];
+        if ( $common )      $spec_rows[] = [ 'Common Names',    esc_html( $common ) ];
+        if ( $max_length )  $spec_rows[] = [ 'Max Length',      esc_html( $max_length ) ];
+        if ( $tank_size )   $spec_rows[] = [ 'Min Tank Size',   esc_html( $tank_size ) ];
+        if ( $temperament ) $spec_rows[] = [ 'Temperament',     esc_html( $temperament ) ];
+        if ( $reef_safe )   $spec_rows[] = [ 'Reef Safe', $reef_labels[ $reef_safe ] ?? esc_html( $reef_safe ) ];
+        if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
+    } elseif ( class_exists( 'FisHotel_Med_Listing' ) ) {
+        // Plain product listing (v1.29.0): "Contains" (active ingredients),
+        // Reef Safe and the food rows. Treats and Use In are kept in wp-admin
+        // but never printed; "Best For" is printed on a plain food only.
+        $spec_rows = FisHotel_Med_Listing::spec_rows( [
+            'active_ingredient' => (string) get_post_meta( $product_id, '_fishotel_active_ingredient', true ),
+            'reef_safe'         => (string) get_post_meta( $product_id, '_fishotel_reef_safe',          true ),
+            'food_source'       => (string) get_post_meta( $product_id, '_fishotel_food_source',        true ),
+            'best_for'          => (string) get_post_meta( $product_id, '_fishotel_best_for',           true ),
+            'nutrition'         => (string) get_post_meta( $product_id, '_fishotel_nutrition',          true ),
+            'additives'         => (string) get_post_meta( $product_id, '_fishotel_additives',          true ),
+        ], $is_med_or_aff, $is_food, $is_medicated_food, $reef_labels );
+    }
+
+    // Short facts → the "at a glance" row; longer ones → entries beside
+    // the description. A row that only repeats the line under the name is
+    // not printed again.
+    $pdp_split  = FisHotel_Product_Layout::split( $spec_rows, wp_strip_all_tags( $subtitle ) );
+    $pdp_glance = $pdp_split['glance'];
+
+    // Care notes (Foods & Feeding, Habitat & Behavior): the product's own
+    // text; on a fish, else the site-wide default text. The defaults are
+    // fish care text ("Default Foods & Feeding text"), so they fill a
+    // fish's empty box only: before v1.30.0 they also put a "Fish Dossier"
+    // on gift card, sticker and invoice pages.
+    $foods_feeding = get_post_meta( $product_id, '_fh_foods_feeding', true );
+    $habitat       = get_post_meta( $product_id, '_fh_habitat', true );
+    if ( $is_fish && class_exists( 'FisHotel_Admin_Settings' ) ) {
+        if ( ! $foods_feeding ) { $foods_feeding = FisHotel_Admin_Settings::get( 'fh_default_foods' ); }
+        if ( ! $habitat )       { $habitat       = FisHotel_Admin_Settings::get( 'fh_default_habitat' ); }
+    }
+    // Never on a medication page (v1.29.0): care_notes() gives none there.
+    $pdp_care = FisHotel_Product_Layout::care_notes( $foods_feeding ? $foods_feeding : '', $habitat ? $habitat : '', $is_med_or_aff );
+
+    // "Plan this fish's quarantine" — fish only. Links resolve by page
+    // template (same helper as the footer Tools column) so renamed slugs
+    // keep working; nothing is printed when both pages are missing. The
+    // scheduler link pre-fills its tank slider (?tank=<gal>) from the
+    // numeric part of _fh_min_tank_size when the field has one.
+    $plan_sched_url  = '';
+    $plan_compat_url = '';
+    if ( $is_fish && function_exists( 'fishotel_tool_page_url' ) ) {
+        $plan_sched_url  = fishotel_tool_page_url( 'page-qt-scheduler.php', 'qt-scheduler' );
+        $plan_compat_url = fishotel_tool_page_url( 'page-compatibility-guide.php', 'compatibility-guide' );
+        if ( $plan_sched_url !== '' ) {
+            $plan_tank_raw = (string) get_post_meta( $product_id, '_fh_min_tank_size', true );
+            if ( preg_match( '/(\d+(?:\.\d+)?)/', $plan_tank_raw, $plan_m ) ) {
+                $plan_tank_gal = (int) round( (float) $plan_m[1] );
+                if ( $plan_tank_gal > 0 ) {
+                    $plan_sched_url = add_query_arg( 'tank', $plan_tank_gal, $plan_sched_url );
+                }
+            }
+        }
+    }
+    $pdp_has_tools = ( $plan_sched_url !== '' || $plan_compat_url !== '' );
+
+    // The description. The facts typed in it ("old style"): a labelled
+    // line is hidden only when its field is filled — the facts above show
+    // it. Empty fields leave their line readable (v1.28.0;
+    // inc/product-facts.php).
+    //
+    // A medication page prints it as plain text in one paragraph, exactly
+    // as v1.29.0 did: no link, bold, list, quote or Fun Facts card can
+    // come out of a medication's description. Every other product keeps
+    // its paragraphs, lists, bold, italics, links and quotes, and its
+    // "Fun Facts" become a card (v1.30.0; rich() in inc/product-facts.php).
+    $pdp_is_med_page = $is_med_or_aff
+        || in_array( 'medications', $_card_cat_slugs, true )
+        || ( class_exists( 'FisHotel_Med_Listing' ) && FisHotel_Med_Listing::is_med( $product_id ) );
+    $facts_shown = class_exists( 'FisHotel_Product_Facts' )
+        ? FisHotel_Product_Facts::shown_elsewhere(
+            FisHotel_Product_Facts::current( $product_id ),
+            (bool) $is_fish,
+            $region !== ''
+        )
+        : [];
+    $pdp_desc_plain = '';      // medication page: plain text
+    $pdp_desc_html  = '';      // every other page: safe HTML
+    $pdp_fun_title  = '';
+    $pdp_fun_facts  = [];
+    if ( $desc_raw ) {
+        if ( ! class_exists( 'FisHotel_Product_Facts' ) ) {
+            $pdp_desc_plain = trim( wp_strip_all_tags( $desc_raw ) );
+        } elseif ( ! $pdp_is_med_page ) {
+            $pdp_rich      = FisHotel_Product_Facts::rich( $desc_raw, $facts_shown );
+            $pdp_desc_html = $pdp_rich['html'];
+            $pdp_fun_title = $pdp_rich['fun_title'];
+            $pdp_fun_facts = $pdp_rich['fun_facts'];
+        } else {
+            $pdp_desc_plain = FisHotel_Product_Facts::prose( $desc_raw, $facts_shown );
+        }
+    }
+
+    // Story heading by category: "About This Fish" / "… Product" / "… Food";
+    // anything else (gift cards, merch, future categories) says "Description".
+    $about_word = class_exists( 'FisHotel_Med_Listing' )
+        ? FisHotel_Med_Listing::about_word( $is_med_or_aff, $is_food, $is_medicated_food )
+        : '';
+    $pdp_story_word = FisHotel_Product_Layout::story_word(
+        $is_fish,
+        $pdp_is_med_page,
+        $about_word,
+        $is_food || in_array( 'foods', $_card_cat_slugs, true ) || in_array( 'freeze-dried-foods', $_card_cat_slugs, true )
+    );
+
+    // Which columns and headings the band under the top area prints.
+    $pdp_body = FisHotel_Product_Layout::body( [
+        'has_text'  => ( $pdp_desc_html !== '' || $pdp_desc_plain !== '' ),
+        'facts'     => count( $pdp_fun_facts ),
+        'before'    => count( $pdp_split['before'] ),
+        'care'      => count( $pdp_care ),
+        'after'     => count( $pdp_split['after'] ),
+        'has_tools' => $pdp_has_tools,
+        'is_fish'   => (bool) $is_fish,
+    ] );
+
+    // Where the glance row sits: beside the photo when the page prints no
+    // buy form (Coming Soon, or a product that cannot be bought), under
+    // the photo and buy box otherwise.
+    $pdp_no_form   = FisHotel_Product_Layout::no_buy_form( $is_coming_soon, $is_unavailable, $is_gift_card, $is_amazon_med );
+    $pdp_top_class = FisHotel_Product_Layout::top_modifier( count( $pdp_glance ), $pdp_no_form );
+
+    // Tag pills. No pills on a medication page (v1.29.0): its tags are
+    // therapeutic labels and disease names (Antibacterial, Ich, Flukes …),
+    // each linking to a tag page. Plain listing only.
+    $display_tags = function_exists( 'fishotel_pdp_display_tags' )
+        ? fishotel_pdp_display_tags( $tags, $product_id )
+        : $tags;
+    if ( class_exists( 'FisHotel_Med_Listing' ) && FisHotel_Med_Listing::is_med( $product_id ) ) {
+        $display_tags = [];
+    }
+    // On a fish page with a glance row, a pill that says the same as a
+    // glance cell is not printed; the cell links to the tag's page instead.
+    $pdp_glance_links = [];
+    if ( $is_fish && $pdp_glance && $display_tags ) {
+        $pdp_tag_names = [];
+        foreach ( $display_tags as $tag_i => $tag ) {
+            $pdp_tag_names[ $tag_i ] = $tag->name;
+        }
+        $pdp_tag_plan = FisHotel_Product_Layout::link_tags( $pdp_glance, $pdp_tag_names );
+        foreach ( $pdp_tag_plan['links'] as $cell_i => $tag_i ) {
+            $tag_url = get_term_link( $display_tags[ $tag_i ] );
+            if ( is_wp_error( $tag_url ) ) {
+                continue; // no page to link to: the pill stays
+            }
+            $pdp_glance_links[ $cell_i ] = $tag_url;
+            unset( $display_tags[ $tag_i ] );
+        }
+        $display_tags = array_values( $display_tags );
+    }
 ?>
 
 <?php /* ── PAGE HERO BANNER ── */ ?>
@@ -117,14 +352,28 @@ while ( have_posts() ) :
         <nav class="page-hero__breadcrumb" aria-label="Breadcrumb">
             <a href="<?php echo esc_url( home_url('/') ); ?>">Home</a>
             <span>/</span>
-            <?php $product_cats = get_the_terms( $product_id, 'product_cat' );
-            $product_cat = $product_cats ? $product_cats[0] : null;
-            if ( $product_cat ) : ?>
-                <a href="<?php echo esc_url( get_term_link( $product_cat ) ); ?>"><?php echo esc_html( $product_cat->name ); ?></a>
-            <?php else : ?>
+            <?php /* Every category of the product is one link here, the
+                    widest first ("Quarantined Fish / Wrasses"): the
+                    "Category" row under the buy box is gone (v1.30.0), and
+                    no link to a category went with it. */
+            $product_cats = get_the_terms( $product_id, 'product_cat' );
+            $product_cats = ( $product_cats && ! is_wp_error( $product_cats ) ) ? array_values( $product_cats ) : [];
+            $pdp_crumbs   = [];
+            foreach ( $product_cats as $pdp_cat ) {
+                $pdp_crumbs[] = [ 'id' => $pdp_cat->term_id, 'parent' => $pdp_cat->parent, 'count' => $pdp_cat->count, 'name' => $pdp_cat->name ];
+            }
+            $pdp_crumbs_out = 0;
+            foreach ( FisHotel_Product_Layout::crumb_order( $pdp_crumbs ) as $pdp_cat_i ) :
+                $pdp_cat_url = get_term_link( $product_cats[ $pdp_cat_i ] );
+                if ( is_wp_error( $pdp_cat_url ) ) { continue; }
+                $pdp_crumbs_out++; ?>
+                <a href="<?php echo esc_url( $pdp_cat_url ); ?>"><?php echo esc_html( $product_cats[ $pdp_cat_i ]->name ); ?></a>
+                <span>/</span>
+            <?php endforeach;
+            if ( 0 === $pdp_crumbs_out ) : ?>
                 <a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a>
+                <span>/</span>
             <?php endif; ?>
-            <span>/</span>
             <span style="color:var(--fh-text-2)"><?php the_title(); ?></span>
         </nav>
 
@@ -132,53 +381,17 @@ while ( have_posts() ) :
             <?php
             $words = explode(' ', get_the_title(), 2);
             echo '<span class="word-1">' . esc_html($words[0]) . '</span>';
-            if (!empty($words[1])) { echo '&nbsp;<span class="word-2">' . esc_html($words[1]) . '</span>'; }
+            if (!empty($words[1])) { echo ' <span class="word-2">' . esc_html($words[1]) . '</span>'; }
             ?>
         </h1>
 
         <div class="page-hero__meta">
-            <?php
-            // Subtitle under the H1. Fish products surface the short
-            // description (where the italicized scientific name lives).
-            // Medications + Tier 2 surface their active ingredient(s);
-            // foods surface their source species. Short description acts
-            // as the fallback for everything else (gift cards, merch,
-            // future categories Jeff adds). The tag pill row's genus
-            // deny-list (fishotel_pdp_display_tags) drops any pill that
-            // duplicates the first word of this subtitle so the same
-            // word never appears in both places.
-            $short    = (string) $product->get_short_description();
-            $subtitle = '';
-            if ( $is_fish ) {
-                $subtitle = $short;
-            } elseif ( function_exists( 'fishotel_is_amazon_affiliate_product' )
-                && ( fishotel_is_amazon_affiliate_product( $product_id )
-                    || ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) ) ) ) {
-                // The ingredient is in the "Contains" row and the description
-                // (v1.29.0): no third copy under the name.
-                $subtitle = class_exists( 'FisHotel_Med_Listing' )
-                    ? FisHotel_Med_Listing::med_subtitle( (string) get_post_meta( $product_id, '_fishotel_active_ingredient', true ), $short )
-                    : $short;
-            } elseif ( function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id ) ) {
-                $subtitle = (string) get_post_meta( $product_id, '_fishotel_food_source', true );
-                if ( $subtitle === '' ) { $subtitle = $short; }
-            } else {
-                $subtitle = $short;
-            }
+            <?php /* $subtitle and $display_tags are resolved at the top of this template. */
             if ( $subtitle !== '' ) : ?>
                 <span class="page-hero__latin"><?php echo wp_kses_post( $subtitle ); ?></span>
             <?php endif; ?>
 
             <?php
-            $display_tags = function_exists( 'fishotel_pdp_display_tags' )
-                ? fishotel_pdp_display_tags( $tags, $product_id )
-                : $tags;
-            // No tag pills on a medication page (v1.29.0): its tags are
-            // therapeutic labels and disease names (Antibacterial, Ich,
-            // Flukes …), each linking to a tag page. Plain listing only.
-            if ( class_exists( 'FisHotel_Med_Listing' ) && FisHotel_Med_Listing::is_med( $product_id ) ) {
-                $display_tags = [];
-            }
             if ( $display_tags ) : ?>
             <div class="fh-tag-list">
                 <?php foreach ($display_tags as $tag) :
@@ -197,7 +410,7 @@ while ( have_posts() ) :
 </div>
 
 <?php /* ── MAIN 2-COL: GALLERY + PURCHASE ── */ ?>
-<div class="fh-product-layout">
+<div class="fh-product-layout<?php echo $pdp_top_class !== '' ? ' ' . esc_attr( $pdp_top_class ) : ''; ?>">
 
     <?php /* ── GALLERY ── */ ?>
     <div class="fh-gallery">
@@ -293,9 +506,9 @@ while ( have_posts() ) :
         <?php
         if ( function_exists( 'fishotel_render_purchase_badge' ) ) {
             // Staff Notes are never passed: they are private (v1.28.0).
-            fishotel_render_purchase_badge( $product_id, [
-                'region' => $region,
-            ] );
+            // Region is not passed either (v1.30.0): it is in the facts
+            // under the photo, so the certificate does not say it again.
+            fishotel_render_purchase_badge( $product_id );
         }
         ?>
 
@@ -357,15 +570,9 @@ while ( have_posts() ) :
         }
         $is_sold_out = ( $stock_badge['state'] === 'soldout' );
 
-        // Not purchasable at all (no price, unpublished, filtered out) is
-        // a different state from "sold out": WC would reject the add-to-
-        // cart POST, so rendering the stock badge + qty + button would
-        // only lead the customer into an error. Mirror WC core's own
-        // simple.php (which bails before the form when ! is_purchasable)
-        // and show a muted contact line instead. Coming Soon and Amazon-
-        // mode products never reach this branch.
-        $is_unavailable = in_array( $product->get_type(), array( 'simple', 'variable' ), true )
-            && ! $product->is_purchasable();
+        // $is_unavailable ("cannot be bought at all", not "sold out") is
+        // resolved at the top of this template. Coming Soon and Amazon-
+        // mode products never reach the branch that prints its notice.
 
         // Set true in the attribute loop below when any rendered attribute
         // has no pre-selected value — drives the initial "choose an option"
@@ -588,243 +795,201 @@ while ( have_posts() ) :
 
         <?php endif; /* ! $is_coming_soon && ! $is_amazon_med */ ?>
 
-        <?php /* Product meta */ ?>
-        <div class="fh-product-meta product_meta">
-            <?php do_action( 'woocommerce_product_meta_start' ); ?>
-            <?php if ($product->get_sku()) : ?>
+        <?php /* Product meta — the SKU strip. Printed only when it has
+                something in it (a SKU, or a plugin's own lines): both hooks
+                still fire in the same place. The Category row is gone
+                (v1.30.0) — the breadcrumb above the name already says it. */ ?>
+        <?php
+        ob_start();
+        do_action( 'woocommerce_product_meta_start' );
+        if ( $product->get_sku() ) : ?>
             <div class="fh-product-meta__row">
                 <span class="fh-product-meta__label">SKU</span>
                 <span><?php echo esc_html($product->get_sku()); ?></span>
             </div>
-            <?php endif; ?>
-            <div class="fh-product-meta__row">
-                <span class="fh-product-meta__label">Category</span>
-                <span><?php echo wc_get_product_category_list($product_id, ', '); ?></span>
-            </div>
-            <?php do_action( 'woocommerce_product_meta_end' ); ?>
+        <?php endif;
+        do_action( 'woocommerce_product_meta_end' );
+        $pdp_meta = ob_get_clean();
+        if ( trim( $pdp_meta ) !== '' ) : ?>
+        <div class="fh-product-meta product_meta">
+            <?php echo $pdp_meta; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where built ?>
         </div>
+        <?php endif; ?>
 
     </div><!-- .fh-purchase -->
+
+    <?php /* ── AT A GLANCE — the short facts, one row. Printed inside the
+            top area as its third child: under the photo and the buy box,
+            or beside the photo when the page has no buy form. Only with
+            two or more short facts (inc/product-layout.php). ── */ ?>
+    <?php if ( $pdp_top_class !== '' ) : ?>
+    <dl class="fh-glance">
+        <?php foreach ( $pdp_glance as $glance_i => $glance_cell ) :
+            $glance_url   = isset( $pdp_glance_links[ $glance_i ] ) ? $pdp_glance_links[ $glance_i ] : '';
+            $glance_badge = false !== strpos( $glance_cell[1], 'fh-spec-badge' );
+        ?>
+        <div class="fh-glance__cell">
+            <dt><?php echo esc_html( $glance_cell[0] ); ?></dt>
+            <dd><?php
+            if ( $glance_url !== '' && $glance_badge ) {
+                echo '<a class="fh-glance__badge-link" href="' . esc_url( $glance_url ) . '">' . wp_kses_post( $glance_cell[1] )
+                    . '<span class="fh-sr-only"> &ndash; ' . esc_html__( 'more reef safe fish', 'fishotel' ) . '</span></a>';
+            } elseif ( $glance_url !== '' ) {
+                echo '<a href="' . esc_url( $glance_url ) . '">' . wp_kses_post( $glance_cell[1] ) . '</a>';
+            } else {
+                echo wp_kses_post( $glance_cell[1] );
+            }
+            ?></dd>
+        </div>
+        <?php endforeach; ?>
+    </dl>
+    <?php endif; ?>
 </div><!-- .fh-product-layout -->
 
 <?php do_action( 'woocommerce_after_single_product_summary' ); ?>
 
-<?php /* ── ABOUT THIS SPECIES / MEDICATION / FOOD — Stat Grid from meta fields ── */ ?>
-<?php
-$desc_raw = $product->get_description();
+<?php /* ── THE BODY — one band, two columns (v1.30.0).
+        Left, the story: the description with its paragraphs, lists, bold,
+        italics and links, then the Fun Facts card. Right, the details: a
+        plain list of labelled entries (the Fish Dossier) with "Plan this
+        fish's quarantine" at its foot. Every piece is optional: a column
+        with nothing in it is not printed, and with neither there is no
+        band (inc/product-layout.php decides).
+        A food's or a medication's rows have no heading of their own: one
+        or two of them are a short list above the description; more are
+        the details column, printed BEFORE the story in the HTML so that a
+        phone shows "Contains" above the description (a wide screen still
+        has it on the right). ── */ ?>
+<?php if ( ! empty( $pdp_body['band'] ) ) :
+    $pdp_entry_tag = $pdp_body['entry_tag'];
+    $pdp_plan_tag  = $pdp_body['plan_tag'];
+    $pdp_rich_tags = class_exists( 'FisHotel_Product_Facts' ) ? FisHotel_Product_Facts::rich_allowed_html() : [];
+    $pdp_fact_tags = array_intersect_key( $pdp_rich_tags, [ 'strong' => 1, 'b' => 1, 'em' => 1, 'i' => 1, 'a' => 1 ] );
 
-// Build the row list per category. Empty fields skip so the table stays
-// clean. Medicated foods (a medication product that's also a flake or
-// pellet, e.g. Praziquantel Pellet) merge both sets — meds first, then
-// the food-specific rows. Phase 3.6.
-$spec_rows         = [];
-$is_amazon_aff     = function_exists( 'fishotel_is_amazon_affiliate_product' ) && fishotel_is_amazon_affiliate_product( $product_id );
-$is_med_or_aff     = $is_amazon_aff || ( function_exists( 'fishotel_is_medication_product' ) && fishotel_is_medication_product( $product_id ) );
-$is_food           = function_exists( 'fishotel_is_food_product' ) && fishotel_is_food_product( $product_id );
-$_card_cat_slugs   = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
-$_card_cat_slugs   = is_wp_error( $_card_cat_slugs ) ? [] : (array) $_card_cat_slugs;
-$is_medicated_food = $is_med_or_aff && (
-    in_array( 'flakes', $_card_cat_slugs, true ) || in_array( 'pellets', $_card_cat_slugs, true )
-    || in_array( 'medicated-food', $_card_cat_slugs, true ) || in_array( 'medicated-foods', $_card_cat_slugs, true )
-);
+    // Every entry, in print order: the longer facts, the care notes, then
+    // "Also Known As". A fact's value was escaped where its row was built
+    // (it may hold the Reef Safe badge); a care note is plain text.
+    $pdp_entries = [];
+    foreach ( $pdp_split['before'] as $pdp_entry ) { $pdp_entries[] = [ $pdp_entry[0], wp_kses_post( $pdp_entry[1] ) ]; }
+    // Care notes. care_notes() already gives none on a medication page; the
+    // fence is repeated here because tests/med-listings-test.php pins it
+    // (v1.29.0: the site-wide "Default Foods & Feeding" text would print a
+    // feeding schedule under a medicated food).
+    if ( $pdp_care && ! $is_med_or_aff ) : ?><?php
+        foreach ( $pdp_care as $pdp_entry ) { $pdp_entries[] = [ $pdp_entry[0], esc_html( $pdp_entry[1] ) ]; }
+    endif;
+    foreach ( $pdp_split['after'] as $pdp_entry )  { $pdp_entries[] = [ $pdp_entry[0], wp_kses_post( $pdp_entry[1] ) ]; }
 
-$reef_labels = [
-    'yes'     => '<span class="fh-spec-badge fh-spec-badge--green">&#10003; Yes</span>',
-    'no'      => '<span class="fh-spec-badge fh-spec-badge--amber">&#10007; No</span>',
-    'caution' => '<span class="fh-spec-badge fh-spec-badge--amber">&#9888; With Caution</span>',
-];
+    // The details column, built once and printed in one of two places.
+    $pdp_details_html = '';
+    if ( $pdp_body['details'] ) :
+        ob_start(); ?>
+        <div class="<?php echo esc_attr( $pdp_body['dossier_class'] ); ?>">
+            <?php if ( $pdp_body['dossier_title'] ) : ?>
+            <h2 class="fh-serif-head fh-pdp-h2">Fish <em>Dossier</em></h2>
+            <?php endif; ?>
 
-if ( $is_fish ) {
-    $sci_name    = get_post_meta( $product_id, '_fh_scientific_name', true );
-    $common      = get_post_meta( $product_id, '_fh_common_names', true );
-    $max_length  = get_post_meta( $product_id, '_fh_max_length', true );
-    $tank_size   = get_post_meta( $product_id, '_fh_min_tank_size', true );
-    $temperament = get_post_meta( $product_id, '_fh_temperament', true );
-    $reef_safe   = get_post_meta( $product_id, '_fh_reef_safe', true );
-    if ( $sci_name )    $spec_rows[] = [ 'Scientific Name', esc_html( $sci_name ) ];
-    if ( $common )      $spec_rows[] = [ 'Common Names',    esc_html( $common ) ];
-    if ( $max_length )  $spec_rows[] = [ 'Max Length',      esc_html( $max_length ) ];
-    if ( $tank_size )   $spec_rows[] = [ 'Min Tank Size',   esc_html( $tank_size ) ];
-    if ( $temperament ) $spec_rows[] = [ 'Temperament',     esc_html( $temperament ) ];
-    if ( $reef_safe )   $spec_rows[] = [ 'Reef Safe', $reef_labels[ $reef_safe ] ?? esc_html( $reef_safe ) ];
-    if ( $region )      $spec_rows[] = [ 'Region',          esc_html( $region ) ];
-} elseif ( class_exists( 'FisHotel_Med_Listing' ) ) {
-    // Plain product listing (v1.29.0): "Contains" (active ingredients),
-    // Reef Safe and the food rows. Treats and Use In are kept in wp-admin
-    // but never printed; "Best For" is printed on a plain food only.
-    $spec_rows = FisHotel_Med_Listing::spec_rows( [
-        'active_ingredient' => (string) get_post_meta( $product_id, '_fishotel_active_ingredient', true ),
-        'reef_safe'         => (string) get_post_meta( $product_id, '_fishotel_reef_safe',          true ),
-        'food_source'       => (string) get_post_meta( $product_id, '_fishotel_food_source',        true ),
-        'best_for'          => (string) get_post_meta( $product_id, '_fishotel_best_for',           true ),
-        'nutrition'         => (string) get_post_meta( $product_id, '_fishotel_nutrition',          true ),
-        'additives'         => (string) get_post_meta( $product_id, '_fishotel_additives',          true ),
-    ], $is_med_or_aff, $is_food, $is_medicated_food, $reef_labels );
-}
+            <?php if ( $pdp_entries ) : ?>
+            <div class="fh-dossier__items">
+                <?php foreach ( $pdp_entries as $pdp_entry ) : ?>
+                <div class="fh-dossier__item">
+                    <<?php echo $pdp_entry_tag; ?> class="fh-dossier__label"><?php echo esc_html( $pdp_entry[0] ); ?></<?php echo $pdp_entry_tag; ?>>
+                    <p class="fh-dossier__text"><?php echo $pdp_entry[1]; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where $pdp_entries is built ?></p>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
-// Resolve the H2 copy by category: "Species" for fish, "Food" for foods and
-// medicated flakes/pellets, "Product" for other medications (until v1.29.0
-// both said "Medication"). The prose sub-heading below uses the same word.
-$about_word = class_exists( 'FisHotel_Med_Listing' )
-    ? FisHotel_Med_Listing::about_word( $is_med_or_aff, $is_food, $is_medicated_food )
-    : '';
-if ( $is_fish ) {
-    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">Species</em>';
-} elseif ( $about_word !== '' ) {
-    $about_label = 'About This <em style="font-style:normal; color:var(--fh-gold);">' . $about_word . '</em>';
-} else {
-    $about_label = '';
-}
-?>
-
-<?php if ( ! empty( $spec_rows ) || $desc_raw ) : ?>
-<div class="fh-species">
-    <div class="fh-species__inner">
-        <span class="fh-eyebrow">Description</span>
-        <span class="fh-rule"></span>
-
-        <?php /* "About This …" H2 + structured spec table — fish gets the
-                species rows, meds/affiliate get medication rows, foods get
-                food rows, medicated foods (meds in flakes/pellets) get
-                both sets merged. Anything outside those buckets renders
-                neither H2 nor table; the prose body below still renders. */ ?>
-        <?php if ( $about_label !== '' ) : ?>
-        <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">
-            <?php echo wp_kses( $about_label, [ 'em' => [ 'style' => true ] ] ); ?>
-        </h2>
-
-        <?php if ( ! empty( $spec_rows ) ) : ?>
-        <table class="fh-species-grid">
-            <?php foreach ( $spec_rows as $row ) : ?>
-            <tr>
-                <td><?php echo esc_html( $row[0] ); ?></td>
-                <td><?php echo wp_kses_post( $row[1] ); ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </table>
-        <?php endif; ?>
-        <?php endif; ?>
-
+            <?php if ( $pdp_has_tools ) : ?>
+            <div class="fh-dossier__plan">
+                <<?php echo $pdp_plan_tag; ?> class="fh-dossier__label"><?php esc_html_e( "Plan this fish's quarantine", 'fishotel' ); ?></<?php echo $pdp_plan_tag; ?>>
+                <div class="fh-dossier__links">
+                    <?php if ( $plan_sched_url !== '' ) : ?>
+                    <a href="<?php echo esc_url( $plan_sched_url ); ?>" class="fh-btn fh-btn--ghost fh-plan-qt__btn"><?php esc_html_e( 'Build a QT Schedule', 'fishotel' ); ?></a>
+                    <?php endif; ?>
+                    <?php if ( $plan_compat_url !== '' ) : ?>
+                    <a href="<?php echo esc_url( $plan_compat_url ); ?>" class="fh-btn fh-btn--ghost fh-plan-qt__btn"><?php esc_html_e( 'Check Tank Compatibility', 'fishotel' ); ?></a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
         <?php
-        // The facts typed in the description ("old style"): a labelled
-        // line is hidden only when its field is filled — the table above
-        // shows it. Empty fields leave their line readable (v1.28.0;
-        // inc/product-facts.php).
-        if ( $desc_raw ) :
-            if ( class_exists( 'FisHotel_Product_Facts' ) ) {
-                $facts_shown = FisHotel_Product_Facts::shown_elsewhere(
-                    FisHotel_Product_Facts::current( $product_id ),
-                    (bool) $is_fish,
-                    $region !== ''
-                );
-                $prose = FisHotel_Product_Facts::prose( $desc_raw, $facts_shown );
-            } else {
-                $prose = trim( wp_strip_all_tags( $desc_raw ) );
-            }
-        ?>
-        <?php if ( $prose ) :
-            // Sub-heading varies by product category. Anything outside
-            // fish/meds/foods (gift cards, merch, future categories)
-            // renders no heading — the prose still appears below the
-            // "Description" eyebrow.
-            $prose_cats = wp_get_post_terms( $product_id, 'product_cat', [ 'fields' => 'slugs' ] );
-            $prose_cats = is_wp_error( $prose_cats ) ? [] : (array) $prose_cats;
-            if ( $is_fish ) {
-                $prose_label = 'About This Fish';
-            } elseif ( in_array( 'medications', $prose_cats, true ) || $is_med_or_aff ) {
-                $prose_label = 'About This ' . ( $about_word !== '' ? $about_word : 'Product' );
-            } elseif ( in_array( 'foods', $prose_cats, true ) || in_array( 'freeze-dried-foods', $prose_cats, true ) ) {
-                $prose_label = 'About This Food';
-            } else {
-                $prose_label = '';
-            }
-        ?>
-        <div class="fh-species__prose">
-            <?php if ( $prose_label !== '' ) : ?>
-            <h3 class="fh-species__prose-label"><?php echo esc_html( $prose_label ); ?></h3>
-            <?php endif; ?>
-            <p><?php echo wp_kses_post( nl2br( esc_html( $prose ) ) ); ?></p>
-        </div>
-        <?php endif; ?>
-        <?php endif; ?>
-    </div>
-</div>
-<?php endif; ?>
-
-<?php /* ── CARE GUIDE (Dossier) — reads from custom meta fields ── */ ?>
-<?php
-$foods_feeding = get_post_meta( $product_id, '_fh_foods_feeding', true );
-if ( ! $foods_feeding && class_exists('FisHotel_Admin_Settings') ) {
-    $foods_feeding = FisHotel_Admin_Settings::get('fh_default_foods');
-}
-$habitat = get_post_meta( $product_id, '_fh_habitat', true );
-if ( ! $habitat && class_exists('FisHotel_Admin_Settings') ) {
-    $habitat = FisHotel_Admin_Settings::get('fh_default_habitat');
-}
+        $pdp_details_html = ob_get_clean();
+    endif;
 ?>
+<div class="<?php echo esc_attr( $pdp_body['band_class'] ); ?>">
+    <div class="fh-pdp-body__inner">
 
-<?php /* Not on a medication page (v1.29.0): the site-wide "Default Foods &
-        Feeding" text would print a feeding schedule under a medicated food. */ ?>
-<?php if ( ( $foods_feeding || $habitat ) && ! $is_med_or_aff ) : ?>
-<div class="fh-careguide">
-    <div class="fh-careguide__inner">
-        <span class="fh-eyebrow">Care Guide</span>
-        <span class="fh-rule"></span>
-        <h2 class="fh-serif-head" style="font-size:30px; margin-bottom:32px;">Fish <em style="font-style:normal; color:var(--fh-gold);">Dossier</em></h2>
+        <?php if ( $pdp_body['details_first'] ) { echo $pdp_details_html; } // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above, escaped there ?>
 
-        <div class="fh-careguide__blocks">
-            <?php if ( $foods_feeding ) : ?>
-            <div class="fh-careguide__block">
-                <h3 class="fh-careguide__block-title">Foods &amp; Feeding</h3>
-                <p class="fh-careguide__block-text"><?php echo esc_html( $foods_feeding ); ?></p>
+        <?php if ( $pdp_body['story'] ) : ?>
+        <div class="fh-story">
+            <h2 class="fh-serif-head fh-pdp-h2"><?php
+                if ( $pdp_story_word !== '' ) {
+                    echo 'About This <em>' . esc_html( $pdp_story_word ) . '</em>';
+                } else {
+                    echo 'Description';
+                }
+            ?></h2>
+
+            <?php if ( $pdp_body['lede'] ) : ?>
+            <dl class="fh-story__specs">
+                <?php foreach ( $pdp_entries as $pdp_entry ) : ?>
+                <div class="fh-story__spec">
+                    <dt><?php echo esc_html( $pdp_entry[0] ); ?></dt>
+                    <dd><?php echo $pdp_entry[1]; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where $pdp_entries is built ?></dd>
+                </div>
+                <?php endforeach; ?>
+            </dl>
+            <?php endif; ?>
+
+            <?php if ( $pdp_desc_plain !== '' ) : /* medication page: plain text, as v1.29.0 printed it */ ?>
+            <div class="fh-story__prose">
+                <p><?php echo wp_kses_post( nl2br( esc_html( $pdp_desc_plain ) ) ); ?></p>
+            </div>
+            <?php elseif ( $pdp_desc_html !== '' ) : ?>
+            <div class="fh-story__prose">
+                <?php echo wp_kses( $pdp_desc_html, $pdp_rich_tags ); ?>
             </div>
             <?php endif; ?>
 
-            <?php if ( $habitat ) : ?>
-            <div class="fh-careguide__block">
-                <h3 class="fh-careguide__block-title">Habitat &amp; Behavior</h3>
-                <p class="fh-careguide__block-text"><?php echo esc_html( $habitat ); ?></p>
-            </div>
+            <?php if ( $pdp_fun_facts ) :
+                // "Fun Facts" → Fun <em>Facts</em>, two-tone like the other
+                // headings; words typed after the label ("Fun Facts about
+                // this fish") follow in the first colour.
+                $pdp_fun_words = explode( ' ', $pdp_fun_title, 3 );
+            ?>
+            <section class="fh-funfacts" aria-labelledby="fh-funfacts-h">
+                <h3 class="fh-funfacts__title" id="fh-funfacts-h"><?php
+                    echo esc_html( $pdp_fun_words[0] );
+                    if ( ! empty( $pdp_fun_words[1] ) ) {
+                        echo ' <em>' . esc_html( $pdp_fun_words[1] ) . '</em>';
+                    }
+                    if ( ! empty( $pdp_fun_words[2] ) ) {
+                        echo ' ' . esc_html( $pdp_fun_words[2] );
+                    }
+                ?></h3>
+                <ul class="fh-funfacts__list">
+                    <?php foreach ( $pdp_fun_facts as $pdp_fact ) : ?>
+                    <li class="fh-funfacts__item">
+                        <?php if ( $pdp_fact['lead'] !== '' ) : ?>
+                        <strong class="fh-funfacts__lead"><?php echo esc_html( $pdp_fact['lead'] ); ?><span class="fh-sr-only">:</span></strong>
+                        <?php endif; ?>
+                        <span class="fh-funfacts__text"><?php echo wp_kses( $pdp_fact['html'], $pdp_fact_tags ); ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </section>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
+
+        <?php if ( ! $pdp_body['details_first'] ) { echo $pdp_details_html; } // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above, escaped there ?>
+
     </div>
 </div>
 <?php endif; ?>
-
-<?php /* ── PLAN THIS FISH'S QUARANTINE — fish only. Links resolve by page
-        template (same helper as the footer Tools column) so renamed slugs
-        keep working; the row renders nothing when both pages are missing.
-        The scheduler link pre-fills its tank slider (?tank=<gal>) from the
-        numeric part of _fh_min_tank_size when the field has one. */ ?>
-<?php
-if ( $is_fish && function_exists( 'fishotel_tool_page_url' ) ) :
-    $plan_sched_url  = fishotel_tool_page_url( 'page-qt-scheduler.php', 'qt-scheduler' );
-    $plan_compat_url = fishotel_tool_page_url( 'page-compatibility-guide.php', 'compatibility-guide' );
-    if ( $plan_sched_url !== '' ) {
-        $plan_tank_raw = (string) get_post_meta( $product_id, '_fh_min_tank_size', true );
-        if ( preg_match( '/(\d+(?:\.\d+)?)/', $plan_tank_raw, $plan_m ) ) {
-            $plan_tank_gal = (int) round( (float) $plan_m[1] );
-            if ( $plan_tank_gal > 0 ) {
-                $plan_sched_url = add_query_arg( 'tank', $plan_tank_gal, $plan_sched_url );
-            }
-        }
-    }
-    if ( $plan_sched_url !== '' || $plan_compat_url !== '' ) :
-?>
-<div class="fh-plan-qt">
-    <div class="fh-plan-qt__inner">
-        <span class="fh-plan-qt__label"><?php esc_html_e( "Plan this fish's quarantine", 'fishotel' ); ?></span>
-        <div class="fh-plan-qt__links">
-            <?php if ( $plan_sched_url !== '' ) : ?>
-            <a href="<?php echo esc_url( $plan_sched_url ); ?>" class="fh-btn fh-btn--ghost fh-plan-qt__btn"><?php esc_html_e( 'Build a QT Schedule', 'fishotel' ); ?></a>
-            <?php endif; ?>
-            <?php if ( $plan_compat_url !== '' ) : ?>
-            <a href="<?php echo esc_url( $plan_compat_url ); ?>" class="fh-btn fh-btn--ghost fh-plan-qt__btn"><?php esc_html_e( 'Check Tank Compatibility', 'fishotel' ); ?></a>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
-<?php endif; endif; ?>
 
 <?php /* ── RELATED PRODUCTS — Also in Quarantine ── */ ?>
 <?php

@@ -28,7 +28,8 @@ fishotel-theme/
 ├── inc/
 │   ├── admin-settings.php     ★ FisHotel Theme admin pages (all editable copy + images)
 │   ├── hotel-data.php         ★ Fish facts box + Staff notes box (product screen)
-│   ├── product-facts.php      ★ Facts typed in the description: product-page text, copy, old-style test
+│   ├── product-facts.php      ★ Facts typed in the description: product-page text (plain, and with formatting + Fun Facts card), copy, old-style test
+│   ├── product-layout.php     ★ Product page: which fact goes where, what is printed when a field is empty (v1.30.0)
 │   ├── fish-notes.php         One-time list of fish whose Notes the product page showed (v1.28.0)
 │   ├── admin-product-screen.php  Medication & food tab only on meds / foods
 │   ├── hotel-journal.php      ★ Quarantine journal entries (repeatable)
@@ -113,9 +114,9 @@ Every WooCommerce product gets two boxes (until v1.28.0 one box, "FisHotel — P
   line breaks, and a feeding block stops at the next labelled line (it used to run into
   "Habitat and Behavior: …").
 - **The "About This Fish" text** hides a labelled line only when that fact is shown elsewhere on
-  the page: its field is filled and the table is printed (Quarantined Fish), or it is Foods /
-  Habitat (the Dossier is printed for every product); the Region line also goes when a region
-  tag is set. A fish whose fields are empty keeps its facts readable in the text. "Fun Facts" and
+  the page: its field is filled and the facts are printed (Quarantined Fish — a table until
+  v1.30.0, now the row under the photo and the Fish Dossier), or it is Foods / Habitat (the
+  Dossier is printed for every product); the Region line also goes when a region tag is set. A fish whose fields are empty keeps its facts readable in the text. "Fun Facts" and
   everything after it are no longer cut off. Until v1.28.0 every labelled line was removed
   whatever the field held, and a description saved as `<p>…</p><p>…</p>` lost everything after
   the first label.
@@ -141,6 +142,102 @@ box saving only its own fields, no empty rows from the facts box or the Medicati
 `php tests/fish-notes-test.php` (the list, the wording, the certificate without a note),
 `node tests/admin-product.test.js` (what the Copy button fills, which handed-on facts were taken,
 the message).
+
+### The product page: facts at a glance, the story, the Fish Dossier (v1.30.0)
+Files: `woocommerce/single-product.php`, `inc/product-layout.php`, `FisHotel_Product_Facts::rich()`
+in `inc/product-facts.php`, `assets/css/main.css` ("PRODUCT PAGE BODY").
+
+Until v1.30.0 the page stacked five bands under the photo: a facts table and the description
+(both using only the left half of the page), a "Fish Dossier" with one or two boxes, a "Plan this
+fish's quarantine" strip, then "More Available Now". The description was flattened to plain text,
+so a blockquote of fun facts came out as loose lines. Now there are three bands, and every piece
+is optional — nothing new to type, no field added, nothing stored:
+
+- **At a glance** — the short facts (28 characters or fewer; the Reef Safe badge always counts)
+  in one row under the photo and the buy box. On a page with no buy form (a fish that cannot be
+  bought, Coming Soon) the same row sits beside the photo instead, one fact to a line, right
+  under the "Currently unavailable" notice. Its rows stretch so the list ends on the photo's
+  bottom edge (two facts = two tall rows; five = five ordinary ones); when the right side is
+  taller than the photo anyway (Coming Soon) the list simply follows the panel. Up to 1024px
+  wide the photo is small, so there the row goes across the page under the photo as on every
+  other product. It needs at least two short facts; a single one becomes a Dossier entry.
+- **The story** (left) — "About This Fish" (or "… Food", "… Product", or "Description") and the
+  description with its paragraphs, bullet and numbered lists, bold, italics, links and quotes.
+  Nothing else gets through: no pictures, scripts, styles, classes or `target`; a link keeps only
+  a safe `href`. The page prints it through `wp_kses()` with that same short list as a second
+  lock. **Shortcodes are not run** — `[gallery]` shows as the typed words, as it always has.
+- **Fun Facts card** — a blockquote that starts with "Fun Facts:" becomes a card: one row per
+  fact, the words before the first colon in bold as the lead-in ("Night Owl: It naps all day").
+  The same card for "Fun Facts:" typed with no blockquote (a list under it, lines in the same
+  paragraph, "Lead-in: sentence" paragraphs, or the blockquote right under the label). A fact
+  with no colon is a plain row; "10:30" does not split a fact; a lead-in is at most 40
+  characters and 6 words; only a colon makes a lead-in (a dash does not).
+  - **The label** is "Fun Facts" or "Fun Fact" in any capitals, at the start of a line, ending
+    in ":", "!", a dash, or nothing at all when it is alone on its line. A symbol may be typed
+    in front ("★ Fun Facts:") and a few words may follow — up to six before a ":" or "!"
+    ("Fun Facts about this fish:"), up to four when the label is the whole line; those words
+    become part of the card's heading. A sentence that merely begins "Fun facts are …" is left
+    alone. "Did you know?" is not a label (`FUN_REGEX` in `inc/product-facts.php`).
+  - **Inside a blockquote** every line after the label is a fact, even one that begins
+    "Habitat:" or "Region:" while that field is filled: the owner grouped them.
+  - **With no blockquote** the card ends at a line that is a fact label of its own
+    ("Temperament: …", "Scientific Name: …", a second "Fun Facts"). That line is an old-style
+    fact: it is hidden when its field is filled and stays readable in the text when it is not,
+    exactly as before v1.30.0 — it is never printed as a fun fact. When the label's own line
+    already holds a fact ("Fun fact: it hums."), a plain line after it in the same paragraph
+    stays text; only "Lead-in: sentence" lines go on into the card.
+  - "Fun Facts:" with nothing left under it (the last line, or only hidden facts below) prints
+    no card and no heading. A blockquote that is not fun facts is styled as a quote. No text is
+    ever dropped by these rules.
+- **Fish Dossier** (right) — a plain list of labelled entries, no boxes: a Scientific Name that
+  differs from the line under the name, any fact too long for the row, Foods & Feeding, Habitat
+  & Behavior, "Also Known As" (Common Names) — and "Plan this fish's quarantine" with its two
+  buttons at the foot. With no entries the buttons are the whole column; with nothing at all
+  there is no column, and with no story either there is no band. The two care notes come from
+  the product's own boxes (product screen → "Fish facts" box → "Care Guide (Fish Dossier)" →
+  "Foods & Feeding" and "Habitat & Behavior"). The site-wide defaults (FisHotel Theme → Product
+  Page → Care Guide Defaults → "Default Foods & Feeding text" / "Default Habitat & Behavior
+  text") fill an empty box **on a fish only**: before v1.30.0 they also put a "Fish Dossier" on
+  gift card, sticker and invoice pages.
+- **A food's or a medication's rows** ("Contains", "Food Source", "Nutrition Value" …) have no
+  heading of their own. One or two of them are a short list above the description (one row
+  alone in a column of its own looked lost). Three or more are the right-hand column on a wide
+  screen and are printed **before** the description in the HTML, so a phone shows "Contains"
+  above the text instead of last on the page. No word is added on a medication page.
+- **Nothing twice** — a fact that only repeats the line under the name (the scientific name) is
+  not printed again; Region is no longer on the green certificate; the Category row under the
+  buy box is gone — **every** category of the product is a link in the breadcrumb above the
+  name instead ("Home / Quarantined Fish / Wrasses / …": a parent before its child, otherwise
+  the category holding the most products first; `FisHotel_Product_Layout::crumb_order()`), so
+  no link to a category was lost; the SKU strip prints only when there is a SKU. On a
+  fish with the row, a tag pill that says the same as a cell (Peaceful, Reef Safe, Red Sea) is
+  not printed and the cell links to that tag's page instead.
+- **Medication pages keep every v1.29.0 rule.** Their description is still plain text in one
+  paragraph — `rich()` is never called there, so no link, bold, list, quote or Fun Facts card
+  can come from a medication's description. No care notes, no quarantine buttons, no tag pills.
+  "Contains" and Reef Safe are the same words in the new row instead of a table.
+- **When the markup is beyond the rules** (a broken character, a comment that never closes, a
+  "<" glued to a word) the description is printed as the plain text it was before v1.30.0.
+  The same when the result would be many times longer than what was typed: a bold or a link
+  that was never closed is opened once (not once more on every line), an unclosed link ends
+  with its paragraph, and past 8× the typed length (+4 KB) the plain text is printed.
+- The photo no longer follows the scroll on a page that has the facts row under it (it would
+  slide over the row); it still does on pages without one.
+- "Currently unavailable — contact us" and the SKU line are in the body grey (5.5:1 on the page
+  background); the muted grey they had was 2.5:1.
+- Private things are still read nowhere on this page: Staff notes, costs, supplier and batch
+  figures, tank numbers, counts, customer names, the Misc plugin's Clean Room dates.
+- **Installing 1.30.0: clear the page cache (Breeze / Varnish) straight after replacing the
+  theme.** A product page still held by the cache has the old bands' markup, and their CSS is
+  gone from the new stylesheet: until the cache is cleared such a page shows its facts table,
+  Dossier boxes and quarantine strip unstyled. Pages built after the install are right.
+
+Tests: `php tests/product-rich-test.php` (every way of typing fun facts and their label,
+old-style lines under a "Fun Facts" heading in each of the three shapes, lead-ins, hostile
+markup, the size limit, the plain fallback, the medication branch of the page),
+`php tests/product-layout-test.php` (28 / 29 characters, one short fact, the line under the
+name, pills and cells, every combination of filled and empty pieces, the order of the
+breadcrumb's categories, the fields the page reads).
 
 ### Product and order screens — the theme's boxes only where they matter (v1.28.0)
 - **"Medication & food" tab** (was "FisHotel Medication"; inc/medication-store/product-meta.php)

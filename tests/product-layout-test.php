@@ -326,6 +326,7 @@ check( 'the photo does not follow the scroll over a facts row under it, at any w
 	false !== strpos( $css, '.fh-product-layout--facts-below .fh-gallery { position: static; }' )
 	&& (bool) preg_match( '/@media \(max-width: 1024px\) \{\s*\.fh-product-layout--facts-beside \.fh-gallery \{ position: static; \}/', $css )
 );
+check( 'the breadcrumb\'s links show the gold focus ring with the other new links', (bool) preg_match( '/\.fishotel-product-page \.page-hero__breadcrumb a:focus-visible,\s*\.fh-glance a:focus-visible,[^{]*\{\s*outline: 2px solid var\(--fh-gold\)/', $css ) );
 check( 'the breadcrumb wraps on the product page', (bool) preg_match( '/\.fishotel-product-page \.page-hero__breadcrumb \{[^}]*flex-wrap: wrap/', $css ) );
 check( 'no new font, image or script in the new CSS', ! preg_match( '/\.fh-(glance|pdp-body|story|funfacts|dossier)[^{}]*\{[^}]*(url\(|@import|font-family:\s*["\'])/', $css ) );
 

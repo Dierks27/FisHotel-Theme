@@ -1826,7 +1826,8 @@ h1, h2, h3, h4, h5 {
 /* The band above "More Available Now" is now the dark one, so lift this one. */
 .fishotel-product-page .fh-related { background: var(--fh-bg); }
 
-/* Keyboard focus on everything new */
+/* Keyboard focus on everything new (the breadcrumb carries the category links now) */
+.fishotel-product-page .page-hero__breadcrumb a:focus-visible,
 .fh-glance a:focus-visible,
 .fh-story__prose a:focus-visible,
 .fh-funfacts a:focus-visible,

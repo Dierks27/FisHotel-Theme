@@ -110,6 +110,16 @@ while ( have_posts() ) :
         : null;
     $opening_thumb   = $opening_picture ? (int) $opening_picture['thumb'] : -1;
 
+    // Not purchasable at all (no price, unpublished, filtered out) is
+    // a different state from "sold out": WC would reject the add-to-
+    // cart POST, so rendering the stock badge + qty + button would
+    // only lead the customer into an error. Mirror WC core's own
+    // simple.php (which bails before the form when ! is_purchasable)
+    // and show a muted contact line instead. Worked out once, here: the
+    // buy box and the place of the facts row both depend on it.
+    $is_unavailable = in_array( $product->get_type(), array( 'simple', 'variable' ), true )
+        && ! $product->is_purchasable();
+
     // ── What the page prints around the photo and the buy box (v1.30.0) ──
     // Resolved up here, ahead of the title band, because the tag pills and
     // the top area depend on it: a pill that only repeats a fact is not
@@ -201,26 +211,22 @@ while ( have_posts() ) :
     // Short facts → the "at a glance" row; longer ones → entries beside
     // the description. A row that only repeats the line under the name is
     // not printed again.
-    $pdp_split = class_exists( 'FisHotel_Product_Layout' )
-        ? FisHotel_Product_Layout::split( $spec_rows, wp_strip_all_tags( $subtitle ) )
-        : [ 'glance' => [], 'before' => $spec_rows, 'after' => [] ];
+    $pdp_split  = FisHotel_Product_Layout::split( $spec_rows, wp_strip_all_tags( $subtitle ) );
     $pdp_glance = $pdp_split['glance'];
 
     // Care notes (Foods & Feeding, Habitat & Behavior): the product's own
-    // text, else the site-wide default text.
+    // text; on a fish, else the site-wide default text. The defaults are
+    // fish care text ("Default Foods & Feeding text"), so they fill a
+    // fish's empty box only: before v1.30.0 they also put a "Fish Dossier"
+    // on gift card, sticker and invoice pages.
     $foods_feeding = get_post_meta( $product_id, '_fh_foods_feeding', true );
-    if ( ! $foods_feeding && class_exists('FisHotel_Admin_Settings') ) {
-        $foods_feeding = FisHotel_Admin_Settings::get('fh_default_foods');
+    $habitat       = get_post_meta( $product_id, '_fh_habitat', true );
+    if ( $is_fish && class_exists( 'FisHotel_Admin_Settings' ) ) {
+        if ( ! $foods_feeding ) { $foods_feeding = FisHotel_Admin_Settings::get( 'fh_default_foods' ); }
+        if ( ! $habitat )       { $habitat       = FisHotel_Admin_Settings::get( 'fh_default_habitat' ); }
     }
-    $habitat = get_post_meta( $product_id, '_fh_habitat', true );
-    if ( ! $habitat && class_exists('FisHotel_Admin_Settings') ) {
-        $habitat = FisHotel_Admin_Settings::get('fh_default_habitat');
-    }
-    // Never on a medication page (v1.29.0): the site-wide "Default Foods &
-    // Feeding" text would print a feeding schedule under a medicated food.
-    $pdp_care = class_exists( 'FisHotel_Product_Layout' )
-        ? FisHotel_Product_Layout::care_notes( $foods_feeding ? $foods_feeding : '', $habitat ? $habitat : '', $is_med_or_aff )
-        : [];
+    // Never on a medication page (v1.29.0): care_notes() gives none there.
+    $pdp_care = FisHotel_Product_Layout::care_notes( $foods_feeding ? $foods_feeding : '', $habitat ? $habitat : '', $is_med_or_aff );
 
     // "Plan this fish's quarantine" — fish only. Links resolve by page
     // template (same helper as the footer Tools column) so renamed slugs
@@ -271,7 +277,7 @@ while ( have_posts() ) :
     if ( $desc_raw ) {
         if ( ! class_exists( 'FisHotel_Product_Facts' ) ) {
             $pdp_desc_plain = trim( wp_strip_all_tags( $desc_raw ) );
-        } elseif ( ! $is_med_or_aff && ! $pdp_is_med_page ) {
+        } elseif ( ! $pdp_is_med_page ) {
             $pdp_rich      = FisHotel_Product_Facts::rich( $desc_raw, $facts_shown );
             $pdp_desc_html = $pdp_rich['html'];
             $pdp_fun_title = $pdp_rich['fun_title'];
@@ -286,40 +292,29 @@ while ( have_posts() ) :
     $about_word = class_exists( 'FisHotel_Med_Listing' )
         ? FisHotel_Med_Listing::about_word( $is_med_or_aff, $is_food, $is_medicated_food )
         : '';
-    $pdp_story_word = class_exists( 'FisHotel_Product_Layout' )
-        ? FisHotel_Product_Layout::story_word(
-            $is_fish,
-            $pdp_is_med_page,
-            $about_word,
-            $is_food || in_array( 'foods', $_card_cat_slugs, true ) || in_array( 'freeze-dried-foods', $_card_cat_slugs, true )
-        )
-        : '';
+    $pdp_story_word = FisHotel_Product_Layout::story_word(
+        $is_fish,
+        $pdp_is_med_page,
+        $about_word,
+        $is_food || in_array( 'foods', $_card_cat_slugs, true ) || in_array( 'freeze-dried-foods', $_card_cat_slugs, true )
+    );
 
     // Which columns and headings the band under the top area prints.
-    $pdp_body = class_exists( 'FisHotel_Product_Layout' )
-        ? FisHotel_Product_Layout::body( [
-            'has_text'  => ( $pdp_desc_html !== '' || $pdp_desc_plain !== '' ),
-            'facts'     => count( $pdp_fun_facts ),
-            'before'    => count( $pdp_split['before'] ),
-            'care'      => count( $pdp_care ),
-            'after'     => count( $pdp_split['after'] ),
-            'has_tools' => $pdp_has_tools,
-            'is_fish'   => (bool) $is_fish,
-        ] )
-        : [ 'band' => false ];
+    $pdp_body = FisHotel_Product_Layout::body( [
+        'has_text'  => ( $pdp_desc_html !== '' || $pdp_desc_plain !== '' ),
+        'facts'     => count( $pdp_fun_facts ),
+        'before'    => count( $pdp_split['before'] ),
+        'care'      => count( $pdp_care ),
+        'after'     => count( $pdp_split['after'] ),
+        'has_tools' => $pdp_has_tools,
+        'is_fish'   => (bool) $is_fish,
+    ] );
 
     // Where the glance row sits: beside the photo when the page prints no
-    // buy form (Coming Soon, or a product that cannot be bought — the same
-    // test as $is_unavailable below), under the photo and buy box otherwise.
-    $pdp_no_form = class_exists( 'FisHotel_Product_Layout' ) && FisHotel_Product_Layout::no_buy_form(
-        $is_coming_soon,
-        in_array( $product->get_type(), array( 'simple', 'variable' ), true ) && ! $product->is_purchasable(),
-        $is_gift_card,
-        $is_amazon_med
-    );
-    $pdp_top_class = class_exists( 'FisHotel_Product_Layout' )
-        ? FisHotel_Product_Layout::top_modifier( count( $pdp_glance ), $pdp_no_form )
-        : '';
+    // buy form (Coming Soon, or a product that cannot be bought), under
+    // the photo and buy box otherwise.
+    $pdp_no_form   = FisHotel_Product_Layout::no_buy_form( $is_coming_soon, $is_unavailable, $is_gift_card, $is_amazon_med );
+    $pdp_top_class = FisHotel_Product_Layout::top_modifier( count( $pdp_glance ), $pdp_no_form );
 
     // Tag pills. No pills on a medication page (v1.29.0): its tags are
     // therapeutic labels and disease names (Antibacterial, Ich, Flukes …),
@@ -333,7 +328,7 @@ while ( have_posts() ) :
     // On a fish page with a glance row, a pill that says the same as a
     // glance cell is not printed; the cell links to the tag's page instead.
     $pdp_glance_links = [];
-    if ( $is_fish && $pdp_glance && $display_tags && class_exists( 'FisHotel_Product_Layout' ) ) {
+    if ( $is_fish && $pdp_glance && $display_tags ) {
         $pdp_tag_names = [];
         foreach ( $display_tags as $tag_i => $tag ) {
             $pdp_tag_names[ $tag_i ] = $tag->name;
@@ -357,14 +352,28 @@ while ( have_posts() ) :
         <nav class="page-hero__breadcrumb" aria-label="Breadcrumb">
             <a href="<?php echo esc_url( home_url('/') ); ?>">Home</a>
             <span>/</span>
-            <?php $product_cats = get_the_terms( $product_id, 'product_cat' );
-            $product_cat = $product_cats ? $product_cats[0] : null;
-            if ( $product_cat ) : ?>
-                <a href="<?php echo esc_url( get_term_link( $product_cat ) ); ?>"><?php echo esc_html( $product_cat->name ); ?></a>
-            <?php else : ?>
+            <?php /* Every category of the product is one link here, the
+                    widest first ("Quarantined Fish / Wrasses"): the
+                    "Category" row under the buy box is gone (v1.30.0), and
+                    no link to a category went with it. */
+            $product_cats = get_the_terms( $product_id, 'product_cat' );
+            $product_cats = ( $product_cats && ! is_wp_error( $product_cats ) ) ? array_values( $product_cats ) : [];
+            $pdp_crumbs   = [];
+            foreach ( $product_cats as $pdp_cat ) {
+                $pdp_crumbs[] = [ 'id' => $pdp_cat->term_id, 'parent' => $pdp_cat->parent, 'count' => $pdp_cat->count, 'name' => $pdp_cat->name ];
+            }
+            $pdp_crumbs_out = 0;
+            foreach ( FisHotel_Product_Layout::crumb_order( $pdp_crumbs ) as $pdp_cat_i ) :
+                $pdp_cat_url = get_term_link( $product_cats[ $pdp_cat_i ] );
+                if ( is_wp_error( $pdp_cat_url ) ) { continue; }
+                $pdp_crumbs_out++; ?>
+                <a href="<?php echo esc_url( $pdp_cat_url ); ?>"><?php echo esc_html( $product_cats[ $pdp_cat_i ]->name ); ?></a>
+                <span>/</span>
+            <?php endforeach;
+            if ( 0 === $pdp_crumbs_out ) : ?>
                 <a href="<?php echo esc_url( get_permalink( wc_get_page_id('shop') ) ); ?>">Shop</a>
+                <span>/</span>
             <?php endif; ?>
-            <span>/</span>
             <span style="color:var(--fh-text-2)"><?php the_title(); ?></span>
         </nav>
 
@@ -561,15 +570,9 @@ while ( have_posts() ) :
         }
         $is_sold_out = ( $stock_badge['state'] === 'soldout' );
 
-        // Not purchasable at all (no price, unpublished, filtered out) is
-        // a different state from "sold out": WC would reject the add-to-
-        // cart POST, so rendering the stock badge + qty + button would
-        // only lead the customer into an error. Mirror WC core's own
-        // simple.php (which bails before the form when ! is_purchasable)
-        // and show a muted contact line instead. Coming Soon and Amazon-
-        // mode products never reach this branch.
-        $is_unavailable = in_array( $product->get_type(), array( 'simple', 'variable' ), true )
-            && ! $product->is_purchasable();
+        // $is_unavailable ("cannot be bought at all", not "sold out") is
+        // resolved at the top of this template. Coming Soon and Amazon-
+        // mode products never reach the branch that prints its notice.
 
         // Set true in the attribute loop below when any rendered attribute
         // has no pre-selected value — drives the initial "choose an option"
@@ -851,94 +854,47 @@ while ( have_posts() ) :
         plain list of labelled entries (the Fish Dossier) with "Plan this
         fish's quarantine" at its foot. Every piece is optional: a column
         with nothing in it is not printed, and with neither there is no
-        band (inc/product-layout.php decides; the HTML is in reading
-        order, nothing is re-ordered by CSS). ── */ ?>
+        band (inc/product-layout.php decides).
+        A food's or a medication's rows have no heading of their own: one
+        or two of them are a short list above the description; more are
+        the details column, printed BEFORE the story in the HTML so that a
+        phone shows "Contains" above the description (a wide screen still
+        has it on the right). ── */ ?>
 <?php if ( ! empty( $pdp_body['band'] ) ) :
     $pdp_entry_tag = $pdp_body['entry_tag'];
     $pdp_plan_tag  = $pdp_body['plan_tag'];
     $pdp_rich_tags = class_exists( 'FisHotel_Product_Facts' ) ? FisHotel_Product_Facts::rich_allowed_html() : [];
     $pdp_fact_tags = array_intersect_key( $pdp_rich_tags, [ 'strong' => 1, 'b' => 1, 'em' => 1, 'i' => 1, 'a' => 1 ] );
-?>
-<div class="<?php echo esc_attr( $pdp_body['band_class'] ); ?>">
-    <div class="fh-pdp-body__inner">
 
-        <?php if ( $pdp_body['story'] ) : ?>
-        <div class="fh-story">
-            <h2 class="fh-serif-head fh-pdp-h2"><?php
-                if ( $pdp_story_word !== '' ) {
-                    echo 'About This <em>' . esc_html( $pdp_story_word ) . '</em>';
-                } else {
-                    echo 'Description';
-                }
-            ?></h2>
+    // Every entry, in print order: the longer facts, the care notes, then
+    // "Also Known As". A fact's value was escaped where its row was built
+    // (it may hold the Reef Safe badge); a care note is plain text.
+    $pdp_entries = [];
+    foreach ( $pdp_split['before'] as $pdp_entry ) { $pdp_entries[] = [ $pdp_entry[0], wp_kses_post( $pdp_entry[1] ) ]; }
+    // Care notes. care_notes() already gives none on a medication page; the
+    // fence is repeated here because tests/med-listings-test.php pins it
+    // (v1.29.0: the site-wide "Default Foods & Feeding" text would print a
+    // feeding schedule under a medicated food).
+    if ( $pdp_care && ! $is_med_or_aff ) : ?><?php
+        foreach ( $pdp_care as $pdp_entry ) { $pdp_entries[] = [ $pdp_entry[0], esc_html( $pdp_entry[1] ) ]; }
+    endif;
+    foreach ( $pdp_split['after'] as $pdp_entry )  { $pdp_entries[] = [ $pdp_entry[0], wp_kses_post( $pdp_entry[1] ) ]; }
 
-            <?php if ( $pdp_desc_plain !== '' ) : /* medication page: plain text, as v1.29.0 printed it */ ?>
-            <div class="fh-story__prose">
-                <p><?php echo wp_kses_post( nl2br( esc_html( $pdp_desc_plain ) ) ); ?></p>
-            </div>
-            <?php elseif ( $pdp_desc_html !== '' ) : ?>
-            <div class="fh-story__prose">
-                <?php echo wp_kses( $pdp_desc_html, $pdp_rich_tags ); ?>
-            </div>
-            <?php endif; ?>
-
-            <?php if ( $pdp_fun_facts ) :
-                // "Fun Facts" → Fun <em>Facts</em>, two-tone like the other headings.
-                $pdp_fun_words = explode( ' ', $pdp_fun_title, 2 );
-            ?>
-            <section class="fh-funfacts" aria-labelledby="fh-funfacts-h">
-                <h3 class="fh-funfacts__title" id="fh-funfacts-h"><?php
-                    echo esc_html( $pdp_fun_words[0] );
-                    if ( ! empty( $pdp_fun_words[1] ) ) {
-                        echo ' <em>' . esc_html( $pdp_fun_words[1] ) . '</em>';
-                    }
-                ?></h3>
-                <ul class="fh-funfacts__list">
-                    <?php foreach ( $pdp_fun_facts as $pdp_fact ) : ?>
-                    <li class="fh-funfacts__item">
-                        <?php if ( $pdp_fact['lead'] !== '' ) : ?>
-                        <strong class="fh-funfacts__lead"><?php echo esc_html( $pdp_fact['lead'] ); ?><span class="fh-sr-only">:</span></strong>
-                        <?php endif; ?>
-                        <span class="fh-funfacts__text"><?php echo wp_kses( $pdp_fact['html'], $pdp_fact_tags ); ?></span>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-            </section>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
-
-        <?php if ( $pdp_body['details'] ) : ?>
+    // The details column, built once and printed in one of two places.
+    $pdp_details_html = '';
+    if ( $pdp_body['details'] ) :
+        ob_start(); ?>
         <div class="<?php echo esc_attr( $pdp_body['dossier_class'] ); ?>">
             <?php if ( $pdp_body['dossier_title'] ) : ?>
             <h2 class="fh-serif-head fh-pdp-h2">Fish <em>Dossier</em></h2>
             <?php endif; ?>
 
-            <?php if ( $pdp_body['entries'] > 0 ) : ?>
+            <?php if ( $pdp_entries ) : ?>
             <div class="fh-dossier__items">
-                <?php foreach ( $pdp_split['before'] as $pdp_entry ) : ?>
+                <?php foreach ( $pdp_entries as $pdp_entry ) : ?>
                 <div class="fh-dossier__item">
                     <<?php echo $pdp_entry_tag; ?> class="fh-dossier__label"><?php echo esc_html( $pdp_entry[0] ); ?></<?php echo $pdp_entry_tag; ?>>
-                    <p class="fh-dossier__text"><?php echo wp_kses_post( $pdp_entry[1] ); ?></p>
-                </div>
-                <?php endforeach; ?>
-
-                <?php /* Care notes. Not on a medication page (v1.29.0): the
-                        site-wide "Default Foods & Feeding" text would print a
-                        feeding schedule under a medicated food. */ ?>
-                <?php if ( ( $foods_feeding || $habitat ) && ! $is_med_or_aff ) : ?>
-                <?php foreach ( $pdp_care as $pdp_entry ) : ?>
-                <div class="fh-dossier__item">
-                    <<?php echo $pdp_entry_tag; ?> class="fh-dossier__label"><?php echo esc_html( $pdp_entry[0] ); ?></<?php echo $pdp_entry_tag; ?>>
-                    <p class="fh-dossier__text"><?php echo esc_html( $pdp_entry[1] ); ?></p>
-                </div>
-                <?php endforeach; ?>
-                <?php endif; ?>
-
-                <?php foreach ( $pdp_split['after'] as $pdp_entry ) : ?>
-                <div class="fh-dossier__item">
-                    <<?php echo $pdp_entry_tag; ?> class="fh-dossier__label"><?php echo esc_html( $pdp_entry[0] ); ?></<?php echo $pdp_entry_tag; ?>>
-                    <p class="fh-dossier__text"><?php echo wp_kses_post( $pdp_entry[1] ); ?></p>
+                    <p class="fh-dossier__text"><?php echo $pdp_entry[1]; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where $pdp_entries is built ?></p>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -958,7 +914,78 @@ while ( have_posts() ) :
             </div>
             <?php endif; ?>
         </div>
+        <?php
+        $pdp_details_html = ob_get_clean();
+    endif;
+?>
+<div class="<?php echo esc_attr( $pdp_body['band_class'] ); ?>">
+    <div class="fh-pdp-body__inner">
+
+        <?php if ( $pdp_body['details_first'] ) { echo $pdp_details_html; } // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above, escaped there ?>
+
+        <?php if ( $pdp_body['story'] ) : ?>
+        <div class="fh-story">
+            <h2 class="fh-serif-head fh-pdp-h2"><?php
+                if ( $pdp_story_word !== '' ) {
+                    echo 'About This <em>' . esc_html( $pdp_story_word ) . '</em>';
+                } else {
+                    echo 'Description';
+                }
+            ?></h2>
+
+            <?php if ( $pdp_body['lede'] ) : ?>
+            <dl class="fh-story__specs">
+                <?php foreach ( $pdp_entries as $pdp_entry ) : ?>
+                <div class="fh-story__spec">
+                    <dt><?php echo esc_html( $pdp_entry[0] ); ?></dt>
+                    <dd><?php echo $pdp_entry[1]; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where $pdp_entries is built ?></dd>
+                </div>
+                <?php endforeach; ?>
+            </dl>
+            <?php endif; ?>
+
+            <?php if ( $pdp_desc_plain !== '' ) : /* medication page: plain text, as v1.29.0 printed it */ ?>
+            <div class="fh-story__prose">
+                <p><?php echo wp_kses_post( nl2br( esc_html( $pdp_desc_plain ) ) ); ?></p>
+            </div>
+            <?php elseif ( $pdp_desc_html !== '' ) : ?>
+            <div class="fh-story__prose">
+                <?php echo wp_kses( $pdp_desc_html, $pdp_rich_tags ); ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if ( $pdp_fun_facts ) :
+                // "Fun Facts" → Fun <em>Facts</em>, two-tone like the other
+                // headings; words typed after the label ("Fun Facts about
+                // this fish") follow in the first colour.
+                $pdp_fun_words = explode( ' ', $pdp_fun_title, 3 );
+            ?>
+            <section class="fh-funfacts" aria-labelledby="fh-funfacts-h">
+                <h3 class="fh-funfacts__title" id="fh-funfacts-h"><?php
+                    echo esc_html( $pdp_fun_words[0] );
+                    if ( ! empty( $pdp_fun_words[1] ) ) {
+                        echo ' <em>' . esc_html( $pdp_fun_words[1] ) . '</em>';
+                    }
+                    if ( ! empty( $pdp_fun_words[2] ) ) {
+                        echo ' ' . esc_html( $pdp_fun_words[2] );
+                    }
+                ?></h3>
+                <ul class="fh-funfacts__list">
+                    <?php foreach ( $pdp_fun_facts as $pdp_fact ) : ?>
+                    <li class="fh-funfacts__item">
+                        <?php if ( $pdp_fact['lead'] !== '' ) : ?>
+                        <strong class="fh-funfacts__lead"><?php echo esc_html( $pdp_fact['lead'] ); ?><span class="fh-sr-only">:</span></strong>
+                        <?php endif; ?>
+                        <span class="fh-funfacts__text"><?php echo wp_kses( $pdp_fact['html'], $pdp_fact_tags ); ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </section>
+            <?php endif; ?>
+        </div>
         <?php endif; ?>
+
+        <?php if ( ! $pdp_body['details_first'] ) { echo $pdp_details_html; } // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above, escaped there ?>
 
     </div>
 </div>

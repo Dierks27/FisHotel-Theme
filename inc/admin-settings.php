@@ -801,8 +801,8 @@ JS;
 				'page'   => 'fishotel-product',
 				'title'  => 'Care Guide Defaults',
 				'fields' => [
-					'fh_default_foods'   => [ 'label' => 'Default Foods & Feeding text',    'type' => 'textarea', 'description' => 'Shown when a product has no Foods & Feeding custom field.' ],
-					'fh_default_habitat' => [ 'label' => 'Default Habitat & Behavior text', 'type' => 'textarea', 'description' => 'Shown when a product has no Habitat & Behavior custom field.' ],
+					'fh_default_foods'   => [ 'label' => 'Default Foods & Feeding text',    'type' => 'textarea', 'description' => 'Shown on a fish whose own Foods & Feeding box is empty. Fish pages only.' ],
+					'fh_default_habitat' => [ 'label' => 'Default Habitat & Behavior text', 'type' => 'textarea', 'description' => 'Shown on a fish whose own Habitat & Behavior box is empty. Fish pages only.' ],
 				],
 			],
 			// Tool Links — which product the Medication Dosing Calculator and

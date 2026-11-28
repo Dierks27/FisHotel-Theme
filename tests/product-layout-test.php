@@ -167,7 +167,21 @@ $b = $L::body( [ 'has_text' => false, 'facts' => 0, 'before' => 1, 'care' => 2, 
 check( 'facts and care notes but no description: details alone, across the page', $b['band'] && ! $b['story'] && 'fh-pdp-body fh-pdp-body--solo fh-pdp-body--care-only' === $b['band_class'] && $b['dossier_title'] && 'h3' === $b['entry_tag'], j( $b ) );
 
 $b = $L::body( [ 'has_text' => true, 'facts' => 0, 'before' => 3, 'care' => 0, 'after' => 0, 'has_tools' => false, 'is_fish' => false ] );
-check( 'food or medication rows: a plain list, no "Fish Dossier" over it', $b['details'] && ! $b['dossier_title'] && 'fh-dossier fh-dossier--untitled' === $b['dossier_class'] && 'h3' === $b['entry_tag'], j( $b ) );
+check( 'food or medication rows: a plain list, no "Fish Dossier" over it', $b['details'] && ! $b['lede'] && ! $b['dossier_title'] && 'fh-dossier fh-dossier--untitled' === $b['dossier_class'], j( $b ) );
+check( '… printed BEFORE the description in the HTML, so a phone shows "Contains" above the text, not last', true === $b['details_first'] && 'fh-pdp-body fh-pdp-body--details-first' === $b['band_class'] && 'h2' === $b['entry_tag'], j( $b ) );
+
+// One or two rows alone in a column look lost (a medicated food with only
+// its Food Source): they go above the description instead, in one column.
+foreach ( [ 1, 2 ] as $rows ) {
+	$b = $L::body( [ 'has_text' => true, 'facts' => 0, 'before' => $rows, 'care' => 0, 'after' => 0, 'has_tools' => false, 'is_fish' => false ] );
+	check( "$rows row(s) on a food or medication: above the description, no second column", $b['lede'] && ! $b['details'] && ! $b['details_first'] && $b['story'] && 'fh-pdp-body fh-pdp-body--solo' === $b['band_class'] && $rows === $b['entries'], j( $b ) );
+}
+$b = $L::body( [ 'has_text' => true, 'facts' => 0, 'before' => 0, 'care' => 1, 'after' => 0, 'has_tools' => true, 'is_fish' => true ] );
+check( 'a fish keeps its Dossier column with one care note (the quarantine buttons sit under it)', ! $b['lede'] && $b['details'] && ! $b['details_first'] && $b['dossier_title'], j( $b ) );
+$b = $L::body( [ 'has_text' => true, 'facts' => 0, 'before' => 1, 'care' => 0, 'after' => 0, 'has_tools' => false, 'is_fish' => true ] );
+check( 'one entry under "Fish Dossier" stays a column: it has its heading', ! $b['lede'] && $b['details'] && $b['dossier_title'] && ! $b['details_first'], j( $b ) );
+$b = $L::body( [ 'has_text' => false, 'facts' => 0, 'before' => 1, 'care' => 0, 'after' => 0, 'has_tools' => false, 'is_fish' => false ] );
+check( 'one row and no description: the row alone, nothing to sit above', ! $b['lede'] && $b['details'] && ! $b['details_first'] && 'h2' === $b['entry_tag'], j( $b ) );
 
 $b = $L::body( [ 'has_text' => false, 'facts' => 0, 'before' => 2, 'care' => 0, 'after' => 0, 'has_tools' => false, 'is_fish' => false ] );
 check( 'rows with no heading above them at all are h2, so no heading level is skipped', ! $b['dossier_title'] && 'h2' === $b['entry_tag'], j( $b ) );
@@ -182,24 +196,83 @@ foreach ( [ true, false ] as $text ) foreach ( [ 0, 2 ] as $facts ) foreach ( [ 
 	$b  = $L::body( $in );
 	$n  = $before + $care + $after;
 	if ( $b['story'] !== ( $text || $facts > 0 ) )                       $bad[] = 'story ' . j( $in );
-	if ( $b['details'] !== ( $n > 0 || $tools ) )                        $bad[] = 'details ' . j( $in );
+	$lede = ( $text || $facts > 0 ) && $n > 0 && $n <= 2 && ! $tools && ! $fish && 0 === $care;
+	if ( $b['lede'] !== $lede )                                          $bad[] = 'lede ' . j( $in );
+	if ( $b['details'] !== ( ( $n > 0 || $tools ) && ! $lede ) )         $bad[] = 'details ' . j( $in );
+	if ( $b['details_first'] && ( ! $b['details'] || ! $b['story'] || $b['dossier_title'] || $tools ) ) $bad[] = 'details first ' . j( $in );
+	if ( $b['details_first'] && 'h2' !== $b['entry_tag'] )               $bad[] = 'rows before the story heading must be h2 ' . j( $in );
 	if ( $b['band'] !== ( $b['story'] || $b['details'] ) )               $bad[] = 'band ' . j( $in );
 	if ( $b['dossier_title'] && 0 === $n )                               $bad[] = 'title over nothing ' . j( $in );
 	if ( $b['card'] && 0 === $facts )                                    $bad[] = 'card over nothing ' . j( $in );
 	if ( $b['prose'] && ! $text )                                        $bad[] = 'empty text block ' . j( $in );
 	if ( ( false !== strpos( $b['band_class'], '--solo' ) ) !== ( $b['story'] xor $b['details'] ) ) $bad[] = 'solo ' . j( $in );
 	if ( 'h3' === $b['entry_tag'] && ! $b['story'] && ! $b['dossier_title'] && $n > 0 )             $bad[] = 'h3 under no h2 ' . j( $in );
+	if ( 'h3' === $b['entry_tag'] && $b['details_first'] )                                          $bad[] = 'h3 before the first h2 ' . j( $in );
 	if ( $tools && 'h3' === $b['plan_tag'] && 0 === $n )                 $bad[] = 'quarantine label h3 with no heading above it ' . j( $in );
 }
 check( 'no empty heading, column or band in any of 192 combinations', [] === $bad, implode( ' | ', array_slice( $bad, 0, 3 ) ) );
+
+// ── crumb_order(): every category is one link in the breadcrumb ─────────
+echo "crumb_order()\n";
+$cat = function ( $id, $name, $count, $parent = 0 ) {
+	return [ 'id' => $id, 'name' => $name, 'count' => $count, 'parent' => $parent ];
+};
+$order = function ( array $cats ) use ( $L ) {
+	$names = [];
+	foreach ( $L::crumb_order( $cats ) as $key ) {
+		$names[] = $cats[ $key ]['name'];
+	}
+	return $names;
+};
+check( 'the wide category first, whichever name sorts first',
+	[ 'Quarantined Fish', 'Gobies & Dartfish' ] === $order( [ $cat( 80, 'Gobies & Dartfish', 6 ), $cat( 73, 'Quarantined Fish', 40 ) ] )
+	&& [ 'Quarantined Fish', 'Wrasses' ] === $order( [ $cat( 73, 'Quarantined Fish', 40 ), $cat( 81, 'Wrasses', 9 ) ] ),
+	j( $order( [ $cat( 80, 'Gobies & Dartfish', 6 ), $cat( 73, 'Quarantined Fish', 40 ) ] ) )
+);
+check( 'a parent before its child, whatever their sizes',
+	[ 'Foods', 'Medicated Food' ] === $order( [ $cat( 5, 'Medicated Food', 12, 4 ), $cat( 4, 'Foods', 3 ) ] )
+);
+check( 'a child follows its own parent, not somebody else\'s',
+	[ 'Medications', 'Foods', 'Pellets' ] === $order( [ $cat( 9, 'Pellets', 2, 4 ), $cat( 76, 'Medications', 30 ), $cat( 4, 'Foods', 8 ) ] ),
+	j( $order( [ $cat( 9, 'Pellets', 2, 4 ), $cat( 76, 'Medications', 30 ), $cat( 4, 'Foods', 8 ) ] ) )
+);
+check( 'same size: by name, then by id — always the same order',
+	[ 'Alpha', 'beta', 'Beta' ] === $order( [ $cat( 3, 'Beta', 5 ), $cat( 2, 'beta', 5 ), $cat( 1, 'Alpha', 5 ) ] ),
+	j( $order( [ $cat( 3, 'Beta', 5 ), $cat( 2, 'beta', 5 ), $cat( 1, 'Alpha', 5 ) ] ) )
+);
+check( 'every category exactly once; one category and none are fine',
+	[ 0 ] === $L::crumb_order( [ $cat( 73, 'Quarantined Fish', 40 ) ] ) && [] === $L::crumb_order( [] )
+	&& 3 === count( array_unique( $L::crumb_order( [ $cat( 1, 'A', 1, 2 ), $cat( 2, 'B', 1, 1 ), $cat( 3, 'C', 1 ) ] ) ) )
+);
+check( 'the keys given are the keys returned', [ 'x', 'y' ] === $L::crumb_order( [ 'y' => $cat( 81, 'Wrasses', 9 ), 'x' => $cat( 73, 'Quarantined Fish', 40 ) ] ) );
 
 // ── The product page ────────────────────────────────────────────────────
 echo "the product page\n";
 $pdp = file_get_contents( dirname( __DIR__ ) . '/woocommerce/single-product.php' );
 check( 'the glance row is printed only when it has a place', false !== strpos( $pdp, "<?php if ( \$pdp_top_class !== '' ) : ?>\n    <dl class=\"fh-glance\">" ) );
 check( 'the body band is printed only when it has something in it', false !== strpos( $pdp, "<?php if ( ! empty( \$pdp_body['band'] ) ) :" ) );
-check( 'care notes are fenced off on a medication page in the markup too', false !== strpos( $pdp, '<?php if ( ( $foods_feeding || $habitat ) && ! $is_med_or_aff ) : ?>' ) && false !== strpos( $pdp, 'FisHotel_Product_Layout::care_notes(' ) );
-check( 'pills are matched to cells on a fish page only', false !== strpos( $pdp, 'if ( $is_fish && $pdp_glance && $display_tags && class_exists( \'FisHotel_Product_Layout\' ) )' ) );
+check( 'care notes come from care_notes() alone, which never gives one on a medication page',
+	1 === substr_count( $pdp, 'FisHotel_Product_Layout::care_notes(' ) && false !== strpos( $pdp, "\$habitat ? \$habitat : '', \$is_med_or_aff )" )
+	&& 1 === substr_count( $pdp, 'foreach ( $pdp_care as' ) && false === strpos( $pdp, '( $foods_feeding || $habitat )' )
+);
+$fence = strpos( $pdp, "if ( \$is_fish && class_exists( 'FisHotel_Admin_Settings' ) ) {" );
+check( 'the site-wide care defaults are read for a fish only (no "Fish Dossier" on a gift card or a sticker)',
+	false !== $fence
+	&& 1 === substr_count( $pdp, "'fh_default_foods'" ) && strpos( $pdp, "'fh_default_foods'" ) > $fence
+	&& 1 === substr_count( $pdp, "'fh_default_habitat'" ) && strpos( $pdp, "'fh_default_habitat'" ) > $fence
+	&& strpos( $pdp, "'fh_default_habitat'" ) < strpos( $pdp, 'FisHotel_Product_Layout::care_notes(' )
+);
+check( 'pills are matched to cells on a fish page only', false !== strpos( $pdp, 'if ( $is_fish && $pdp_glance && $display_tags )' ) );
+check( 'the layout rules are always loaded: no fallback that would print a page without its description', false === strpos( $pdp, "class_exists( 'FisHotel_Product_Layout' )" ) && false === strpos( $pdp, "[ 'band' => false ]" ) );
+check( '"cannot be bought" is worked out once', 1 === substr_count( $pdp, '! $product->is_purchasable()' ) && 1 === substr_count( $pdp, '$is_unavailable = ' ) );
+check( 'every category is a link in the breadcrumb, in crumb_order()', false !== strpos( $pdp, 'FisHotel_Product_Layout::crumb_order(' ) && false === strpos( $pdp, '$product_cats[0]' ) );
+check( 'one or two rows go above the description as a list, not as headings', false !== strpos( $pdp, "<?php if ( \$pdp_body['lede'] ) : ?>\n            <dl class=\"fh-story__specs\">" ) );
+check( 'the details column is printed once: before the story when its rows have no heading (food, medication), after it otherwise',
+	1 === substr_count( $pdp, "if ( \$pdp_body['details_first'] ) { echo \$pdp_details_html; }" )
+	&& 1 === substr_count( $pdp, "if ( ! \$pdp_body['details_first'] ) { echo \$pdp_details_html; }" )
+	&& strpos( $pdp, "if ( \$pdp_body['details_first'] ) { echo" ) < strpos( $pdp, '<div class="fh-story">' )
+	&& strpos( $pdp, '<div class="fh-story">' ) < strpos( $pdp, "if ( ! \$pdp_body['details_first'] ) { echo" )
+);
 check( 'the old bands are gone', false === strpos( $pdp, 'fh-species' ) && false === strpos( $pdp, 'fh-careguide' ) && false === strpos( $pdp, 'class="fh-plan-qt"' ) );
 check( 'Region is no longer passed to the certificate, and no Category row', false === strpos( $pdp, "'region' => \$region" ) && false === strpos( $pdp, 'wc_get_product_category_list' ) );
 check( 'the SKU strip is printed only when it has something in it', false !== strpos( $pdp, "if ( trim( \$pdp_meta ) !== '' ) : ?>" ) );
@@ -235,9 +308,25 @@ check( 'nothing is stored by the page', false === strpos( $pdp, 'update_post_met
 
 $css = file_get_contents( dirname( __DIR__ ) . '/assets/css/main.css' ) . file_get_contents( dirname( __DIR__ ) . '/assets/css/woocommerce.css' );
 check( 'the old bands have no CSS left', ! preg_match( '/\.fh-(species|careguide)[\w-]*\s*[{,]/', $css ) && ! preg_match( '/\.fh-plan-qt(__inner|__label|__links)?\s*[{,]/', $css ) );
-foreach ( [ '.fh-glance', '.fh-pdp-body', '.fh-story__prose', '.fh-funfacts', '.fh-dossier', '.fh-dossier__plan', '.fh-product-layout--facts-below', '.fh-product-layout--facts-beside' ] as $class ) {
+foreach ( [ '.fh-glance', '.fh-pdp-body', '.fh-story__prose', '.fh-story__specs', '.fh-story__spec', '.fh-funfacts', '.fh-dossier', '.fh-dossier__plan', '.fh-product-layout--facts-below', '.fh-product-layout--facts-beside', '.fh-pdp-body--details-first' ] as $class ) {
 	check( "CSS for $class", false !== strpos( $css, $class . ' ' ) || false !== strpos( $css, $class . ',' ) );
 }
+// Beside the photo the list sits under the notice and its rows stretch to
+// the photo's bottom edge; it is never pinned to the bottom over a gap, and
+// up to 1024px it is the ordinary row across the page.
+$beside = substr( $css, strpos( $css, '@media (min-width: 1025px) {' ) );
+$beside = substr( $beside, 0, strpos( $beside, "\n}\n" ) );
+check( 'facts beside the photo: only from 1025px, stretched, not pinned to the bottom',
+	false !== strpos( $beside, '.fh-product-layout--facts-beside .fh-glance {' ) && false !== strpos( $beside, 'align-self: stretch;' )
+	&& false === strpos( $beside, 'align-self: end' ) && false !== strpos( $beside, 'grid-template-rows: auto 1fr;' )
+	&& ! preg_match( '/@media \(min-width: 769px\) \{\s*\.fh-product-layout--facts-beside/', $css ),
+	substr( $beside, 0, 120 )
+);
+check( 'the photo does not follow the scroll over a facts row under it, at any width',
+	false !== strpos( $css, '.fh-product-layout--facts-below .fh-gallery { position: static; }' )
+	&& (bool) preg_match( '/@media \(max-width: 1024px\) \{\s*\.fh-product-layout--facts-beside \.fh-gallery \{ position: static; \}/', $css )
+);
+check( 'the breadcrumb wraps on the product page', (bool) preg_match( '/\.fishotel-product-page \.page-hero__breadcrumb \{[^}]*flex-wrap: wrap/', $css ) );
 check( 'no new font, image or script in the new CSS', ! preg_match( '/\.fh-(glance|pdp-body|story|funfacts|dossier)[^{}]*\{[^}]*(url\(|@import|font-family:\s*["\'])/', $css ) );
 
 echo "\n" . ( $failures ? "$failures FAILED" : 'all passed' ) . "\n";

@@ -167,6 +167,112 @@ same( 'label with text the rules cannot read as facts → nothing is removed',
 	'<p>Fun Facts:</p><p>This fish is simply a delight to keep and that is all there is to it.</p>'
 );
 
+// With no blockquote around them, the card ends at a line that is a fact
+// label of its own ("Temperament: …"): that line is an old-style fact, and
+// the hide rule deals with it exactly as before v1.30.0. Three shapes.
+echo "fun facts with no blockquote, old-style lines under them\n";
+$every = [ 'scientific_name', 'common_names', 'max_length', 'min_tank_size', 'temperament', 'reef_safe', 'region', 'foods_feeding', 'habitat' ];
+same( 'shape 1 — lines of one paragraph: the fact is a fact, the labelled lines stay hidden',
+	"<p>Description: It glows a little.<br>Fun Facts: It hums when it courts.<br>Habitat: Sandy lagoons.<br>Temperament: Peaceful<br>Reef Safe: Yes<br>Maximum Length: 3 inches</p>",
+	$every,
+	'<p>It glows a little.</p>',
+	'Fun Facts',
+	[ [ '', 'It hums when it courts.' ] ]
+);
+same( 'shape 1 — the label alone, labelled lines only: no card, no heading, nothing printed twice',
+	"A calm fish.\n\nFun Facts:\nScientific Name: Testus fishus\nMaximum Length: 4 inches\nTemperament: Peaceful",
+	$every,
+	'<p>A calm fish.</p>'
+);
+same( 'shape 1 — real facts first, then labelled lines: the card stops at the first label',
+	"A calm fish.\n\nFun Facts:\nNight Owl: It naps.\nTemperament: Peaceful\nReef Safe: Yes",
+	$every,
+	'<p>A calm fish.</p>',
+	'Fun Facts',
+	[ [ 'Night Owl', 'It naps.' ] ]
+);
+same( 'shape 2 — a list under the label: labelled items are not facts',
+	'<p>A calm fish.</p><p>Fun Facts:</p><ul><li>Night Owl: It naps.</li><li>Temperament: Peaceful</li><li>Region: Red Sea</li></ul>',
+	$every,
+	'<p>A calm fish.</p>',
+	'Fun Facts',
+	[ [ 'Night Owl', 'It naps.' ] ]
+);
+same( 'shape 2 — a list of labelled items only: no card, no heading',
+	'<p>A calm fish.</p><p>Fun Facts:</p><ul><li>Scientific Name: Testus fishus</li><li>Minimum Aquarium Size: 30 gallons</li></ul>',
+	$every,
+	'<p>A calm fish.</p>'
+);
+same( 'shape 3 — "Label: text" paragraphs under the label: none is a fact',
+	"<p>A calm fish.</p><p>Fun Facts:</p><p>Scientific Name: Testus fishus</p><p>Habitat and Behavior: Hovers near rockwork.</p><p>Foods and Feeding Habits: Mysis twice a day.</p>",
+	$every,
+	'<p>A calm fish.</p>'
+);
+same( 'shape 3 — real facts, then labelled paragraphs',
+	"A calm fish.\n\nFun Facts:\n\nNight Owl: It naps.\n\nTemperament: Peaceful\n\nRegion: Red Sea",
+	$every,
+	'<p>A calm fish.</p>',
+	'Fun Facts',
+	[ [ 'Night Owl', 'It naps.' ] ]
+);
+same( 'a second "Fun Facts:" with only hidden lines under it does not stay behind as a heading over nothing',
+	"A calm fish.\n\nFun Facts: It hums.\n\nFun Facts:\n\nScientific Name: Testus fishus\n\nMinimum Aquarium Size: 30 gallons",
+	$every,
+	'<p>A calm fish.</p>',
+	'Fun Facts',
+	[ [ '', 'It hums.' ] ]
+);
+same( 'a labelled line whose field is EMPTY stays readable in the text, not in the card',
+	"A calm fish.\n\nFun Facts:\nNight Owl: It naps.\nTemperament: Peaceful",
+	[],
+	'<p>A calm fish.</p><p>Temperament: Peaceful</p>',
+	'Fun Facts',
+	[ [ 'Night Owl', 'It naps.' ] ]
+);
+same( 'a fact on the label\'s own line: a plain line after it stays text',
+	"Intro.\n\nFun fact: It hums when it courts.\nShips in a breather bag.",
+	[],
+	'<p>Intro.</p><p>Ships in a breather bag.</p>',
+	'Fun Fact',
+	[ [ '', 'It hums when it courts.' ] ]
+);
+same( 'a fact on the label\'s own line: "Lead-in: sentence" lines after it are facts',
+	"Intro.\n\nFun Facts: It hums when it courts.\nNight Owl: It naps.\nShips in a breather bag.",
+	[],
+	'<p>Intro.</p><p>Ships in a breather bag.</p>',
+	'Fun Facts',
+	[ [ '', 'It hums when it courts.' ], [ 'Night Owl', 'It naps.' ] ]
+);
+// The owner grouped them: inside a blockquote nothing is second-guessed.
+same( 'inside a blockquote a labelled line is still a fun fact',
+	"<blockquote>Fun Facts:\nNight Owl: It naps.\nTemperament: It sulks when moved.</blockquote>",
+	$every,
+	'',
+	'Fun Facts',
+	[ [ 'Night Owl', 'It naps.' ], [ 'Temperament', 'It sulks when moved.' ] ]
+);
+
+// The label does not have to be typed exactly "Fun Facts:".
+echo "the label typed a little differently\n";
+$quote = '<ul><li>Night Owl: It naps.</li><li>Sand Sifter: It sifts.</li></ul></blockquote>';
+$two   = [ [ 'Night Owl', 'It naps.' ], [ 'Sand Sifter', 'It sifts.' ] ];
+same( '"Fun Facts about this fish:" — its words become the heading', "<blockquote>Fun Facts about this fish:$quote", [], '', 'Fun Facts about this fish', $two );
+same( '"Fun Facts!"', "<blockquote><strong>Fun Facts!</strong>$quote", [], '', 'Fun Facts', $two );
+same( 'a symbol typed in front', "<blockquote>★ Fun Facts:$quote", [], '', 'Fun Facts', $two );
+same( 'capitals, no colon, on its own line', "<blockquote><p>FUN FACTS</p>$quote", [], '', 'Fun Facts', $two );
+same( '"Fun fact about the Ember Wrasse: …" with the fact on the same line',
+	"Intro.\n\nFun fact about the Ember Wrasse: it hums.",
+	[],
+	'<p>Intro.</p>',
+	'Fun Fact about the Ember Wrasse',
+	[ [ '', 'it hums.' ] ]
+);
+same( 'a sentence that only begins with the words is left alone',
+	"Fun facts are hard to come by for a fish this shy and this small.\n\nNight Owl: It naps.",
+	[],
+	'<p>Fun facts are hard to come by for a fish this shy and this small.</p><p>Night Owl: It naps.</p>'
+);
+
 echo "lead-ins\n";
 same( 'nested markup, times, links, a bold that runs past the colon, a long clause, a nested list',
 	'<blockquote>Fun Facts:<ul><li><strong><em>Night Owl:</em></strong> It wakes at 10:30 and reads <a href="/blog/">our blog</a>.</li><li>Feeds at 10:30 sharp</li><li><strong>Bold fact: with the bold</strong> running on</li><li>A very long opening clause that is really a sentence and not a lead-in at all: so it stays whole</li><li>Outer fact<ul><li>Inner: nested fact</li></ul></li></ul></blockquote>',
@@ -332,6 +438,54 @@ same( 'a link around a picture, and an empty link, leave nothing behind',
 	'<p>See and done.</p>'
 );
 
+same( 'the link target is the href attribute itself, not the word "href=" inside another attribute',
+	'<a title="see href=https://wrong.example.test/ here" href="https://right.example.test/">link</a>',
+	[],
+	'<p><a href="https://right.example.test/">link</a></p>'
+);
+same( 'a link that is never closed ends with its paragraph',
+	'<p>See <a href="/guide">the guide.</p><p>Second paragraph.</p><ul><li>Item</li></ul>',
+	[],
+	'<p>See <a href="/guide">the guide.</a></p><p>Second paragraph.</p><ul><li>Item</li></ul>'
+);
+same( 'a tag opened twice is opened once',
+	'<p><strong><strong><b>Very</b></strong></strong> bold</p>',
+	[],
+	'<p><strong><b>Very</b></strong> bold</p>'
+);
+same( 'entities typed as text are written back as typed, in a fact too',
+	'<blockquote>Fun Facts:<ul><li><strong>Tag Talk: It is written &amp;lt;b&amp;gt;</strong> in code</li></ul></blockquote><p>Type &amp;lt; for a bracket.</p>',
+	[],
+	'<p>Type &amp;lt; for a bracket.</p>',
+	'Fun Facts',
+	[ [ 'Tag Talk', 'It is written &amp;lt;b&amp;gt; in code' ] ]
+);
+same( 'a list item typed over two lines: a labelled second line is hidden as before',
+	"<ul><li>Feed twice a day\nTemperament: Peaceful</li><li>Keep a lid\non the tank</li></ul>",
+	[ 'temperament' ],
+	'<ul><li>Feed twice a day</li><li>Keep a lid on the tank</li></ul>'
+);
+
+// What comes out is never many times what was typed: a slip (a forgotten
+// </strong>) makes the rest bold, as a browser would; markup built to blow
+// the page up gets the plain text instead.
+$slip = '<p>' . str_repeat( '<strong>', 300 ) . 'Bold from here.</p>' . str_repeat( "<p>Another line.</p>\n", 300 );
+$t0   = microtime( true );
+$out  = $F::rich( $slip, [] );
+$took = microtime( true ) - $t0;
+check( '300 unclosed bold tags + 300 lines: output stays small and quick',
+	strlen( $out['html'] ) < 3 * strlen( $slip ) && $took < 2 && false !== strpos( $out['html'], 'Another line.' ),
+	strlen( $out['html'] ) . ' bytes from ' . strlen( $slip ) . ', ' . round( $took, 2 ) . 's'
+);
+$bomb = '<p><a href="/' . str_repeat( 'x', 2000 ) . '">' . str_repeat( "line<br>\n", 3000 ) . '</p>';
+$t0   = microtime( true );
+$out  = $F::rich( $bomb, [] );
+$took = microtime( true ) - $t0;
+check( 'one long link over 3,000 lines: the plain text is printed instead',
+	true === $out['plain'] && strlen( $out['html'] ) < 3 * strlen( $bomb ) && $took < 2 && false === strpos( $out['html'], '<a' ),
+	strlen( $out['html'] ) . ' bytes from ' . strlen( $bomb ) . ', ' . round( $took, 2 ) . 's, plain=' . j( $out['plain'] )
+);
+
 // Whatever comes in, only the allowed tags come out — each written exactly
 // one way, with nothing but an href on a link.
 $allowed  = '~^(?:</?(?:p|strong|b|em|i|ul|ol|li|blockquote)>|<br>|<br />|</a>|<a href="[^"<>]*">)$~';
@@ -428,7 +582,8 @@ echo "the product page\n";
 $pdp = file_get_contents( dirname( __DIR__ ) . '/woocommerce/single-product.php' );
 check( 'rich() is called once, behind "not a medication"',
 	1 === substr_count( $pdp, 'FisHotel_Product_Facts::rich(' )
-	&& (bool) preg_match( '/elseif \( ! \$is_med_or_aff && ! \$pdp_is_med_page \) \{\s*\$pdp_rich\s*=\s*FisHotel_Product_Facts::rich\(/', $pdp )
+	&& (bool) preg_match( '/elseif \( ! \$pdp_is_med_page \) \{\s*\$pdp_rich\s*=\s*FisHotel_Product_Facts::rich\(/', $pdp )
+	&& (bool) preg_match( '/\$pdp_is_med_page = \$is_med_or_aff\s*\|\|/', $pdp )
 );
 check( 'a medication page gets prose(): plain text',
 	(bool) preg_match( '/\} else \{\s*\$pdp_desc_plain = FisHotel_Product_Facts::prose\( \$desc_raw, \$facts_shown \);/', $pdp )

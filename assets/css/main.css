@@ -1119,10 +1119,13 @@ h1, h2, h3, h4, h5 {
 
 .fh-purchase__hint[hidden] { display: none; }
 
-/* Not-purchasable PDP (no price etc.) — replaces badge + qty + button. */
+/* Not-purchasable PDP (no price etc.) — replaces badge + qty + button.
+   Body-text grey (v1.30.0): on a fish that cannot be bought this line is the
+   message of the whole right side; the muted grey was 2.5:1 on this
+   background. */
 .fh-purchase__unavailable {
   font-size: 13px;
-  color: var(--fh-text-3);
+  color: var(--fh-text-2);
   padding: 14px 0;
   border-top: 1px solid var(--fh-border);
   border-bottom: 1px solid var(--fh-border);
@@ -1495,6 +1498,10 @@ h1, h2, h3, h4, h5 {
 /* A long two-word name wraps on a phone instead of being cut off. */
 .fishotel-product-page .page-hero__title { overflow-wrap: break-word; }
 
+/* The breadcrumb names every category of the product ("Quarantined Fish /
+   Wrasses"): on a phone it goes onto a second line instead of off the screen. */
+.fishotel-product-page .page-hero__breadcrumb { flex-wrap: wrap; row-gap: 6px; }
+
 .fishotel-product-page .fh-product-layout { row-gap: 32px; }
 
 /* 2 ── At a glance ─────────────────────────────────────────────────────
@@ -1560,28 +1567,56 @@ h1, h2, h3, h4, h5 {
    over it (a sticky grid item is held by the whole grid, not by its own row). */
 .fh-product-layout--facts-below .fh-gallery { position: static; }
 
-/* No buy form (fish unavailable, Coming Soon): the same <dl> moves up beside
-   the photo and sits on the photo's bottom edge, one fact to a line, so the
-   right side is framed instead of half empty. Only the placement changes. */
-@media (min-width: 769px) {
+/* No buy form (fish unavailable, Coming Soon). On a wide screen the same <dl>
+   moves up beside the photo, one fact to a line, right under the notice — so
+   the right side is used instead of half empty. Only the placement changes.
+
+   The list always sits WITH the notice above it; it is never pushed down to
+   the photo's bottom edge over a gap. Its rows may grow a little (to 68px
+   each) to end exactly on the photo's bottom edge when they nearly reach it;
+   with only two or three facts they stay together at the top and the space
+   is left under them. The list itself has no frame: each row draws its own,
+   so the room it may grow into never shows as an empty box.
+
+   Up to 1024px the photo is small and the list would hang far below it: there
+   the row stays where every other page has it, across the page under the
+   photo and the notice. */
+@media (max-width: 1024px) {
+  .fh-product-layout--facts-beside .fh-gallery { position: static; }
+}
+@media (min-width: 1025px) {
+  .fh-product-layout--facts-beside { grid-template-rows: auto 1fr; }
   .fh-product-layout--facts-beside .fh-gallery { grid-row: 1 / span 2; }
+  /* The 8px under the photo is the gap to the thumbnails: none without them. */
+  .fh-product-layout--facts-beside .fh-gallery__main:last-child { margin-bottom: 0; }
   .fh-product-layout--facts-beside .fh-purchase { grid-column: 2; grid-row: 1; }
+  .fh-product-layout--facts-beside .fh-purchase__unavailable { margin-bottom: 0; }   /* the row gap is the space to the list */
   .fh-product-layout--facts-beside .fh-glance {
     grid-column: 2;
     grid-row: 2;
-    align-self: end;
+    align-self: stretch;
     flex-direction: column;
     flex-wrap: nowrap;
+    gap: 0;
+    background: none;
+    border: 0;
   }
   .fh-product-layout--facts-beside .fh-glance__cell {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    max-height: 124px;
     display: grid;
     grid-template-columns: 150px minmax(0, 1fr);
     column-gap: 16px;
     align-items: baseline;
-    padding: 13px 20px;
+    align-content: center;
+    padding: 12px 20px;
+    border: 1px solid var(--fh-border-md);
   }
+  .fh-product-layout--facts-beside .fh-glance__cell + .fh-glance__cell { border-top: 0; }
   .fh-product-layout--facts-beside .fh-glance dt { margin: 0; }
+  /* Two or three facts fill the same height with taller rows: larger figures. */
+  .fh-product-layout--facts-beside .fh-glance__cell:first-child:nth-last-child(-n+3) dd,
+  .fh-product-layout--facts-beside .fh-glance__cell:first-child:nth-last-child(-n+3) ~ .fh-glance__cell dd { font-size: 18px; }
 }
 
 /* 3 ── The body: story on the left, details on the right ──────────────── */
@@ -1630,6 +1665,39 @@ h1, h2, h3, h4, h5 {
 .fh-story__prose ol { list-style: decimal; }
 .fh-story__prose li { margin-bottom: 6px; padding-left: 4px; }
 .fh-story__prose li::marker { color: var(--fh-gold); }
+
+/* One or two rows of a food or a medication ("Contains", "Food Source"):
+   a short list above the description, in the entries' own lettering. */
+.fh-story__specs {
+  margin: 0 0 22px;
+  max-width: 760px;
+  border-top: 1px solid var(--fh-border);
+  border-bottom: 1px solid var(--fh-border);
+}
+.fh-story__spec {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  column-gap: 16px;
+  align-items: baseline;
+  padding: 11px 0;
+}
+.fh-story__spec + .fh-story__spec { border-top: 1px solid var(--fh-border); }
+.fh-story__spec dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  color: var(--fh-gold);
+}
+.fh-story__spec dd {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fh-text-1);
+  overflow-wrap: anywhere;
+}
+.fh-story__spec .fh-spec-badge { font-size: 10px; padding: 3px 9px; }
 
 /* A quote that is not fun facts */
 .fh-story__prose blockquote {
@@ -1736,6 +1804,14 @@ h1, h2, h3, h4, h5 {
 .fh-dossier--tools-only { padding-top: 6px; }
 .fh-dossier--tools-only .fh-dossier__plan { margin-top: 0; padding-top: 0; border-top: 0; }
 
+/* A food's or a medication's rows are printed before the story in the HTML
+   (a phone shows them above the description). On a wide screen they are
+   still the right-hand column. */
+@media (min-width: 769px) {
+  .fh-pdp-body--details-first .fh-story   { grid-column: 1; grid-row: 1; }
+  .fh-pdp-body--details-first .fh-dossier { grid-column: 2; grid-row: 1; }
+}
+
 /* Details with no story beside them: entries side by side across the page */
 .fh-pdp-body--care-only .fh-dossier { border-left: 0; padding-left: 0; padding-top: 0; }
 .fh-pdp-body--care-only .fh-dossier__items {
@@ -1779,7 +1855,9 @@ h1, h2, h3, h4, h5 {
   .fh-dossier,
   .fh-dossier--untitled,
   .fh-dossier--tools-only { border-left: 0; padding-left: 0; padding-top: 36px; border-top: 1px solid var(--fh-border-md); }
-  .fh-pdp-body--solo .fh-dossier { border-top: 0; padding-top: 0; }
+  .fh-pdp-body--solo .fh-dossier,
+  .fh-pdp-body--details-first .fh-dossier { border-top: 0; padding-top: 0; }
+  .fh-story__spec { grid-template-columns: 112px minmax(0, 1fr); column-gap: 12px; }
   .fh-dossier__links .fh-btn,
   .fh-pdp-body--care-only .fh-dossier__links .fh-btn { flex: 1 1 100%; }
 }
@@ -1978,7 +2056,7 @@ h1, h2, h3, h4, h5 {
   display: flex;
   gap: 10px;
   font-size: 10px;
-  color: var(--fh-text-3);
+  color: var(--fh-text-2);   /* body grey (v1.30.0): the muted grey was 2.5:1 here */
   margin-bottom: 6px;
 }
 

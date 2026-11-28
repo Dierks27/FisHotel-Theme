@@ -20,6 +20,8 @@
  *   top_modifier() where the glance row sits (under the photo and buy box,
  *                 or beside the photo when there is no buy form)
  *   body()        which columns and headings the band below prints
+ *   crumb_order() the order of the category links above the name (every
+ *                 category of the product is one link, the widest first)
  *
  * Pure PHP — no WordPress, no database, nothing stored. Covered by
  * tests/product-layout-test.php.
@@ -36,6 +38,13 @@ class FisHotel_Product_Layout {
 
 	/** Fewer short facts than this: no glance row (one cell alone looks lost). */
 	const GLANCE_MIN_CELLS = 2;
+
+	/**
+	 * A food's or medication's rows, when there are this many or fewer,
+	 * are printed above the description instead of in a column of their
+	 * own (one "Food Source" alone behind a dividing line looks lost).
+	 */
+	const LEDE_MAX = 2;
 
 	/** Tags stripped, entities decoded, spaces tidied, trimmed. */
 	public static function plain( $html ) {
@@ -218,11 +227,22 @@ class FisHotel_Product_Layout {
 	/**
 	 * What the band under the top area prints.
 	 *
+	 * Three places can hold the entries (the longer facts and the care
+	 * notes):
+	 *  - the details column, right of the story — the Fish Dossier;
+	 *  - the same column printed BEFORE the story in the HTML when its rows
+	 *    have no heading (a food's or a medication's rows): on a phone
+	 *    "Contains" is then above the description, not the last thing on
+	 *    the page. On a wide screen it is still the right-hand column;
+	 *  - a short list above the description ("lede") when there are only
+	 *    one or two such rows: no second column for them.
+	 *
 	 * @param array $in has_text (bool: description text), facts (int: fun
 	 *                  facts), before / care / after (int: entries),
 	 *                  has_tools (bool: quarantine buttons), is_fish (bool).
 	 * @return array{
-	 *   band: bool, story: bool, prose: bool, card: bool, details: bool, entries: int,
+	 *   band: bool, story: bool, prose: bool, card: bool, lede: bool,
+	 *   details: bool, details_first: bool, entries: int,
 	 *   band_class: string, dossier_class: string, dossier_title: bool,
 	 *   entry_tag: string, plan_tag: string
 	 * }
@@ -235,12 +255,15 @@ class FisHotel_Product_Layout {
 		$tools    = ! empty( $in['has_tools'] );
 		$is_fish  = ! empty( $in['is_fish'] );
 
-		$story   = $has_text || $facts > 0;
-		$details = $entries > 0 || $tools;
+		$story = $has_text || $facts > 0;
 
 		// "Fish Dossier" only over entries, and only on a fish or over a
 		// care note; a food's or medication's rows stand as a plain list.
 		$title = $entries > 0 && ( $is_fish || $care > 0 );
+
+		$lede    = $story && $entries > 0 && $entries <= self::LEDE_MAX && ! $title && ! $tools;
+		$details = ( $entries > 0 || $tools ) && ! $lede;
+		$first   = $details && $story && $entries > 0 && ! $title && ! $tools;
 
 		$band_class = 'fh-pdp-body';
 		if ( $story xor $details ) {
@@ -248,6 +271,8 @@ class FisHotel_Product_Layout {
 			if ( $details ) {
 				$band_class .= ' fh-pdp-body--care-only';
 			}
+		} elseif ( $first ) {
+			$band_class .= ' fh-pdp-body--details-first';
 		}
 		$dossier_class = 'fh-dossier';
 		if ( 0 === $entries ) {
@@ -261,15 +286,75 @@ class FisHotel_Product_Layout {
 			'story'         => $story,
 			'prose'         => $has_text,
 			'card'          => $facts > 0,
+			'lede'          => $lede,
 			'details'       => $details,
+			'details_first' => $first,
 			'entries'       => $entries,
 			'band_class'    => $band_class,
 			'dossier_class' => $dossier_class,
 			'dossier_title' => $title,
 			// Headings never skip a level: an entry is an h3 under the
-			// column's or the story's h2, an h2 when it has neither.
-			'entry_tag'     => ( $title || $story ) ? 'h3' : 'h2',
+			// column's or the story's h2, an h2 when it has neither above
+			// it (rows printed before the story come before its h2).
+			'entry_tag'     => ( $title || ( $story && ! $first ) ) ? 'h3' : 'h2',
 			'plan_tag'      => $entries > 0 ? 'h3' : 'h2',
 		];
+	}
+
+	/**
+	 * The order of a product's categories in the breadcrumb above its
+	 * name. Every category is one link there (the "Category" row under the
+	 * buy box is gone), so a fish filed under "Quarantined Fish" and
+	 * "Wrasses" keeps a link to both.
+	 *
+	 *  - a parent comes before its child, the child right after it;
+	 *  - otherwise the category holding the most products comes first
+	 *    ("Quarantined Fish" before "Wrasses", "Medications" before
+	 *    "Medicated Food"), whichever name sorts first;
+	 *  - then by name, then by id, so the order never flips between visits.
+	 *
+	 * @param array[] $cats key => [ id, parent, count, name ].
+	 * @return array Keys of $cats, in print order.
+	 */
+	public static function crumb_order( array $cats ) {
+		$ids = [];
+		foreach ( $cats as $key => $cat ) {
+			$ids[ (int) ( $cat['id'] ?? 0 ) ] = $key;
+		}
+		$by_parent = [];
+		foreach ( $cats as $key => $cat ) {
+			$parent = (int) ( $cat['parent'] ?? 0 );
+			// A parent that is not one of this product's categories (or a
+			// category named as its own parent) counts as none.
+			if ( ! isset( $ids[ $parent ] ) || $ids[ $parent ] === $key ) {
+				$parent = 0;
+			}
+			$by_parent[ $parent ][] = $key;
+		}
+		$wide_first = function ( $a, $b ) use ( $cats ) {
+			$by = ( (int) ( $cats[ $b ]['count'] ?? 0 ) ) <=> ( (int) ( $cats[ $a ]['count'] ?? 0 ) );
+			if ( 0 === $by ) {
+				$by = strcasecmp( (string) ( $cats[ $a ]['name'] ?? '' ), (string) ( $cats[ $b ]['name'] ?? '' ) );
+			}
+			return 0 !== $by ? $by : ( (int) ( $cats[ $a ]['id'] ?? 0 ) ) <=> ( (int) ( $cats[ $b ]['id'] ?? 0 ) );
+		};
+		$order = [];
+		$walk  = function ( $parent ) use ( &$walk, &$order, &$by_parent, $cats, $wide_first ) {
+			$keys = $by_parent[ $parent ] ?? [];
+			unset( $by_parent[ $parent ] ); // each level once: a loop of parents cannot run on
+			usort( $keys, $wide_first );
+			foreach ( $keys as $key ) {
+				$order[] = $key;
+				$walk( (int) ( $cats[ $key ]['id'] ?? 0 ) );
+			}
+		};
+		$walk( 0 );
+		// Categories caught in a loop of parents (A under B under A): still printed.
+		foreach ( array_keys( $cats ) as $key ) {
+			if ( ! in_array( $key, $order, true ) ) {
+				$order[] = $key;
+			}
+		}
+		return $order;
 	}
 }

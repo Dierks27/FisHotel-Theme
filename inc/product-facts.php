@@ -443,6 +443,21 @@ class FisHotel_Product_Facts {
 	const LEAD_MAX_CHARS = 40;
 	const LEAD_MAX_WORDS = 6;
 
+	/**
+	 * The "Fun Facts" label as rich() reads it — wider than LABEL_REGEX,
+	 * which the old-style rules keep: a symbol may be typed in front
+	 * ("★ Fun Facts:"), it may end in "!" as well as ":" or a dash, and a
+	 * few words may follow it — up to six before a ":" or "!" ("Fun Facts
+	 * about this fish:"), up to four when the label is the whole line. A
+	 * sentence that only begins "Fun facts are …" is left alone.
+	 */
+	const FUN_WORD  = '(?>[\p{L}\p{N}]+(?:[\'’\-][\p{L}\p{N}]+)*)';
+	const FUN_REGEX = '/^[^\p{L}\p{N}]*(?<label>Fun\s+Facts?)(?:\s*(?:[:!\-–—|]|\t|$)|(?<more>(?:\s+' . self::FUN_WORD . '){1,6}?)\s*[:!]|(?<line>(?:\s+' . self::FUN_WORD . '){1,4})\s*$)/iu';
+
+	/** rich() never returns more than this many times what was typed (+ RICH_GROW_ROOM bytes). */
+	const RICH_GROW_MAX  = 8;
+	const RICH_GROW_ROOM = 4096;
+
 	/** Inline tags a line may keep; block tags that start a new line. */
 	const RICH_INLINE = [ 'strong' => 1, 'b' => 1, 'em' => 1, 'i' => 1, 'a' => 1 ];
 	const RICH_BLOCK  = [
@@ -523,14 +538,45 @@ class FisHotel_Product_Facts {
 		return htmlspecialchars( str_replace( "\xC2\xA0", ' ', $text ), ENT_NOQUOTES, 'UTF-8' );
 	}
 
+	/** Text already read (rich_plain()) → safe text for HTML. Never decoded a second time. */
+	private static function rich_enc( $plain ) {
+		return htmlspecialchars( (string) $plain, ENT_NOQUOTES, 'UTF-8' );
+	}
+
+	/**
+	 * A line that is the "Fun Facts" label → what follows the label on that
+	 * line and the heading to print; null for any other line.
+	 *
+	 * @param string $text A line's plain text.
+	 * @return array{ rest: string, title: string }|null
+	 */
+	public static function fun_label( $text ) {
+		if ( ! preg_match( self::FUN_REGEX, (string) $text, $m ) ) {
+			return null;
+		}
+		$more = trim( (string) preg_replace( '/\s+/u', ' ', ( $m['more'] ?? '' ) . ( $m['line'] ?? '' ) ) );
+		return [
+			'rest'  => trim( (string) substr( (string) $text, strlen( $m[0] ) ) ),
+			'title' => ( preg_match( '/s$/i', $m['label'] ) ? 'Fun Facts' : 'Fun Fact' ) . ( '' !== $more ? ' ' . $more : '' ),
+		];
+	}
+
 	/** The safe target of a link's attributes, or '' (the words stay, the link goes). */
 	private static function rich_href( $attrs ) {
-		if ( ! preg_match( '/\bhref\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i', (string) $attrs, $m ) ) {
+		// Attribute by attribute, so "href=" inside another attribute's
+		// value (title="see href=…") is never taken for the target.
+		if ( ! preg_match_all( '/([^\s"\'=<>\/]+)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+)))?/', (string) $attrs, $all, PREG_SET_ORDER ) ) {
 			return '';
 		}
-		$href = $m[1] ?? '';
-		if ( '' === $href ) $href = $m[2] ?? '';
-		if ( '' === $href ) $href = $m[3] ?? '';
+		$href = '';
+		foreach ( $all as $m ) {
+			if ( 'href' === strtolower( $m[1] ) ) {
+				$href = $m[2] ?? '';
+				if ( '' === $href ) $href = $m[3] ?? '';
+				if ( '' === $href ) $href = $m[4] ?? '';
+				break;
+			}
+		}
 		$href = trim( html_entity_decode( $href, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
 		if ( ! preg_match( '~^(?:https?://|mailto:|tel:|/|#)~i', $href ) || preg_match( '/[\x00-\x1F\x7F<>`"\'\\\\]/', $href ) ) {
 			return '';
@@ -610,7 +656,8 @@ class FisHotel_Product_Facts {
 				];
 			}
 		};
-		$flush = function () use ( &$cur, &$open, &$lines ) {
+		$room  = self::RICH_GROW_MAX * strlen( $html ) + self::RICH_GROW_ROOM;
+		$flush = function () use ( &$cur, &$open, &$lines, &$room ) {
 			if ( null !== $cur ) {
 				foreach ( array_reverse( $open ) as $o ) {
 					$cur['html'] .= '</' . $o[0] . '>';
@@ -618,6 +665,13 @@ class FisHotel_Product_Facts {
 				$cur['html'] = self::rich_tidy( $cur['html'] );
 				$cur['text'] = self::rich_plain( $cur['html'] );
 				if ( '' !== $cur['text'] ) {
+					// A tag left open is opened again on every line after
+					// it. That must never turn a page of text into many
+					// pages of markup: past the limit, the plain text.
+					$room -= strlen( $cur['html'] );
+					if ( $room < 0 ) {
+						throw new \RuntimeException( 'size' );
+					}
 					$lines[] = $cur;
 				}
 			}
@@ -631,9 +685,12 @@ class FisHotel_Product_Facts {
 
 				if ( isset( self::RICH_INLINE[ $name ] ) ) {
 					if ( ! $closing ) {
+						if ( in_array( $name, array_column( $open, 0 ), true ) ) {
+							continue; // already open: bold inside bold, a link inside a link
+						}
 						$tag = '<' . $name . '>';
 						if ( 'a' === $name ) {
-							$href = in_array( 'a', array_column( $open, 0 ), true ) ? '' : self::rich_href( $tok[3] );
+							$href = self::rich_href( $tok[3] );
 							if ( '' === $href ) {
 								continue; // no safe target: the words stay, the link goes
 							}
@@ -677,6 +734,14 @@ class FisHotel_Product_Facts {
 				if ( 'br' === $name ) {
 					continue;
 				}
+				// A link never runs on into the next paragraph or list item:
+				// one that was not closed ends here.
+				foreach ( $open as $k => $o ) {
+					if ( 'a' === $o[0] ) {
+						unset( $open[ $k ] );
+					}
+				}
+				$open = array_values( $open );
 				$para++;
 				if ( 'blockquote' === $name ) {
 					if ( ! $closing ) {
@@ -711,7 +776,14 @@ class FisHotel_Product_Facts {
 
 			$text = $tok[0];
 			if ( in_array( true, array_column( $lists, 'li' ), true ) ) {
-				$text = preg_replace( '/\s*\n\s*/', ' ', $text ); // a list item is one line
+				// A list item is one line — except that a labelled line
+				// typed inside it ("Temperament: …") stays a line of its
+				// own, so the hide rule sees it as prose() does.
+				$pieces = preg_split( '/\s*\n\s*/', $text );
+				$text   = (string) array_shift( $pieces );
+				foreach ( $pieces as $piece ) {
+					$text .= ( '' !== self::line_field( self::rich_plain( $piece ) ) ? "\n" : ' ' ) . $piece;
+				}
 			}
 			foreach ( preg_split( '/\n[ \t]*\n\s*/', $text ) as $pi => $ptxt ) {
 				if ( $pi > 0 ) {
@@ -767,7 +839,7 @@ class FisHotel_Product_Facts {
 				break;
 			}
 		}
-		$whole = [ 'lead' => '', 'html' => self::rich_balanced( $html ) ? $html : self::rich_esc( self::rich_plain( $html ) ) ];
+		$whole = [ 'lead' => '', 'html' => self::rich_balanced( $html ) ? $html : self::rich_enc( self::rich_plain( $html ) ) ];
 		if ( $pos < 0 ) {
 			return $whole;
 		}
@@ -780,7 +852,7 @@ class FisHotel_Product_Facts {
 		if ( preg_match_all( '/./su', $lead ) > self::LEAD_MAX_CHARS || count( preg_split( '/\s+/u', $lead ) ) > self::LEAD_MAX_WORDS ) {
 			return $whole;
 		}
-		return [ 'lead' => $lead, 'html' => self::rich_balanced( $after ) ? $after : self::rich_esc( self::rich_plain( $after ) ) ];
+		return [ 'lead' => $lead, 'html' => self::rich_balanced( $after ) ? $after : self::rich_enc( self::rich_plain( $after ) ) ];
 	}
 
 	/** rich() itself; null when the markup is beyond the rules. */
@@ -794,27 +866,39 @@ class FisHotel_Product_Facts {
 		$fun_facts = [];
 
 		// Step 2 — the Fun Facts block (the first "Fun Facts" label only).
-		$at = -1;
+		$at  = -1;
+		$fun = null;
 		foreach ( $lines as $i => $line ) {
-			if ( 'fun_facts' === self::line_field( $line['text'] ) ) {
+			$fun = self::fun_label( $line['text'] );
+			if ( null !== $fun ) {
 				$at = $i;
 				break;
 			}
 		}
 		if ( $at >= 0 ) {
 			$label = $lines[ $at ];
-			preg_match( self::LABEL_REGEX, $label['text'], $m );
-			$rest = trim( (string) substr( $label['text'], strlen( $m[0] ) ) );
-			$take = [];
-			$j    = $at + 1;
+			$rest  = $fun['rest'];
+			$take  = [];
+			$j     = $at + 1;
+			// Outside a blockquote the block ends at a line that is a
+			// label of its own ("Temperament: …", a second "Fun Facts"):
+			// that line is an old-style fact, and step 3 hides it or
+			// leaves it exactly as prose() does. It is never a fun fact.
+			$is_label = function ( $k ) use ( &$lines ) {
+				return '' !== self::line_field( $lines[ $k ]['text'] ) || null !== self::fun_label( $lines[ $k ]['text'] );
+			};
 			if ( $label['quote'] ) {
-				// Inside a blockquote: every later line of that quote.
+				// Inside a blockquote: every later line of that quote —
+				// the owner grouped them, nothing is second-guessed.
 				while ( $j < $n && $lines[ $j ]['quote'] === $label['quote'] ) {
 					$take[] = $j++;
 				}
 			} else {
-				// More lines in the label's own paragraph.
-				while ( $j < $n && $lines[ $j ]['para'] === $label['para'] && ! $lines[ $j ]['list'] && ! $lines[ $j ]['quote'] ) {
+				// More lines in the label's own paragraph. When the label's
+				// line already holds a fact, only "Lead-in: sentence" lines
+				// go on with it; a plain line after it stays text.
+				while ( $j < $n && $lines[ $j ]['para'] === $label['para'] && ! $lines[ $j ]['list'] && ! $lines[ $j ]['quote'] && ! $is_label( $j )
+					&& ( '' === $rest || '' !== self::split_fact( $lines[ $j ]['html'] )['lead'] ) ) {
 					$take[] = $j++;
 				}
 			}
@@ -827,12 +911,12 @@ class FisHotel_Product_Facts {
 					}
 				} elseif ( $next['list'] && ! $next['quote'] ) {
 					// The list right under the label (nested items too).
-					while ( $j < $n && $lines[ $j ]['list'] && ! $lines[ $j ]['quote'] && $lines[ $j ]['list']['id'] === $next['list']['id'] ) {
+					while ( $j < $n && $lines[ $j ]['list'] && ! $lines[ $j ]['quote'] && $lines[ $j ]['list']['id'] === $next['list']['id'] && ! $is_label( $j ) ) {
 						$take[] = $j++;
 					}
 				} elseif ( ! $next['quote'] ) {
 					// Paragraphs shaped "Lead-in: sentence", up to the first that is not.
-					while ( $j < $n && ! $lines[ $j ]['list'] && ! $lines[ $j ]['quote'] && ! $lines[ $j ]['heading']
+					while ( $j < $n && ! $lines[ $j ]['list'] && ! $lines[ $j ]['quote'] && ! $lines[ $j ]['heading'] && ! $is_label( $j )
 						&& '' !== self::split_fact( $lines[ $j ]['html'] )['lead'] ) {
 						$take[] = $j++;
 					}
@@ -841,12 +925,19 @@ class FisHotel_Product_Facts {
 
 			$facts = [];
 			if ( '' !== $rest ) {
-				// Text typed on the label's own line is the first fact.
-				$rest_html = self::rich_esc( $rest );
-				if ( preg_match( '~Fun\s+Facts?\s*(?:</[a-z]+>\s*)*[:\-–—|]?~iu', $label['html'], $mm, PREG_OFFSET_CAPTURE ) ) {
-					$tail = self::rich_tidy( preg_replace( '~^(?:\s|</(?:strong|b|em|i|a)>)+~', '', (string) substr( $label['html'], $mm[0][1] + strlen( $mm[0][0] ) ) ) );
-					if ( self::rich_balanced( $tail ) && self::rich_plain( $tail ) === $rest ) {
+				// Text typed on the label's own line is the first fact. Its
+				// bold, italics and links are kept when the line's markup
+				// ends exactly on that text; otherwise the words alone.
+				$rest_html = self::rich_enc( $rest );
+				$len       = min( strlen( $label['html'] ), 400 ); // the label is short: the fact starts near the front
+				for ( $k = 0; $k < $len; $k++ ) {
+					if ( $k > 0 && '>' !== $label['html'][ $k - 1 ] && ! ctype_space( $label['html'][ $k - 1 ] ) && ':' !== $label['html'][ $k - 1 ] ) {
+						continue; // a fact starts after a tag, a space or the colon
+					}
+					$tail = self::rich_tidy( preg_replace( '~^(?:\s|</(?:strong|b|em|i|a)>)+~', '', (string) substr( $label['html'], $k ) ) );
+					if ( self::rich_plain( $tail ) === $rest && self::rich_balanced( $tail ) ) {
 						$rest_html = $tail;
+						break;
 					}
 				}
 				$facts[] = self::split_fact( $rest_html );
@@ -856,15 +947,12 @@ class FisHotel_Product_Facts {
 			}
 
 			if ( $facts ) {
-				$fun_title = preg_match( '/s$/i', trim( $m['label'] ) ) ? 'Fun Facts' : 'Fun Fact';
+				$fun_title = $fun['title'];
 				$fun_facts = $facts;
 				foreach ( array_merge( [ $at ], $take ) as $i ) {
 					unset( $lines[ $i ] );
 				}
-			} elseif ( $at === $n - 1 ) {
-				unset( $lines[ $at ] ); // the label as the very last line: no heading over nothing
-			} // otherwise the label stays in the text as typed
-			$lines = array_values( $lines );
+			} // otherwise the label stays where it was typed — unless step 3 leaves nothing under it
 		}
 
 		// Step 3 — an old-style labelled line is hidden when its fact is
@@ -876,6 +964,16 @@ class FisHotel_Product_Facts {
 				continue;
 			}
 			$kept[] = $line;
+		}
+		// A "Fun Facts" label with nothing left under it (it was the last
+		// line, or every line after it was a hidden fact): no heading over
+		// nothing.
+		while ( $kept ) {
+			$last = self::fun_label( $kept[ count( $kept ) - 1 ]['text'] );
+			if ( null === $last || '' !== $last['rest'] ) {
+				break;
+			}
+			array_pop( $kept );
 		}
 		if ( $kept ) {
 			$kept[0]['html'] = self::rich_tidy( preg_replace( '~^((?:<[^>]+>)*)Description:\s*~i', '$1', $kept[0]['html'] ) );
